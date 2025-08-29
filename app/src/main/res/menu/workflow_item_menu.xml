@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_duplicate"
+        android:title="@string/workflow_item_menu_duplicate" />
+    <item
+        android:id="@+id/menu_export_single"
+        android:title="@string/workflow_item_menu_export_single" />
+    <item
+        android:id="@+id/menu_delete"
+        android:title="@string/workflow_item_menu_delete" />
+</menu>
