@@ -16,7 +16,8 @@ class WorkflowListAdapter(
     private val onEdit: (Workflow) -> Unit,
     private val onDelete: (Workflow) -> Unit,
     private val onDuplicate: (Workflow) -> Unit,
-    private val onExport: (Workflow) -> Unit
+    private val onExport: (Workflow) -> Unit,
+    private val onExecute: (Workflow) -> Unit // 新增：执行按钮回调
 ) : RecyclerView.Adapter<WorkflowListAdapter.WorkflowViewHolder>() {
 
     // 新增：用于在删除或复制后刷新列表
@@ -60,6 +61,9 @@ class WorkflowListAdapter(
             }
             popup.show()
         }
+
+        // 绑定执行按钮
+        holder.executeButton.setOnClickListener { onExecute(workflow) }
     }
 
     override fun getItemCount() = workflows.size
@@ -68,6 +72,7 @@ class WorkflowListAdapter(
         val name: TextView = itemView.findViewById(R.id.text_view_workflow_name)
         val description: TextView = itemView.findViewById(R.id.text_view_workflow_description)
         val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
+        val executeButton: ImageButton = itemView.findViewById(R.id.button_execute_workflow) // 新增
         val infoContainer: LinearLayout = itemView.findViewById(R.id.workflow_info_container)
 
         fun bind(workflow: Workflow) {
