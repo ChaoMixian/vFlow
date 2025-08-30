@@ -1,8 +1,9 @@
 package com.chaomixian.vflow.core.module
 
-import com.chaomixian.vflow.modules.device.DelayModule
+import com.chaomixian.vflow.modules.device.*
 import com.chaomixian.vflow.modules.logic.*
-import com.chaomixian.vflow.modules.triggers.ManualTriggerModule
+import com.chaomixian.vflow.modules.triggers.*
+import com.chaomixian.vflow.modules.variable.*
 
 object ModuleRegistry {
     private val modules = mutableMapOf<String, ActionModule>()
@@ -26,8 +27,18 @@ object ModuleRegistry {
 
     fun initialize() {
         modules.clear()
+        // 触发器
         register(ManualTriggerModule())
+
+        // 变量
+        register(SetVariableModule())
+
+        // 设备
         register(DelayModule())
+        register(FindTextModule())
+        register(ClickModule())
+
+        // 逻辑控制
         register(IfModule())
         register(ElseModule())
         register(EndIfModule())

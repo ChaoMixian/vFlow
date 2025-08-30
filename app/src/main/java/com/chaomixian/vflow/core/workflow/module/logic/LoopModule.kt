@@ -5,16 +5,20 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 
-// --- 模块ID常量 ---
 const val LOOP_PAIRING_ID = "loop"
 const val LOOP_START_ID = "vflow.logic.loop.start"
 const val LOOP_END_ID = "vflow.logic.loop.end"
 
-// --- “循环”模块：块的开始 ---
 class LoopModule : ActionModule {
     override val id = LOOP_START_ID
     override val metadata = ActionMetadata("循环", "重复执行一组操作固定的次数", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_START, LOOP_PAIRING_ID)
+
+    // --- 新增/修改：实现接口 ---
+    override fun getInputs(): List<InputDefinition> = listOf(
+        InputDefinition("count", "重复次数", ParameterType.NUMBER)
+    )
+    override fun getOutputs(): List<OutputDefinition> = emptyList()
 
     override fun getParameters(): List<ParameterDefinition> {
         return listOf(
@@ -22,6 +26,7 @@ class LoopModule : ActionModule {
         )
     }
 
+    // createSteps 和 onStepDeleted 保持不变...
     override fun createSteps(): List<ActionStep> {
         return listOf(
             ActionStep(LOOP_START_ID, getParameters().associate { it.id to it.defaultValue }),
@@ -41,12 +46,16 @@ class LoopModule : ActionModule {
     override suspend fun execute(context: ExecutionContext) = ActionResult(success = true)
 }
 
-// --- “结束循环”模块：块的结束 ---
 class EndLoopModule : ActionModule {
     override val id = LOOP_END_ID
     override val metadata = ActionMetadata("结束循环", "", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, LOOP_PAIRING_ID)
+
+    // --- 新增：实现接口 ---
+    override fun getInputs(): List<InputDefinition> = emptyList()
+    override fun getOutputs(): List<OutputDefinition> = emptyList()
     override fun getParameters(): List<ParameterDefinition> = emptyList()
+
     override suspend fun execute(context: ExecutionContext) = ActionResult(success = true)
 }
 

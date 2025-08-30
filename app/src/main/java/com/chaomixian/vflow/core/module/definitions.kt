@@ -1,34 +1,58 @@
 package com.chaomixian.vflow.core.module
 
-// 参数的定义，用于动态生成UI
-data class ParameterDefinition(
-    val id: String, // e.g., "targetText"
-    val name: String, // e.g., "目标文本"
-    val type: ParameterType,
-    val defaultValue: Any? = null,
-    val options: List<String> = emptyList() // 用于 ENUM 类型
-)
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
+/**
+ * 参数类型枚举。
+ * 定义了静态值的类型。
+ */
 enum class ParameterType {
     STRING,
     NUMBER,
     BOOLEAN,
-    ENUM, // 用于下拉菜单
-    NODE_ID,
-    COORDINATE
+    ENUM,
+    ANY // ANY 类型主要用于“如果”等可以接受任何输入的模块
 }
 
-// 新增：定义模块在逻辑块中的角色
+/**
+ * 模块的一个输入参数定义。
+ * @param staticType 如果未连接魔法变量，UI上应显示的静态输入框类型。
+ * @param acceptedMagicVariableTypes 一个类型集合，定义了此输入可以接受哪些魔法变量。
+ */
+data class InputDefinition(
+    val id: String,
+    val name: String,
+    val staticType: ParameterType,
+    val acceptsMagicVariable: Boolean = true,
+    val acceptedMagicVariableTypes: Set<Class<out Parcelable>> = emptySet()
+)
+
+// OutputDefinition 和其他定义保持不变
+data class OutputDefinition(
+    val id: String,
+    val name: String,
+    val type: Class<out Parcelable>
+)
+
+data class ParameterDefinition(
+    val id: String,
+    val name: String,
+    val type: ParameterType,
+    val defaultValue: Any? = null,
+    val options: List<String> = emptyList()
+)
+
 enum class BlockType {
-    NONE,           // 普通原子模块
-    BLOCK_START,    // 块的开始 (如 '循环', '如果')
-    BLOCK_MIDDLE,   // 块的中间 (如 '否则')
-    BLOCK_END       // 块的结束 (虚拟模块，如 '结束循环')
+    NONE,
+    BLOCK_START,
+    BLOCK_MIDDLE,
+    BLOCK_END
 }
 
-// 新增：用于描述模块的块行为
 data class BlockBehavior(
     val type: BlockType,
-    // 用于配对，例如 'if' 块的所有部分(if, else, endif)都有相同的 pairingId
-    val pairingId: String? = null
+    val pairingId: String? = null,
+    val isIndividuallyDeletable: Boolean = false
 )

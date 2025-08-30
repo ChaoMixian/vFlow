@@ -1,48 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/card_action_item"
-    style="?attr/materialCardViewFilledStyle"
+    android:id="@+id/root_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginVertical="4dp"
-    android:clickable="true"
-    android:focusable="true">
+    android:orientation="horizontal">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <Space
+        android:id="@+id/indent_space"
+        android:layout_width="0dp"
+        android:layout_height="match_parent" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_action_item"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:paddingVertical="8dp">
+        android:layout_marginVertical="4dp"
+        android:layout_weight="1"
+        app:cardCornerRadius="12dp"
+        app:strokeWidth="0dp">
 
-        <ImageView
-            android:id="@+id/icon_action_type"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="4dp"
-            app:tint="?attr/colorPrimary"
-            tools:src="@drawable/ic_macros" />
-
-        <TextView
-            android:id="@+id/text_view_action_description"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/card_content_layout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_weight="1"
-            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-            tools:text="延迟 1000 毫秒" />
+            android:orientation="vertical"
+            android:paddingBottom="8dp">
 
-        <ImageButton
-            android:id="@+id/button_delete_action"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="删除动作"
-            app:srcCompat="@drawable/ic_delete"
-            app:tint="?android:attr/textColorSecondary" />
-    </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="12dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="4dp">
+
+                <ImageView
+                    android:id="@+id/icon_action_type"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    app:tint="?attr/colorOnSurface"
+                    tools:src="@drawable/ic_macros" />
+
+                <TextView
+                    android:id="@+id/text_view_action_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="8dp"
+                    android:layout_toEndOf="@id/icon_action_type"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    tools:text="点击" />
+
+                <ImageButton
+                    android:id="@+id/button_delete_action"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="删除动作"
+                    app:srcCompat="@drawable/ic_close"
+                    app:tint="?android:attr/textColorSecondary" />
+            </RelativeLayout>
+
+            <LinearLayout
+                android:id="@+id/container_inputs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingTop="8dp" />
+
+            <LinearLayout
+                android:id="@+id/container_outputs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="12dp"
+                android:paddingTop="4dp" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>

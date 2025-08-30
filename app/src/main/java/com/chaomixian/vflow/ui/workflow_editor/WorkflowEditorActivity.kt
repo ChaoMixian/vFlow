@@ -5,19 +5,19 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import com.google.android.material.appbar.AppBarLayout
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.ui.common.BaseActivity
+import com.google.android.material.appbar.AppBarLayout // <-- 核心修复：添加缺失的 import
 import java.util.*
 
 class WorkflowEditorActivity : BaseActivity() {
@@ -28,6 +28,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private lateinit var actionStepAdapter: ActionStepAdapter
     private lateinit var nameEditText: EditText
     private lateinit var itemTouchHelper: ItemTouchHelper
+    private var currentEditorSheet: ActionEditorSheet? = null
 
     companion object {
         const val EXTRA_WORKFLOW_ID = "WORKFLOW_ID"
@@ -49,56 +50,81 @@ class WorkflowEditorActivity : BaseActivity() {
         findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow() }
     }
 
-    /**
-     * 新增：为顶部和底部的UI元素应用正确的内边距，以避开系统栏。
-     */
-    private fun applyWindowInsets() {
-        val appBar = findViewById<AppBarLayout>(R.id.app_bar_layout_editor)
-        val bottomButtonContainer = findViewById<LinearLayout>(R.id.bottom_button_container)
+    private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
+        // --- 核心修复：调用正确的 newInstance 方法 ---
+        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId)
+        currentEditorSheet = editor
 
-        ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top)
-            insets
+        editor.onSave = { newStep ->
+            if (position != -1) {
+                actionSteps[position] = actionSteps[position].copy(parameters = newStep.parameters)
+            } else {
+                val stepsToAdd = module.createSteps()
+                val configuredFirstStep = stepsToAdd.first().copy(parameters = newStep.parameters)
+                actionSteps.add(configuredFirstStep)
+                if (stepsToAdd.size > 1) {
+                    actionSteps.addAll(stepsToAdd.subList(1, stepsToAdd.size))
+                }
+            }
+            recalculateAndNotify()
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(bottomButtonContainer) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(bottom = systemBars.bottom)
-            insets
+        editor.onMagicVariableRequested = { inputId ->
+            showMagicVariablePicker(position, inputId, module)
         }
+
+        editor.show(supportFragmentManager, "ActionEditor")
     }
 
-    private fun loadWorkflowData() {
-        val workflowId = intent.getStringExtra(EXTRA_WORKFLOW_ID)
-        if (workflowId != null) {
-            currentWorkflow = workflowManager.getWorkflow(workflowId)
-            currentWorkflow?.let {
-                nameEditText.setText(it.name)
-                actionSteps.clear()
-                actionSteps.addAll(it.steps)
+    private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
+        val targetInputDef = editingModule.getInputs().find { it.id == targetInputId } ?: return
+        val availableVariables = mutableListOf<MagicVariableItem>()
+        val effectivePosition = if (editingStepPosition == -1) actionSteps.size else editingStepPosition
+
+        for (i in 0 until effectivePosition) {
+            val step = actionSteps[i]
+            val module = ModuleRegistry.getModule(step.moduleId)
+            module?.getOutputs()?.forEach { outputDef ->
+                val isCompatible = targetInputDef.acceptedMagicVariableTypes.any { acceptedType ->
+                    acceptedType.isAssignableFrom(outputDef.type)
+                }
+                if (isCompatible) {
+                    availableVariables.add(
+                        MagicVariableItem(
+                            variableReference = "{{${step.id}.${outputDef.id}}}",
+                            variableName = outputDef.name,
+                            originModuleName = module.metadata.name
+                        )
+                    )
+                }
             }
         }
-        if (actionSteps.isEmpty()) {
-            val manualTriggerModule = ModuleRegistry.getModule("vflow.trigger.manual")!!
-            actionSteps.addAll(manualTriggerModule.createSteps())
+
+        if (availableVariables.isEmpty()) {
+            Toast.makeText(this, "没有可兼容的变量", Toast.LENGTH_SHORT).show()
+            return
         }
-        recalculateAndNotify()
+
+        val picker = MagicVariablePickerSheet.newInstance(availableVariables)
+        picker.onVariableSelected = { selectedVariable ->
+            currentEditorSheet?.updateInputWithVariable(targetInputId, selectedVariable.variableReference)
+        }
+        picker.show(supportFragmentManager, "MagicVariablePicker")
     }
+
+    // --- 其他方法保持不变，这里为了完整性全部列出 ---
 
     private fun setupRecyclerView() {
         actionStepAdapter = ActionStepAdapter(
             actionSteps,
-            onEditClick = { position ->
+            onEditClick = { position, inputId ->
                 val step = actionSteps[position]
-                // 找到步骤对应的真实模块（即使是else或end，也找到if模块来编辑）
                 val startPos = findBlockStartPosition(position)
                 val startStep = actionSteps[startPos]
                 val module = ModuleRegistry.getModule(startStep.moduleId)
 
-                // 编辑时，我们传递块的开始模块（用于获取参数定义）和实际点击的步骤（用于填充现有值）
                 if (module != null) {
-                    showActionEditor(module, step, startPos)
+                    showActionEditor(module, step, startPos, inputId)
                 }
             },
             onDeleteClick = { position ->
@@ -114,6 +140,7 @@ class WorkflowEditorActivity : BaseActivity() {
         findViewById<RecyclerView>(R.id.recycler_view_action_steps).apply {
             layoutManager = LinearLayoutManager(this@WorkflowEditorActivity)
             adapter = actionStepAdapter
+            addItemDecoration(WorkflowConnectionDecorator(actionSteps))
         }
     }
 
@@ -216,30 +243,50 @@ class WorkflowEditorActivity : BaseActivity() {
         itemTouchHelper.attachToRecyclerView(findViewById(R.id.recycler_view_action_steps))
     }
 
+    private fun applyWindowInsets() {
+        val appBar = findViewById<AppBarLayout>(R.id.app_bar_layout_editor)
+        val bottomButtonContainer = findViewById<LinearLayout>(R.id.bottom_button_container)
+
+        ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top)
+            insets
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(bottomButtonContainer) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(bottom = systemBars.bottom)
+            insets
+        }
+    }
+
+    private fun loadWorkflowData() {
+        val workflowId = intent.getStringExtra(EXTRA_WORKFLOW_ID)
+        if (workflowId != null) {
+            currentWorkflow = workflowManager.getWorkflow(workflowId)
+            currentWorkflow?.let {
+                nameEditText.setText(it.name)
+                actionSteps.clear()
+                actionSteps.addAll(it.steps)
+            }
+        }
+        if (actionSteps.isEmpty()) {
+            val manualTriggerModule = ModuleRegistry.getModule("vflow.trigger.manual")!!
+            actionSteps.addAll(manualTriggerModule.createSteps())
+        }
+        recalculateAndNotify()
+    }
+
     private fun showActionPicker() {
         val picker = ActionPickerSheet()
         picker.onActionSelected = { module ->
             if (module.metadata.category == "触发器") {
                 Toast.makeText(this, "触发器只能位于工作流的开始。", Toast.LENGTH_SHORT).show()
             } else {
-                showActionEditor(module, null, -1)
+                showActionEditor(module, null, -1, null)
             }
         }
         picker.show(supportFragmentManager, "ActionPicker")
-    }
-
-    private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int) {
-        val editor = ActionEditorSheet.newInstance(module, existingStep)
-        editor.onSave = { newStep ->
-            if (position != -1) {
-                actionSteps[position] = actionSteps[position].copy(parameters = newStep.parameters)
-            } else {
-                val stepsToAdd = module.createSteps()
-                actionSteps.addAll(stepsToAdd)
-            }
-            recalculateAndNotify()
-        }
-        editor.show(supportFragmentManager, "ActionEditor")
     }
 
     private fun recalculateAndNotify() {

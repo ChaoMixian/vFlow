@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="4dp">
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/input_layout_key"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:hint="键">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edit_text_key"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/input_layout_value"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="8dp"
+        android:hint="值">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edit_text_value"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <ImageButton
+        android:id="@+id/button_delete_kv"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_delete"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="删除"/>
+</LinearLayout>

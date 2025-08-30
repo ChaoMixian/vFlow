@@ -6,56 +6,52 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.ActionModule
-import com.chaomixian.vflow.core.module.ParameterDefinition
-import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
-import com.chaomixian.vflow.R
 
 class ActionEditorSheet : BottomSheetDialogFragment() {
 
     private lateinit var module: ActionModule
     private var existingStep: ActionStep? = null
     var onSave: ((ActionStep) -> Unit)? = null
+    var onMagicVariableRequested: ((inputId: String) -> Unit)? = null
 
-    // 用于存储动态创建的输入视图，以便后续读取它们的值
     private val inputViews = mutableMapOf<String, View>()
+    private val currentParameters = mutableMapOf<String, Any?>()
 
     companion object {
-        fun newInstance(module: ActionModule, existingStep: ActionStep? = null): ActionEditorSheet {
-            val fragment = ActionEditorSheet()
-            // 注意：模块不能直接通过 Bundle 传递，所以我们用 ID 来查找
-            fragment.arguments = Bundle().apply {
-                putString("moduleId", module.id)
-                putParcelable("existingStep", existingStep)
+        // --- 核心修复：确保 newInstance 方法有3个参数 ---
+        fun newInstance(
+            module: ActionModule,
+            existingStep: ActionStep?,
+            focusedInputId: String? // 这个参数之前缺失了
+        ): ActionEditorSheet {
+            return ActionEditorSheet().apply {
+                arguments = Bundle().apply {
+                    putString("moduleId", module.id)
+                    putParcelable("existingStep", existingStep)
+                    putString("focusedInputId", focusedInputId)
+                }
             }
-            return fragment
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val moduleId = arguments?.getString("moduleId")
-        val mod = moduleId?.let { com.chaomixian.vflow.core.module.ModuleRegistry.getModule(it) }
-        if (mod == null) {
-            dismiss()
-            return
-        }
-        module = mod
+        module = moduleId?.let { com.chaomixian.vflow.core.module.ModuleRegistry.getModule(it) } ?: return dismiss()
         existingStep = arguments?.getParcelable("existingStep")
+        currentParameters.putAll(existingStep?.parameters ?: emptyMap())
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.sheet_action_editor, container, false)
         val title = view.findViewById<TextView>(R.id.text_view_bottom_sheet_title)
         val paramsContainer = view.findViewById<LinearLayout>(R.id.container_action_params)
@@ -63,89 +59,68 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
         title.text = "编辑 ${module.metadata.name}"
 
-        // 动态构建UI
-        buildUiForParameters(paramsContainer)
+        buildUiForInputs(paramsContainer)
 
         saveButton.setOnClickListener {
-            try {
-                // 从UI读取参数并构建 ActionStep
-                val parameters = readParametersFromUi()
-                val newStep = ActionStep(moduleId = module.id, parameters = parameters)
-                onSave?.invoke(newStep)
-                dismiss()
-            } catch (e: Exception) {
-                Toast.makeText(context, "输入错误: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            readParametersFromUi()
+            val newStep = ActionStep(moduleId = module.id, parameters = currentParameters)
+            onSave?.invoke(newStep)
+            dismiss()
         }
-
         return view
     }
 
-    // --- 这是动态UI魔法发生的地方 ---
-    private fun buildUiForParameters(container: LinearLayout) {
-        val parameters = module.getParameters()
-        parameters.forEach { paramDef ->
-            val currentValue = existingStep?.parameters?.get(paramDef.id) ?: paramDef.defaultValue
-
-            when (paramDef.type) {
-                ParameterType.STRING -> addTextField(container, paramDef, currentValue, isNumeric = false)
-                ParameterType.NUMBER -> addTextField(container, paramDef, currentValue, isNumeric = true)
-                ParameterType.BOOLEAN -> addSwitch(container, paramDef, currentValue)
-                // 其他类型如 ENUM, NODE_ID 等可以后续添加
-                else -> {}
-            }
+    fun updateInputWithVariable(inputId: String, variableReference: String) {
+        currentParameters[inputId] = variableReference
+        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let {
+            buildUiForInputs(it)
         }
     }
 
-    // --- 这是从动态UI读取数据的地方 ---
-    private fun readParametersFromUi(): Map<String, Any?> {
-        val parameters = mutableMapOf<String, Any?>()
-        inputViews.forEach { (paramId, view) ->
-            when (view) {
-                is TextInputLayout -> {
-                    val text = view.editText?.text?.toString()
-                    // 简单的类型转换
-                    val paramDef = module.getParameters().find { it.id == paramId }
-                    if (paramDef?.type == ParameterType.NUMBER) {
-                        parameters[paramId] = text?.toLongOrNull()
-                    } else {
-                        parameters[paramId] = text
-                    }
+    private fun buildUiForInputs(container: LinearLayout) {
+        container.removeAllViews()
+        inputViews.clear()
+
+        module.getInputs().forEach { inputDef ->
+            val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, container, false)
+            row.findViewById<TextView>(R.id.input_name).text = inputDef.name
+
+            val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+            val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
+
+            val currentValue = currentParameters[inputDef.id]
+
+            if (inputDef.acceptsMagicVariable) {
+                magicButton.visibility = View.VISIBLE
+                magicButton.setOnClickListener {
+                    readParametersFromUi()
+                    onMagicVariableRequested?.invoke(inputDef.id)
                 }
-                is MaterialSwitch -> parameters[paramId] = view.isChecked
+            } else {
+                magicButton.visibility = View.GONE
+            }
+
+            if (currentValue is String && currentValue.startsWith("{{")) {
+                val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
+                pill.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
+                valueContainer.addView(pill)
+            } else {
+                val editText = EditText(context).apply {
+                    setText(currentValue?.toString() ?: "")
+                    hint = "输入或选择变量"
+                }
+                valueContainer.addView(editText)
+                inputViews[inputDef.id] = editText
+            }
+            container.addView(row)
+        }
+    }
+
+    private fun readParametersFromUi() {
+        inputViews.forEach { (inputId, view) ->
+            if (view is EditText) {
+                currentParameters[inputId] = view.text.toString()
             }
         }
-        return parameters
-    }
-
-    // --- UI 构建辅助函数 ---
-    private fun addTextField(container: LinearLayout, paramDef: ParameterDefinition, value: Any?, isNumeric: Boolean) {
-        val textInputLayout = TextInputLayout(requireContext()).apply {
-            hint = paramDef.name
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = 16 }
-        }
-        val editText = TextInputEditText(requireContext()).apply {
-            setText(value?.toString() ?: "")
-            inputType = if (isNumeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
-        }
-        textInputLayout.addView(editText)
-        container.addView(textInputLayout)
-        inputViews[paramDef.id] = textInputLayout // 存入map以便读取
-    }
-
-    private fun addSwitch(container: LinearLayout, paramDef: ParameterDefinition, value: Any?) {
-        val switch = MaterialSwitch(requireContext()).apply {
-            text = paramDef.name
-            isChecked = value as? Boolean ?: false
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = 16 }
-        }
-        container.addView(switch)
-        inputViews[paramDef.id] = switch // 存入map以便读取
     }
 }
