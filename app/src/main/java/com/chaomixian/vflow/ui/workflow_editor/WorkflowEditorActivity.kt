@@ -3,10 +3,15 @@ package com.chaomixian.vflow.ui.workflow_editor
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import com.google.android.material.appbar.AppBarLayout
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.WorkflowManager
@@ -31,6 +36,7 @@ class WorkflowEditorActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workflow_editor)
+        applyWindowInsets()
 
         workflowManager = WorkflowManager(this)
         nameEditText = findViewById(R.id.edit_text_workflow_name)
@@ -41,6 +47,26 @@ class WorkflowEditorActivity : BaseActivity() {
 
         findViewById<Button>(R.id.button_add_action).setOnClickListener { showActionPicker() }
         findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow() }
+    }
+
+    /**
+     * 新增：为顶部和底部的UI元素应用正确的内边距，以避开系统栏。
+     */
+    private fun applyWindowInsets() {
+        val appBar = findViewById<AppBarLayout>(R.id.app_bar_layout_editor)
+        val bottomButtonContainer = findViewById<LinearLayout>(R.id.bottom_button_container)
+
+        ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = systemBars.top)
+            insets
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(bottomButtonContainer) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(bottom = systemBars.bottom)
+            insets
+        }
     }
 
     private fun loadWorkflowData() {

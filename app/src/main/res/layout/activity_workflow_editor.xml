@@ -73,19 +73,37 @@
         android:elevation="8dp"
         android:orientation="vertical"
         android:padding="16dp">
-        <Button
-            android:id="@+id/button_add_action"
-            style="@style/Widget.Material3.Button.TonalButton"
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="添加动作"
-            app:icon="@drawable/ic_add" />
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/button_add_action"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/workflow_editor_add_action"
+                app:icon="@drawable/ic_add" />
+
+            <Button
+                android:id="@+id/button_execute_workflow"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/workflow_editor_execute"
+                app:icon="@drawable/ic_play_arrow" />
+        </LinearLayout>
+
         <Button
             android:id="@+id/button_save_workflow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="保存工作流" />
-    </LinearLayout>
+            android:text="@string/workflow_editor_save" />
 
+    </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -7,19 +7,19 @@
 
     <fragment
         android:id="@+id/navigation_home"
-        android:name="com.chamixian.vflow.ui.main.fragments.HomeFragment"
+        android:name="com.chaomixian.vflow.ui.main.fragments.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" />
 
     <fragment
         android:id="@+id/navigation_workflows"
-        android:name="com.chamixian.vflow.ui.workflow_list.WorkflowListFragment"
+        android:name="com.chaomixian.vflow.ui.workflow_list.WorkflowListFragment"
         android:label="@string/title_workflows"
         tools:layout="@layout/fragment_workflows" />
 
     <fragment
         android:id="@+id/navigation_settings"
-        android:name="com.chamixian.vflow.ui.main.fragments.SettingsFragment"
+        android:name="com.chaomixian.vflow.ui.main.fragments.SettingsFragment"
         android:label="@string/title_settings"
         tools:layout="@layout/fragment_settings" />
 
