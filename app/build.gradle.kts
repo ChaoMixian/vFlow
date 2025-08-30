@@ -62,6 +62,7 @@ dependencies {
     // 新增：Shizuku API (未来重新引入高级功能时需要)
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    implementation(libs.androidx.scenecore)
 
     // 测试库
     testImplementation("junit:junit:4.13.2")

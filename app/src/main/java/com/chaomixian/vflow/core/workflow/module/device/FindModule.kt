@@ -2,13 +2,16 @@
 
 package com.chaomixian.vflow.modules.device
 
+import android.content.Context
 import android.graphics.Rect
 import android.os.Parcelable
 import android.view.accessibility.AccessibilityNodeInfo
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.*
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.parcelize.Parcelize
 import java.util.regex.Pattern
 
@@ -34,13 +37,13 @@ class FindTextModule : ActionModule {
             staticType = ParameterType.ENUM,
             defaultValue = "完全匹配",
             options = matchModeOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false // 这是一个配置，不接受变量
         ),
         InputDefinition(
             id = "targetText",
             name = "目标文本",
             staticType = ParameterType.STRING,
-            acceptsMagicVariable = true,
+            acceptsMagicVariable = true, // 这是一个输入，接受变量
             acceptedMagicVariableTypes = setOf(TextVariable::class.java)
         )
     )
@@ -48,6 +51,21 @@ class FindTextModule : ActionModule {
     override fun getOutputs(): List<OutputDefinition> = listOf(
         OutputDefinition("element", "找到的元素", ScreenElement::class.java)
     )
+
+    override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val mode = step.parameters["matchMode"]?.toString() ?: "完全匹配"
+        val target = step.parameters["targetText"]?.toString() ?: "..."
+        val isVariable = target.startsWith("{{")
+        val targetPillText = if (isVariable) "变量" else "'$target'"
+
+        return PillUtil.buildSpannable(
+            context,
+            "查找文本 ",
+            PillUtil.Pill(mode, isVariable = false),
+            " 的 ",
+            PillUtil.Pill(targetPillText, isVariable)
+        )
+    }
 
     override suspend fun execute(
         context: ExecutionContext,

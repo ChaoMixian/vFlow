@@ -22,6 +22,7 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.android.material.textfield.TextInputLayout
 
 class SetVariableEditorViewHolder(
@@ -44,21 +45,27 @@ class VariableModuleUIProvider(
 
     override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep): View? {
         val params = step.parameters
-        val type = params["type"]?.toString() ?: "未知"
-        val value = params["value"]
+        val type = params["type"]?.toString() ?: "文本"
+        val value = params["value"]?.toString() ?: ""
 
         val previewView = LayoutInflater.from(context)
             .inflate(R.layout.partial_variable_preview, parent, false)
 
         val summaryTextView = previewView.findViewById<TextView>(R.id.text_view_variable_summary)
 
-        val valueStr = when {
-            value == null -> "空"
-            value.toString().isEmpty() -> "空"
-            type == "文本" -> "'${value}'"
-            else -> value.toString()
+        val valuePillText = when {
+            value.isEmpty() && type != "文本" -> "..."
+            type == "文本" -> "'$value'"
+            else -> value
         }
-        summaryTextView.text = "设置变量 ${type} 为 ${valueStr}"
+
+        summaryTextView.text = PillUtil.buildSpannable(
+            context,
+            "设置变量 ",
+            PillUtil.Pill(type, false),
+            " 为 ",
+            PillUtil.Pill(valuePillText, false)
+        )
 
         return previewView
     }

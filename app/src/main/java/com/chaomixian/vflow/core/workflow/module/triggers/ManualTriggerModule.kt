@@ -1,8 +1,11 @@
+// main/java/com/chaomixian/vflow/core/workflow/module/triggers/ManualTriggerModule.kt
 package com.chaomixian.vflow.modules.triggers
 
+import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.BooleanVariable
 
 class ManualTriggerModule : ActionModule {
@@ -19,6 +22,10 @@ class ManualTriggerModule : ActionModule {
     override fun getOutputs(): List<OutputDefinition> = listOf(
         OutputDefinition("success", "是否成功", BooleanVariable::class.java)
     )
+
+    override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        return metadata.name
+    }
 
     override suspend fun execute(
         context: ExecutionContext,

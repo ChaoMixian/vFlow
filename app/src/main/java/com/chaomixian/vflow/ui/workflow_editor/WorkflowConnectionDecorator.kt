@@ -1,9 +1,12 @@
+// main/java/com/chaomixian/vflow/ui/workflow_editor/WorkflowConnectionDecorator.kt
+
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -14,15 +17,14 @@ class WorkflowConnectionDecorator(private val steps: List<ActionStep>) : Recycle
         color = Color.WHITE
         strokeWidth = 6f
         style = Paint.Style.STROKE
-        alpha = 200 // 增加不透明度
-        strokeCap = Paint.Cap.ROUND // 圆润的线条端点
-        setShadowLayer(8f, 0f, 4f, Color.argb(100, 0, 0, 0)) // 添加阴影
+        alpha = 200
+        strokeCap = Paint.Cap.ROUND
+        setShadowLayer(8f, 0f, 4f, Color.argb(100, 0, 0, 0))
     }
 
     override fun onDrawOver(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
         val stepMap = steps.associateBy { it.id }
 
-        // 遍历所有步骤，查找连接关系
         steps.forEachIndexed { index, currentStep ->
             currentStep.parameters.forEach { (inputId, value) ->
                 if (value is String && value.startsWith("{{")) {
@@ -33,13 +35,13 @@ class WorkflowConnectionDecorator(private val steps: List<ActionStep>) : Recycle
                     val sourceStep = stepMap[sourceStepId]
                     if (sourceStep != null) {
                         val sourcePosition = steps.indexOf(sourceStep)
+                        if (sourcePosition == -1 || sourcePosition >= index) return@forEach
 
-                        // 查找当前可见的 ViewHolder
                         val destView = parent.findViewHolderForAdapterPosition(index)?.itemView
                         val sourceView = parent.findViewHolderForAdapterPosition(sourcePosition)?.itemView
 
                         if (sourceView != null && destView != null) {
-                            drawConnection(c, parent, sourceView, destView, sourceOutputId, inputId)
+                            drawConnection(c, parent, sourceView, destView, sourceStep.id, sourceOutputId, currentStep.id, inputId)
                         }
                     }
                 }
@@ -47,14 +49,17 @@ class WorkflowConnectionDecorator(private val steps: List<ActionStep>) : Recycle
         }
     }
 
-    private fun drawConnection(c: Canvas, parent: RecyclerView, sourceView: View, destView: View, sourceOutputId: String, destInputId: String) {
-        // --- 核心修复：使用 Tag 来精确查找连接点 ---
-        val startNode = sourceView.findViewWithTag<View?>("output_${(sourceView.tag as ActionStep).id}_${sourceOutputId}") ?: return
-        val endNode = destView.findViewWithTag<View?>("input_${(destView.tag as ActionStep).id}_${destInputId}") ?: return
+    private fun drawConnection(c: Canvas, parent: RecyclerView, sourceView: View, destView: View, sourceStepId: String, sourceOutputId: String, destStepId: String, destInputId: String) {
+        val startNode = sourceView.findViewWithTag<View?>("output_${sourceStepId}_${sourceOutputId}") ?: return
+        val endNode = destView.findViewWithTag<View?>("input_${destStepId}_${destInputId}") ?: return
 
-        // 获取连接点相对于 RecyclerView 的精确坐标
         val startPos = getRelativePos(startNode, parent)
         val endPos = getRelativePos(endNode, parent)
+
+        // 如果节点不可见（例如在滚动之外），坐标可能为0，此时不绘制
+        if (startPos[0] == 0 && startPos[1] == 0) return
+        if (endPos[0] == 0 && endPos[1] == 0) return
+
 
         val startX = startPos[0] + startNode.width / 2f
         val startY = startPos[1] + startNode.height / 2f
@@ -64,29 +69,28 @@ class WorkflowConnectionDecorator(private val steps: List<ActionStep>) : Recycle
         val path = Path()
         path.moveTo(startX, startY)
 
-        // 计算控制点，让曲线更平滑
-        val controlPointX1 = startX + (endX - startX) * 0.5f
+        val controlPointOffset = 60f
+        val controlPointX1 = startX + controlPointOffset
         val controlPointY1 = startY
-        val controlPointX2 = startX + (endX - startX) * 0.5f
+        val controlPointX2 = endX + controlPointOffset
         val controlPointY2 = endY
 
         path.cubicTo(controlPointX1, controlPointY1, controlPointX2, controlPointY2, endX, endY)
         c.drawPath(path, linePaint)
     }
 
-    // 辅助函数，获取 View 相对于其父 RecyclerView 的位置
+    /**
+     * 更健壮的坐标计算方法。
+     * 它计算一个视图相对于其祖先（这里是RecyclerView）的绘制位置。
+     */
     private fun getRelativePos(view: View, parent: RecyclerView): IntArray {
         val pos = IntArray(2)
-        view.getGlobalVisibleRect(android.graphics.Rect())
-        pos[0] = view.left
-        pos[1] = view.top
-
-        var currentParent = view.parent
-        while (currentParent != parent && currentParent is View) {
-            pos[0] += (currentParent as View).left
-            pos[1] += (currentParent as View).top
-            currentParent = currentParent.parent
-        }
+        val rect = Rect()
+        view.getDrawingRect(rect)
+        // offsetDescendantRectToMyCoords 将子视图的矩形坐标转换为父视图的坐标
+        parent.offsetDescendantRectToMyCoords(view, rect)
+        pos[0] = rect.left
+        pos[1] = rect.top
         return pos
     }
 }

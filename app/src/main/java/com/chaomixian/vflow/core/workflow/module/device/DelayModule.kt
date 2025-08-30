@@ -2,12 +2,14 @@
 
 package com.chaomixian.vflow.modules.device
 
+import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.BooleanVariable
 import com.chaomixian.vflow.modules.variable.NumberVariable
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.delay
 import java.lang.Exception
 
@@ -35,6 +37,18 @@ class DelayModule : ActionModule {
         OutputDefinition("success", "是否成功", BooleanVariable::class.java)
     )
 
+    override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val durationValue = step.parameters["duration"]?.toString() ?: "1000"
+        val isVariable = durationValue.startsWith("{{")
+        val pillText = if (isVariable) "变量" else durationValue
+        return PillUtil.buildSpannable(
+            context,
+            "延迟",
+            PillUtil.Pill(pillText, isVariable),
+            " 毫秒"
+        )
+    }
+
     override fun validate(step: ActionStep): ValidationResult {
         val duration = step.parameters["duration"]
         if (duration is String) {
@@ -43,7 +57,10 @@ class DelayModule : ActionModule {
                     return ValidationResult(false, "延迟时间不能为负数")
                 }
             } catch (e: Exception) {
-                return ValidationResult(false, "无效的数字格式")
+                // 忽略魔法变量的验证
+                if (!duration.startsWith("{{")) {
+                    return ValidationResult(false, "无效的数字格式")
+                }
             }
         } else if (duration is Number && duration.toLong() < 0) {
             return ValidationResult(false, "延迟时间不能为负数")

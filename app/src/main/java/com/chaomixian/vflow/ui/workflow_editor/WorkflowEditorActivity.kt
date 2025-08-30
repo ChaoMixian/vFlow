@@ -1,5 +1,8 @@
+// main/java/com/chaomixian/vflow/ui/workflow_editor/WorkflowEditorActivity.kt
+
 package com.chaomixian.vflow.ui.workflow_editor
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -43,10 +46,8 @@ class WorkflowEditorActivity : BaseActivity() {
         workflowManager = WorkflowManager(this)
         nameEditText = findViewById(R.id.edit_text_workflow_name)
 
-        // --- 核心修改：为 Toolbar 添加返回按钮功能 ---
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar_editor)
         toolbar.setNavigationOnClickListener { finish() }
-
 
         setupRecyclerView()
         loadWorkflowData()
@@ -119,8 +120,12 @@ class WorkflowEditorActivity : BaseActivity() {
 
 
     private fun setupRecyclerView() {
+        val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+        val hideConnections = prefs.getBoolean("hideConnections", false)
+
         actionStepAdapter = ActionStepAdapter(
             actionSteps,
+            hideConnections, // 传递设置
             onEditClick = { position, inputId ->
                 val step = actionSteps[position]
                 val startPos = findBlockStartPosition(position)
@@ -144,7 +149,10 @@ class WorkflowEditorActivity : BaseActivity() {
         findViewById<RecyclerView>(R.id.recycler_view_action_steps).apply {
             layoutManager = LinearLayoutManager(this@WorkflowEditorActivity)
             adapter = actionStepAdapter
-            addItemDecoration(WorkflowConnectionDecorator(actionSteps))
+            // 只有当设置为显示连接线时，才添加装饰器
+            if (!hideConnections) {
+                addItemDecoration(WorkflowConnectionDecorator(actionSteps))
+            }
         }
     }
 

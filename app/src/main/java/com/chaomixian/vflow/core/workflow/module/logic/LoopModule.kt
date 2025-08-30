@@ -2,11 +2,13 @@
 
 package com.chaomixian.vflow.modules.logic
 
+import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.NumberVariable
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.lang.Exception
 
 const val LOOP_PAIRING_ID = "loop"
@@ -30,6 +32,19 @@ class LoopModule : ActionModule {
     )
 
     override fun getOutputs(): List<OutputDefinition> = emptyList()
+
+    override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val countValue = step.parameters["count"]?.toString() ?: "5"
+        val isVariable = countValue.startsWith("{{")
+        val pillText = if (isVariable) "变量" else countValue
+
+        return PillUtil.buildSpannable(
+            context,
+            "循环 ",
+            PillUtil.Pill(pillText, isVariable),
+            " 次"
+        )
+    }
 
     override fun createSteps(): List<ActionStep> {
         // 使用 getInputs 的默认值创建步骤
@@ -91,6 +106,8 @@ class EndLoopModule : ActionModule {
 
     override fun getInputs(): List<InputDefinition> = emptyList()
     override fun getOutputs(): List<OutputDefinition> = emptyList()
+
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束循环"
 
     override suspend fun execute(
         context: ExecutionContext,

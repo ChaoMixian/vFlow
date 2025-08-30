@@ -16,6 +16,8 @@
     <string name="settings_section_general">通用设置</string>
     <string name="settings_switch_expert_mode">专家模式</string>
     <string name="settings_switch_expert_mode_desc">启用后，将显示用于高级脚本和操作的模块。</string>
+    <string name="settings_switch_hide_connections">隐藏连接线</string>
+    <string name="settings_switch_hide_connections_desc">在工作流编辑器中，隐藏连接点和输出行，以获得更简洁的视图。</string>
 
     <string name="workflow_item_menu_duplicate">复制</string>
     <string name="workflow_item_menu_export_single">导出此工作流</string>

@@ -2,31 +2,27 @@
 
 package com.chaomixian.vflow.modules.variable
 
+import android.content.Context
 import android.os.Parcelable
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
 
-// 1. 定义模块化的、可传递的变量类型
 @Parcelize data class TextVariable(val value: String) : Parcelable
 @Parcelize data class NumberVariable(val value: Double) : Parcelable
 @Parcelize data class BooleanVariable(val value: Boolean) : Parcelable
 @Parcelize data class ListVariable(val value: @RawValue List<Any?>) : Parcelable
 @Parcelize data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelable
 
-/**
- * 设置变量模块
- */
 class SetVariableModule : ActionModule {
     override val id = "vflow.variable.set"
     override val metadata = ActionMetadata("设置变量", "创建文本、数字、布尔值等变量", R.drawable.ic_variable, "变量")
 
     private val typeOptions = listOf("文本", "数字", "布尔", "字典")
-
-    // 委托所有UI逻辑
     override val uiProvider = VariableModuleUIProvider(typeOptions)
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -43,12 +39,14 @@ class SetVariableModule : ActionModule {
             name = "值",
             staticType = ParameterType.ANY,
             defaultValue = "",
-            acceptsMagicVariable = false // 值在这个模块中是静态设置的
+            acceptsMagicVariable = false
         )
     )
 
+    // 这个模块没有静态输出，所有输出都是动态的
     override fun getOutputs(): List<OutputDefinition> = emptyList()
 
+    // 根据用户选择的类型，动态地定义输出
     override fun getDynamicOutputs(step: ActionStep): List<OutputDefinition> {
         val selectedType = step.parameters["type"] as? String
         return when (selectedType) {
@@ -58,6 +56,26 @@ class SetVariableModule : ActionModule {
             "字典" -> listOf(OutputDefinition("variable", "变量 (字典)", DictionaryVariable::class.java))
             else -> emptyList()
         }
+    }
+
+    override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val type = step.parameters["type"]?.toString() ?: "文本"
+        val value = step.parameters["value"]?.toString() ?: ""
+
+        val valuePillText = when {
+            value.isEmpty() && type != "文本" -> "..."
+            type == "文本" -> "'$value'"
+            type == "字典" -> "{...}"
+            else -> value
+        }
+
+        return PillUtil.buildSpannable(
+            context,
+            "设置变量 ",
+            PillUtil.Pill(type, false),
+            " 为 ",
+            PillUtil.Pill(valuePillText, false)
+        )
     }
 
     override suspend fun execute(

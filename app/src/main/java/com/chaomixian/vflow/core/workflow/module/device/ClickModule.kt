@@ -4,16 +4,19 @@ package com.chaomixian.vflow.modules.device
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.content.Context
 import android.graphics.Path
 import android.os.Parcelable
 import android.util.Log
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.workflow.model.ActionStep
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.parcelize.Parcelize
 import com.chaomixian.vflow.modules.variable.BooleanVariable
 import com.chaomixian.vflow.modules.variable.TextVariable
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 @Parcelize
 data class Coordinate(val x: Int, val y: Int) : Parcelable
@@ -39,6 +42,18 @@ class ClickModule : ActionModule {
     override fun getOutputs(): List<OutputDefinition> = listOf(
         OutputDefinition("success", "是否成功", BooleanVariable::class.java)
     )
+
+    override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val targetValue = step.parameters["target"]?.toString() ?: "..."
+        val isVariable = targetValue.startsWith("{{")
+        val pillText = if (isVariable) "变量" else targetValue
+
+        return PillUtil.buildSpannable(
+            context,
+            "点击 ",
+            PillUtil.Pill(pillText, isVariable)
+        )
+    }
 
     override suspend fun execute(
         context: ExecutionContext,

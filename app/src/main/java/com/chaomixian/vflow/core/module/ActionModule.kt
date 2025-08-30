@@ -63,6 +63,14 @@ interface ActionModule {
         return getOutputs()
     }
 
+    /**
+     * 新增：生成在工作流步骤卡片上显示的紧凑摘要。
+     * @param context 安卓上下文，用于访问资源。
+     * @param step 当前的动作步骤实例。
+     * @return 一个 CharSequence，可以包含 Spans 以实现富文本效果（例如 "药丸"）。
+     */
+    fun getSummary(context: Context, step: ActionStep): CharSequence? = null
+
     val uiProvider: ModuleUIProvider? get() = null
 
     fun validate(step: ActionStep): ValidationResult {

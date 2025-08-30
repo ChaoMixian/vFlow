@@ -1,11 +1,15 @@
+// main/java/com/chaomixian/vflow/core/workflow/module/logic/IfModule.kt
+
 package com.chaomixian.vflow.modules.logic
 
+import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.device.ScreenElement
 import com.chaomixian.vflow.modules.variable.*
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 const val IF_PAIRING_ID = "if"
 const val IF_START_ID = "vflow.logic.if.start"
@@ -36,6 +40,19 @@ class IfModule : ActionModule {
     override fun getOutputs(): List<OutputDefinition> = listOf(
         OutputDefinition("result", "条件结果", BooleanVariable::class.java)
     )
+
+    override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val conditionValue = step.parameters["condition"]?.toString()
+        val hasCondition = !conditionValue.isNullOrBlank()
+        val isVariable = conditionValue?.startsWith("{{") == true
+        val pillText = if (isVariable) "变量" else (if(hasCondition) "..." else "条件")
+
+        return PillUtil.buildSpannable(
+            context,
+            "如果 ",
+            PillUtil.Pill(pillText, isVariable || !hasCondition)
+        )
+    }
 
     override fun createSteps(): List<ActionStep> {
         return listOf(
@@ -82,14 +99,14 @@ class IfModule : ActionModule {
     }
 }
 
-// ... (ElseModule and EndIfModule remain the same, just add the new execute signature)
-
 class ElseModule : ActionModule {
     override val id = ELSE_ID
     override val metadata = ActionMetadata("否则", "如果条件不满足，则执行这里的操作", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, IF_PAIRING_ID, isIndividuallyDeletable = true)
     override fun getInputs(): List<InputDefinition> = emptyList()
     override fun getOutputs(): List<OutputDefinition> = emptyList()
+
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = "否则"
 
     override fun onStepDeleted(steps: MutableList<ActionStep>, position: Int): Boolean {
         if (position > 0 && position < steps.size) {
@@ -111,6 +128,8 @@ class EndIfModule : ActionModule {
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, IF_PAIRING_ID)
     override fun getInputs(): List<InputDefinition> = emptyList()
     override fun getOutputs(): List<OutputDefinition> = emptyList()
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束如果"
+
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
