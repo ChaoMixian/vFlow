@@ -1,12 +1,11 @@
 package com.chaomixian.vflow.modules.logic
 
-import android.os.Parcelable
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.device.ScreenElement
-import com.chaomixian.vflow.modules.variable.BooleanVariable
+import com.chaomixian.vflow.modules.variable.*
 
 // --- 模块ID常量，用于逻辑关联 ---
 const val IF_PAIRING_ID = "if"
@@ -19,21 +18,26 @@ class IfModule : ActionModule {
     override val metadata = ActionMetadata("如果", "根据条件执行不同的操作", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_START, IF_PAIRING_ID)
 
-    // --- 新增/修改：实现接口 ---
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "condition",
             name = "条件",
-            staticType = ParameterType.BOOLEAN, // 静态输入时是布尔值
+            staticType = ParameterType.BOOLEAN,
             acceptsMagicVariable = true,
-            // 明确声明只接受布尔类型的魔法变量
-            acceptedMagicVariableTypes = setOf(BooleanVariable::class.java)
+            // 接受所有可能的变量类型，在执行时判断其真假值
+            acceptedMagicVariableTypes = setOf(
+                BooleanVariable::class.java,
+                NumberVariable::class.java,
+                TextVariable::class.java,
+                DictionaryVariable::class.java,
+                ListVariable::class.java,
+                ScreenElement::class.java
+            )
         )
     )
     override fun getOutputs(): List<OutputDefinition> = listOf(
         OutputDefinition("result", "条件结果", BooleanVariable::class.java)
     )
-    // "如果"模块完全依赖于魔法变量输入，因此没有静态参数
     override fun getParameters(): List<ParameterDefinition> = emptyList()
 
     // createSteps 和 onStepDeleted 保持不变...
@@ -57,21 +61,23 @@ class IfModule : ActionModule {
     }
 
     override suspend fun execute(context: ExecutionContext): ActionResult {
-        // “如果”模块的核心职责是评估输入条件，并将布尔结果输出
         val condition = context.magicVariables["condition"]
+            ?: context.variables["condition"]
 
-        // 智能判断各种输入类型的真假值
         val result = when (condition) {
             is Boolean -> condition
             is BooleanVariable -> condition.value
             is Number -> condition.toDouble() != 0.0
+            is NumberVariable -> condition.value != 0.0
             is String -> condition.isNotEmpty()
+            is TextVariable -> condition.value.isNotEmpty()
             is Collection<*> -> condition.isNotEmpty()
-            is ScreenElement -> true // 如果上一步找到了元素，视为真
-            else -> condition != null // 其他非空对象也视为真
+            is ListVariable -> condition.value.isNotEmpty()
+            is Map<*,*> -> condition.isNotEmpty()
+            is DictionaryVariable -> condition.value.isNotEmpty()
+            is ScreenElement -> true
+            else -> condition != null
         }
-
-        // 执行器将根据这个输出来决定是否跳过后续步骤
         return ActionResult(true, mapOf("result" to BooleanVariable(result)))
     }
 }

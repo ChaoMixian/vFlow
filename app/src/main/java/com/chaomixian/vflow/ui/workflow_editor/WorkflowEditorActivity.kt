@@ -84,7 +84,8 @@ class WorkflowEditorActivity : BaseActivity() {
         for (i in 0 until effectivePosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId)
-            module?.getOutputs()?.forEach { outputDef ->
+            // --- 核心修改：调用 getDynamicOutputs ---
+            module?.getDynamicOutputs(step)?.forEach { outputDef ->
                 val isCompatible = targetInputDef.acceptedMagicVariableTypes.any { acceptedType ->
                     acceptedType.isAssignableFrom(outputDef.type)
                 }
