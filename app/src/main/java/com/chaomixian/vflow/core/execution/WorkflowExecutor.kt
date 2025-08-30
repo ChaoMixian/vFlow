@@ -1,3 +1,5 @@
+// main/java/com/chaomixian/vflow/core/execution/WorkflowExecutor.kt
+
 package com.chaomixian.vflow.core.execution
 
 import android.util.Log
@@ -16,8 +18,6 @@ object WorkflowExecutor {
         executorScope.launch {
             Log.d("WorkflowExecutor", "开始执行工作流: ${workflow.name}")
 
-            // 保存所有步骤的输出结果，以步骤的唯一ID作为键
-            // 值现在是一个 Map<String, Any?>，对应模块的多个输出
             val stepOutputs = mutableMapOf<String, Map<String, Any?>>()
 
             for (step in workflow.steps) {
@@ -33,19 +33,16 @@ object WorkflowExecutor {
                     accessibilityService = service
                 )
 
-                // --- 魔法变量解析 (已优化) ---
                 step.parameters.forEach { (key, value) ->
                     if (value is String && value.startsWith("{{") && value.endsWith("}}")) {
-                        // 引用格式为: "{{步骤ID.输出ID}}"
                         val parts = value.removeSurrounding("{{", "}}").split('.')
                         val sourceStepId = parts.getOrNull(0)
-                        val sourceOutputId = parts.getOrNull(1) // 获取具名的输出ID
+                        val sourceOutputId = parts.getOrNull(1)
 
                         if (sourceStepId != null && sourceOutputId != null) {
                             val sourceOutputsMap = stepOutputs[sourceStepId]
                             val sourceOutputValue = sourceOutputsMap?.get(sourceOutputId)
                             if (sourceOutputValue != null) {
-                                // 将解析到的值放入魔法变量map，供模块执行时使用
                                 context.magicVariables[key] = sourceOutputValue
                             }
                         }
@@ -54,12 +51,13 @@ object WorkflowExecutor {
 
                 Log.d("WorkflowExecutor", " -> 执行: ${module.metadata.name}")
 
-                val result = module.execute(context)
+                // --- 核心修改：更新 execute 调用以包含进度回调 ---
+                val result = module.execute(context) { progress ->
+                    // 在这里可以处理进度更新，例如通过回调更新UI
+                    Log.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progress.message}")
+                }
 
                 if (result.success) {
-                    // **【核心修复】**
-                    // 1. 将 result.output 改为 result.outputs
-                    // 2. 判断 .isNotEmpty() 而不是 != null
                     if (result.outputs.isNotEmpty()) {
                         stepOutputs[step.id] = result.outputs
                     }

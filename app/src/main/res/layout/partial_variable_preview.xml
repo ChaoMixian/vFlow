@@ -3,40 +3,26 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingTop="4dp">
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingVertical="4dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_variable_type"
-            android:alpha="0.8"/>
-
-        <TextView
-            android:id="@+id/text_view_variable_type"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textStyle="bold"
-            tools:text="类型: 文本" />
-
-    </LinearLayout>
+    <ImageView
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_variable"
+        app:tint="?attr/colorOnSurface"
+        xmlns:app="http://schemas.android.com/apk/res-auto" />
 
     <TextView
-        android:id="@+id/text_view_variable_value"
-        android:layout_width="match_parent"
+        android:id="@+id/text_view_variable_summary"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:maxLines="3"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
         android:ellipsize="end"
-        android:textAppearance="?attr/textAppearanceBodyMedium"
-        tools:text="这是一个示例文本值，可能会很长长长长长长长长长长长长长长长长长长长长长长长。" />
+        android:maxLines="2"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        tools:text="设置变量 文本 为 'Hello World'" />
 
 </LinearLayout>

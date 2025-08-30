@@ -1,6 +1,5 @@
 package com.chaomixian.vflow.modules.triggers
 
-import android.os.Parcelable
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
@@ -15,18 +14,18 @@ class ManualTriggerModule : ActionModule {
         category = "触发器"
     )
 
-    // --- 新增：实现接口 ---
     override fun getInputs(): List<InputDefinition> = emptyList()
 
-    // 触发器模块也应该有输出，表示触发成功
     override fun getOutputs(): List<OutputDefinition> = listOf(
         OutputDefinition("success", "是否成功", BooleanVariable::class.java)
     )
 
-    override fun getParameters(): List<ParameterDefinition> = emptyList()
-
-    override suspend fun execute(context: ExecutionContext): ActionResult {
-        // 手动触发总是成功的，并输出 true
+    override suspend fun execute(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ActionResult {
+        // 手动触发总是成功的
+        onProgress(ProgressUpdate("工作流被手动触发"))
         return ActionResult(success = true, outputs = mapOf("success" to BooleanVariable(true)))
     }
 }

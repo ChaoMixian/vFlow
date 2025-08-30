@@ -7,24 +7,23 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.NumberVariable
+import java.lang.Exception
 
 const val LOOP_PAIRING_ID = "loop"
 const val LOOP_START_ID = "vflow.logic.loop.start"
 const val LOOP_END_ID = "vflow.logic.loop.end"
 
-class LoopModule : ActionModule { // <-- 实现接口
+class LoopModule : ActionModule {
     override val id = LOOP_START_ID
     override val metadata = ActionMetadata("循环", "重复执行一组操作固定的次数", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_START, LOOP_PAIRING_ID)
-
-    // `getParameters` 必须为空，因为所有用户可配置项都应在 `getInputs` 中定义
-    override fun getParameters(): List<ParameterDefinition> = emptyList()
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "count",
             name = "重复次数",
             staticType = ParameterType.NUMBER,
+            defaultValue = 5,
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(NumberVariable::class.java)
         )
@@ -33,9 +32,10 @@ class LoopModule : ActionModule { // <-- 实现接口
     override fun getOutputs(): List<OutputDefinition> = emptyList()
 
     override fun createSteps(): List<ActionStep> {
-        // 提供一个默认值
+        // 使用 getInputs 的默认值创建步骤
+        val defaultParams = getInputs().associate { it.id to it.defaultValue }
         return listOf(
-            ActionStep(LOOP_START_ID, mapOf("count" to 5)),
+            ActionStep(LOOP_START_ID, defaultParams),
             ActionStep(LOOP_END_ID, emptyMap())
         )
     }
@@ -43,36 +43,62 @@ class LoopModule : ActionModule { // <-- 实现接口
     override fun onStepDeleted(steps: MutableList<ActionStep>, position: Int): Boolean {
         val endPos = findBlockEndPosition(steps, position, LOOP_START_ID, LOOP_END_ID)
         if (endPos != position) {
-            steps.subList(position, endPos + 1).clear()
+            // 从后往前删除以避免索引问题
+            for (i in endPos downTo position) {
+                steps.removeAt(i)
+            }
             return true
         }
         return false
     }
 
-    override suspend fun execute(context: ExecutionContext): ActionResult {
-        // 执行逻辑现在可以处理 NumberVariable
-        val countValue = context.magicVariables["count"]
-        val count = when (countValue) {
-            is NumberVariable -> countValue.value.toInt()
-            is Number -> countValue.toInt()
-            else -> (context.variables["count"] as? String)?.toIntOrNull() ?: 5
+    override fun validate(step: ActionStep): ValidationResult {
+        val count = step.parameters["count"]
+        val countAsLong = when (count) {
+            is String -> count.toLongOrNull()
+            is Number -> count.toLong()
+            else -> null
         }
-        // 实际的循环逻辑将在 WorkflowExecutor 中处理
+
+        if (countAsLong == null && (count as? String)?.startsWith("{{") != true) {
+            return ValidationResult(false, "无效的数字格式")
+        }
+
+        if (countAsLong != null && countAsLong <= 0) {
+            return ValidationResult(false, "循环次数必须大于0")
+        }
+
+        return ValidationResult(true)
+    }
+
+    override suspend fun execute(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ActionResult {
+        // LoopModule 的 execute 仅作为循环开始的标记。
+        // 实际的循环逻辑由 WorkflowExecutor 处理。
+        // 我们可以在这里传递一些初始信息。
+        val countValue = context.magicVariables["count"] ?: context.variables["count"]
+        onProgress(ProgressUpdate("循环开始，次数: $countValue"))
         return ActionResult(success = true)
     }
 }
 
 class EndLoopModule : ActionModule {
-    // ... EndLoopModule 保持不变 ...
     override val id = LOOP_END_ID
     override val metadata = ActionMetadata("结束循环", "", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, LOOP_PAIRING_ID)
 
     override fun getInputs(): List<InputDefinition> = emptyList()
     override fun getOutputs(): List<OutputDefinition> = emptyList()
-    override fun getParameters(): List<ParameterDefinition> = emptyList()
 
-    override suspend fun execute(context: ExecutionContext) = ActionResult(success = true)
+    override suspend fun execute(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ActionResult {
+        onProgress(ProgressUpdate("循环迭代结束"))
+        return ActionResult(success = true)
+    }
 }
 
 private fun findBlockEndPosition(steps: List<ActionStep>, startPosition: Int, startId: String, endId: String): Int {

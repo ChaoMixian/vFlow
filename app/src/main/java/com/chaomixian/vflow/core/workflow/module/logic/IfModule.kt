@@ -7,7 +7,6 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.device.ScreenElement
 import com.chaomixian.vflow.modules.variable.*
 
-// --- 模块ID常量，用于逻辑关联 ---
 const val IF_PAIRING_ID = "if"
 const val IF_START_ID = "vflow.logic.if.start"
 const val ELSE_ID = "vflow.logic.if.middle"
@@ -24,7 +23,6 @@ class IfModule : ActionModule {
             name = "条件",
             staticType = ParameterType.BOOLEAN,
             acceptsMagicVariable = true,
-            // 接受所有可能的变量类型，在执行时判断其真假值
             acceptedMagicVariableTypes = setOf(
                 BooleanVariable::class.java,
                 NumberVariable::class.java,
@@ -38,9 +36,7 @@ class IfModule : ActionModule {
     override fun getOutputs(): List<OutputDefinition> = listOf(
         OutputDefinition("result", "条件结果", BooleanVariable::class.java)
     )
-    override fun getParameters(): List<ParameterDefinition> = emptyList()
 
-    // createSteps 和 onStepDeleted 保持不变...
     override fun createSteps(): List<ActionStep> {
         return listOf(
             ActionStep(IF_START_ID, emptyMap()),
@@ -60,7 +56,10 @@ class IfModule : ActionModule {
         return false
     }
 
-    override suspend fun execute(context: ExecutionContext): ActionResult {
+    override suspend fun execute(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ActionResult {
         val condition = context.magicVariables["condition"]
             ?: context.variables["condition"]
 
@@ -78,18 +77,19 @@ class IfModule : ActionModule {
             is ScreenElement -> true
             else -> condition != null
         }
+        onProgress(ProgressUpdate("条件判断结果: $result"))
         return ActionResult(true, mapOf("result" to BooleanVariable(result)))
     }
 }
+
+// ... (ElseModule and EndIfModule remain the same, just add the new execute signature)
 
 class ElseModule : ActionModule {
     override val id = ELSE_ID
     override val metadata = ActionMetadata("否则", "如果条件不满足，则执行这里的操作", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, IF_PAIRING_ID, isIndividuallyDeletable = true)
-    // --- 新增：实现接口 ---
     override fun getInputs(): List<InputDefinition> = emptyList()
     override fun getOutputs(): List<OutputDefinition> = emptyList()
-    override fun getParameters(): List<ParameterDefinition> = emptyList()
 
     override fun onStepDeleted(steps: MutableList<ActionStep>, position: Int): Boolean {
         if (position > 0 && position < steps.size) {
@@ -99,23 +99,25 @@ class ElseModule : ActionModule {
         return false
     }
 
-    override suspend fun execute(context: ExecutionContext) = ActionResult(success = true)
+    override suspend fun execute(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ) = ActionResult(success = true)
 }
 
 class EndIfModule : ActionModule {
     override val id = IF_END_ID
     override val metadata = ActionMetadata("结束如果", "", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, IF_PAIRING_ID)
-
-    // --- 新增：实现接口 ---
     override fun getInputs(): List<InputDefinition> = emptyList()
     override fun getOutputs(): List<OutputDefinition> = emptyList()
-    override fun getParameters(): List<ParameterDefinition> = emptyList()
-
-    override suspend fun execute(context: ExecutionContext) = ActionResult(success = true)
+    override suspend fun execute(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ) = ActionResult(success = true)
 }
 
-// 辅助函数保持不变...
+
 private fun findBlockEndPosition(steps: List<ActionStep>, startPosition: Int, startId: String, endId: String): Int {
     var openBlocks = 1
     for (i in (startPosition + 1) until steps.size) {

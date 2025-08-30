@@ -17,7 +17,8 @@ import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.ui.common.BaseActivity
-import com.google.android.material.appbar.AppBarLayout // <-- 核心修复：添加缺失的 import
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.appbar.MaterialToolbar
 import java.util.*
 
 class WorkflowEditorActivity : BaseActivity() {
@@ -42,6 +43,11 @@ class WorkflowEditorActivity : BaseActivity() {
         workflowManager = WorkflowManager(this)
         nameEditText = findViewById(R.id.edit_text_workflow_name)
 
+        // --- 核心修改：为 Toolbar 添加返回按钮功能 ---
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar_editor)
+        toolbar.setNavigationOnClickListener { finish() }
+
+
         setupRecyclerView()
         loadWorkflowData()
         setupDragAndDrop()
@@ -51,7 +57,6 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
-        // --- 核心修复：调用正确的 newInstance 方法 ---
         val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId)
         currentEditorSheet = editor
 
@@ -84,7 +89,6 @@ class WorkflowEditorActivity : BaseActivity() {
         for (i in 0 until effectivePosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId)
-            // --- 核心修改：调用 getDynamicOutputs ---
             module?.getDynamicOutputs(step)?.forEach { outputDef ->
                 val isCompatible = targetInputDef.acceptedMagicVariableTypes.any { acceptedType ->
                     acceptedType.isAssignableFrom(outputDef.type)
@@ -113,7 +117,6 @@ class WorkflowEditorActivity : BaseActivity() {
         picker.show(supportFragmentManager, "MagicVariablePicker")
     }
 
-    // --- 其他方法保持不变，这里为了完整性全部列出 ---
 
     private fun setupRecyclerView() {
         actionStepAdapter = ActionStepAdapter(
@@ -297,23 +300,33 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun recalculateAllIndentation() {
         val indentStack = Stack<Pair<String, String?>>()
-        for (i in 1 until actionSteps.size) {
+        var currentIndent = 0
+        for (i in 0 until actionSteps.size) {
             val step = actionSteps[i]
             val behavior = getBlockBehavior(step)
 
-            if (behavior.type == BlockType.BLOCK_END || behavior.type == BlockType.BLOCK_MIDDLE) {
+            if (behavior.type == BlockType.BLOCK_END) {
                 if (indentStack.isNotEmpty() && indentStack.peek().second == behavior.pairingId) {
                     indentStack.pop()
+                    currentIndent = indentStack.size
+                }
+            }
+            else if (behavior.type == BlockType.BLOCK_MIDDLE) {
+                if (indentStack.isNotEmpty() && indentStack.peek().second == behavior.pairingId) {
+                    // Don't pop for middle, just align with the start
+                    currentIndent = indentStack.size -1
                 }
             }
 
-            step.indentationLevel = indentStack.size
+            step.indentationLevel = currentIndent
 
-            if (behavior.type == BlockType.BLOCK_START || behavior.type == BlockType.BLOCK_MIDDLE) {
+            if (behavior.type == BlockType.BLOCK_START) {
                 indentStack.push(Pair(step.moduleId, behavior.pairingId))
+                currentIndent = indentStack.size
             }
         }
     }
+
 
     private fun getBlockBehavior(step: ActionStep): BlockBehavior {
         return ModuleRegistry.getModule(step.moduleId)?.blockBehavior ?: BlockBehavior(BlockType.NONE)

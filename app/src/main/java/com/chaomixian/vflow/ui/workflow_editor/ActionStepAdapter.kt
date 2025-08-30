@@ -13,11 +13,11 @@ import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.ModuleRegistry
-import com.chaomixian.vflow.core.module.ModuleWithPreview
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.card.MaterialCardView
 import java.util.*
@@ -60,99 +60,91 @@ class ActionStepAdapter(
         val deleteButton: ImageButton = itemView.findViewById(R.id.button_delete_action)
         private val cardView: MaterialCardView = itemView.findViewById(R.id.card_action_item)
         private val indentSpace: Space = itemView.findViewById(R.id.indent_space)
-        private val inputsContainer: LinearLayout = itemView.findViewById(R.id.container_inputs)
-        private val outputsContainer: LinearLayout = itemView.findViewById(R.id.container_outputs)
-        private val previewContainer: LinearLayout = itemView.findViewById(R.id.container_preview)
-        // 获取对标题栏容器的引用
+        private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container)
         private val headerContainer: View = itemView.findViewById(R.id.header_container)
-
 
         fun bind(step: ActionStep, position: Int) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
 
-            // 1. 设置基础信息
             nameTextView.text = module.metadata.name
             actionIcon.setImageResource(module.metadata.iconRes)
             indentSpace.layoutParams.width = (step.indentationLevel * 24 * context.resources.displayMetrics.density).toInt()
             val categoryColor = ContextCompat.getColor(context, getCategoryColor(module.metadata.category))
             cardView.setCardBackgroundColor(categoryColor)
 
-            // 2. 设置点击事件
             cardView.setOnClickListener {
                 if (adapterPosition != RecyclerView.NO_POSITION) {
                     onEditClick(adapterPosition, null)
                 }
             }
 
-            // 3. 清空所有动态容器
-            previewContainer.removeAllViews()
-            inputsContainer.removeAllViews()
-            outputsContainer.removeAllViews()
+            contentContainer.removeAllViews()
 
-            // 4. 通用预览逻辑
+            val uiProvider = module.uiProvider
             var hasCustomPreview = false
-            if (module is ModuleWithPreview) {
-                val previewView = module.createPreviewView(context, previewContainer, step)
+            if (uiProvider != null) {
+                val previewView = uiProvider.createPreview(context, contentContainer, step)
                 if (previewView != null) {
-                    previewContainer.addView(previewView)
+                    contentContainer.addView(previewView)
                     hasCustomPreview = true
                 }
             }
 
-            // --- 核心修复：确保标题栏总是可见，只控制预览容器的可见性 ---
-            headerContainer.visibility = View.VISIBLE
-            previewContainer.visibility = if (hasCustomPreview) View.VISIBLE else View.GONE
+            headerContainer.isVisible = !hasCustomPreview
+            (contentContainer.layoutParams as ViewGroup.MarginLayoutParams).topMargin = if(hasCustomPreview) (12 * context.resources.displayMetrics.density).toInt() else 0
 
-
-            // 5. 动态填充输入区域
+            // --- 核心修复：改进药丸显示逻辑 ---
             module.getInputs().forEach { inputDef ->
-                val row = LayoutInflater.from(context).inflate(R.layout.row_action_parameter, inputsContainer, false)
+                val row = LayoutInflater.from(context).inflate(R.layout.row_action_parameter, contentContainer, false)
 
+                val paramName = row.findViewById<TextView>(R.id.parameter_name)
                 val inputNode = row.findViewById<ImageView>(R.id.input_node)
+                val valueContainer = row.findViewById<FrameLayout>(R.id.parameter_value_container)
+
                 inputNode.visibility = View.VISIBLE
                 inputNode.tag = "input_${step.id}_${inputDef.id}"
+                paramName.text = inputDef.name
 
-                val valueContainer = row.findViewById<FrameLayout>(R.id.parameter_value_container)
                 val paramValue = step.parameters[inputDef.id]
                 val valueStr = paramValue?.toString()
 
-                val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
-                val pillText = pill.findViewById<TextView>(R.id.pill_text)
-                val pillBackground = pill.background.mutate() as android.graphics.drawable.GradientDrawable
-
                 if (!valueStr.isNullOrBlank()) {
+                    valueContainer.isVisible = true
+                    val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
+                    val pillText = pill.findViewById<TextView>(R.id.pill_text)
+                    val pillBackground = pill.background.mutate() as android.graphics.drawable.GradientDrawable
+
                     if (valueStr.startsWith("{{")) {
                         pillText.text = "已连接变量"
                         pillBackground.setColor(ContextCompat.getColor(context, R.color.variable_pill_color))
                     } else {
-                        pillText.text = "${inputDef.name}: ${valueStr}"
+                        // 静态值显示为灰色药丸
+                        pillText.text = valueStr
                         pillBackground.setColor(ContextCompat.getColor(context, R.color.static_pill_color))
                     }
+                    valueContainer.addView(pill)
                 } else {
-                    pillText.text = inputDef.name
-                    pillBackground.setColor(ContextCompat.getColor(context, R.color.static_pill_color))
+                    valueContainer.isVisible = false
                 }
 
-                valueContainer.addView(pill)
-                valueContainer.setOnClickListener {
+                row.setOnClickListener {
                     if (adapterPosition != RecyclerView.NO_POSITION) {
                         onEditClick(adapterPosition, inputDef.id)
                     }
                 }
-                inputsContainer.addView(row)
+                contentContainer.addView(row)
             }
 
-            // 6. 使用 getDynamicOutputs 渲染输出连接点
+
             module.getDynamicOutputs(step).forEach { outputDef ->
-                val row = LayoutInflater.from(context).inflate(R.layout.row_action_parameter, outputsContainer, false)
+                val row = LayoutInflater.from(context).inflate(R.layout.row_action_parameter, contentContainer, false)
                 row.findViewById<TextView>(R.id.parameter_name).text = outputDef.name
                 val outputNode = row.findViewById<ImageView>(R.id.output_node)
                 outputNode.visibility = View.VISIBLE
                 outputNode.tag = "output_${step.id}_${outputDef.id}"
-                outputsContainer.addView(row)
+                contentContainer.addView(row)
             }
 
-            // 7. 设置删除按钮可见性
             val behavior = module.blockBehavior
             val isDeletable = when {
                 position == 0 -> false

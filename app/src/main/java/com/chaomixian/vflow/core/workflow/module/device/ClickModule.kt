@@ -28,11 +28,10 @@ class ClickModule : ActionModule {
             name = "目标",
             staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
-            // 明确声明可接受的魔法变量类型
             acceptedMagicVariableTypes = setOf(
                 ScreenElement::class.java,
                 Coordinate::class.java,
-                TextVariable::class.java // 用于 "x,y" 格式的字符串
+                TextVariable::class.java
             )
         )
     )
@@ -41,11 +40,12 @@ class ClickModule : ActionModule {
         OutputDefinition("success", "是否成功", BooleanVariable::class.java)
     )
 
-    override fun getParameters(): List<ParameterDefinition> = emptyList()
-
-    override suspend fun execute(context: ExecutionContext): ActionResult {
+    override suspend fun execute(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ActionResult {
         val target = context.magicVariables["target"]
-            ?: context.variables["target"] // 也检查静态参数
+            ?: context.variables["target"]
 
         val coordinate: Coordinate? = when (target) {
             is ScreenElement -> Coordinate(target.bounds.centerX(), target.bounds.centerY())
@@ -59,6 +59,8 @@ class ClickModule : ActionModule {
             Log.w("ClickModule", "没有有效的点击目标。")
             return ActionResult(true, mapOf("success" to BooleanVariable(false)))
         }
+
+        onProgress(ProgressUpdate("正在点击坐标: (${coordinate.x}, ${coordinate.y})"))
 
         val service = context.accessibilityService
         val path = Path().apply { moveTo(coordinate.x.toFloat(), coordinate.y.toFloat()) }
@@ -76,7 +78,6 @@ class ClickModule : ActionModule {
         return ActionResult(true, mapOf("success" to BooleanVariable(clickSuccess)))
     }
 
-    // 辅助扩展函数，用于从 "x,y" 格式的字符串解析坐标
     private fun String.toCoordinate(): Coordinate? {
         return try {
             val parts = this.split(',')

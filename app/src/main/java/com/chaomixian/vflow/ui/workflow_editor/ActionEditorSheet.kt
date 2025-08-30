@@ -7,20 +7,11 @@ import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.widget.*
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.module.ActionModule
-import com.chaomixian.vflow.core.module.CustomEditorViewHolder
-import com.chaomixian.vflow.core.module.InputDefinition
-import com.chaomixian.vflow.core.module.ModuleWithCustomEditor
-import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.textfield.TextInputLayout
@@ -32,10 +23,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     var onSave: ((ActionStep) -> Unit)? = null
     var onMagicVariableRequested: ((inputId: String) -> Unit)? = null
 
-    // 用于存储通用输入控件或自定义UI的ViewHolder
     private val inputViews = mutableMapOf<String, View>()
     private var customEditorHolder: CustomEditorViewHolder? = null
-
     private val currentParameters = mutableMapOf<String, Any?>()
 
     companion object {
@@ -57,9 +46,10 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val moduleId = arguments?.getString("moduleId")
-        module = moduleId?.let { com.chaomixian.vflow.core.module.ModuleRegistry.getModule(it) } ?: return dismiss()
+        module = moduleId?.let { ModuleRegistry.getModule(it) } ?: return dismiss()
         existingStep = arguments?.getParcelable("existingStep")
-        currentParameters.putAll(existingStep?.parameters ?: module.getParameters().associate { it.id to it.defaultValue })
+        currentParameters.putAll(module.getInputs().associate { it.id to it.defaultValue }.filterValues { it != null })
+        existingStep?.parameters?.let { currentParameters.putAll(it) }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -69,15 +59,20 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val saveButton = view.findViewById<Button>(R.id.button_save)
 
         title.text = "编辑 ${module.metadata.name}"
-
         buildUi(paramsContainer)
 
         saveButton.setOnClickListener {
             readParametersFromUi()
             val newStep = existingStep?.copy(parameters = currentParameters)
                 ?: ActionStep(moduleId = module.id, parameters = currentParameters)
-            onSave?.invoke(newStep)
-            dismiss()
+
+            val validationResult = module.validate(newStep)
+            if (validationResult.isValid) {
+                onSave?.invoke(newStep)
+                dismiss()
+            } else {
+                Toast.makeText(context, validationResult.errorMessage, Toast.LENGTH_LONG).show()
+            }
         }
         return view
     }
@@ -85,61 +80,41 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     fun updateInputWithVariable(inputId: String, variableReference: String) {
         currentParameters[inputId] = variableReference
         view?.findViewById<LinearLayout>(R.id.container_action_params)?.let {
-            buildUi(it) // 重新构建整个UI以显示"药丸"
+            buildUi(it)
         }
     }
 
-    // --- 通用UI构建逻辑 ---
+    // --- 最终的、完全解耦的UI构建逻辑 ---
     private fun buildUi(container: LinearLayout) {
         container.removeAllViews()
         inputViews.clear()
         customEditorHolder = null
 
-        // 检查模块是否提供自定义UI
-        if (module is ModuleWithCustomEditor) {
-            val customModule = module as ModuleWithCustomEditor
-            customEditorHolder = customModule.createEditorView(requireContext(), container, currentParameters) {
-                // 当自定义UI内部状态改变时，立即从UI读取参数，确保数据同步
+        val uiProvider = module.uiProvider
+        val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
+
+        // 1. 如果有自定义UI，先渲染它
+        if (uiProvider != null) {
+            customEditorHolder = uiProvider.createEditor(requireContext(), container, currentParameters) {
                 readParametersFromUi()
             }
             container.addView(customEditorHolder!!.view)
-        } else {
-            // 如果没有，则根据 getParameters() 生成标准UI
-            module.getParameters().forEach { paramDef ->
-                val paramView = createViewForParameter(paramDef)
-                container.addView(paramView)
-                inputViews[paramDef.id] = paramView
-            }
         }
 
-        // 总是为 getInputs() 创建UI，用于魔法变量连接
+        // 2. 遍历所有输入，只为那些没有被自定义UI处理过的输入创建通用UI
         module.getInputs().forEach { inputDef ->
-            val inputRow = createViewForInput(inputDef, container)
-            container.addView(inputRow)
-            inputViews[inputDef.id] = inputRow // 这里保存的是整行View
-        }
-    }
-
-    // 创建标准参数的UI (用于没有自定义编辑器的模块)
-    private fun createViewForParameter(paramDef: com.chaomixian.vflow.core.module.ParameterDefinition): View {
-        val currentValue = currentParameters[paramDef.id]
-        return when (paramDef.type) {
-            ParameterType.BOOLEAN -> SwitchCompat(requireContext()).apply {
-                text = paramDef.name
-                isChecked = currentValue as? Boolean ?: false
-            }
-            else -> TextInputLayout(requireContext()).apply { // 字符串、数字等
-                hint = paramDef.name
-                val editText = EditText(context).apply {
-                    setText(currentValue?.toString() ?: "")
-                    inputType = if (paramDef.type == ParameterType.NUMBER) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
+            if (!handledInputIds.contains(inputDef.id)) {
+                val inputView = if (inputDef.acceptsMagicVariable) {
+                    createViewForInput(inputDef, container)
+                } else {
+                    createViewForStaticParameter(inputDef)
                 }
-                addView(editText)
+                container.addView(inputView)
+                inputViews[inputDef.id] = inputView
             }
         }
     }
 
-    // 创建输入参数（魔法变量连接点）的UI (通用逻辑)
     private fun createViewForInput(inputDef: InputDefinition, parent: ViewGroup): View {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, parent, false)
         row.findViewById<TextView>(R.id.input_name).text = inputDef.name
@@ -159,49 +134,104 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             pill.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
             valueContainer.addView(pill)
         } else {
-            val textInputLayout = TextInputLayout(requireContext())
-            val editText = EditText(context).apply {
-                setText(currentValue?.toString() ?: "")
-                hint = "输入值..."
-            }
-            textInputLayout.addView(editText)
-            valueContainer.addView(textInputLayout)
+            val staticInputView = createBaseViewForInputType(inputDef, currentValue)
+            valueContainer.addView(staticInputView)
         }
         return row
     }
 
-    // --- 通用UI读取逻辑 ---
-    private fun readParametersFromUi() {
-        // 如果有自定义UI，从自定义UI读取
-        if (module is ModuleWithCustomEditor && customEditorHolder != null) {
-            val customParams = (module as ModuleWithCustomEditor).readParametersFromEditorView(customEditorHolder!!)
-            currentParameters.putAll(customParams)
-        } else {
-            // 否则，从标准UI控件读取
-            inputViews.forEach { (id, view) ->
-                if (module.getParameters().any{it.id == id}) { // 只读取静态参数
-                    val value = when (view) {
-                        is SwitchCompat -> view.isChecked
-                        is TextInputLayout -> view.editText?.text?.toString() ?: ""
-                        else -> null
-                    }
-                    if (value != null) currentParameters[id] = value
+    private fun createViewForStaticParameter(paramDef: InputDefinition): View {
+        val currentValue = currentParameters[paramDef.id]
+        val view = when (paramDef.staticType) {
+            ParameterType.BOOLEAN -> SwitchCompat(requireContext()).apply {
+                text = paramDef.name
+                isChecked = currentValue as? Boolean ?: (paramDef.defaultValue as? Boolean ?: false)
+            }
+            ParameterType.ENUM -> LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, 8, 0, 8)
+                val label = TextView(context).apply {
+                    text = paramDef.name
+                    setTextAppearance(android.R.style.TextAppearance_Material_Body2)
                 }
+                val spinner = Spinner(context).apply {
+                    adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, paramDef.options).also {
+                        it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    }
+                    val currentEnum = currentValue as? String ?: paramDef.defaultValue as? String
+                    val selectionIndex = paramDef.options.indexOf(currentEnum)
+                    if (selectionIndex != -1) setSelection(selectionIndex)
+                }
+                addView(label)
+                addView(spinner)
+            }
+            else -> TextInputLayout(requireContext()).apply {
+                hint = paramDef.name
+                val editText = EditText(context).apply {
+                    setText(currentValue?.toString() ?: paramDef.defaultValue?.toString() ?: "")
+                    inputType = if (paramDef.staticType == ParameterType.NUMBER) InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED else InputType.TYPE_CLASS_TEXT
+                }
+                addView(editText)
             }
         }
+        view.tag = paramDef.id
+        return view
+    }
 
-        // 总是从输入行中读取可能存在的静态值
+    private fun createBaseViewForInputType(inputDef: InputDefinition, currentValue: Any?): View {
+        return when (inputDef.staticType) {
+            ParameterType.BOOLEAN -> SwitchCompat(requireContext()).apply {
+                isChecked = currentValue as? Boolean ?: (inputDef.defaultValue as? Boolean ?: false)
+            }
+            ParameterType.ENUM -> Spinner(requireContext()).apply {
+                adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, inputDef.options).also {
+                    it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                }
+                val currentEnum = currentValue as? String ?: inputDef.defaultValue as? String
+                val selectionIndex = inputDef.options.indexOf(currentEnum)
+                if (selectionIndex != -1) setSelection(selectionIndex)
+            }
+            else -> TextInputLayout(requireContext()).apply {
+                val editText = EditText(context).apply {
+                    setText(currentValue?.toString() ?: inputDef.defaultValue?.toString() ?: "")
+                    hint = "输入值..."
+                    inputType = if (inputDef.staticType == ParameterType.NUMBER) InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED else InputType.TYPE_CLASS_TEXT
+                }
+                addView(editText)
+            }
+        }
+    }
+
+    private fun readParametersFromUi() {
+        val uiProvider = module.uiProvider
+        if (uiProvider != null && customEditorHolder != null) {
+            val customParams = uiProvider.readFromEditor(customEditorHolder!!)
+            currentParameters.putAll(customParams)
+        }
+
         inputViews.forEach { (id, view) ->
-            if (module.getInputs().any{it.id == id}) { // 只读取输入参数
-                // 仅当当前值不是魔法变量引用时，才尝试从UI读取
-                if ((currentParameters[id] as? String)?.startsWith("{{") != true) {
+            if ((currentParameters[id] as? String)?.startsWith("{{") == true) {
+                return@forEach
+            }
+
+            val value: Any? = when(view) {
+                is TextInputLayout -> view.editText?.text?.toString()
+                is SwitchCompat -> view.isChecked
+                is LinearLayout -> (view.getChildAt(1) as? Spinner)?.selectedItem?.toString()
+                is RelativeLayout -> {
                     val valueContainer = view.findViewById<FrameLayout>(R.id.input_value_container)
-                    val textInputLayout = valueContainer?.getChildAt(0) as? TextInputLayout
-                    val text = textInputLayout?.editText?.text?.toString()
-                    if (text != null) {
-                        currentParameters[id] = text
+                    when(val staticView = valueContainer.getChildAt(0)) {
+                        is TextInputLayout -> staticView.editText?.text?.toString()
+                        is SwitchCompat -> staticView.isChecked
+                        is Spinner -> staticView.selectedItem?.toString()
+                        else -> null
                     }
                 }
+                else -> null
+            }
+
+            if (value != null) {
+                currentParameters[id] = value
             }
         }
     }
