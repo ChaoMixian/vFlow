@@ -41,7 +41,7 @@ class LoopModule : ActionModule {
         return PillUtil.buildSpannable(
             context,
             "循环 ",
-            PillUtil.Pill(pillText, isVariable),
+            PillUtil.Pill(pillText, isVariable, parameterId = "count"),
             " 次"
         )
     }
@@ -116,18 +116,4 @@ class EndLoopModule : ActionModule {
         onProgress(ProgressUpdate("循环迭代结束"))
         return ActionResult(success = true)
     }
-}
-
-private fun findBlockEndPosition(steps: List<ActionStep>, startPosition: Int, startId: String, endId: String): Int {
-    var openBlocks = 1
-    for (i in (startPosition + 1) until steps.size) {
-        val currentId = steps[i].moduleId
-        if (currentId == startId) {
-            openBlocks++
-        } else if (currentId == endId) {
-            openBlocks--
-            if (openBlocks == 0) return i
-        }
-    }
-    return startPosition
 }

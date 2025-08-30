@@ -50,7 +50,7 @@ class IfModule : ActionModule {
         return PillUtil.buildSpannable(
             context,
             "如果 ",
-            PillUtil.Pill(pillText, isVariable || !hasCondition)
+            PillUtil.Pill(pillText, isVariable || !hasCondition, parameterId = "condition")
         )
     }
 
@@ -137,7 +137,7 @@ class EndIfModule : ActionModule {
 }
 
 
-private fun findBlockEndPosition(steps: List<ActionStep>, startPosition: Int, startId: String, endId: String): Int {
+internal fun findBlockEndPosition(steps: List<ActionStep>, startPosition: Int, startId: String, endId: String): Int {
     var openBlocks = 1
     for (i in (startPosition + 1) until steps.size) {
         val currentId = steps[i].moduleId

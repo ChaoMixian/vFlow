@@ -72,9 +72,9 @@ class SetVariableModule : ActionModule {
         return PillUtil.buildSpannable(
             context,
             "设置变量 ",
-            PillUtil.Pill(type, false),
+            PillUtil.Pill(type, false, parameterId = "type"),
             " 为 ",
-            PillUtil.Pill(valuePillText, false)
+            PillUtil.Pill(valuePillText, false, parameterId = "value")
         )
     }
 

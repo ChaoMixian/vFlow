@@ -41,10 +41,11 @@ class DelayModule : ActionModule {
         val durationValue = step.parameters["duration"]?.toString() ?: "1000"
         val isVariable = durationValue.startsWith("{{")
         val pillText = if (isVariable) "变量" else durationValue
+
         return PillUtil.buildSpannable(
             context,
-            "延迟",
-            PillUtil.Pill(pillText, isVariable),
+            "延迟 ",
+            PillUtil.Pill(pillText, isVariable, parameterId = "duration"),
             " 毫秒"
         )
     }

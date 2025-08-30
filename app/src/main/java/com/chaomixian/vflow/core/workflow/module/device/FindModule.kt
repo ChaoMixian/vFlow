@@ -61,9 +61,9 @@ class FindTextModule : ActionModule {
         return PillUtil.buildSpannable(
             context,
             "查找文本 ",
-            PillUtil.Pill(mode, isVariable = false),
+            PillUtil.Pill(mode, isVariable = false, parameterId = "matchMode"),
             " 的 ",
-            PillUtil.Pill(targetPillText, isVariable)
+            PillUtil.Pill(targetPillText, isVariable, parameterId = "targetText")
         )
     }
 

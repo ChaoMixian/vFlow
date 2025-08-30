@@ -39,7 +39,7 @@ interface ModuleUIProvider {
     fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?>
 
     /**
-     * 核心修复：声明此UI提供者处理了哪些输入的UI渲染。
+     * 声明此UI提供者处理了哪些输入的UI渲染。
      * ActionEditorSheet 将不会为这些ID创建通用的UI。
      * @return 一个包含输入ID的Set。
      */
@@ -64,7 +64,7 @@ interface ActionModule {
     }
 
     /**
-     * 新增：生成在工作流步骤卡片上显示的紧凑摘要。
+     * 生成在工作流步骤卡片上显示的紧凑摘要。
      * @param context 安卓上下文，用于访问资源。
      * @param step 当前的动作步骤实例。
      * @return 一个 CharSequence，可以包含 Spans 以实现富文本效果（例如 "药丸"）。

@@ -51,7 +51,7 @@ class ClickModule : ActionModule {
         return PillUtil.buildSpannable(
             context,
             "点击 ",
-            PillUtil.Pill(pillText, isVariable)
+            PillUtil.Pill(pillText, isVariable, parameterId = "target")
         )
     }
 
