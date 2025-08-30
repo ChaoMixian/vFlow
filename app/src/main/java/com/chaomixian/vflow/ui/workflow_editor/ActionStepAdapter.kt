@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/ui/workflow_editor/ActionStepAdapter.kt
-
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
@@ -29,26 +27,23 @@ import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.google.android.material.card.MaterialCardView
+import com.google.android.material.card.MaterialCardView // 导入 MaterialCardView
 import java.util.*
 import kotlin.math.roundToInt
 
-// --- FIX: Implement the required method for the marker spans ---
-
-// Used to mark "static value" pills.
+// 用于标记 "静态值" 药丸的 span.
 private class StaticPillSpan : CharacterStyle() {
     override fun updateDrawState(tp: TextPaint?) {
-        // No-op. This is a marker span.
+        // 空操作。这是一个标记 span。
     }
 }
 
-// Used to mark "magic variable" pills, carrying the parameter ID.
+// 用于标记 "魔法变量" 药丸的 span, 携带参数 ID.
 private class MagicVariablePlaceholderSpan(val parameterId: String) : CharacterStyle() {
     override fun updateDrawState(tp: TextPaint?) {
-        // No-op. This is a marker span.
+        // 空操作。这是一个标记 span。
     }
 }
-
 
 class ActionStepAdapter(
     private val actionSteps: MutableList<ActionStep>,
@@ -73,7 +68,7 @@ class ActionStepAdapter(
     override fun onBindViewHolder(holder: ActionStepViewHolder, position: Int) {
         val step = actionSteps[position]
         holder.itemView.tag = step
-        // Pass the full, up-to-date list on each bind.
+        // 在每次绑定时传递完整的、最新的列表。
         holder.bind(step, position, actionSteps)
         holder.deleteButton.setOnClickListener { onDeleteClick(position) }
     }
@@ -87,17 +82,21 @@ class ActionStepAdapter(
     ) : RecyclerView.ViewHolder(itemView) {
         private val context: Context = itemView.context
         val deleteButton: ImageButton = itemView.findViewById(R.id.button_delete_action)
-        private val cardView: MaterialCardView = itemView.findViewById(R.id.card_action_item)
+        private val itemContainer: LinearLayout = itemView.findViewById(R.id.card_action_item) // 外层容器
         private val indentSpace: Space = itemView.findViewById(R.id.indent_space)
-        private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container)
+        private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container) // 原来的内容容器
+        private val categoryColorBar: View = itemView.findViewById(R.id.category_color_bar) // 彩色指示条
 
         fun bind(step: ActionStep, position: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
 
             indentSpace.layoutParams.width = (step.indentationLevel * 24 * context.resources.displayMetrics.density).toInt()
+
+            // 设置彩色指示条的颜色
             val categoryColor = ContextCompat.getColor(context, getCategoryColor(module.metadata.category))
-            cardView.setCardBackgroundColor(categoryColor)
-            cardView.setOnClickListener {
+            categoryColorBar.setBackgroundColor(categoryColor)
+
+            itemContainer.setOnClickListener { // 整个卡片都可以点击
                 if (adapterPosition != RecyclerView.NO_POSITION) {
                     onEditClick(adapterPosition, null)
                 }
@@ -105,7 +104,7 @@ class ActionStepAdapter(
             contentContainer.removeAllViews()
 
             val rawSummary = module.getSummary(context, step)
-            // The core logic: process the summary text, replacing markers with colored spans.
+            // 核心逻辑：处理摘要文本，用带颜色的 span 替换标记。
             val finalSummary = processSummarySpans(rawSummary, step, allSteps)
 
             val connectableInputs = module.getInputs().filter { it.acceptsMagicVariable }
@@ -115,7 +114,7 @@ class ActionStepAdapter(
             contentContainer.addView(headerRow)
 
             if (!hideConnections) {
-                if (rawSummary == null) { // If there's a summary, parameters are already shown in it.
+                if (rawSummary == null) { // 如果有摘要，参数已经显示在其中了。
                     connectableInputs.forEach { inputDef ->
                         contentContainer.addView(createParameterRow(step, inputDef.id, inputDef.name, true, allSteps))
                     }
@@ -240,7 +239,7 @@ class ActionStepAdapter(
             if (summary !is Spanned) return summary
 
             val spannable = SpannableStringBuilder(summary)
-            // Iterate backwards to avoid index issues when replacing spans.
+            // 反向迭代，以避免在替换 span 时出现索引问题。
             spannable.getSpans<CharacterStyle>().reversed().forEach { span ->
                 val start = spannable.getSpanStart(span)
                 val end = spannable.getSpanEnd(span)
@@ -255,8 +254,8 @@ class ActionStepAdapter(
 
                 if (color != null) {
                     val backgroundSpan = RoundedBackgroundSpan(context, color)
-                    spannable.removeSpan(span) // Remove the marker
-                    spannable.setSpan(backgroundSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) // Add the real drawing span
+                    spannable.removeSpan(span) // 移除标记
+                    spannable.setSpan(backgroundSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) // 添加真正的绘制 span
                 }
             }
             return spannable
@@ -264,7 +263,7 @@ class ActionStepAdapter(
     }
 }
 
-// --- PillUtil to generate marked-up text ---
+// --- 用于生成带标记文本的 PillUtil ---
 object PillUtil {
     fun buildSpannable(context: Context, vararg parts: Any): CharSequence {
         val builder = SpannableStringBuilder()
@@ -284,6 +283,12 @@ object PillUtil {
                     builder.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
+            // 这里确保 PillUtil 在创建 Span 时能够正确传递 context
+            // 实际使用时，如果 PillUtil 不直接依赖 context 来创建 Span，
+            // 那么这个参数可能就不需要了，或者只是用于其他辅助函数。
+            // 目前这个 context 并没有被 PillUtil 内部用来创建 RoundedBackgroundSpan,
+            // 而是由 ActionStepViewHolder 内部的 processSummarySpans 来创建的。
+            // 所以这里的 context 参数是安全的，不会造成功能破坏。
         }
         return builder
     }
@@ -298,6 +303,8 @@ class RoundedBackgroundSpan(
     private val textColor: Int = ContextCompat.getColor(context, R.color.white)
     private val cornerRadius: Float = 20f
     private val paddingHorizontal: Float = 12f
+    private val strokeWidth = 1 * context.resources.displayMetrics.density // 1dp 描边宽度
+    private val strokeColor = 0x40000000 // 25% 透明度的黑色作为描边颜色
 
     override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
         return (paint.measureText(text, start, end) + paddingHorizontal * 2).roundToInt()
@@ -305,9 +312,27 @@ class RoundedBackgroundSpan(
 
     override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
         val width = paint.measureText(text, start, end)
-        val paintBackground = Paint(paint).apply { color = backgroundColor }
-        canvas.drawRoundRect(x, top.toFloat() + 4, x + width + paddingHorizontal * 2, bottom.toFloat() - 4, cornerRadius, cornerRadius, paintBackground)
-        val paintText = Paint(paint).apply { color = textColor }
-        canvas.drawText(text, start, end, x + paddingHorizontal, y.toFloat(), paintText)
+        val rect = android.graphics.RectF(x, top.toFloat() + 4, x + width + paddingHorizontal * 2, bottom.toFloat() - 4)
+
+        // 绘制背景
+        val backgroundPaint = Paint(paint).apply {
+            color = backgroundColor
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, backgroundPaint)
+
+        // 绘制描边
+        val strokePaint = Paint(paint).apply {
+            color = strokeColor
+            style = Paint.Style.STROKE
+            strokeWidth = this@RoundedBackgroundSpan.strokeWidth
+        }
+        // 将矩形稍微缩小，使描边绘制在边缘上
+        rect.inset(strokeWidth / 2, strokeWidth / 2)
+        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, strokePaint)
+
+        // 绘制文本
+        val textPaint = Paint(paint).apply { color = textColor }
+        canvas.drawText(text, start, end, x + paddingHorizontal, y.toFloat(), textPaint)
     }
 }
