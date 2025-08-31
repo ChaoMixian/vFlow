@@ -68,10 +68,14 @@ class LoopModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // LoopModule 的 execute 仅作为循环开始的标记。
-        // 实际的循环逻辑由 WorkflowExecutor 处理。
+        // --- 核心修复：正确解析魔法变量的值 ---
         val countValue = context.magicVariables["count"] ?: context.variables["count"]
-        onProgress(ProgressUpdate("循环开始，次数: $countValue"))
+        val actualCount = when (countValue) {
+            is NumberVariable -> countValue.value
+            is Number -> countValue
+            else -> countValue?.toString()
+        }
+        onProgress(ProgressUpdate("循环开始，次数: $actualCount"))
         return ExecutionResult.Success()
     }
 }

@@ -1,18 +1,23 @@
 package com.chaomixian.vflow.ui.workflow_list
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.permissions.PermissionActivity
+import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.WorkflowEditorActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -23,22 +28,28 @@ class WorkflowListFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: WorkflowListAdapter
     private lateinit var itemTouchHelper: ItemTouchHelper
+    private var pendingWorkflow: Workflow? = null
+
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            pendingWorkflow?.let { executeWorkflow(it) }
+        }
+        pendingWorkflow = null
+    }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_workflows, container, false)
         workflowManager = WorkflowManager(requireContext())
-
         recyclerView = view.findViewById(R.id.recycler_view_workflows)
         setupRecyclerView()
         setupDragAndDrop()
-
         view.findViewById<FloatingActionButton>(R.id.fab_add_workflow).setOnClickListener {
             startActivity(Intent(requireContext(), WorkflowEditorActivity::class.java))
         }
-
         return view
     }
 
@@ -48,9 +59,7 @@ class WorkflowListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        // 使用 GridLayoutManager，每行2个
         recyclerView.layoutManager = GridLayoutManager(requireContext(), 2)
-        // Adapter 在 onResume 中加载数据时创建
     }
 
     private fun loadWorkflows() {
@@ -63,24 +72,33 @@ class WorkflowListFragment : Fragment() {
                 }
                 startActivity(intent)
             },
-            onDelete = { workflow ->
-                showDeleteConfirmationDialog(workflow)
-            },
+            onDelete = { workflow -> showDeleteConfirmationDialog(workflow) },
             onDuplicate = { workflow ->
                 workflowManager.duplicateWorkflow(workflow.id)
                 Toast.makeText(requireContext(), "已复制为 '${workflow.name} (副本)'", Toast.LENGTH_SHORT).show()
-                loadWorkflows() // 重新加载以刷新列表
+                loadWorkflows()
             },
-            onExport = { workflow ->
-                // TODO: 实现导出逻辑 (需要文件选择器)
-                Toast.makeText(requireContext(), "导出功能待实现", Toast.LENGTH_SHORT).show()
-            },
-            onExecute = { workflow ->
-                // TODO: 实现执行逻辑
-                Toast.makeText(requireContext(), "正在执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
-            }
+            onExport = { Toast.makeText(requireContext(), "导出功能待实现", Toast.LENGTH_SHORT).show() },
+            onExecute = { workflow -> executeWorkflow(workflow) }
         )
         recyclerView.adapter = adapter
+    }
+
+    private fun executeWorkflow(workflow: Workflow) {
+        val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
+        if (missingPermissions.isEmpty()) {
+            // 权限满足，直接执行。
+            // 不再关心具体服务，只传递 Context。
+            Toast.makeText(requireContext(), "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
+            WorkflowExecutor.execute(workflow, requireContext())
+        } else {
+            pendingWorkflow = workflow
+            val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
+                putParcelableArrayListExtra(PermissionActivity.EXTRA_PERMISSIONS, ArrayList(missingPermissions))
+                putExtra(PermissionActivity.EXTRA_WORKFLOW_NAME, workflow.name)
+            }
+            permissionLauncher.launch(intent)
+        }
     }
 
     private fun showDeleteConfirmationDialog(workflow: Workflow) {
@@ -90,7 +108,7 @@ class WorkflowListFragment : Fragment() {
             .setNegativeButton(R.string.common_cancel, null)
             .setPositiveButton(R.string.common_delete) { _, _ ->
                 workflowManager.deleteWorkflow(workflow.id)
-                loadWorkflows() // 删除后刷新列表
+                loadWorkflows()
             }
             .show()
     }
@@ -100,20 +118,13 @@ class WorkflowListFragment : Fragment() {
             ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, 0
         ) {
             override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
+                recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder
             ): Boolean {
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
-                val workflows = workflowManager.getAllWorkflows().toMutableList()
-                Collections.swap(workflows, fromPosition, toPosition)
-                // Here you should ideally save the new order in WorkflowManager
-                // For now, we just update the adapter
                 adapter.notifyItemMoved(fromPosition, toPosition)
                 return true
             }
-
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
         }
         itemTouchHelper = ItemTouchHelper(callback)

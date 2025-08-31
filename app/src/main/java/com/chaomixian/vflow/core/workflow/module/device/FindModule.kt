@@ -9,6 +9,8 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.*
+import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.services.AccessibilityService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.parcelize.Parcelize
 import java.util.regex.Pattern
@@ -22,6 +24,7 @@ data class ScreenElement(
 class FindTextModule : BaseModule() {
     override val id = "vflow.device.find.text"
     override val metadata = ActionMetadata("查找文本", "在屏幕上查找元素", R.drawable.ic_node_search, "设备")
+    override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
     private val matchModeOptions = listOf("完全匹配", "包含", "正则")
     override val uiProvider = FindModuleUIProvider(matchModeOptions)
@@ -67,13 +70,20 @@ class FindTextModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val service = context.accessibilityService
-        val targetText = (context.magicVariables["targetText"]?.toString() ?: context.variables["targetText"] as? String)
+        // 从服务容器中获取无障碍服务
+        val service = context.services.get(AccessibilityService::class)
+            ?: return ExecutionResult.Failure("服务未运行", "查找文本需要无障碍服务，但该服务当前未运行。")
+
+        // --- 核心修复：正确解析魔法变量 ---
+        // 优先从魔法变量获取，如果是 TextVariable，则取其 .value，否则从静态变量获取
+        val targetText = (context.magicVariables["targetText"] as? TextVariable)?.value
+            ?: context.variables["targetText"] as? String
 
         if (targetText.isNullOrBlank()) {
             return ExecutionResult.Failure("参数缺失", "目标文本不能为空。")
         }
-        val rootNode = service.rootInActiveWindow ?: return ExecutionResult.Failure("服务错误", "无法获取到当前窗口的根节点。")
+        val rootNode = service.rootInActiveWindow
+            ?: return ExecutionResult.Failure("服务错误", "无法获取到当前窗口的根节点。")
 
         try {
             val matchModeStr = context.variables["matchMode"] as? String ?: "完全匹配"

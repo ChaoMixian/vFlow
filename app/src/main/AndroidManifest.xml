@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -27,6 +28,10 @@
 
         <activity
             android:name=".ui.workflow_editor.WorkflowEditorActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".permissions.PermissionActivity"
             android:exported="false" />
 
         <service

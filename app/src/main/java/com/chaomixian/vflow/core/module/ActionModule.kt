@@ -3,6 +3,8 @@ package com.chaomixian.vflow.core.module
 import android.content.Context
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.permissions.Permission
+
 
 /**
  * 核心模块接口（已重构）。
@@ -27,6 +29,11 @@ interface ActionModule {
     fun getSummary(context: Context, step: ActionStep): CharSequence? = null
 
     val uiProvider: ModuleUIProvider?
+
+    /**
+     * 声明模块运行所需的权限列表。
+     */
+    val requiredPermissions: List<Permission>
 
     fun validate(step: ActionStep): ValidationResult
 

@@ -2,21 +2,16 @@ package com.chaomixian.vflow.services
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
-import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import com.chaomixian.vflow.ui.main.MainActivity
 
 class AccessibilityService : AccessibilityService() {
 
-    companion object {
-        private var instance: AccessibilityService? = null
-        fun getInstance(): AccessibilityService? = instance
-    }
+    // 移除不稳定的静态实例 companion object
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        instance = this
-        Log.d("vFlowService", "无障碍服务已连接。")
+        // 服务连接成功，立即向总线上报自己的实例
+        ServiceStateBus.onAccessibilityServiceConnected(this, this)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -24,12 +19,13 @@ class AccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() {
-        Log.e("vFlowService", "无障碍服务被中断。")
+        // 服务被中断，也视为断开
+        ServiceStateBus.onAccessibilityServiceDisconnected(this)
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        Log.d("vFlowService", "无障碍服务已断开。")
-        instance = null
+        // 服务解绑，向总线上报自己已断开
+        ServiceStateBus.onAccessibilityServiceDisconnected(this)
         return super.onUnbind(intent)
     }
 }

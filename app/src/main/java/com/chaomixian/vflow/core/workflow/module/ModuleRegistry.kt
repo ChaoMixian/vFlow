@@ -37,6 +37,7 @@ object ModuleRegistry {
         register(DelayModule())
         register(FindTextModule())
         register(ClickModule())
+        register(ToastModule())
 
         // 逻辑控制
         register(IfModule())

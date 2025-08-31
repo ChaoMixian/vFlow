@@ -2,6 +2,7 @@ package com.chaomixian.vflow.core.module
 
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.permissions.Permission
 
 /**
  * 标准模块的抽象基类。
@@ -11,6 +12,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 abstract class BaseModule : ActionModule {
 
     // --- 开发者通常需要实现的部分 ---
+    override val requiredPermissions: List<Permission>
+        get() = emptyList() // 默认不需要任何权限
 
     override val blockBehavior: BlockBehavior
         get() = BlockBehavior(BlockType.NONE)
