@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/variable/VariableModuleUIProvider.kt
-
 package com.chaomixian.vflow.modules.variable
 
 import android.content.Context
@@ -39,7 +37,6 @@ class VariableModuleUIProvider(
 ) : ModuleUIProvider {
 
     override fun getHandledInputIds(): Set<String> {
-        // 声明此UI提供者处理了 "type" 和 "value" 这两个输入
         return setOf("type", "value")
     }
 

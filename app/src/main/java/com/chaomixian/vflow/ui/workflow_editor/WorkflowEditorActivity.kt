@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/ui/workflow_editor/WorkflowEditorActivity.kt
-
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
@@ -90,7 +88,8 @@ class WorkflowEditorActivity : BaseActivity() {
         for (i in 0 until effectivePosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId)
-            module?.getDynamicOutputs(step)?.forEach { outputDef ->
+            // 使用新的 getOutputs(step) 方法
+            module?.getOutputs(step)?.forEach { outputDef ->
                 val isCompatible = targetInputDef.acceptedMagicVariableTypes.any { acceptedType ->
                     acceptedType.isAssignableFrom(outputDef.type)
                 }
@@ -125,7 +124,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         actionStepAdapter = ActionStepAdapter(
             actionSteps,
-            hideConnections, // 传递设置
+            hideConnections,
             onEditClick = { position, inputId ->
                 val step = actionSteps[position]
                 val startPos = findBlockStartPosition(position)
@@ -149,7 +148,6 @@ class WorkflowEditorActivity : BaseActivity() {
         findViewById<RecyclerView>(R.id.recycler_view_action_steps).apply {
             layoutManager = LinearLayoutManager(this@WorkflowEditorActivity)
             adapter = actionStepAdapter
-            // 只有当设置为显示连接线时，才添加装饰器
             if (!hideConnections) {
                 addItemDecoration(WorkflowConnectionDecorator(actionSteps))
             }
@@ -321,7 +319,6 @@ class WorkflowEditorActivity : BaseActivity() {
             }
             else if (behavior.type == BlockType.BLOCK_MIDDLE) {
                 if (indentStack.isNotEmpty() && indentStack.peek().second == behavior.pairingId) {
-                    // Don't pop for middle, just align with the start
                     currentIndent = indentStack.size -1
                 }
             }

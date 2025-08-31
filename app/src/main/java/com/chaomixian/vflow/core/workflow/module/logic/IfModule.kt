@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/logic/IfModule.kt
-
 package com.chaomixian.vflow.modules.logic
 
 import android.content.Context
@@ -16,10 +14,14 @@ const val IF_START_ID = "vflow.logic.if.start"
 const val ELSE_ID = "vflow.logic.if.middle"
 const val IF_END_ID = "vflow.logic.if.end"
 
-class IfModule : ActionModule {
+class IfModule : BaseBlockModule() {
     override val id = IF_START_ID
     override val metadata = ActionMetadata("如果", "根据条件执行不同的操作", R.drawable.ic_control_flow, "逻辑控制")
-    override val blockBehavior = BlockBehavior(BlockType.BLOCK_START, IF_PAIRING_ID)
+
+    // --- 来自 BaseBlockModule 的配置 ---
+    override val pairingId = IF_PAIRING_ID
+    override val stepIdsInBlock = listOf(IF_START_ID, ELSE_ID, IF_END_ID)
+    // --- 配置结束 ---
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -37,7 +39,7 @@ class IfModule : ActionModule {
             )
         )
     )
-    override fun getOutputs(): List<OutputDefinition> = listOf(
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("result", "条件结果", BooleanVariable::class.java)
     )
 
@@ -54,29 +56,10 @@ class IfModule : ActionModule {
         )
     }
 
-    override fun createSteps(): List<ActionStep> {
-        return listOf(
-            ActionStep(IF_START_ID, emptyMap()),
-            ActionStep(ELSE_ID, emptyMap()),
-            ActionStep(IF_END_ID, emptyMap())
-        )
-    }
-
-    override fun onStepDeleted(steps: MutableList<ActionStep>, position: Int): Boolean {
-        val endPos = findBlockEndPosition(steps, position, IF_START_ID, IF_END_ID)
-        if (endPos != position) {
-            for (i in endPos downTo position) {
-                steps.removeAt(i)
-            }
-            return true
-        }
-        return false
-    }
-
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ): ActionResult {
+    ): ExecutionResult {
         val condition = context.magicVariables["condition"]
             ?: context.variables["condition"]
 
@@ -91,62 +74,36 @@ class IfModule : ActionModule {
             is ListVariable -> condition.value.isNotEmpty()
             is Map<*,*> -> condition.isNotEmpty()
             is DictionaryVariable -> condition.value.isNotEmpty()
-            is ScreenElement -> true
-            else -> condition != null
+            is ScreenElement -> true // ScreenElement 存在即为真
+            else -> condition != null // 其他非空对象也为真
         }
         onProgress(ProgressUpdate("条件判断结果: $result"))
-        return ActionResult(true, mapOf("result" to BooleanVariable(result)))
+        return ExecutionResult.Success(mapOf("result" to BooleanVariable(result)))
     }
 }
 
-class ElseModule : ActionModule {
+class ElseModule : BaseModule() {
     override val id = ELSE_ID
     override val metadata = ActionMetadata("否则", "如果条件不满足，则执行这里的操作", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, IF_PAIRING_ID, isIndividuallyDeletable = true)
-    override fun getInputs(): List<InputDefinition> = emptyList()
-    override fun getOutputs(): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "否则"
-
-    override fun onStepDeleted(steps: MutableList<ActionStep>, position: Int): Boolean {
-        if (position > 0 && position < steps.size) {
-            steps.removeAt(position)
-            return true
-        }
-        return false
-    }
 
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ) = ActionResult(success = true)
+    ) = ExecutionResult.Success()
 }
 
-class EndIfModule : ActionModule {
+class EndIfModule : BaseModule() {
     override val id = IF_END_ID
     override val metadata = ActionMetadata("结束如果", "", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, IF_PAIRING_ID)
-    override fun getInputs(): List<InputDefinition> = emptyList()
-    override fun getOutputs(): List<OutputDefinition> = emptyList()
+
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束如果"
 
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ) = ActionResult(success = true)
-}
-
-
-internal fun findBlockEndPosition(steps: List<ActionStep>, startPosition: Int, startId: String, endId: String): Int {
-    var openBlocks = 1
-    for (i in (startPosition + 1) until steps.size) {
-        val currentId = steps[i].moduleId
-        if (currentId == startId) {
-            openBlocks++
-        } else if (currentId == endId) {
-            openBlocks--
-            if (openBlocks == 0) return i
-        }
-    }
-    return startPosition
+    ) = ExecutionResult.Success()
 }

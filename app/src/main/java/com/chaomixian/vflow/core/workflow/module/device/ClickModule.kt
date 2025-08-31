@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/device/ClickModule.kt
-
 package com.chaomixian.vflow.modules.device
 
 import android.accessibilityservice.AccessibilityService
@@ -12,16 +10,16 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.parcelize.Parcelize
 import com.chaomixian.vflow.modules.variable.BooleanVariable
 import com.chaomixian.vflow.modules.variable.TextVariable
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class Coordinate(val x: Int, val y: Int) : Parcelable
 
-class ClickModule : ActionModule {
+class ClickModule : BaseModule() {
     override val id = "vflow.device.click"
     override val metadata = ActionMetadata("点击", "点击一个屏幕元素或坐标", R.drawable.ic_coordinate, "设备")
 
@@ -39,7 +37,7 @@ class ClickModule : ActionModule {
         )
     )
 
-    override fun getOutputs(): List<OutputDefinition> = listOf(
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("success", "是否成功", BooleanVariable::class.java)
     )
 
@@ -58,7 +56,7 @@ class ClickModule : ActionModule {
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ): ActionResult {
+    ): ExecutionResult {
         val target = context.magicVariables["target"]
             ?: context.variables["target"]
 
@@ -71,8 +69,7 @@ class ClickModule : ActionModule {
         }
 
         if (coordinate == null) {
-            Log.w("ClickModule", "没有有效的点击目标。")
-            return ActionResult(true, mapOf("success" to BooleanVariable(false)))
+            return ExecutionResult.Failure("目标无效", "没有提供有效的点击目标或坐标格式不正确。")
         }
 
         onProgress(ProgressUpdate("正在点击坐标: (${coordinate.x}, ${coordinate.y})"))
@@ -90,7 +87,7 @@ class ClickModule : ActionModule {
         }, null)
 
         val clickSuccess = deferred.await()
-        return ActionResult(true, mapOf("success" to BooleanVariable(clickSuccess)))
+        return ExecutionResult.Success(mapOf("success" to BooleanVariable(clickSuccess)))
     }
 
     private fun String.toCoordinate(): Coordinate? {

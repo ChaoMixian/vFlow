@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/device/FindModuleUIProvider.kt
-
 package com.chaomixian.vflow.modules.device
 
 import android.content.Context
@@ -23,7 +21,6 @@ class FindModuleUIProvider(
 ) : ModuleUIProvider {
 
     override fun getHandledInputIds(): Set<String> {
-        // 声明此UI提供者只处理 "matchMode" 这一个输入
         return setOf("matchMode")
     }
 

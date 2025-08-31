@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/device/FindModule.kt
-
 package com.chaomixian.vflow.modules.device
 
 import android.content.Context
@@ -21,13 +19,11 @@ data class ScreenElement(
     val text: String?
 ) : Parcelable
 
-class FindTextModule : ActionModule {
+class FindTextModule : BaseModule() {
     override val id = "vflow.device.find.text"
     override val metadata = ActionMetadata("查找文本", "在屏幕上查找元素", R.drawable.ic_node_search, "设备")
 
     private val matchModeOptions = listOf("完全匹配", "包含", "正则")
-
-    // 将UI逻辑委托给独立的UI提供者
     override val uiProvider = FindModuleUIProvider(matchModeOptions)
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -37,18 +33,18 @@ class FindTextModule : ActionModule {
             staticType = ParameterType.ENUM,
             defaultValue = "完全匹配",
             options = matchModeOptions,
-            acceptsMagicVariable = false // 这是一个配置，不接受变量
+            acceptsMagicVariable = false
         ),
         InputDefinition(
             id = "targetText",
             name = "目标文本",
             staticType = ParameterType.STRING,
-            acceptsMagicVariable = true, // 这是一个输入，接受变量
+            acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(TextVariable::class.java)
         )
     )
 
-    override fun getOutputs(): List<OutputDefinition> = listOf(
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("element", "找到的元素", ScreenElement::class.java)
     )
 
@@ -70,19 +66,24 @@ class FindTextModule : ActionModule {
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ): ActionResult {
+    ): ExecutionResult {
         val service = context.accessibilityService
         val targetText = (context.magicVariables["targetText"]?.toString() ?: context.variables["targetText"] as? String)
 
-        if (targetText.isNullOrBlank()) return ActionResult(success = false)
-        val rootNode = service.rootInActiveWindow ?: return ActionResult(success = false)
+        if (targetText.isNullOrBlank()) {
+            return ExecutionResult.Failure("参数缺失", "目标文本不能为空。")
+        }
+        val rootNode = service.rootInActiveWindow ?: return ExecutionResult.Failure("服务错误", "无法获取到当前窗口的根节点。")
 
         try {
             val matchModeStr = context.variables["matchMode"] as? String ?: "完全匹配"
             onProgress(ProgressUpdate("正在以 [${matchModeStr}] 模式查找文本: '$targetText'"))
             val nodes = findNodesByText(rootNode, targetText, matchModeStr)
 
-            if (nodes.isEmpty()) return ActionResult(success = false)
+            if (nodes.isEmpty()) {
+                onProgress(ProgressUpdate("未在屏幕上找到匹配的文本。"))
+                return ExecutionResult.Success() // 未找到是成功的一种，只是输出为空
+            }
 
             val foundNode = nodes.first()
             val bounds = Rect()
@@ -93,9 +94,12 @@ class FindTextModule : ActionModule {
                 text = foundNode.text?.toString() ?: foundNode.contentDescription?.toString()
             )
 
+            // 回收所有获取到的节点，避免内存泄漏
             nodes.forEach { it.recycle() }
 
-            return ActionResult(success = true, outputs = mapOf("element" to screenElement))
+            return ExecutionResult.Success(outputs = mapOf("element" to screenElement))
+        } catch (e: Exception) {
+            return ExecutionResult.Failure("执行异常", e.localizedMessage ?: "发生了未知错误")
         } finally {
             rootNode.recycle()
         }

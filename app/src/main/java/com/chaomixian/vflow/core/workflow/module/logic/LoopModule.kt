@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/logic/LoopModule.kt
-
 package com.chaomixian.vflow.modules.logic
 
 import android.content.Context
@@ -9,16 +7,19 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.NumberVariable
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import java.lang.Exception
 
 const val LOOP_PAIRING_ID = "loop"
 const val LOOP_START_ID = "vflow.logic.loop.start"
 const val LOOP_END_ID = "vflow.logic.loop.end"
 
-class LoopModule : ActionModule {
+class LoopModule : BaseBlockModule() {
     override val id = LOOP_START_ID
     override val metadata = ActionMetadata("循环", "重复执行一组操作固定的次数", R.drawable.ic_control_flow, "逻辑控制")
-    override val blockBehavior = BlockBehavior(BlockType.BLOCK_START, LOOP_PAIRING_ID)
+
+    // --- 来自 BaseBlockModule 的配置 ---
+    override val pairingId = LOOP_PAIRING_ID
+    override val stepIdsInBlock = listOf(LOOP_START_ID, LOOP_END_ID)
+    // --- 配置结束 ---
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -31,8 +32,6 @@ class LoopModule : ActionModule {
         )
     )
 
-    override fun getOutputs(): List<OutputDefinition> = emptyList()
-
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val countValue = step.parameters["count"]?.toString() ?: "5"
         val isVariable = countValue.startsWith("{{")
@@ -44,27 +43,6 @@ class LoopModule : ActionModule {
             PillUtil.Pill(pillText, isVariable, parameterId = "count"),
             " 次"
         )
-    }
-
-    override fun createSteps(): List<ActionStep> {
-        // 使用 getInputs 的默认值创建步骤
-        val defaultParams = getInputs().associate { it.id to it.defaultValue }
-        return listOf(
-            ActionStep(LOOP_START_ID, defaultParams),
-            ActionStep(LOOP_END_ID, emptyMap())
-        )
-    }
-
-    override fun onStepDeleted(steps: MutableList<ActionStep>, position: Int): Boolean {
-        val endPos = findBlockEndPosition(steps, position, LOOP_START_ID, LOOP_END_ID)
-        if (endPos != position) {
-            // 从后往前删除以避免索引问题
-            for (i in endPos downTo position) {
-                steps.removeAt(i)
-            }
-            return true
-        }
-        return false
     }
 
     override fun validate(step: ActionStep): ValidationResult {
@@ -89,31 +67,27 @@ class LoopModule : ActionModule {
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ): ActionResult {
+    ): ExecutionResult {
         // LoopModule 的 execute 仅作为循环开始的标记。
         // 实际的循环逻辑由 WorkflowExecutor 处理。
-        // 我们可以在这里传递一些初始信息。
         val countValue = context.magicVariables["count"] ?: context.variables["count"]
         onProgress(ProgressUpdate("循环开始，次数: $countValue"))
-        return ActionResult(success = true)
+        return ExecutionResult.Success()
     }
 }
 
-class EndLoopModule : ActionModule {
+class EndLoopModule : BaseModule() {
     override val id = LOOP_END_ID
     override val metadata = ActionMetadata("结束循环", "", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, LOOP_PAIRING_ID)
-
-    override fun getInputs(): List<InputDefinition> = emptyList()
-    override fun getOutputs(): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束循环"
 
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ): ActionResult {
+    ): ExecutionResult {
         onProgress(ProgressUpdate("循环迭代结束"))
-        return ActionResult(success = true)
+        return ExecutionResult.Success()
     }
 }

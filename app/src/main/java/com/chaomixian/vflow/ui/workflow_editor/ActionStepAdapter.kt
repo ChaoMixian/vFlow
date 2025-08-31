@@ -2,13 +2,18 @@ package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextPaint
 import android.text.style.CharacterStyle
+import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
+import android.text.style.StyleSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,22 +32,16 @@ import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.google.android.material.card.MaterialCardView // 导入 MaterialCardView
+import com.google.android.material.color.MaterialColors
 import java.util.*
 import kotlin.math.roundToInt
 
-// 用于标记 "静态值" 药丸的 span.
 private class StaticPillSpan : CharacterStyle() {
-    override fun updateDrawState(tp: TextPaint?) {
-        // 空操作。这是一个标记 span。
-    }
+    override fun updateDrawState(tp: TextPaint?) {}
 }
 
-// 用于标记 "魔法变量" 药丸的 span, 携带参数 ID.
 private class MagicVariablePlaceholderSpan(val parameterId: String) : CharacterStyle() {
-    override fun updateDrawState(tp: TextPaint?) {
-        // 空操作。这是一个标记 span。
-    }
+    override fun updateDrawState(tp: TextPaint?) {}
 }
 
 class ActionStepAdapter(
@@ -68,7 +67,6 @@ class ActionStepAdapter(
     override fun onBindViewHolder(holder: ActionStepViewHolder, position: Int) {
         val step = actionSteps[position]
         holder.itemView.tag = step
-        // 在每次绑定时传递完整的、最新的列表。
         holder.bind(step, position, actionSteps)
         holder.deleteButton.setOnClickListener { onDeleteClick(position) }
     }
@@ -82,21 +80,25 @@ class ActionStepAdapter(
     ) : RecyclerView.ViewHolder(itemView) {
         private val context: Context = itemView.context
         val deleteButton: ImageButton = itemView.findViewById(R.id.button_delete_action)
-        private val itemContainer: LinearLayout = itemView.findViewById(R.id.card_action_item) // 外层容器
         private val indentSpace: Space = itemView.findViewById(R.id.indent_space)
-        private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container) // 原来的内容容器
-        private val categoryColorBar: View = itemView.findViewById(R.id.category_color_bar) // 彩色指示条
+        private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container)
+        private val categoryColorBar: View = itemView.findViewById(R.id.category_color_bar)
 
         fun bind(step: ActionStep, position: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
 
             indentSpace.layoutParams.width = (step.indentationLevel * 24 * context.resources.displayMetrics.density).toInt()
 
-            // 设置彩色指示条的颜色
+            // --- UI 更新：圆角指示条 ---
             val categoryColor = ContextCompat.getColor(context, getCategoryColor(module.metadata.category))
-            categoryColorBar.setBackgroundColor(categoryColor)
+            val drawable = GradientDrawable()
+            drawable.shape = GradientDrawable.RECTANGLE
+            drawable.cornerRadius = (4 * context.resources.displayMetrics.density) // 4dp 圆角
+            drawable.setColor(categoryColor)
+            categoryColorBar.background = drawable
+            // --- UI 更新结束 ---
 
-            itemContainer.setOnClickListener { // 整个卡片都可以点击
+            itemView.setOnClickListener {
                 if (adapterPosition != RecyclerView.NO_POSITION) {
                     onEditClick(adapterPosition, null)
                 }
@@ -104,17 +106,29 @@ class ActionStepAdapter(
             contentContainer.removeAllViews()
 
             val rawSummary = module.getSummary(context, step)
-            // 核心逻辑：处理摘要文本，用带颜色的 span 替换标记。
             val finalSummary = processSummarySpans(rawSummary, step, allSteps)
 
-            val connectableInputs = module.getInputs().filter { it.acceptsMagicVariable }
-            val outputs = module.getDynamicOutputs(step)
+            val prefix = "#$position "
+            val spannablePrefix = SpannableStringBuilder(prefix)
+            spannablePrefix.setSpan(StyleSpan(Typeface.BOLD), 0, prefix.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val prefixColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY)
+            spannablePrefix.setSpan(ForegroundColorSpan(prefixColor), 0, prefix.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-            val headerRow = createHeaderRow(step, module, finalSummary, connectableInputs)
+            val finalTitle = SpannableStringBuilder().append(spannablePrefix)
+            if (finalSummary != null) {
+                finalTitle.append(finalSummary)
+            } else {
+                finalTitle.append(module.metadata.name)
+            }
+
+            val connectableInputs = module.getInputs().filter { it.acceptsMagicVariable }
+            val outputs = module.getOutputs(step)
+
+            val headerRow = createHeaderRow(step, module, finalTitle)
             contentContainer.addView(headerRow)
 
             if (!hideConnections) {
-                if (rawSummary == null) { // 如果有摘要，参数已经显示在其中了。
+                if (rawSummary == null) {
                     connectableInputs.forEach { inputDef ->
                         contentContainer.addView(createParameterRow(step, inputDef.id, inputDef.name, true, allSteps))
                     }
@@ -135,28 +149,19 @@ class ActionStepAdapter(
             deleteButton.visibility = if (isDeletable) View.VISIBLE else View.GONE
         }
 
-        private fun createHeaderRow(step: ActionStep, module: com.chaomixian.vflow.core.module.ActionModule, summary: CharSequence?, inputs: List<InputDefinition>): View {
+        private fun createHeaderRow(step: ActionStep, module: com.chaomixian.vflow.core.module.ActionModule, summary: CharSequence?): View {
             val row = LayoutInflater.from(context).inflate(R.layout.row_action_parameter, contentContainer, false)
             val icon = row.findViewById<ImageView>(R.id.icon_action_type)
             val nameTextView = row.findViewById<TextView>(R.id.parameter_name)
-            val inputNode = row.findViewById<ImageView>(R.id.input_node)
 
             icon?.setImageResource(module.metadata.iconRes)
             icon?.isVisible = true
 
-            if (summary != null) {
-                nameTextView.text = summary
-                inputNode?.isVisible = inputs.isNotEmpty() && !hideConnections
-                if (inputs.isNotEmpty()) {
-                    inputNode?.tag = "input_${step.id}_${inputs.first().id}"
-                }
-            } else {
-                nameTextView.text = module.metadata.name
-                inputNode?.isVisible = false
-            }
+            nameTextView.text = summary
 
             row.findViewById<View>(R.id.parameter_value_container).isVisible = false
             row.findViewById<View>(R.id.output_node).isVisible = false
+            row.findViewById<View>(R.id.input_node).isVisible = false
             nameTextView.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium)
 
             return row
@@ -200,10 +205,11 @@ class ActionStepAdapter(
         private fun createPillView(valueStr: String, parent: ViewGroup, allSteps: List<ActionStep>): View {
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, parent, false)
             val pillText = pill.findViewById<TextView>(R.id.pill_text)
-            val pillBackground = pill.background.mutate() as android.graphics.drawable.GradientDrawable
+            val pillBackground = pill.background.mutate() as GradientDrawable
 
             if (valueStr.startsWith("{{")) {
-                pillText.text = "已连接变量"
+                val sourceIndex = getSourceStepIndex(valueStr, allSteps)
+                pillText.text = if (sourceIndex != -1) "变量#$sourceIndex" else "已连接变量"
                 val color = getMagicVariablePillColor(valueStr, allSteps)
                 pillBackground.setColor(color)
             } else {
@@ -223,6 +229,12 @@ class ActionStepAdapter(
             }
         }
 
+        private fun getSourceStepIndex(valueStr: String?, allSteps: List<ActionStep>): Int {
+            if (valueStr == null || !valueStr.startsWith("{{")) return -1
+            val sourceStepId = valueStr.removeSurrounding("{{", "}}").split('.').firstOrNull()
+            return allSteps.indexOfFirst { it.id == sourceStepId }
+        }
+
         private fun getMagicVariablePillColor(valueStr: String?, allSteps: List<ActionStep>): Int {
             val defaultColor = ContextCompat.getColor(context, R.color.variable_pill_color)
             if (valueStr == null || !valueStr.startsWith("{{")) return defaultColor
@@ -239,23 +251,33 @@ class ActionStepAdapter(
             if (summary !is Spanned) return summary
 
             val spannable = SpannableStringBuilder(summary)
-            // 反向迭代，以避免在替换 span 时出现索引问题。
             spannable.getSpans<CharacterStyle>().reversed().forEach { span ->
                 val start = spannable.getSpanStart(span)
                 val end = spannable.getSpanEnd(span)
-                val color = when (span) {
-                    is MagicVariablePlaceholderSpan -> {
-                        val paramValue = step.parameters[span.parameterId]?.toString()
-                        getMagicVariablePillColor(paramValue, allSteps)
-                    }
-                    is StaticPillSpan -> ContextCompat.getColor(context, R.color.static_pill_color)
-                    else -> null
-                }
 
-                if (color != null) {
+                if (span is MagicVariablePlaceholderSpan) {
+                    val paramValue = step.parameters[span.parameterId]?.toString()
+                    val color = getMagicVariablePillColor(paramValue, allSteps)
+                    val sourceIndex = getSourceStepIndex(paramValue, allSteps)
+                    val originalText = spannable.substring(start, end)
+
+                    if (sourceIndex != -1 && originalText.trim() == "变量") {
+                        val replacementText = " 变量#$sourceIndex "
+                        spannable.replace(start, end, replacementText)
+                        val newEnd = start + replacementText.length
+                        val backgroundSpan = RoundedBackgroundSpan(context, color)
+                        spannable.removeSpan(span)
+                        spannable.setSpan(backgroundSpan, start, newEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    } else {
+                        val backgroundSpan = RoundedBackgroundSpan(context, color)
+                        spannable.removeSpan(span)
+                        spannable.setSpan(backgroundSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                } else if (span is StaticPillSpan) {
+                    val color = ContextCompat.getColor(context, R.color.static_pill_color)
                     val backgroundSpan = RoundedBackgroundSpan(context, color)
-                    spannable.removeSpan(span) // 移除标记
-                    spannable.setSpan(backgroundSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) // 添加真正的绘制 span
+                    spannable.removeSpan(span)
+                    spannable.setSpan(backgroundSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
             return spannable
@@ -263,7 +285,6 @@ class ActionStepAdapter(
     }
 }
 
-// --- 用于生成带标记文本的 PillUtil ---
 object PillUtil {
     fun buildSpannable(context: Context, vararg parts: Any): CharSequence {
         val builder = SpannableStringBuilder()
@@ -283,12 +304,6 @@ object PillUtil {
                     builder.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
-            // 这里确保 PillUtil 在创建 Span 时能够正确传递 context
-            // 实际使用时，如果 PillUtil 不直接依赖 context 来创建 Span，
-            // 那么这个参数可能就不需要了，或者只是用于其他辅助函数。
-            // 目前这个 context 并没有被 PillUtil 内部用来创建 RoundedBackgroundSpan,
-            // 而是由 ActionStepViewHolder 内部的 processSummarySpans 来创建的。
-            // 所以这里的 context 参数是安全的，不会造成功能破坏。
         }
         return builder
     }
@@ -303,8 +318,8 @@ class RoundedBackgroundSpan(
     private val textColor: Int = ContextCompat.getColor(context, R.color.white)
     private val cornerRadius: Float = 20f
     private val paddingHorizontal: Float = 12f
-    private val strokeWidth = 1 * context.resources.displayMetrics.density // 1dp 描边宽度
-    private val strokeColor = 0x40000000 // 25% 透明度的黑色作为描边颜色
+    private val strokeWidth = 1 * context.resources.displayMetrics.density
+    private val strokeColor = 0x40000000
 
     override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
         return (paint.measureText(text, start, end) + paddingHorizontal * 2).roundToInt()
@@ -314,24 +329,20 @@ class RoundedBackgroundSpan(
         val width = paint.measureText(text, start, end)
         val rect = android.graphics.RectF(x, top.toFloat() + 4, x + width + paddingHorizontal * 2, bottom.toFloat() - 4)
 
-        // 绘制背景
         val backgroundPaint = Paint(paint).apply {
             color = backgroundColor
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, backgroundPaint)
 
-        // 绘制描边
         val strokePaint = Paint(paint).apply {
             color = strokeColor
             style = Paint.Style.STROKE
             strokeWidth = this@RoundedBackgroundSpan.strokeWidth
         }
-        // 将矩形稍微缩小，使描边绘制在边缘上
         rect.inset(strokeWidth / 2, strokeWidth / 2)
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, strokePaint)
 
-        // 绘制文本
         val textPaint = Paint(paint).apply { color = textColor }
         canvas.drawText(text, start, end, x + paddingHorizontal, y.toFloat(), textPaint)
     }

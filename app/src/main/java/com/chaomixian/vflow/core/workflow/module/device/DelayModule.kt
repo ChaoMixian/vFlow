@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/device/DelayModule.kt
-
 package com.chaomixian.vflow.modules.device
 
 import android.content.Context
@@ -13,7 +11,7 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.delay
 import java.lang.Exception
 
-class DelayModule : ActionModule {
+class DelayModule : BaseModule() {
     override val id = "vflow.device.delay"
     override val metadata = ActionMetadata(
         name = "延迟",
@@ -33,7 +31,7 @@ class DelayModule : ActionModule {
         )
     )
 
-    override fun getOutputs(): List<OutputDefinition> = listOf(
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("success", "是否成功", BooleanVariable::class.java)
     )
 
@@ -58,7 +56,6 @@ class DelayModule : ActionModule {
                     return ValidationResult(false, "延迟时间不能为负数")
                 }
             } catch (e: Exception) {
-                // 忽略魔法变量的验证
                 if (!duration.startsWith("{{")) {
                     return ValidationResult(false, "无效的数字格式")
                 }
@@ -72,7 +69,7 @@ class DelayModule : ActionModule {
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ): ActionResult {
+    ): ExecutionResult {
         val durationValue = context.magicVariables["duration"] ?: context.variables["duration"]
 
         val duration = when(durationValue) {
@@ -82,11 +79,15 @@ class DelayModule : ActionModule {
             else -> 1000L
         }
 
+        if (duration < 0) {
+            return ExecutionResult.Failure("参数错误", "延迟时间不能为负数: $duration ms")
+        }
+
         if (duration > 0) {
             onProgress(ProgressUpdate("正在延迟 ${duration}ms..."))
             delay(duration)
         }
 
-        return ActionResult(success = true, outputs = mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
     }
 }

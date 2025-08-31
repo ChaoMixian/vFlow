@@ -1,4 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/triggers/ManualTriggerModule.kt
 package com.chaomixian.vflow.modules.triggers
 
 import android.content.Context
@@ -8,7 +7,7 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.BooleanVariable
 
-class ManualTriggerModule : ActionModule {
+class ManualTriggerModule : BaseModule() {
     override val id = "vflow.trigger.manual"
     override val metadata = ActionMetadata(
         name = "手动触发",
@@ -17,9 +16,7 @@ class ManualTriggerModule : ActionModule {
         category = "触发器"
     )
 
-    override fun getInputs(): List<InputDefinition> = emptyList()
-
-    override fun getOutputs(): List<OutputDefinition> = listOf(
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("success", "是否成功", BooleanVariable::class.java)
     )
 
@@ -30,9 +27,9 @@ class ManualTriggerModule : ActionModule {
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ): ActionResult {
+    ): ExecutionResult {
         // 手动触发总是成功的
         onProgress(ProgressUpdate("工作流被手动触发"))
-        return ActionResult(success = true, outputs = mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(outputs = mapOf("success" to BooleanVariable(true)))
     }
 }

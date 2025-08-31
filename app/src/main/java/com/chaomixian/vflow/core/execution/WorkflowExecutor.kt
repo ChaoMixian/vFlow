@@ -1,8 +1,7 @@
-// main/java/com/chaomixian/vflow/core/execution/WorkflowExecutor.kt
-
 package com.chaomixian.vflow.core.execution
 
 import android.util.Log
+import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.AccessibilityService
@@ -33,6 +32,7 @@ object WorkflowExecutor {
                     accessibilityService = service
                 )
 
+                // 解析魔法变量
                 step.parameters.forEach { (key, value) ->
                     if (value is String && value.startsWith("{{") && value.endsWith("}}")) {
                         val parts = value.removeSurrounding("{{", "}}").split('.')
@@ -51,19 +51,19 @@ object WorkflowExecutor {
 
                 Log.d("WorkflowExecutor", " -> 执行: ${module.metadata.name}")
 
-                // --- 核心修改：更新 execute 调用以包含进度回调 ---
-                val result = module.execute(context) { progress ->
-                    // 在这里可以处理进度更新，例如通过回调更新UI
+                when (val result = module.execute(context, { progress ->
                     Log.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progress.message}")
-                }
-
-                if (result.success) {
-                    if (result.outputs.isNotEmpty()) {
-                        stepOutputs[step.id] = result.outputs
+                })) {
+                    is ExecutionResult.Success -> {
+                        if (result.outputs.isNotEmpty()) {
+                            stepOutputs[step.id] = result.outputs
+                        }
                     }
-                } else {
-                    Log.e("WorkflowExecutor", "模块 ${module.metadata.name} 执行失败，工作流中断。")
-                    break
+                    is ExecutionResult.Failure -> {
+                        Log.e("WorkflowExecutor", "模块 ${module.metadata.name} 执行失败: ${result.errorTitle} - ${result.errorMessage}")
+                        // 工作流中断
+                        break
+                    }
                 }
             }
             Log.d("WorkflowExecutor", "工作流 '${workflow.name}' 执行完毕。")

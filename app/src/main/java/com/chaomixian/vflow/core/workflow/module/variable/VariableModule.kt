@@ -1,5 +1,3 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/variable/VariableModule.kt
-
 package com.chaomixian.vflow.modules.variable
 
 import android.content.Context
@@ -18,7 +16,7 @@ import kotlinx.parcelize.RawValue
 @Parcelize data class ListVariable(val value: @RawValue List<Any?>) : Parcelable
 @Parcelize data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelable
 
-class SetVariableModule : ActionModule {
+class SetVariableModule : BaseModule() {
     override val id = "vflow.variable.set"
     override val metadata = ActionMetadata("设置变量", "创建文本、数字、布尔值等变量", R.drawable.ic_variable, "变量")
 
@@ -39,15 +37,14 @@ class SetVariableModule : ActionModule {
             name = "值",
             staticType = ParameterType.ANY,
             defaultValue = "",
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false // 值通过自定义UI设置，这里关闭魔法变量
         )
     )
 
-    // 这个模块没有静态输出，所有输出都是动态的
-    override fun getOutputs(): List<OutputDefinition> = emptyList()
+    // 输出是动态的
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
+        if (step == null) return emptyList() // 编辑器加载时可能为null
 
-    // 根据用户选择的类型，动态地定义输出
-    override fun getDynamicOutputs(step: ActionStep): List<OutputDefinition> {
         val selectedType = step.parameters["type"] as? String
         return when (selectedType) {
             "文本" -> listOf(OutputDefinition("variable", "变量 (文本)", TextVariable::class.java))
@@ -60,13 +57,14 @@ class SetVariableModule : ActionModule {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val type = step.parameters["type"]?.toString() ?: "文本"
-        val value = step.parameters["value"]?.toString() ?: ""
+        val value = step.parameters["value"]
 
         val valuePillText = when {
-            value.isEmpty() && type != "文本" -> "..."
-            type == "文本" -> "'$value'"
+            type == "布尔" -> value.toString()
             type == "字典" -> "{...}"
-            else -> value
+            value is String && value.isEmpty() -> "' '"
+            value != null -> "'$value'"
+            else -> "..."
         }
 
         return PillUtil.buildSpannable(
@@ -81,7 +79,7 @@ class SetVariableModule : ActionModule {
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ): ActionResult {
+    ): ExecutionResult {
         val type = context.variables["type"] as? String ?: "文本"
         val value = context.variables["value"]
 
@@ -91,6 +89,7 @@ class SetVariableModule : ActionModule {
             "字典" -> DictionaryVariable(value as? Map<String, Any?> ?: emptyMap())
             else -> TextVariable(value?.toString() ?: "")
         }
-        return ActionResult(true, mapOf("variable" to variable))
+        onProgress(ProgressUpdate("设置变量 ($type) 完成"))
+        return ExecutionResult.Success(mapOf("variable" to variable))
     }
 }
