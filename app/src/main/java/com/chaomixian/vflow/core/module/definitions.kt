@@ -94,13 +94,20 @@ data class ValidationResult(
     val errorMessage: String? = null
 )
 
+// --- 信号定义 ---
+sealed class ExecutionSignal {
+    /** 跳转到指定的程序计数器位置 */
+    data class Jump(val pc: Int) : ExecutionSignal()
+}
+
 /**
- * 模块执行结果的密封类。
- * 提供了比简单布尔值更丰富的成功/失败信息。
+ * 模块执行结果的密封类 (重构)。
  */
 sealed class ExecutionResult {
     data class Success(val outputs: Map<String, Any?> = emptyMap()) : ExecutionResult()
     data class Failure(val errorTitle: String, val errorMessage: String) : ExecutionResult()
+    /** 新增：模块可以返回一个信号来控制执行流程 */
+    data class Signal(val signal: ExecutionSignal) : ExecutionResult()
 }
 
 

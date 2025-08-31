@@ -60,10 +60,29 @@ class IfModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val condition = context.magicVariables["condition"]
-            ?: context.variables["condition"]
+        val condition = context.magicVariables["condition"] ?: context.variables["condition"]
+        val result = evaluateCondition(condition)
+        onProgress(ProgressUpdate("条件判断结果: $result"))
 
-        val result = when (condition) {
+        // 核心改动：如果条件不满足，则计算跳转位置并发起信号
+        if (!result) {
+            val jumpTo = findNextBlockPosition(
+                context.allSteps,
+                context.currentStepIndex,
+                setOf(ELSE_ID, IF_END_ID)
+            )
+            if (jumpTo != -1) {
+                // 返回一个信号，告诉执行器跳转
+                return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
+            }
+        }
+
+        // 条件满足，正常返回 Success
+        return ExecutionResult.Success(mapOf("result" to BooleanVariable(result)))
+    }
+
+    private fun evaluateCondition(condition: Any?): Boolean {
+        return when (condition) {
             is Boolean -> condition
             is BooleanVariable -> condition.value
             is Number -> condition.toDouble() != 0.0
@@ -74,11 +93,9 @@ class IfModule : BaseBlockModule() {
             is ListVariable -> condition.value.isNotEmpty()
             is Map<*,*> -> condition.isNotEmpty()
             is DictionaryVariable -> condition.value.isNotEmpty()
-            is ScreenElement -> true // ScreenElement 存在即为真
-            else -> condition != null // 其他非空对象也为真
+            is ScreenElement -> true
+            else -> condition != null
         }
-        onProgress(ProgressUpdate("条件判断结果: $result"))
-        return ExecutionResult.Success(mapOf("result" to BooleanVariable(result)))
     }
 }
 
@@ -92,7 +109,18 @@ class ElseModule : BaseModule() {
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
-    ) = ExecutionResult.Success()
+    ): ExecutionResult {
+        // 核心改动： "Else" 模块需要无条件跳转到 "EndIf"
+        val jumpTo = findNextBlockPosition(
+            context.allSteps,
+            context.currentStepIndex,
+            setOf(IF_END_ID)
+        )
+        if (jumpTo != -1) {
+            return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
+        }
+        return ExecutionResult.Success()
+    }
 }
 
 class EndIfModule : BaseModule() {
@@ -106,4 +134,30 @@ class EndIfModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ) = ExecutionResult.Success()
+}
+
+/**
+ * 辅助函数，用于模块内部计算配对模块的位置
+ */
+fun findNextBlockPosition(steps: List<ActionStep>, startPosition: Int, targetIds: Set<String>): Int {
+    val startModule = ModuleRegistry.getModule(steps[startPosition].moduleId)
+    val pairingId = startModule?.blockBehavior?.pairingId ?: return -1
+    var openBlocks = 1
+    for (i in (startPosition + 1) until steps.size) {
+        val currentModule = ModuleRegistry.getModule(steps[i].moduleId)
+        if (currentModule?.blockBehavior?.pairingId == pairingId) {
+            when (currentModule.blockBehavior.type) {
+                BlockType.BLOCK_START -> openBlocks++
+                BlockType.BLOCK_END -> {
+                    openBlocks--
+                    if (openBlocks == 0 && targetIds.contains(currentModule.id)) return i
+                }
+                BlockType.BLOCK_MIDDLE -> {
+                    if (openBlocks == 1 && targetIds.contains(currentModule.id)) return i
+                }
+                else -> {}
+            }
+        }
+    }
+    return -1
 }

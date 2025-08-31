@@ -64,18 +64,18 @@ class LoopModule : BaseBlockModule() {
         return ValidationResult(true)
     }
 
+    // 在新架构下，LoopModule的execute仅用于日志记录
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // --- 核心修复：正确解析魔法变量的值 ---
         val countValue = context.magicVariables["count"] ?: context.variables["count"]
         val actualCount = when (countValue) {
             is NumberVariable -> countValue.value
             is Number -> countValue
             else -> countValue?.toString()
         }
-        onProgress(ProgressUpdate("循环开始，次数: $actualCount"))
+        onProgress(ProgressUpdate("循环开始，总次数: $actualCount"))
         return ExecutionResult.Success()
     }
 }
@@ -87,6 +87,7 @@ class EndLoopModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束循环"
 
+    // EndLoopModule的execute也仅用于日志记录
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit

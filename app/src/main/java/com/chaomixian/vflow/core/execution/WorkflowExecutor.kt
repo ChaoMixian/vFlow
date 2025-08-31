@@ -5,10 +5,8 @@ import android.util.Log
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.modules.logic.ELSE_ID
-import com.chaomixian.vflow.modules.logic.IF_END_ID
 import com.chaomixian.vflow.modules.logic.LOOP_END_ID
-import com.chaomixian.vflow.modules.variable.BooleanVariable
+import com.chaomixian.vflow.modules.logic.LOOP_START_ID
 import com.chaomixian.vflow.modules.variable.NumberVariable
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.CoroutineScope
@@ -19,9 +17,6 @@ import java.util.Stack
 // --- 控制流状态定义 ---
 private sealed class ControlFlowState
 private data class LoopState(val startPc: Int, val endPc: Int, val totalIterations: Long, var currentIteration: Long = 0) : ControlFlowState()
-private data class IfState(val jumped: Boolean) : ControlFlowState()
-// --- 状态定义结束 ---
-
 
 object WorkflowExecutor {
 
@@ -36,25 +31,26 @@ object WorkflowExecutor {
 
             val stepOutputs = mutableMapOf<String, Map<String, Any?>>()
             val controlFlowStack = Stack<ControlFlowState>()
-            var pc = 0 // 程序计数器 (Program Counter)
+            var pc = 0 // 程序计数器
 
             while (pc < workflow.steps.size) {
                 val step = workflow.steps[pc]
                 val module = ModuleRegistry.getModule(step.moduleId)
-
                 if (module == null) {
-                    Log.w("WorkflowExecutor", "未找到模块: ${step.moduleId}，跳过。")
+                    Log.w("WorkflowExecutor", "模块未找到: ${step.moduleId}")
                     pc++
                     continue
                 }
 
-                // --- 预处理魔法变量 ---
                 val executionContext = ExecutionContext(
                     applicationContext = context.applicationContext,
                     variables = step.parameters.toMutableMap(),
                     magicVariables = mutableMapOf(),
-                    services = services
+                    services = services,
+                    allSteps = workflow.steps,
+                    currentStepIndex = pc
                 )
+
                 step.parameters.forEach { (key, value) ->
                     if (value is String && value.startsWith("{{") && value.endsWith("}}")) {
                         val parts = value.removeSurrounding("{{", "}}").split('.')
@@ -68,13 +64,31 @@ object WorkflowExecutor {
                         }
                     }
                 }
-                // --- 预处理结束 ---
+
+                // --- 循环逻辑预处理 ---
+                // 在执行LOOP_START之前，先建立循环状态
+                if (module.id == LOOP_START_ID) {
+                    val countVar = executionContext.magicVariables["count"] ?: executionContext.variables["count"]
+                    val count = when (countVar) {
+                        is NumberVariable -> countVar.value.toLong()
+                        is Number -> countVar.toLong()
+                        else -> countVar.toString().toLongOrNull() ?: 0
+                    }
+                    val endPc = findNextBlockPosition(workflow.steps, pc, setOf(LOOP_END_ID))
+                    if (count > 0 && endPc != -1) {
+                        controlFlowStack.push(LoopState(pc, endPc, count))
+                    } else {
+                        pc = endPc + 1 // 次数为0或找不到结尾，直接跳过整个循环
+                        continue
+                    }
+                }
 
                 Log.d("WorkflowExecutor", "[$pc] -> 执行: ${module.metadata.name}")
                 val result = module.execute(executionContext) { progress ->
                     Log.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progress.message}")
                 }
 
+                var jumped = false
                 when (result) {
                     is ExecutionResult.Success -> {
                         if (result.outputs.isNotEmpty()) {
@@ -82,85 +96,40 @@ object WorkflowExecutor {
                         }
                     }
                     is ExecutionResult.Failure -> {
-                        Log.e("WorkflowExecutor", "模块 ${module.metadata.name} 执行失败: ${result.errorTitle} - ${result.errorMessage}")
-                        break // 出现错误则终止整个工作流
+                        Log.e("WorkflowExecutor", "模块执行失败: ${result.errorTitle} - ${result.errorMessage}")
+                        break // 终止工作流
                     }
-                }
-
-                // --- 控制流逻辑 ---
-                val behavior = module.blockBehavior
-                var jumped = false
-
-                when (behavior.type) {
-                    BlockType.BLOCK_START -> {
-                        when (module.id) {
-                            "vflow.logic.if.start" -> {
-                                val conditionMet = (result as? ExecutionResult.Success)?.outputs?.get("result") as? BooleanVariable
-                                if (conditionMet?.value == false) {
-                                    val jumpTo = findNextBlockPosition(workflow.steps, pc, setOf(ELSE_ID, IF_END_ID))
-                                    if (jumpTo != -1) {
-                                        pc = jumpTo
-                                        jumped = true
-                                    }
-                                }
-                                controlFlowStack.push(IfState(jumped))
-                            }
-                            "vflow.logic.loop.start" -> {
-                                val countVar = executionContext.magicVariables["count"] ?: executionContext.variables["count"]
-                                val count = when (countVar) {
-                                    is NumberVariable -> countVar.value.toLong()
-                                    is Number -> countVar.toLong()
-                                    else -> countVar.toString().toLongOrNull() ?: 0
-                                }
-                                val endPc = findNextBlockPosition(workflow.steps, pc, setOf(LOOP_END_ID))
-                                if (count <= 0 || endPc == -1) {
-                                    pc = endPc + 1 // 跳过整个循环
-                                    jumped = true
-                                } else {
-                                    controlFlowStack.push(LoopState(pc, endPc, count))
-                                }
+                    is ExecutionResult.Signal -> {
+                        when (val signal = result.signal) {
+                            is ExecutionSignal.Jump -> {
+                                pc = signal.pc
+                                jumped = true
                             }
                         }
                     }
-                    BlockType.BLOCK_MIDDLE -> {
-                        if (module.id == ELSE_ID && controlFlowStack.peek() is IfState) {
-                            if (!(controlFlowStack.peek() as IfState).jumped) {
-                                val jumpTo = findNextBlockPosition(workflow.steps, pc, setOf(IF_END_ID))
-                                if (jumpTo != -1) {
-                                    pc = jumpTo
-                                    jumped = true
-                                }
-                            }
-                        }
-                    }
-                    BlockType.BLOCK_END -> {
-                        if (controlFlowStack.isNotEmpty()) {
-                            val state = controlFlowStack.peek()
-                            if (state is LoopState && module.id == LOOP_END_ID) {
-                                state.currentIteration++
-                                if (state.currentIteration < state.totalIterations) {
-                                    // --- 核心修复：跳转到循环体内的第一个模块，而不是循环开始模块 ---
-                                    pc = state.startPc + 1
-                                    jumped = true
-                                } else {
-                                    controlFlowStack.pop()
-                                }
-                            } else if (state is IfState && module.id == IF_END_ID) {
-                                controlFlowStack.pop()
-                            }
-                        }
-                    }
-                    BlockType.NONE -> { /* 无操作 */ }
                 }
 
-                if (!jumped) {
-                    pc++
+                if (jumped) continue
+
+                // --- 循环逻辑后处理 ---
+                if (module.id == LOOP_END_ID && controlFlowStack.isNotEmpty() && controlFlowStack.peek() is LoopState) {
+                    val loopState = controlFlowStack.peek() as LoopState
+                    loopState.currentIteration++
+                    if (loopState.currentIteration < loopState.totalIterations) {
+                        pc = loopState.startPc + 1 // 跳回循环体内第一个模块
+                        continue
+                    } else {
+                        controlFlowStack.pop() // 循环结束
+                    }
                 }
+
+                pc++
             }
             Log.d("WorkflowExecutor", "工作流 '${workflow.name}' 执行完毕。")
         }
     }
 
+    // 这个函数仍然有用，可以保留在Executor中作为一个公共工具
     private fun findNextBlockPosition(steps: List<ActionStep>, startPosition: Int, targetIds: Set<String>): Int {
         val startModule = ModuleRegistry.getModule(steps[startPosition].moduleId)
         val pairingId = startModule?.blockBehavior?.pairingId ?: return -1
