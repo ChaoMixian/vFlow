@@ -116,6 +116,15 @@ data class ValidationResult(
 sealed class ExecutionSignal {
     /** 跳转到指定的程序计数器位置 */
     data class Jump(val pc: Int) : ExecutionSignal()
+    /** 新增：循环控制信号，用于结束或继续循环 */
+    data class Loop(val action: LoopAction) : ExecutionSignal()
+}
+
+/**
+ * 循环动作的枚举
+ */
+enum class LoopAction {
+    START, END
 }
 
 /**

@@ -348,10 +348,39 @@ class ElseModule : BaseModule() {
     override val metadata = ActionMetadata("否则", "如果条件不满足，则执行这里的操作", R.drawable.ic_control_flow, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, IF_PAIRING_ID, isIndividuallyDeletable = true)
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "否则"
+
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val jumpTo = findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(IF_END_ID))
-        if (jumpTo != -1) return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
+        // 【核心修改】
+        // 1. 找到上一个 If 模块的执行结果
+        val ifStepId = findPreviousStepInSameBlock(context.allSteps, context.currentStepIndex, IF_START_ID)
+        val ifOutput = ifStepId?.let { context.stepOutputs[it]?.get("result") as? BooleanVariable }?.value
+
+        // 2. 如果 If 条件为真，则需要跳过整个 Else 块
+        //    (这说明流程是自然执行到这里的，而不是被 If 模块跳转过来的)
+        if (ifOutput == true) {
+            onProgress(ProgressUpdate("如果条件为真，跳过否则块。"))
+            val jumpTo = findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(IF_END_ID))
+            if (jumpTo != -1) {
+                return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
+            }
+        }
+
+        // 3. 如果 If 条件为假，或者没有找到 If 的结果，则流程应正常执行 Else 块
+        onProgress(ProgressUpdate("进入否则块"))
         return ExecutionResult.Success()
+    }
+
+    // 辅助函数：向前查找同一块中的特定步骤
+    private fun findPreviousStepInSameBlock(steps: List<ActionStep>, startPosition: Int, targetId: String): String? {
+        val pairingId = steps[startPosition].moduleId.let { ModuleRegistry.getModule(it)?.blockBehavior?.pairingId } ?: return null
+        for (i in (startPosition - 1) downTo 0) {
+            val currentStep = steps[i]
+            val currentModule = ModuleRegistry.getModule(currentStep.moduleId) ?: continue
+            if (currentModule.blockBehavior.pairingId == pairingId && currentModule.id == targetId) {
+                return currentStep.id
+            }
+        }
+        return null
     }
 }
 

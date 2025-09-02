@@ -63,44 +63,78 @@ class ClickModule : BaseModule() {
 
         val target = context.magicVariables["target"] ?: context.variables["target"]
 
-        val coordinate: Coordinate? = when (target) {
-            is ScreenElement -> Coordinate(target.bounds.centerX(), target.bounds.centerY())
-            is Coordinate -> target
-            is TextVariable -> target.value.toCoordinate() ?: findNodeByViewId(service, target.value)?.let { node ->
-                val bounds = Rect()
-                node.getBoundsInScreen(bounds)
-                node.recycle()
-                Coordinate(bounds.centerX(), bounds.centerY())
+        // 核心修改：根据输入类型，执行不同的点击操作
+        val clickSuccess = when (target) {
+            is ScreenElement -> {
+                onProgress(ProgressUpdate("正在点击找到的元素"))
+                // 尝试直接使用无障碍服务点击，如果失败则回退到坐标点击
+                val node = findNodeByBounds(service, target.bounds)
+                val success = node?.performAction(AccessibilityNodeInfo.ACTION_CLICK) ?: false
+                if(node != null) node.recycle()
+                success || performGestureClick(service, target.bounds.centerX(), target.bounds.centerY(), onProgress)
             }
-            is String -> target.toCoordinate() ?: findNodeByViewId(service, target)?.let { node ->
-                val bounds = Rect()
-                node.getBoundsInScreen(bounds)
-                node.recycle()
-                Coordinate(bounds.centerX(), bounds.centerY())
+            is Coordinate -> {
+                onProgress(ProgressUpdate("正在点击坐标: (${target.x}, ${target.y})"))
+                performGestureClick(service, target.x, target.y, onProgress)
             }
-            else -> null
+            is TextVariable -> {
+                val viewId = target.value
+                onProgress(ProgressUpdate("正在点击视图ID: $viewId"))
+                performViewIdClick(service, viewId, onProgress)
+            }
+            is String -> {
+                // 首先尝试作为坐标解析，如果失败则作为视图ID处理
+                val coordinate = target.toCoordinate()
+                if (coordinate != null) {
+                    onProgress(ProgressUpdate("正在点击坐标: (${coordinate.x}, ${coordinate.y})"))
+                    performGestureClick(service, coordinate.x, coordinate.y, onProgress)
+                } else {
+                    onProgress(ProgressUpdate("正在点击视图ID: $target"))
+                    performViewIdClick(service, target, onProgress)
+                }
+            }
+            else -> {
+                onProgress(ProgressUpdate("点击失败：目标无效"))
+                false
+            }
         }
 
-        if (coordinate == null) {
-            onProgress(ProgressUpdate("点击失败：目标无效"))
-            return ExecutionResult.Success(mapOf("success" to BooleanVariable(false)))
+        return ExecutionResult.Success(mapOf("success" to BooleanVariable(clickSuccess)))
+    }
+
+    // 新增私有函数：处理基于视图ID的点击
+    private suspend fun performViewIdClick(service: VFlowAccessibilityService, viewId: String, onProgress: suspend (ProgressUpdate) -> Unit): Boolean {
+        val node = findNodeByViewId(service, viewId)
+        if (node == null) {
+            onProgress(ProgressUpdate("视图ID '$viewId' 未找到"))
+            return false
         }
+        val clickSuccess = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        node.recycle()
+        if (!clickSuccess) {
+            onProgress(ProgressUpdate("视图ID '$viewId' 不可点击，回退到坐标点击"))
+            val bounds = Rect()
+            node.getBoundsInScreen(bounds)
+            return performGestureClick(service, bounds.centerX(), bounds.centerY(), onProgress)
+        }
+        onProgress(ProgressUpdate("已通过视图ID成功点击"))
+        return true
+    }
 
-        onProgress(ProgressUpdate("正在点击坐标: (${coordinate.x}, ${coordinate.y})"))
-
-        val path = Path().apply { moveTo(coordinate.x.toFloat(), coordinate.y.toFloat()) }
+    // 新增私有函数：处理基于手势的点击
+    private suspend fun performGestureClick(service: VFlowAccessibilityService, x: Int, y: Int, onProgress: suspend (ProgressUpdate) -> Unit): Boolean {
+        val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 100))
             .build()
-
         val deferred = CompletableDeferred<Boolean>()
         service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
             override fun onCompleted(g: GestureDescription?) { deferred.complete(true) }
             override fun onCancelled(g: GestureDescription?) { deferred.complete(false) }
         }, null)
-
-        val clickSuccess = deferred.await()
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(clickSuccess)))
+        val success = deferred.await()
+        if (success) onProgress(ProgressUpdate("已通过手势成功点击"))
+        return success
     }
 
     private fun String.toCoordinate(): Coordinate? {
@@ -121,5 +155,16 @@ class ClickModule : BaseModule() {
         val nodes = root.findAccessibilityNodeInfosByViewId(viewId)
         root.recycle()
         return nodes?.firstOrNull()
+    }
+
+    private fun findNodeByBounds(service: VFlowAccessibilityService, bounds: Rect): AccessibilityNodeInfo? {
+        val root = service.rootInActiveWindow ?: return null
+        val node = root.findAccessibilityNodeInfosByText("").find {
+            val nodeBounds = Rect()
+            it.getBoundsInScreen(nodeBounds)
+            nodeBounds.contains(bounds)
+        }
+        root.recycle()
+        return node
     }
 }

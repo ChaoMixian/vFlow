@@ -57,7 +57,7 @@
                 android:orientation="vertical"
                 android:paddingStart="6dp"
                 android:paddingTop="8dp"
-                android:paddingEnd="12dp"
+                android:paddingEnd="4dp"
                 android:paddingBottom="8dp"
                 android:layout_gravity="center_vertical" />
             <ImageButton

@@ -5,6 +5,7 @@ package com.chaomixian.vflow.modules.logic
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.LoopState
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.NumberVariable
@@ -61,14 +62,26 @@ class LoopModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val countValue = context.magicVariables["count"] ?: context.variables["count"]
-        val actualCount = when (countValue) {
-            is NumberVariable -> countValue.value
-            is Number -> countValue
-            else -> countValue?.toString()
+        val countVar = context.magicVariables["count"] ?: context.variables["count"]
+        val actualCount = when (countVar) {
+            is NumberVariable -> countVar.value.toLong()
+            is Number -> countVar.toLong()
+            else -> countVar.toString().toLongOrNull() ?: 0
         }
+
+        if (actualCount <= 0) {
+            onProgress(ProgressUpdate("循环次数为0，跳过循环块。"))
+            val endPc = findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(LOOP_END_ID))
+            if (endPc != -1) {
+                return ExecutionResult.Signal(ExecutionSignal.Jump(endPc))
+            } else {
+                return ExecutionResult.Failure("执行错误", "找不到配对的结束循环块")
+            }
+        }
+
         onProgress(ProgressUpdate("循环开始，总次数: $actualCount"))
-        return ExecutionResult.Success()
+        context.loopStack.push(LoopState(actualCount))
+        return ExecutionResult.Signal(ExecutionSignal.Loop(LoopAction.START))
     }
 }
 
@@ -83,7 +96,10 @@ class EndLoopModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        onProgress(ProgressUpdate("循环迭代结束"))
-        return ExecutionResult.Success()
+        val loopState = context.loopStack.peek() ?: return ExecutionResult.Success()
+        onProgress(ProgressUpdate("循环迭代结束，当前是第 ${loopState.currentIteration + 1} 次"))
+
+        loopState.currentIteration++
+        return ExecutionResult.Signal(ExecutionSignal.Loop(LoopAction.END))
     }
 }

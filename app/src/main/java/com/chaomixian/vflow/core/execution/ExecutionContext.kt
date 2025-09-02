@@ -1,7 +1,18 @@
+// 文件: main/java/com/chaomixian/vflow/core/execution/ExecutionContext.kt
+
 package com.chaomixian.vflow.core.execution
 
 import android.content.Context
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import java.util.*
+
+/**
+ * 循环控制流状态的内部数据类。
+ */
+data class LoopState(
+    val totalIterations: Long,
+    var currentIteration: Long = 0
+)
 
 /**
  * 执行时传递的上下文 (重构)。
@@ -11,6 +22,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
  * @param services 一个服务容器，模块可以从中按需获取所需的服务实例。
  * @param allSteps 整个工作流的步骤列表。
  * @param currentStepIndex 当前正在执行的步骤的索引。
+ * @param stepOutputs 存储所有已执行步骤的输出结果。
+ * @param loopStack 一个用于管理嵌套循环状态的堆栈。
  */
 data class ExecutionContext(
     val applicationContext: Context,
@@ -18,5 +31,7 @@ data class ExecutionContext(
     val magicVariables: MutableMap<String, Any?>,
     val services: ExecutionServices,
     val allSteps: List<ActionStep>,
-    val currentStepIndex: Int
+    val currentStepIndex: Int,
+    val stepOutputs: Map<String, Map<String, Any?>>,
+    val loopStack: Stack<LoopState> // 新增：将循环堆栈传递给上下文
 )
