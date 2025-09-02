@@ -15,11 +15,8 @@ const val LOOP_END_ID = "vflow.logic.loop.end"
 class LoopModule : BaseBlockModule() {
     override val id = LOOP_START_ID
     override val metadata = ActionMetadata("循环", "重复执行一组操作固定的次数", R.drawable.ic_control_flow, "逻辑控制")
-
-    // --- 来自 BaseBlockModule 的配置 ---
     override val pairingId = LOOP_PAIRING_ID
     override val stepIdsInBlock = listOf(LOOP_START_ID, LOOP_END_ID)
-    // --- 配置结束 ---
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -28,7 +25,7 @@ class LoopModule : BaseBlockModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 5,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable::class.java)
+            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
         )
     )
 
@@ -64,7 +61,6 @@ class LoopModule : BaseBlockModule() {
         return ValidationResult(true)
     }
 
-    // 在新架构下，LoopModule的execute仅用于日志记录
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
@@ -87,7 +83,6 @@ class EndLoopModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束循环"
 
-    // EndLoopModule的execute也仅用于日志记录
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit

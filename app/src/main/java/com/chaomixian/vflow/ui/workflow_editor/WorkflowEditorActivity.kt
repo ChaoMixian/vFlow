@@ -1,11 +1,14 @@
 package com.chaomixian.vflow.ui.workflow_editor
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -13,10 +16,13 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.permissions.PermissionActivity
+import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
@@ -31,6 +37,20 @@ class WorkflowEditorActivity : BaseActivity() {
     private lateinit var nameEditText: EditText
     private lateinit var itemTouchHelper: ItemTouchHelper
     private var currentEditorSheet: ActionEditorSheet? = null
+
+    private var pendingExecutionWorkflow: Workflow? = null
+
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            pendingExecutionWorkflow?.let {
+                Toast.makeText(this, "开始执行: ${it.name}", Toast.LENGTH_SHORT).show()
+                WorkflowExecutor.execute(it, this)
+            }
+        }
+        pendingExecutionWorkflow = null
+    }
 
     companion object {
         const val EXTRA_WORKFLOW_ID = "WORKFLOW_ID"
@@ -53,6 +73,39 @@ class WorkflowEditorActivity : BaseActivity() {
 
         findViewById<Button>(R.id.button_add_action).setOnClickListener { showActionPicker() }
         findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow() }
+        findViewById<Button>(R.id.button_execute_workflow).setOnClickListener {
+            val name = nameEditText.text.toString().trim()
+            if (name.isBlank()) {
+                Toast.makeText(this, "工作流名称不能为空", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val workflowToExecute = currentWorkflow?.copy(
+                name = name,
+                steps = actionSteps
+            ) ?: Workflow(
+                id = currentWorkflow?.id ?: UUID.randomUUID().toString(),
+                name = name,
+                steps = actionSteps
+            )
+
+            executeWorkflow(workflowToExecute)
+        }
+    }
+
+    private fun executeWorkflow(workflow: Workflow) {
+        val missingPermissions = PermissionManager.getMissingPermissions(this, workflow)
+        if (missingPermissions.isEmpty()) {
+            Toast.makeText(this, "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
+            WorkflowExecutor.execute(workflow, this)
+        } else {
+            pendingExecutionWorkflow = workflow
+            val intent = Intent(this, PermissionActivity::class.java).apply {
+                putParcelableArrayListExtra(PermissionActivity.EXTRA_PERMISSIONS, ArrayList(missingPermissions))
+                putExtra(PermissionActivity.EXTRA_WORKFLOW_NAME, workflow.name)
+            }
+            permissionLauncher.launch(intent)
+        }
     }
 
     private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
@@ -88,11 +141,10 @@ class WorkflowEditorActivity : BaseActivity() {
         for (i in 0 until effectivePosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId)
-            // 使用新的 getOutputs(step) 方法
+
+            // --- CORE FIX: Use typeName strings for compatibility check ---
             module?.getOutputs(step)?.forEach { outputDef ->
-                val isCompatible = targetInputDef.acceptedMagicVariableTypes.any { acceptedType ->
-                    acceptedType.isAssignableFrom(outputDef.type)
-                }
+                val isCompatible = targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
                 if (isCompatible) {
                     availableVariables.add(
                         MagicVariableItem(
@@ -117,7 +169,7 @@ class WorkflowEditorActivity : BaseActivity() {
         picker.show(supportFragmentManager, "MagicVariablePicker")
     }
 
-
+    // ... The rest of WorkflowEditorActivity.kt remains unchanged ...
     private fun setupRecyclerView() {
         val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
         val hideConnections = prefs.getBoolean("hideConnections", false)

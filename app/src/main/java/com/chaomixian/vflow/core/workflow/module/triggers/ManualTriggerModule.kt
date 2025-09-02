@@ -17,7 +17,7 @@ class ManualTriggerModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable::class.java)
+        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -28,7 +28,6 @@ class ManualTriggerModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 手动触发总是成功的
         onProgress(ProgressUpdate("工作流被手动触发"))
         return ExecutionResult.Success(outputs = mapOf("success" to BooleanVariable(true)))
     }

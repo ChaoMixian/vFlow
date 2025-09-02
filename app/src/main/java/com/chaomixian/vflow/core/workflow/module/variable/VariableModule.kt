@@ -10,11 +10,26 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
 
-@Parcelize data class TextVariable(val value: String) : Parcelable
-@Parcelize data class NumberVariable(val value: Double) : Parcelable
-@Parcelize data class BooleanVariable(val value: Boolean) : Parcelable
-@Parcelize data class ListVariable(val value: @RawValue List<Any?>) : Parcelable
-@Parcelize data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelable
+@Parcelize
+data class TextVariable(val value: String) : Parcelable {
+    companion object { const val TYPE_NAME = "vflow.type.text" }
+}
+@Parcelize
+data class NumberVariable(val value: Double) : Parcelable {
+    companion object { const val TYPE_NAME = "vflow.type.number" }
+}
+@Parcelize
+data class BooleanVariable(val value: Boolean) : Parcelable {
+    companion object { const val TYPE_NAME = "vflow.type.boolean" }
+}
+@Parcelize
+data class ListVariable(val value: @RawValue List<Any?>) : Parcelable {
+    companion object { const val TYPE_NAME = "vflow.type.list" }
+}
+@Parcelize
+data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelable {
+    companion object { const val TYPE_NAME = "vflow.type.dictionary" }
+}
 
 class SetVariableModule : BaseModule() {
     override val id = "vflow.variable.set"
@@ -37,20 +52,19 @@ class SetVariableModule : BaseModule() {
             name = "值",
             staticType = ParameterType.ANY,
             defaultValue = "",
-            acceptsMagicVariable = false // 值通过自定义UI设置，这里关闭魔法变量
+            acceptsMagicVariable = false
         )
     )
 
-    // 输出是动态的
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        if (step == null) return emptyList() // 编辑器加载时可能为null
+        if (step == null) return emptyList()
 
         val selectedType = step.parameters["type"] as? String
         return when (selectedType) {
-            "文本" -> listOf(OutputDefinition("variable", "变量 (文本)", TextVariable::class.java))
-            "数字" -> listOf(OutputDefinition("variable", "变量 (数字)", NumberVariable::class.java))
-            "布尔" -> listOf(OutputDefinition("variable", "变量 (布尔)", BooleanVariable::class.java))
-            "字典" -> listOf(OutputDefinition("variable", "变量 (字典)", DictionaryVariable::class.java))
+            "文本" -> listOf(OutputDefinition("variable", "变量 (文本)", TextVariable.TYPE_NAME))
+            "数字" -> listOf(OutputDefinition("variable", "变量 (数字)", NumberVariable.TYPE_NAME))
+            "布尔" -> listOf(OutputDefinition("variable", "变量 (布爾)", BooleanVariable.TYPE_NAME))
+            "字典" -> listOf(OutputDefinition("variable", "变量 (字典)", DictionaryVariable.TYPE_NAME))
             else -> emptyList()
         }
     }
@@ -86,7 +100,7 @@ class SetVariableModule : BaseModule() {
         val variable: Parcelable = when (type) {
             "数字" -> NumberVariable((value as? String)?.toDoubleOrNull() ?: (value as? Number ?: 0.0).toDouble())
             "布尔" -> BooleanVariable(value as? Boolean ?: false)
-            "字典" -> DictionaryVariable(value as? Map<String, Any?> ?: emptyMap())
+            "字典" -> DictionaryVariable((value as? Map<*, *>)?.mapKeys { it.key.toString() } ?: emptyMap())
             else -> TextVariable(value?.toString() ?: "")
         }
         onProgress(ProgressUpdate("设置变量 ($type) 完成"))

@@ -7,7 +7,6 @@
 package com.chaomixian.vflow.modules.device
 
 import android.content.Context
-import android.os.Parcelable
 import android.widget.Toast
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
@@ -19,26 +18,18 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.parcelize.Parcelize
-
-// 如果你的模块需要输出自定义类型的数据，你需要定义一个数据类，
-// 并用 @Parcelize 注解标记它，同时实现 Parcelable 接口。
-// 这使得数据可以在工作流的步骤之间安全地传递。
-@Parcelize
-data class ToastResultVariable(val isShown: Boolean) : Parcelable
-
 
 /**
  * 模块主类。
- * 建议继承 BaseModule，这为你处理了大部分通用逻辑，让你可以专注于核心功能。
+ * 建议继承 BaseModule，它为你处理了大部分通用逻辑（如创建、删除步骤），让你可以专注于核心功能。
  */
 class ToastModule : BaseModule() {
 
     // --- 1. 模块基础信息 (必须实现) ---
 
     /**
-     * 模块的唯一ID。这是模块的“身份证”。
-     * 命名规则建议：`公司/组织名.分类.模块名`，例如 `vflow.utils.toast`
+     * 模块的唯一ID。这是模块的“身份证”，在整个应用中必须是唯一的。
+     * 命名规则建议：`vflow.<分类>.<功能>`，例如 `vflow.device.toast`。
      */
     override val id = "vflow.other.toast"
 
@@ -46,7 +37,7 @@ class ToastModule : BaseModule() {
      * 模块的元数据，定义了它在UI上的外观和信息。
      * - name: 显示在动作选择器和卡片标题中的名称。
      * - description: 在动作选择器中显示的详细描述。
-     * - iconRes: 显示的图标资源ID。
+     * - iconRes: 显示的图标资源ID (来自 R.drawable)。
      * - category: 模块所属的分类，用于在选择器中分组。
      */
     override val metadata = ActionMetadata(
@@ -56,16 +47,19 @@ class ToastModule : BaseModule() {
         category = "其他"
     )
 
-    // --- 新增权限声明 ---
+    /**
+     * 声明此模块运行时需要哪些权限。
+     * 执行器在运行工作流前会检查这些权限，如果缺失会提示用户授权。
+     */
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATIONS)
-    // --- 声明结束 ---
 
 
     // --- 2. 参数定义 (按需实现) ---
 
     /**
      * 定义模块的输入参数。
-     * 系统会根据这里的定义，在编辑界面为你自动生成输入框。
+     * 系统会根据这里的定义，在编辑界面为你自动生成输入UI。
+     * 返回一个 InputDefinition 对象的列表。
      */
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -74,7 +68,7 @@ class ToastModule : BaseModule() {
             staticType = ParameterType.STRING, // 如果不连接魔法变量，它是一个文本输入框
             defaultValue = "Hello, vFlow!", // 输入框的默认值
             acceptsMagicVariable = true, // 是否允许用户连接一个上游的“魔法变量”
-            acceptedMagicVariableTypes = setOf(TextVariable::class.java) // 允许连接哪些类型的变量
+            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME) // 允许连接哪些类型的变量 (使用唯一的类型名称字符串)
         )
     )
 
@@ -82,12 +76,13 @@ class ToastModule : BaseModule() {
      * 定义模块的输出参数。
      * @param step (可选) 如果你的输出是根据用户的输入动态变化的，可以在这里使用 step.parameters 来判断。
      * 对于大部分模块，这个参数可以忽略。
+     * 返回一个 OutputDefinition 对象的列表。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition(
             id = "success", // 输出值的唯一ID
             name = "是否成功", // 在魔法变量选择器中显示的名称
-            type = BooleanVariable::class.java // 输出值的数据类型
+            typeName = BooleanVariable.TYPE_NAME // 输出值的数据类型 (使用唯一的类型名称字符串)
         )
     )
 
@@ -97,33 +92,36 @@ class ToastModule : BaseModule() {
     /**
      * 定义在工作流编辑器卡片上显示的“摘要”。
      * 这可以让用户在不点开编辑的情况下，就能大致了解这个模块做了什么。
-     * 你可以使用 PillUtil 来创建带样式的“药丸”文本。
+     * 你可以使用 PillUtil 来创建带样式的“药丸”文本，以区分静态值和变量。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         // 从步骤的参数中获取用户填写的值
         val message = step.parameters["message"]?.toString() ?: "..."
+        // 判断这个值是否是一个魔法变量引用
         val isVariable = message.startsWith("{{")
+        // 根据是否是变量，决定药丸里显示的文本
         val pillText = if (isVariable) "变量" else "'$message'"
 
-        // 使用 PillUtil 构建富文本
+        // 使用 PillUtil 构建富文本，将普通文本和“药丸”拼接在一起
         return PillUtil.buildSpannable(
             context,
-            "显示消息 ",
-            PillUtil.Pill(pillText, isVariable, parameterId = "message")
+            "显示消息 ", // 普通文本
+            PillUtil.Pill(pillText, isVariable, parameterId = "message") // 药丸
         )
     }
 
     /**
      * 验证用户输入的参数是否合法。
      * 如果验证不通过，用户将无法保存编辑。
-     * 继承 BaseModule 后，默认返回“有效”，只有在需要时才重写。
+     * 继承 BaseModule 后，默认返回“有效”，只有在需要时才重写此方法。
      */
     override fun validate(step: ActionStep): ValidationResult {
         val message = step.parameters["message"]?.toString()
-        // 检查消息是否为空 (但忽略魔法变量)
+        // 检查消息是否为空 (但要忽略魔法变量，因为变量的值在运行时才知道)
         if (message.isNullOrBlank() && !message.toString().startsWith("{{")) {
             return ValidationResult(isValid = false, errorMessage = "消息内容不能为空")
         }
+        // 所有检查都通过，返回有效结果
         return ValidationResult(isValid = true)
     }
 
@@ -132,15 +130,19 @@ class ToastModule : BaseModule() {
 
     /**
      * 这是模块最核心的部分，定义了模块运行时要执行的操作。
-     * 这是一个 `suspend` 函数，意味着你可以在这里执行异步操作（如网络请求、延迟等）。
+     * 这是一个 `suspend` 函数，意味着你可以在这里执行异步操作（如网络请求、延迟等）而不会阻塞线程。
      *
      * @param context 执行时的上下文，你可以从中获取：
-     * - `context.variables`: 用户在编辑器里填写的静态值。
-     * - `context.magicVariables`: 从上游模块连接过来的动态值。
-     * - `context.accessibilityService`: 无障碍服务实例，用于模拟点击、查找节点等。
-     * @param onProgress 一个回调函数，用于向系统报告当前的执行进度。
+     * - `context.variables`: 用户在编辑器里填写的静态参数值。
+     * - `context.magicVariables`: 从上游模块连接过来的动态值（魔法变量）。
+     * - `context.services`: 一个服务容器，可以从中获取无障碍服务等实例。
+     * - `context.applicationContext`: 安卓应用的全局 Context。
+     * @param onProgress 一个回调函数，用于向系统报告当前的执行进度，会显示在日志中。
      *
-     * @return ExecutionResult.Success 或 ExecutionResult.Failure
+     * @return ExecutionResult 必须返回一个执行结果，可以是：
+     * - ExecutionResult.Success: 表示成功，可以附带输出值。
+     * - ExecutionResult.Failure: 表示失败，需要提供错误标题和信息。
+     * - ExecutionResult.Signal: 表示需要改变执行流程（如跳转），由逻辑控制模块使用。
      */
     override suspend fun execute(
         context: ExecutionContext,
@@ -148,6 +150,7 @@ class ToastModule : BaseModule() {
     ): ExecutionResult {
         // 1. 获取输入参数
         // 优先从魔法变量获取，如果未连接，则从静态变量获取。
+        // `as? TextVariable` 是一个安全的类型转换，如果魔法变量不是文本类型，会返回null。
         val message = (context.magicVariables["message"] as? TextVariable)?.value
             ?: context.variables["message"] as? String
 
@@ -164,38 +167,18 @@ class ToastModule : BaseModule() {
         onProgress(ProgressUpdate("准备显示Toast: $message"))
 
         // 4. 执行核心操作
-        // Toast 需要一个 Context，我们从 ExecutionContext 中获取
+        // Toast 需要在主线程上显示，我们使用 withContext(Dispatchers.Main) 来切换线程。
         withContext(Dispatchers.Main) {
             Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
         }
 
-        // 模拟一个耗时操作
+        // 模拟一个耗时操作，来展示 suspend 函数的能力
         kotlinx.coroutines.delay(1000)
 
         // 5. 返回成功结果，并附带输出值
+        // 输出值是一个 Map，key 是输出参数的ID ("success")，value 是对应的变量对象。
         return ExecutionResult.Success(
             outputs = mapOf("success" to BooleanVariable(true))
         )
     }
-
-    /*
-     * 以下是继承自 BaseModule 的一些方法，你通常不需要关心它们，
-     * 但了解它们有助于理解模块的生命周期。
-
-     * override val blockBehavior: BlockBehavior
-     * // 定义模块是否是“积木块”的一部分。对于普通模块，保持默认的 BlockType.NONE 即可。
-
-     * override val uiProvider: ModuleUIProvider?
-     * // 如果你需要一个非常复杂的、完全自定义的编辑界面（比如“设置变量”模块），
-     * // 你需要创建一个类实现 ModuleUIProvider 接口，并在这里返回它的实例。
-     * // 对于大部分模块，返回 null 即可，系统会自动生成UI。
-
-     * override fun createSteps(): List<ActionStep>
-     * // 当用户添加此模块时，需要创建哪些步骤。BaseModule 已为你实现，
-     * // 它会自动创建一个包含默认参数的步骤。只有“积木块”模块需要重写它。
-
-     * override fun onStepDeleted(steps: MutableList<ActionStep>, position: Int): Boolean
-     * // 当步骤被删除时调用。BaseModule 已为你实现默认的删除逻辑。
-     * // 只有“积木块”模块需要重写它来删除整个块。
-     */
 }

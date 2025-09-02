@@ -17,11 +17,8 @@ const val IF_END_ID = "vflow.logic.if.end"
 class IfModule : BaseBlockModule() {
     override val id = IF_START_ID
     override val metadata = ActionMetadata("如果", "根据条件执行不同的操作", R.drawable.ic_control_flow, "逻辑控制")
-
-    // --- 来自 BaseBlockModule 的配置 ---
     override val pairingId = IF_PAIRING_ID
     override val stepIdsInBlock = listOf(IF_START_ID, ELSE_ID, IF_END_ID)
-    // --- 配置结束 ---
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -30,17 +27,17 @@ class IfModule : BaseBlockModule() {
             staticType = ParameterType.BOOLEAN,
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(
-                BooleanVariable::class.java,
-                NumberVariable::class.java,
-                TextVariable::class.java,
-                DictionaryVariable::class.java,
-                ListVariable::class.java,
-                ScreenElement::class.java
+                BooleanVariable.TYPE_NAME,
+                NumberVariable.TYPE_NAME,
+                TextVariable.TYPE_NAME,
+                DictionaryVariable.TYPE_NAME,
+                ListVariable.TYPE_NAME,
+                ScreenElement.TYPE_NAME
             )
         )
     )
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "条件结果", BooleanVariable::class.java)
+        OutputDefinition("result", "条件结果", BooleanVariable.TYPE_NAME)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -64,7 +61,6 @@ class IfModule : BaseBlockModule() {
         val result = evaluateCondition(condition)
         onProgress(ProgressUpdate("条件判断结果: $result"))
 
-        // 核心改动：如果条件不满足，则计算跳转位置并发起信号
         if (!result) {
             val jumpTo = findNextBlockPosition(
                 context.allSteps,
@@ -72,12 +68,10 @@ class IfModule : BaseBlockModule() {
                 setOf(ELSE_ID, IF_END_ID)
             )
             if (jumpTo != -1) {
-                // 返回一个信号，告诉执行器跳转
                 return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
             }
         }
 
-        // 条件满足，正常返回 Success
         return ExecutionResult.Success(mapOf("result" to BooleanVariable(result)))
     }
 
@@ -110,7 +104,6 @@ class ElseModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 核心改动： "Else" 模块需要无条件跳转到 "EndIf"
         val jumpTo = findNextBlockPosition(
             context.allSteps,
             context.currentStepIndex,
@@ -136,9 +129,6 @@ class EndIfModule : BaseModule() {
     ) = ExecutionResult.Success()
 }
 
-/**
- * 辅助函数，用于模块内部计算配对模块的位置
- */
 fun findNextBlockPosition(steps: List<ActionStep>, startPosition: Int, targetIds: Set<String>): Int {
     val startModule = ModuleRegistry.getModule(steps[startPosition].moduleId)
     val pairingId = startModule?.blockBehavior?.pairingId ?: return -1

@@ -29,7 +29,6 @@ android {
         }
     }
     compileOptions {
-        // 安卓开发标准通常使用 1.8 版本，兼容性更广
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }

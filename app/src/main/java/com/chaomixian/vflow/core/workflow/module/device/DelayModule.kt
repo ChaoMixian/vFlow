@@ -2,14 +2,13 @@ package com.chaomixian.vflow.modules.device
 
 import android.content.Context
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.modules.variable.BooleanVariable
 import com.chaomixian.vflow.modules.variable.NumberVariable
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.delay
-import java.lang.Exception
 
 class DelayModule : BaseModule() {
     override val id = "vflow.device.delay"
@@ -27,12 +26,12 @@ class DelayModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 1000L,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable::class.java)
+            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable::class.java)
+        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

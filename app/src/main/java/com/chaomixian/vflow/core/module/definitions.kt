@@ -75,13 +75,15 @@ data class InputDefinition(
     val defaultValue: Any? = null,
     val options: List<String> = emptyList(),
     val acceptsMagicVariable: Boolean = true,
-    val acceptedMagicVariableTypes: Set<Class<out Parcelable>> = emptySet()
+    // 修改：不再依赖 Class，而是使用 typeName 字符串
+    val acceptedMagicVariableTypes: Set<String> = emptySet()
 )
 
 data class OutputDefinition(
     val id: String,
     val name: String,
-    val type: Class<out Parcelable>
+    // 修改：不再依赖 Class，而是使用 typeName 字符串
+    val typeName: String
 )
 
 data class ProgressUpdate(

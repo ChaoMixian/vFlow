@@ -8,18 +8,30 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.modules.variable.*
+import com.chaomixian.vflow.modules.variable.TextVariable
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.AccessibilityService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.parcelize.Parcelize
 import java.util.regex.Pattern
 
+// --- 核心修改：模型定义在模块内部 ---
 @Parcelize
 data class ScreenElement(
     val bounds: Rect,
     val text: String?
-) : Parcelable
+) : Parcelable {
+    companion object {
+        const val TYPE_NAME = "vflow.type.screen_element"
+    }
+}
+
+@Parcelize
+data class Coordinate(val x: Int, val y: Int) : Parcelable {
+    companion object {
+        const val TYPE_NAME = "vflow.type.coordinate"
+    }
+}
 
 class FindTextModule : BaseModule() {
     override val id = "vflow.device.find.text"
@@ -27,7 +39,10 @@ class FindTextModule : BaseModule() {
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
     private val matchModeOptions = listOf("完全匹配", "包含", "正则")
-    override val uiProvider = FindModuleUIProvider(matchModeOptions)
+    private val outputFormatOptions = listOf("元素", "坐标", "视图ID")
+
+    // 我们仍然可以使用 UIProvider，因为它在布局上提供了便利
+    override val uiProvider = FindModuleUIProvider(matchModeOptions, outputFormatOptions)
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -43,26 +58,43 @@ class FindTextModule : BaseModule() {
             name = "目标文本",
             staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable::class.java)
+            // 接受 TextVariable 类型
+            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
+        ),
+        InputDefinition(
+            id = "outputFormat",
+            name = "输出格式",
+            staticType = ParameterType.ENUM,
+            defaultValue = "元素",
+            options = outputFormatOptions,
+            acceptsMagicVariable = false
         )
     )
 
-    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("element", "找到的元素", ScreenElement::class.java)
-    )
+    // 输出类型现在是字符串
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
+        val format = step?.parameters?.get("outputFormat") as? String ?: "元素"
+        return when (format) {
+            "坐标" -> listOf(OutputDefinition("result", "坐标", Coordinate.TYPE_NAME))
+            "视图ID" -> listOf(OutputDefinition("result", "视图ID", TextVariable.TYPE_NAME))
+            else -> listOf(OutputDefinition("result", "找到的元素", ScreenElement.TYPE_NAME))
+        }
+    }
 
+    // ... (getSummary 和 execute 逻辑不变) ...
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val mode = step.parameters["matchMode"]?.toString() ?: "完全匹配"
         val target = step.parameters["targetText"]?.toString() ?: "..."
+        val format = step.parameters["outputFormat"]?.toString() ?: "元素"
         val isVariable = target.startsWith("{{")
         val targetPillText = if (isVariable) "变量" else "'$target'"
 
         return PillUtil.buildSpannable(
             context,
             "查找文本 ",
-            PillUtil.Pill(mode, isVariable = false, parameterId = "matchMode"),
-            " 的 ",
-            PillUtil.Pill(targetPillText, isVariable, parameterId = "targetText")
+            PillUtil.Pill(targetPillText, isVariable, parameterId = "targetText"),
+            " 并输出 ",
+            PillUtil.Pill(format, false, parameterId = "outputFormat")
         )
     }
 
@@ -70,12 +102,9 @@ class FindTextModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 从服务容器中获取无障碍服务
         val service = context.services.get(AccessibilityService::class)
             ?: return ExecutionResult.Failure("服务未运行", "查找文本需要无障碍服务，但该服务当前未运行。")
 
-        // --- 核心修复：正确解析魔法变量 ---
-        // 优先从魔法变量获取，如果是 TextVariable，则取其 .value，否则从静态变量获取
         val targetText = (context.magicVariables["targetText"] as? TextVariable)?.value
             ?: context.variables["targetText"] as? String
 
@@ -92,22 +121,26 @@ class FindTextModule : BaseModule() {
 
             if (nodes.isEmpty()) {
                 onProgress(ProgressUpdate("未在屏幕上找到匹配的文本。"))
-                return ExecutionResult.Success() // 未找到是成功的一种，只是输出为空
+                return ExecutionResult.Success()
             }
 
             val foundNode = nodes.first()
             val bounds = Rect()
             foundNode.getBoundsInScreen(bounds)
 
-            val screenElement = ScreenElement(
-                bounds = bounds,
-                text = foundNode.text?.toString() ?: foundNode.contentDescription?.toString()
-            )
+            val outputFormat = context.variables["outputFormat"] as? String ?: "元素"
+            val output: Parcelable = when (outputFormat) {
+                "坐标" -> Coordinate(bounds.centerX(), bounds.centerY())
+                "视图ID" -> TextVariable(foundNode.viewIdResourceName ?: "")
+                else -> ScreenElement(
+                    bounds = bounds,
+                    text = foundNode.text?.toString() ?: foundNode.contentDescription?.toString()
+                )
+            }
 
-            // 回收所有获取到的节点，避免内存泄漏
             nodes.forEach { it.recycle() }
 
-            return ExecutionResult.Success(outputs = mapOf("element" to screenElement))
+            return ExecutionResult.Success(outputs = mapOf("result" to output))
         } catch (e: Exception) {
             return ExecutionResult.Failure("执行异常", e.localizedMessage ?: "发生了未知错误")
         } finally {

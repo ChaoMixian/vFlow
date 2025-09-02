@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
@@ -16,7 +17,7 @@ class WorkflowListAdapter(
     private val onEdit: (Workflow) -> Unit,
     private val onDelete: (Workflow) -> Unit,
     private val onDuplicate: (Workflow) -> Unit,
-    private val onExport: (Workflow) -> Unit, // 导出单个工作流
+    private val onExport: (Workflow) -> Unit,
     private val onExecute: (Workflow) -> Unit
 ) : RecyclerView.Adapter<WorkflowListAdapter.WorkflowViewHolder>() {
 
@@ -34,7 +35,9 @@ class WorkflowListAdapter(
         val workflow = workflows[position]
         holder.bind(workflow)
 
-        holder.infoContainer.setOnClickListener { onEdit(workflow) }
+        // 核心修改：将点击事件绑定到整个卡片包装器上
+        // 由于按钮是 clickable 的子视图，它们的点击事件会被优先消费，不会触发这里的 onEdit
+        holder.clickableWrapper.setOnClickListener { onEdit(workflow) }
 
         holder.moreOptionsButton.setOnClickListener { view ->
             val popup = PopupMenu(view.context, view)
@@ -69,7 +72,8 @@ class WorkflowListAdapter(
         val description: TextView = itemView.findViewById(R.id.text_view_workflow_description)
         val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
         val executeButton: ImageButton = itemView.findViewById(R.id.button_execute_workflow)
-        val infoContainer: LinearLayout = itemView.findViewById(R.id.workflow_info_container)
+        // 核心修改：获取新的可点击视图的引用
+        val clickableWrapper: RelativeLayout = itemView.findViewById(R.id.clickable_wrapper)
 
         fun bind(workflow: Workflow) {
             name.text = workflow.name
