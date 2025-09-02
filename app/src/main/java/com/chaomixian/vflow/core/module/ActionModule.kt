@@ -24,6 +24,14 @@ interface ActionModule {
     fun getInputs(): List<InputDefinition>
 
     /**
+     * 允许模块根据当前步骤的参数状态来动态调整其输入项。
+     * @param step 当前正在编辑的步骤，包含其参数。
+     * @param allSteps 整个工作流的步骤列表，用于上下文分析（例如，解析魔法变量的类型）。
+     * @return 一个根据当前状态生成的 InputDefinition 列表。
+     */
+    fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition>
+
+    /**
      * 生成在工作流步骤卡片上显示的紧凑摘要。
      */
     fun getSummary(context: Context, step: ActionStep): CharSequence? = null

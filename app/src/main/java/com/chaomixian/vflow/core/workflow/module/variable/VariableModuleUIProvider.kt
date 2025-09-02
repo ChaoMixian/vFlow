@@ -1,3 +1,5 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/variable/VariableModuleUIProvider.kt
+
 package com.chaomixian.vflow.modules.variable
 
 import android.content.Context
@@ -11,7 +13,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
-import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -20,7 +21,6 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.android.material.textfield.TextInputLayout
 
 class SetVariableEditorViewHolder(
@@ -40,31 +40,13 @@ class VariableModuleUIProvider(
         return setOf("type", "value")
     }
 
+    /**
+     * --- 核心修复 ---
+     * 返回 null 来禁用自定义预览，并强制 ActionStepAdapter 回退到使用模块的 getSummary() 方法。
+     * 这确保了UI的一致性。
+     */
     override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep): View? {
-        val params = step.parameters
-        val type = params["type"]?.toString() ?: "文本"
-        val value = params["value"]?.toString() ?: ""
-
-        val previewView = LayoutInflater.from(context)
-            .inflate(R.layout.partial_variable_preview, parent, false)
-
-        val summaryTextView = previewView.findViewById<TextView>(R.id.text_view_variable_summary)
-
-        val valuePillText = when {
-            value.isEmpty() && type != "文本" -> "..."
-            type == "文本" -> "'$value'"
-            else -> value
-        }
-
-        summaryTextView.text = PillUtil.buildSpannable(
-            context,
-            "设置变量 ",
-            PillUtil.Pill(type, false),
-            " 为 ",
-            PillUtil.Pill(valuePillText, false)
-        )
-
-        return previewView
+        return null
     }
 
     override fun createEditor(

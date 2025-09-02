@@ -1,4 +1,4 @@
-// main/java/com/chaomixian/vflow/ui/workflow_editor/WorkflowEditorActivity.kt
+// 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/WorkflowEditorActivity.kt
 
 package com.chaomixian.vflow.ui.workflow_editor
 
@@ -11,7 +11,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -42,6 +41,10 @@ class WorkflowEditorActivity : BaseActivity() {
     private var currentEditorSheet: ActionEditorSheet? = null
 
     private var pendingExecutionWorkflow: Workflow? = null
+
+    // --- 拖放逻辑所需的状态 ---
+    private var listBeforeDrag: List<ActionStep>? = null
+    private var dragStartPosition: Int = -1
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -112,12 +115,19 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
-        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId)
+        // --- 核心修复：在这里传入 actionSteps 列表 ---
+        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, actionSteps)
         currentEditorSheet = editor
 
         editor.onSave = { newStep ->
             if (position != -1) {
-                actionSteps[position] = actionSteps[position].copy(parameters = newStep.parameters)
+                if (focusedInputId != null) {
+                    val updatedParams = actionSteps[position].parameters.toMutableMap()
+                    updatedParams.putAll(newStep.parameters)
+                    actionSteps[position] = actionSteps[position].copy(parameters = updatedParams)
+                } else {
+                    actionSteps[position] = actionSteps[position].copy(parameters = newStep.parameters)
+                }
             } else {
                 val stepsToAdd = module.createSteps()
                 val configuredFirstStep = stepsToAdd.first().copy(parameters = newStep.parameters)
@@ -130,7 +140,8 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         editor.onMagicVariableRequested = { inputId ->
-            showMagicVariablePicker(position, inputId, module)
+            val stepPosition = if (position != -1) position else actionSteps.size
+            showMagicVariablePicker(stepPosition, inputId, module)
         }
 
         editor.show(supportFragmentManager, "ActionEditor")
@@ -139,14 +150,13 @@ class WorkflowEditorActivity : BaseActivity() {
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
         val targetInputDef = editingModule.getInputs().find { it.id == targetInputId } ?: return
         val availableVariables = mutableListOf<MagicVariableItem>()
-        val effectivePosition = if (editingStepPosition == -1) actionSteps.size else editingStepPosition
 
-        for (i in 0 until effectivePosition) {
+        for (i in 0 until editingStepPosition) {
             val step = actionSteps[i]
-            val module = ModuleRegistry.getModule(step.moduleId)
+            val module = ModuleRegistry.getModule(step.moduleId) ?: continue
 
-            module?.getOutputs(step)?.forEach { outputDef ->
-                val isCompatible = targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
+            module.getOutputs(step).forEach { outputDef ->
+                val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() || targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
                 if (isCompatible) {
                     availableVariables.add(
                         MagicVariableItem(
@@ -159,55 +169,22 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
 
-        if (availableVariables.isEmpty()) {
-            Toast.makeText(this, "没有可兼容的变量", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         val picker = MagicVariablePickerSheet.newInstance(availableVariables)
-        picker.onVariableSelected = { selectedVariable ->
-            currentEditorSheet?.updateInputWithVariable(targetInputId, selectedVariable.variableReference)
-
-            // --- 核心修改：当为 IF 模块的 condition 连接变量后，自动设置默认的 checkMode ---
-            if (editingModule.id == "vflow.logic.if.start" && targetInputId == "condition") {
-                val sourceStepId = selectedVariable.variableReference.removeSurrounding("{{", "}}").split('.').firstOrNull()
-                val sourceStep = actionSteps.find { it.id == sourceStepId }
-                val sourceModule = sourceStep?.let { ModuleRegistry.getModule(it.moduleId) }
-                val sourceOutput = sourceModule?.getOutputs(sourceStep)?.firstOrNull()
-                val defaultOption = sourceOutput?.conditionalOptions?.firstOrNull()?.value
-
-                if (defaultOption != null) {
-                    val currentParams = (currentEditorSheet?.getStepParameters() ?: emptyMap()).toMutableMap()
-                    currentParams["checkMode"] = defaultOption
-                    currentEditorSheet?.updateParameters(currentParams)
-                }
+        picker.onSelection = { selectedItem ->
+            if (selectedItem != null) {
+                currentEditorSheet?.updateInputWithVariable(targetInputId, selectedItem.variableReference)
+            } else {
+                currentEditorSheet?.clearInputVariable(targetInputId)
             }
         }
         picker.show(supportFragmentManager, "MagicVariablePicker")
     }
 
-    // --- 核心新增：处理摘要中条件药丸点击事件的逻辑 ---
-    private fun showConditionalOptionPicker(position: Int, parameterId: String, options: List<ConditionalOption>) {
-        val step = actionSteps.getOrNull(position) ?: return
-        val currentChoice = step.parameters[parameterId] as? String
-        val choices = options.map { it.displayName }.toTypedArray()
-        val currentChoiceIndex = options.indexOfFirst { it.value == currentChoice }
-
-        AlertDialog.Builder(this)
-            .setTitle("选择条件")
-            .setSingleChoiceItems(choices, currentChoiceIndex) { dialog, which ->
-                val selectedOption = options[which]
-                val newParameters = step.parameters.toMutableMap()
-                newParameters[parameterId] = selectedOption.value
-                // 更新列表中的步骤数据，并通知适配器刷新
-                actionSteps[position] = step.copy(parameters = newParameters)
-                actionStepAdapter.notifyItemChanged(position)
-                dialog.dismiss()
-            }
-            .setNegativeButton("取消", null)
-            .show()
+    private fun handleParameterPillClick(position: Int, parameterId: String) {
+        val step = actionSteps[position]
+        val module = ModuleRegistry.getModule(step.moduleId) ?: return
+        showActionEditor(module, step, position, parameterId)
     }
-
 
     private fun setupRecyclerView() {
         val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
@@ -218,25 +195,20 @@ class WorkflowEditorActivity : BaseActivity() {
             hideConnections,
             onEditClick = { position, inputId ->
                 val step = actionSteps[position]
-                val module = ModuleRegistry.getModule(step.moduleId)
-                if (module != null) {
+                ModuleRegistry.getModule(step.moduleId)?.let { module ->
                     showActionEditor(module, step, position, inputId)
                 }
             },
             onDeleteClick = { position ->
                 val step = actionSteps[position]
-                val module = ModuleRegistry.getModule(step.moduleId)
-                if (module != null) {
+                ModuleRegistry.getModule(step.moduleId)?.let { module ->
                     if (module.onStepDeleted(actionSteps, position)) {
                         recalculateAndNotify()
                     }
                 }
             },
-            // --- 核心新增：将新回调传递给 Adapter ---
-            onParameterPillClick = { position, parameterId, options ->
-                if (parameterId == "checkMode") {
-                    showConditionalOptionPicker(position, parameterId, options)
-                }
+            onParameterPillClick = { position, parameterId ->
+                handleParameterPillClick(position, parameterId)
             }
         )
         findViewById<RecyclerView>(R.id.recycler_view_action_steps).apply {
@@ -248,13 +220,14 @@ class WorkflowEditorActivity : BaseActivity() {
         }
     }
 
+    // --- 拖放逻辑 (体验优化版) ---
     private fun setupDragAndDrop() {
         val callback = object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
         ) {
-            private var fromPos: Int = -1
-            private var toPos: Int = -1
-
+            /**
+             * 拖动过程中，只负责视觉上的交换，提供流畅的体验。
+             */
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
@@ -262,42 +235,175 @@ class WorkflowEditorActivity : BaseActivity() {
             ): Boolean {
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
-
-                if (fromPosition == 0 || toPosition == 0) return false // 禁止移动触发器
-
-                fromPos = fromPosition
-                toPos = toPosition
-
-                actionStepAdapter.moveItem(fromPosition, toPosition)
+                if (fromPosition > 0 && toPosition > 0) { // 禁止移动触发器
+                    Collections.swap(actionSteps, fromPosition, toPosition)
+                    actionStepAdapter.notifyItemMoved(fromPosition, toPosition)
+                }
                 return true
             }
 
-            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
-                super.onSelectedChanged(viewHolder, actionState)
-                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
-                    fromPos = viewHolder.adapterPosition
-                }
-            }
-
-            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
-                super.clearView(recyclerView, viewHolder)
-                if (fromPos != -1 && toPos != -1 && fromPos != toPos) {
-                    recalculateAndNotify()
-                }
-                fromPos = -1
-                toPos = -1
-            }
-
-
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
 
+            /**
+             * 当一个项目被选中开始拖动时，备份当前列表状态。
+             */
+            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(viewHolder, actionState)
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                    viewHolder?.let {
+                        dragStartPosition = it.adapterPosition
+                        listBeforeDrag = actionSteps.toList()
+                    }
+                }
+            }
+
+            /**
+             * 当拖动结束（松手）时，进行最终的逻辑校验和数据提交。
+             */
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+
+                val originalList = listBeforeDrag
+                val fromPos = dragStartPosition
+                val toPos = viewHolder.adapterPosition
+
+                // 重置状态变量，为下一次拖动做准备
+                listBeforeDrag = null
+                dragStartPosition = -1
+
+                if (originalList == null || fromPos == -1 || toPos == -1 || fromPos == toPos) {
+                    recalculateAndNotify() // 如果没有有效拖动，仅刷新缩进
+                    return
+                }
+
+                // 根据原始列表和拖动起始点，找到被拖动的完整积木块
+                val (blockStart, blockEnd) = findBlockRangeInList(originalList, fromPos)
+                val blockToMove = originalList.subList(blockStart, blockEnd + 1)
+
+                // 在一个临时列表中模拟移动
+                val tempList = originalList.toMutableList()
+                tempList.removeAll(blockToMove.toSet())
+                val targetIndex = if (toPos > fromPos) toPos - blockToMove.size + 1 else toPos
+
+                var isValidMove = false
+                if (targetIndex >= 0 && targetIndex <= tempList.size) {
+                    tempList.addAll(targetIndex, blockToMove)
+                    if (isBlockStructureValid(tempList)) {
+                        // 移动有效，更新主列表
+                        actionSteps.clear()
+                        actionSteps.addAll(tempList)
+                        isValidMove = true
+                    }
+                }
+
+                if (!isValidMove) {
+                    // 移动无效，从备份中恢复
+                    Toast.makeText(this@WorkflowEditorActivity, "无效的移动", Toast.LENGTH_SHORT).show()
+                    actionSteps.clear()
+                    actionSteps.addAll(originalList)
+                }
+
+                // 无论移动是否有效，都进行一次完整的UI刷新，以确保最终状态正确
+                recalculateAndNotify()
+            }
+
             override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-                if (viewHolder.adapterPosition == 0) return 0 // 触发器不可拖动
+                if (viewHolder.adapterPosition == 0) return 0
                 return super.getDragDirs(recyclerView, viewHolder)
             }
         }
         itemTouchHelper = ItemTouchHelper(callback)
         itemTouchHelper.attachToRecyclerView(findViewById(R.id.recycler_view_action_steps))
+    }
+
+    /**
+     * 在一个给定的列表（通常是拖动前的备份）中查找积木块的范围。
+     */
+    /**
+     * 查找给定位置的步骤所属的积木块的完整范围（开始和结束索引）。
+     *
+     * @param list 要在其中搜索的步骤列表。
+     * @param position 列表中的任意位置。
+     * @return 一个 Pair，包含积木块的开始和结束索引。如果该步骤是单个模块，则它自成一个范围。
+     */
+    private fun findBlockRangeInList(list: List<ActionStep>, position: Int): Pair<Int, Int> {
+        // 首先，安全地获取当前位置的模块及其行为
+        val initialModule = ModuleRegistry.getModule(list[position].moduleId)
+        val behavior = initialModule?.blockBehavior
+
+        // 如果模块不存在，或者它不是一个积木块的一部分，则它自成一个范围
+        if (behavior == null || behavior.type == BlockType.NONE || behavior.pairingId == null) {
+            return position to position
+        }
+
+        var start = position
+        var end = position
+
+        // --- 第一步：向上回溯，精确查找块的起始位置 (BLOCK_START) ---
+        var openCount = 0
+        for (i in position downTo 0) {
+            val currentModule = ModuleRegistry.getModule(list[i].moduleId)
+            // 只关心与初始模块配对ID相同的积木块
+            if (currentModule?.blockBehavior?.pairingId == behavior.pairingId) {
+                when (currentModule.blockBehavior.type) {
+                    BlockType.BLOCK_END -> openCount++ // 遇到结束块，计数器加一
+                    BlockType.BLOCK_START -> {
+                        openCount-- // 遇到开始块，计数器减一
+                        if (openCount <= 0) {
+                            // 当计数器归零或变为负数时，意味着我们找到了当前块的起始点
+                            start = i
+                            break // 找到起点，退出向上搜索
+                        }
+                    }
+                    else -> {} // 中间块或普通块不影响层级计数
+                }
+            }
+        }
+
+        // --- 第二步：从已确定的起始点出发，向下精确查找配对的结束位置 (BLOCK_END) ---
+        openCount = 0
+        for (i in start until list.size) {
+            val currentModule = ModuleRegistry.getModule(list[i].moduleId)
+            // 同样只关心配对ID相同的积木块
+            if (currentModule?.blockBehavior?.pairingId == behavior.pairingId) {
+                when (currentModule.blockBehavior.type) {
+                    BlockType.BLOCK_START -> openCount++ // 遇到开始块，计数器加一
+                    BlockType.BLOCK_END -> {
+                        openCount-- // 遇到结束块，计数器减一
+                        if (openCount == 0) {
+                            // 当计数器首次归零时，说明我们找到了与起点配对的那个唯一的结束点
+                            end = i
+                            break // 找到终点，退出向下搜索
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+
+        return start to end
+    }
+
+    /**
+     * 检查给定的步骤列表是否有有效的积木块结构。
+     */
+    private fun isBlockStructureValid(list: List<ActionStep>): Boolean {
+        val blockStack = Stack<String?>()
+        for (step in list) {
+            val behavior = ModuleRegistry.getModule(step.moduleId)?.blockBehavior ?: continue
+            when (behavior.type) {
+                BlockType.BLOCK_START -> blockStack.push(behavior.pairingId)
+                BlockType.BLOCK_END -> {
+                    if (blockStack.isEmpty() || blockStack.peek() != behavior.pairingId) return false
+                    blockStack.pop()
+                }
+                BlockType.BLOCK_MIDDLE -> {
+                    if (blockStack.isEmpty() || blockStack.peek() != behavior.pairingId) return false
+                }
+                else -> {}
+            }
+        }
+        return blockStack.isEmpty()
     }
 
     private fun applyWindowInsets() {
@@ -328,8 +434,9 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
         if (actionSteps.isEmpty()) {
-            val manualTriggerModule = ModuleRegistry.getModule("vflow.trigger.manual")!!
-            actionSteps.addAll(manualTriggerModule.createSteps())
+            ModuleRegistry.getModule("vflow.trigger.manual")?.let {
+                actionSteps.addAll(it.createSteps())
+            }
         }
         recalculateAndNotify()
     }
@@ -353,30 +460,35 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun recalculateAllIndentation() {
         val indentStack = Stack<String?>()
-        var currentIndent = 0
         for (step in actionSteps) {
-            val behavior = ModuleRegistry.getModule(step.moduleId)?.blockBehavior ?: BlockBehavior(BlockType.NONE)
+            val module = ModuleRegistry.getModule(step.moduleId)
+            val behavior = module?.blockBehavior
 
-            if (behavior.type == BlockType.BLOCK_END) {
-                if (indentStack.isNotEmpty() && indentStack.peek() == behavior.pairingId) {
-                    indentStack.pop()
-                    currentIndent = indentStack.size
-                }
-            } else if (behavior.type == BlockType.BLOCK_MIDDLE) {
-                if (indentStack.isNotEmpty() && indentStack.peek() == behavior.pairingId) {
-                    currentIndent = indentStack.size -1
-                }
+            if(behavior == null){
+                step.indentationLevel = 0
+                continue
             }
 
-            step.indentationLevel = currentIndent
-
-            if (behavior.type == BlockType.BLOCK_START) {
-                indentStack.push(behavior.pairingId)
-                currentIndent = indentStack.size
+            when (behavior.type) {
+                BlockType.BLOCK_END -> {
+                    step.indentationLevel = (indentStack.size - 1).coerceAtLeast(0)
+                    if (indentStack.isNotEmpty() && indentStack.peek() == behavior.pairingId) {
+                        indentStack.pop()
+                    }
+                }
+                BlockType.BLOCK_MIDDLE -> {
+                    step.indentationLevel = (indentStack.size - 1).coerceAtLeast(0)
+                }
+                BlockType.BLOCK_START -> {
+                    step.indentationLevel = indentStack.size
+                    indentStack.push(behavior.pairingId)
+                }
+                BlockType.NONE -> {
+                    step.indentationLevel = indentStack.size
+                }
             }
         }
     }
-
 
     private fun saveWorkflow() {
         val name = nameEditText.text.toString().trim()
@@ -395,15 +507,5 @@ class WorkflowEditorActivity : BaseActivity() {
             Toast.makeText(this, "工作流已保存", Toast.LENGTH_SHORT).show()
             finish()
         }
-    }
-
-    // 扩展 ActionEditorSheet 以便在外部访问其内部状态
-    fun ActionEditorSheet.getStepParameters(): Map<String, Any?>? {
-        // This would require making 'currentParameters' in ActionEditorSheet public or providing a getter
-        // For simulation, we assume this is possible. In real code, you'd adjust visibility.
-        return null // Placeholder
-    }
-    fun ActionEditorSheet.updateParameters(params: Map<String, Any?>) {
-        // This would require a public method in ActionEditorSheet to update its internal state
     }
 }

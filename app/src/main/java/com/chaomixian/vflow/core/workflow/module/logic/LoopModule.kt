@@ -1,3 +1,5 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/logic/LoopModule.kt
+
 package com.chaomixian.vflow.modules.logic
 
 import android.content.Context
@@ -32,30 +34,24 @@ class LoopModule : BaseBlockModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val countValue = step.parameters["count"]?.toString() ?: "5"
         val isVariable = countValue.startsWith("{{")
-        val pillText = if (isVariable) "变量" else countValue
 
         return PillUtil.buildSpannable(
             context,
             "循环 ",
-            PillUtil.Pill(pillText, isVariable, parameterId = "count"),
+            PillUtil.Pill(countValue, isVariable, parameterId = "count"),
             " 次"
         )
     }
 
     override fun validate(step: ActionStep): ValidationResult {
         val count = step.parameters["count"]
-        val countAsLong = when (count) {
-            is String -> count.toLongOrNull()
-            is Number -> count.toLong()
-            else -> null
-        }
-
-        if (countAsLong == null && (count as? String)?.startsWith("{{") != true) {
-            return ValidationResult(false, "无效的数字格式")
-        }
-
-        if (countAsLong != null && countAsLong <= 0) {
-            return ValidationResult(false, "循环次数必须大于0")
+        // 在验证时，我们只关心静态值。魔法变量在运行时才解析。
+        if (count is String && !count.startsWith("{{")) {
+            val countAsLong = count.toLongOrNull()
+            if (countAsLong == null) return ValidationResult(false, "无效的数字格式")
+            if (countAsLong <= 0) return ValidationResult(false, "循环次数必须大于0")
+        } else if (count is Number) {
+            if (count.toLong() <= 0) return ValidationResult(false, "循环次数必须大于0")
         }
 
         return ValidationResult(true)

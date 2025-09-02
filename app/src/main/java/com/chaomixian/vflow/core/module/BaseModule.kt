@@ -1,6 +1,5 @@
 package com.chaomixian.vflow.core.module
 
-import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 
@@ -22,8 +21,14 @@ abstract class BaseModule : ActionModule {
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
-
-    // --- 开发者很少需要关心的部分 (已有默认实现) ---
+    /**
+     * 为 getDynamicInputs 提供默认实现。
+     * 对于绝大多数模块，它们的输入是静态的，所以直接返回 getInputs() 的结果。
+     * 只有需要动态UI的模块（如 IfModule）才需要重写此方法。
+     */
+    override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
+        return getInputs()
+    }
 
     /**
      * 默认的步骤创建逻辑。

@@ -1,3 +1,5 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/device/DelayModule.kt
+
 package com.chaomixian.vflow.modules.device
 
 import android.content.Context
@@ -22,7 +24,7 @@ class DelayModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "duration",
-            name = "延迟时间 (毫秒)",
+            name = "延迟时间",
             staticType = ParameterType.NUMBER,
             defaultValue = 1000L,
             acceptsMagicVariable = true,
@@ -37,12 +39,11 @@ class DelayModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val durationValue = step.parameters["duration"]?.toString() ?: "1000"
         val isVariable = durationValue.startsWith("{{")
-        val pillText = if (isVariable) "变量" else durationValue
 
         return PillUtil.buildSpannable(
             context,
-            "延迟 ",
-            PillUtil.Pill(pillText, isVariable, parameterId = "duration"),
+            "延迟",
+            PillUtil.Pill(durationValue, isVariable, parameterId = "duration"),
             " 毫秒"
         )
     }

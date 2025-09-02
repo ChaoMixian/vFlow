@@ -1,3 +1,5 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/variable/VariableModule.kt
+
 package com.chaomixian.vflow.modules.variable
 
 import android.content.Context
@@ -52,7 +54,7 @@ class SetVariableModule : BaseModule() {
             name = "值",
             staticType = ParameterType.ANY,
             defaultValue = "",
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false // 注意：此模块的值不支持魔法变量
         )
     )
 
@@ -74,17 +76,17 @@ class SetVariableModule : BaseModule() {
         val value = step.parameters["value"]
 
         val valuePillText = when {
-            type == "布尔" -> value.toString()
+            type == "布尔" -> value?.toString() ?: "false"
             type == "字典" -> "{...}"
-            value is String && value.isEmpty() -> "' '"
-            value != null -> "'$value'"
+            value is String && value.isNotEmpty() -> "'$value'"
+            value != null && value.toString().isNotEmpty() -> value.toString()
             else -> "..."
         }
 
         return PillUtil.buildSpannable(
             context,
             "设置变量 ",
-            PillUtil.Pill(type, false, parameterId = "type"),
+            PillUtil.Pill(type, false, parameterId = "type", isModuleOption = true),
             " 为 ",
             PillUtil.Pill(valuePillText, false, parameterId = "value")
         )

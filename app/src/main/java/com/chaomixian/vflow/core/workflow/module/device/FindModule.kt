@@ -1,4 +1,4 @@
-// main/java/com/chaomixian/vflow/core/workflow/module/device/FindModule.kt
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/device/FindModule.kt
 
 package com.chaomixian.vflow.modules.device
 
@@ -17,7 +17,6 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.parcelize.Parcelize
 import java.util.regex.Pattern
 
-// --- 核心修改：模型定义在模块内部 ---
 @Parcelize
 data class ScreenElement(
     val bounds: Rect,
@@ -43,40 +42,37 @@ class FindTextModule : BaseModule() {
     private val matchModeOptions = listOf("完全匹配", "包含", "正则")
     private val outputFormatOptions = listOf("元素", "坐标", "视图ID")
 
-    // 我们仍然可以使用 UIProvider，因为它在布局上提供了便利
-    override val uiProvider = FindModuleUIProvider(matchModeOptions, outputFormatOptions)
+    // --- 核心修改：移除了 uiProvider 的重写 ---
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "matchMode",
             name = "匹配模式",
-            staticType = ParameterType.ENUM,
+            staticType = ParameterType.ENUM, // 标准的 ENUM 类型
             defaultValue = "完全匹配",
             options = matchModeOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false // 不接受变量，通用编辑器会正确处理
         ),
         InputDefinition(
             id = "targetText",
             name = "目标文本",
             staticType = ParameterType.STRING,
+            defaultValue = "",
             acceptsMagicVariable = true,
-            // 接受 TextVariable 类型
             acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
         ),
         InputDefinition(
             id = "outputFormat",
             name = "输出格式",
-            staticType = ParameterType.ENUM,
+            staticType = ParameterType.ENUM, // 标准的 ENUM 类型
             defaultValue = "元素",
             options = outputFormatOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false // 不接受变量，通用编辑器会正确处理
         )
     )
 
-    // 输出类型现在是字符串
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val format = step?.parameters?.get("outputFormat") as? String ?: "元素"
-        // --- 核心修改：为输出定义条件选项 ---
         val conditions = listOf(
             ConditionalOption("存在", "存在"),
             ConditionalOption("不存在", "不存在")
@@ -88,20 +84,20 @@ class FindTextModule : BaseModule() {
         }
     }
 
-    // ... (getSummary 和 execute 逻辑不变) ...
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val mode = step.parameters["matchMode"]?.toString() ?: "完全匹配"
         val target = step.parameters["targetText"]?.toString() ?: "..."
         val format = step.parameters["outputFormat"]?.toString() ?: "元素"
         val isVariable = target.startsWith("{{")
-        val targetPillText = if (isVariable) "变量" else "'$target'"
 
         return PillUtil.buildSpannable(
             context,
-            "查找文本 ",
-            PillUtil.Pill(targetPillText, isVariable, parameterId = "targetText"),
+            "使用 ",
+            PillUtil.Pill(mode, false, parameterId = "matchMode", isModuleOption = true),
+            " 模式查找文本 ",
+            PillUtil.Pill(target, isVariable, parameterId = "targetText"),
             " 并输出 ",
-            PillUtil.Pill(format, false, parameterId = "outputFormat")
+            PillUtil.Pill(format, false, parameterId = "outputFormat", isModuleOption = true)
         )
     }
 
@@ -128,7 +124,6 @@ class FindTextModule : BaseModule() {
 
             if (nodes.isEmpty()) {
                 onProgress(ProgressUpdate("未在屏幕上找到匹配的文本。"))
-                // --- 核心修改：未找到时，返回的 Success 结果中 outputs 为空 map ---
                 return ExecutionResult.Success()
             }
 
