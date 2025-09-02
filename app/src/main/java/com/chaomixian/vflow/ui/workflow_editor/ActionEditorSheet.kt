@@ -2,6 +2,7 @@
 
 package com.chaomixian.vflow.ui.workflow_editor
 
+// ... (imports 保持不变) ...
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
@@ -16,8 +17,10 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.textfield.TextInputLayout
 
+
 class ActionEditorSheet : BottomSheetDialogFragment() {
 
+    // ... (属性和 companion object 保持不变) ...
     private lateinit var module: ActionModule
     private var existingStep: ActionStep? = null
     var onSave: ((ActionStep) -> Unit)? = null
@@ -43,6 +46,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
     }
 
+
+    // ... (onCreate, onCreateView, updateInputWithVariable 保持不变) ...
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val moduleId = arguments?.getString("moduleId")
@@ -84,7 +89,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
     }
 
-    // --- 最终的、完全解耦的UI构建逻辑 ---
     private fun buildUi(container: LinearLayout) {
         container.removeAllViews()
         inputViews.clear()
@@ -93,7 +97,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val uiProvider = module.uiProvider
         val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
 
-        // 1. 如果有自定义UI，先渲染它
         if (uiProvider != null) {
             customEditorHolder = uiProvider.createEditor(requireContext(), container, currentParameters) {
                 readParametersFromUi()
@@ -101,9 +104,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             container.addView(customEditorHolder!!.view)
         }
 
-        // 2. 遍历所有输入，只为那些没有被自定义UI处理过的输入创建通用UI
         module.getInputs().forEach { inputDef ->
-            if (!handledInputIds.contains(inputDef.id)) {
+            // --- 核心修改：增加对 isHidden 的判断 ---
+            if (!handledInputIds.contains(inputDef.id) && !inputDef.isHidden) {
                 val inputView = if (inputDef.acceptsMagicVariable) {
                     createViewForInput(inputDef, container)
                 } else {
@@ -115,6 +118,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
     }
 
+    // ... (所有其他方法 createViewForInput, readParametersFromUi 等保持不变) ...
     private fun createViewForInput(inputDef: InputDefinition, parent: ViewGroup): View {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, parent, false)
         row.findViewById<TextView>(R.id.input_name).text = inputDef.name

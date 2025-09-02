@@ -1,3 +1,5 @@
+// main/java/com/chaomixian/vflow/core/workflow/module/device/FindModule.kt
+
 package com.chaomixian.vflow.modules.device
 
 import android.content.Context
@@ -74,10 +76,15 @@ class FindTextModule : BaseModule() {
     // 输出类型现在是字符串
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val format = step?.parameters?.get("outputFormat") as? String ?: "元素"
+        // --- 核心修改：为输出定义条件选项 ---
+        val conditions = listOf(
+            ConditionalOption("存在", "存在"),
+            ConditionalOption("不存在", "不存在")
+        )
         return when (format) {
-            "坐标" -> listOf(OutputDefinition("result", "坐标", Coordinate.TYPE_NAME))
-            "视图ID" -> listOf(OutputDefinition("result", "视图ID", TextVariable.TYPE_NAME))
-            else -> listOf(OutputDefinition("result", "找到的元素", ScreenElement.TYPE_NAME))
+            "坐标" -> listOf(OutputDefinition("result", "坐标", Coordinate.TYPE_NAME, conditions))
+            "视图ID" -> listOf(OutputDefinition("result", "视图ID", TextVariable.TYPE_NAME, conditions))
+            else -> listOf(OutputDefinition("result", "找到的元素", ScreenElement.TYPE_NAME, conditions))
         }
     }
 
@@ -121,6 +128,7 @@ class FindTextModule : BaseModule() {
 
             if (nodes.isEmpty()) {
                 onProgress(ProgressUpdate("未在屏幕上找到匹配的文本。"))
+                // --- 核心修改：未找到时，返回的 Success 结果中 outputs 为空 map ---
                 return ExecutionResult.Success()
             }
 

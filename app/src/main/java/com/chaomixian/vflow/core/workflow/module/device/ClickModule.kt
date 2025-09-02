@@ -1,3 +1,5 @@
+// main/java/com/chaomixian/vflow/core/workflow/module/device/ClickModule.kt
+
 package com.chaomixian.vflow.modules.device
 
 import android.accessibilityservice.AccessibilityService
@@ -46,7 +48,17 @@ class ClickModule : BaseModule() {
 
     // 定义输出参数
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        // --- 核心修改：为输出定义条件选项 ---
+        OutputDefinition(
+            "success",
+            "文本点击成功",
+            BooleanVariable.TYPE_NAME,
+            // 这个模块要成功不成功怪怪的
+//            conditionalOptions = listOf(
+//                ConditionalOption("成功", "成功"),
+//                ConditionalOption("不成功", "不成功")
+//            )
+        )
     )
 
     // 定义编辑器摘要
@@ -99,7 +111,9 @@ class ClickModule : BaseModule() {
 
         // 如果最终无法得到坐标，则执行失败
         if (coordinate == null) {
-            return ExecutionResult.Failure("目标无效", "没有提供有效的点击目标（元素、坐标或视图ID）。")
+            onProgress(ProgressUpdate("点击失败：目标无效"))
+            // --- 核心修改：即使失败，也返回 Success，但输出的布尔值为 false ---
+            return ExecutionResult.Success(mapOf("success" to BooleanVariable(false)))
         }
 
         onProgress(ProgressUpdate("正在点击坐标: (${coordinate.x}, ${coordinate.y})"))

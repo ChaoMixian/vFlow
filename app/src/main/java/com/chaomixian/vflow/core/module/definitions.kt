@@ -1,3 +1,5 @@
+// main/java/com/chaomixian/vflow/core/module/definitions.kt
+
 package com.chaomixian.vflow.core.module
 
 import android.content.Context
@@ -76,15 +78,29 @@ data class InputDefinition(
     val options: List<String> = emptyList(),
     val acceptsMagicVariable: Boolean = true,
     // 修改：不再依赖 Class，而是使用 typeName 字符串
-    val acceptedMagicVariableTypes: Set<String> = emptySet()
+    val acceptedMagicVariableTypes: Set<String> = emptySet(),
+    val isHidden: Boolean = false
 )
+
+/**
+ * 新增：代表一个条件选项的数据类
+ * @param displayName 显示给用户的名称 (例如 "存在")
+ * @param value 内部用于逻辑判断的值 (通常与 displayName 相同)
+ */
+@Parcelize
+data class ConditionalOption(val displayName: String, val value: String) : Parcelable
 
 data class OutputDefinition(
     val id: String,
     val name: String,
     // 修改：不再依赖 Class，而是使用 typeName 字符串
-    val typeName: String
+    val typeName: String,
+    // --- 新增：定义该输出在作为条件时，有哪些可选项 ---
+    // (新增了注释，解释其作用)
+    // 例如，"查找文本" 的输出可以定义为 [("存在", "存在"), ("不存在", "不存在")]
+    val conditionalOptions: List<ConditionalOption>? = null
 )
+
 
 data class ProgressUpdate(
     val message: String,
