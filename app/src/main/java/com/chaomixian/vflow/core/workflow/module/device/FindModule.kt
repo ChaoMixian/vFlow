@@ -36,7 +36,7 @@ data class Coordinate(val x: Int, val y: Int) : Parcelable {
 
 class FindTextModule : BaseModule() {
     override val id = "vflow.device.find.text"
-    override val metadata = ActionMetadata("查找文本", "在屏幕上查找元素", R.drawable.ic_node_search, "设备")
+    override val metadata = ActionMetadata("查找文本", "在屏幕上查找元素", R.drawable.rounded_feature_search_24, "设备")
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
     private val matchModeOptions = listOf("完全匹配", "包含", "正则")

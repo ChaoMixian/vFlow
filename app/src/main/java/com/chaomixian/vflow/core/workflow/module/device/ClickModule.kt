@@ -21,7 +21,7 @@ import kotlinx.coroutines.CompletableDeferred
 
 class ClickModule : BaseModule() {
     override val id = "vflow.device.click"
-    override val metadata = ActionMetadata("点击", "点击一个屏幕元素、坐标或视图ID", R.drawable.ic_coordinate, "设备")
+    override val metadata = ActionMetadata("点击", "点击一个屏幕元素、坐标或视图ID", R.drawable.rounded_ads_click_24, "设备")
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
     override fun getInputs(): List<InputDefinition> = listOf(

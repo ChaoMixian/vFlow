@@ -35,7 +35,7 @@ data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelab
 
 class SetVariableModule : BaseModule() {
     override val id = "vflow.variable.set"
-    override val metadata = ActionMetadata("设置变量", "创建文本、数字、布尔值等变量", R.drawable.ic_variable, "变量")
+    override val metadata = ActionMetadata("设置变量", "创建文本、数字、布尔值等变量", R.drawable.rounded_data_object_24, "变量")
 
     private val typeOptions = listOf("文本", "数字", "布尔", "字典")
     override val uiProvider = VariableModuleUIProvider(typeOptions)

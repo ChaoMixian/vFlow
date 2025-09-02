@@ -17,7 +17,7 @@ const val LOOP_END_ID = "vflow.logic.loop.end"
 
 class LoopModule : BaseBlockModule() {
     override val id = LOOP_START_ID
-    override val metadata = ActionMetadata("循环", "重复执行一组操作固定的次数", R.drawable.ic_control_flow, "逻辑控制")
+    override val metadata = ActionMetadata("循环", "重复执行一组操作固定的次数", R.drawable.rounded_cached_24, "逻辑控制")
     override val pairingId = LOOP_PAIRING_ID
     override val stepIdsInBlock = listOf(LOOP_START_ID, LOOP_END_ID)
 
@@ -87,7 +87,7 @@ class LoopModule : BaseBlockModule() {
 
 class EndLoopModule : BaseModule() {
     override val id = LOOP_END_ID
-    override val metadata = ActionMetadata("结束循环", "", R.drawable.ic_control_flow, "逻辑控制")
+    override val metadata = ActionMetadata("结束循环", "", R.drawable.rounded_cached_24, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, LOOP_PAIRING_ID)
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束循环"

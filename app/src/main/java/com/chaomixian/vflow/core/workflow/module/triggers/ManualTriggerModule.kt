@@ -12,7 +12,7 @@ class ManualTriggerModule : BaseModule() {
     override val metadata = ActionMetadata(
         name = "手动触发",
         description = "通过点击按钮手动启动此工作流",
-        iconRes = R.drawable.ic_play_arrow,
+        iconRes = R.drawable.rounded_play_arrow_24,
         category = "触发器"
     )
 

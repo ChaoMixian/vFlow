@@ -17,7 +17,7 @@ class DelayModule : BaseModule() {
     override val metadata = ActionMetadata(
         name = "延迟",
         description = "暂停工作流一段时间",
-        iconRes = R.drawable.ic_workflows,
+        iconRes = R.drawable.rounded_avg_time_24,
         category = "设备"
     )
 

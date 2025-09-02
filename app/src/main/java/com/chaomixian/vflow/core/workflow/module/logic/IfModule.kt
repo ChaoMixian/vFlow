@@ -62,7 +62,7 @@ val ALL_OPERATORS = (OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT + OPERATORS_FOR_NUMB
 
 class IfModule : BaseBlockModule() {
     override val id = IF_START_ID
-    override val metadata = ActionMetadata("如果", "根据条件执行不同的操作", R.drawable.ic_control_flow, "逻辑控制")
+    override val metadata = ActionMetadata("如果", "根据条件执行不同的操作", R.drawable.rounded_alt_route_24, "逻辑控制")
     override val pairingId = IF_PAIRING_ID
     override val stepIdsInBlock = listOf(IF_START_ID, ELSE_ID, IF_END_ID)
 
@@ -345,7 +345,7 @@ class IfModule : BaseBlockModule() {
 
 class ElseModule : BaseModule() {
     override val id = ELSE_ID
-    override val metadata = ActionMetadata("否则", "如果条件不满足，则执行这里的操作", R.drawable.ic_control_flow, "逻辑控制")
+    override val metadata = ActionMetadata("否则", "如果条件不满足，则执行这里的操作", R.drawable.rounded_alt_route_24, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, IF_PAIRING_ID, isIndividuallyDeletable = true)
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "否则"
 
@@ -386,7 +386,7 @@ class ElseModule : BaseModule() {
 
 class EndIfModule : BaseModule() {
     override val id = IF_END_ID
-    override val metadata = ActionMetadata("结束如果", "", R.drawable.ic_control_flow, "逻辑控制")
+    override val metadata = ActionMetadata("结束如果", "", R.drawable.rounded_alt_route_24, "逻辑控制")
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, IF_PAIRING_ID)
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束如果"
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit) = ExecutionResult.Success()

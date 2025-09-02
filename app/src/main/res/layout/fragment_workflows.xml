@@ -18,6 +18,6 @@
         android:layout_gravity="bottom|end"
         android:contentDescription="添加工作流"
         android:layout_margin="16dp"
-        app:srcCompat="@drawable/ic_add" />
+        app:srcCompat="@drawable/rounded_add_24" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
