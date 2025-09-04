@@ -5,7 +5,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
+import com.chaomixian.vflow.core.module.BooleanVariable
 
 // 文件：ManualTriggerModule.kt
 // 描述：定义手动触发器模块，用于通过用户点击启动工作流。

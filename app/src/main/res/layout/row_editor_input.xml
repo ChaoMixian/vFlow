@@ -21,7 +21,7 @@
         android:layout_alignParentEnd="true"
         android:layout_centerVertical="true"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_magic"
+        android:src="@drawable/rounded_dataset_24"
         android:contentDescription="选择魔法变量"/>
 
     <FrameLayout

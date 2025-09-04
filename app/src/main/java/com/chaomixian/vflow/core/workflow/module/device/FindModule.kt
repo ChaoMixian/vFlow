@@ -8,7 +8,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.workflow.module.data.TextVariable
+import com.chaomixian.vflow.core.module.TextVariable // 更新导入
 import com.chaomixian.vflow.permissions.PermissionManager
 // 项目内部的无障碍服务，避免与 Android 框架的同名类混淆
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
@@ -202,7 +202,7 @@ class FindTextModule : BaseModule() {
      * 根据文本内容和匹配模式在给定的根节点下查找 AccessibilityNodeInfo 节点列表。
      * @param rootNode 开始搜索的根节点。
      * @param text 要查找的文本。
-     * @param matchModeStr 匹配模式 ("完全匹配", "包含", "正则")。
+     * @param matchModeStr 匹配模式 (\"完全匹配\", \"包含\", \"正则\")。
      * @return 匹配到的节点列表。返回的列表中的节点是副本，需要调用者回收。
      */
     private fun findNodesByText(rootNode: AccessibilityNodeInfo, text: String, matchModeStr: String): List<AccessibilityNodeInfo> {
@@ -222,7 +222,7 @@ class FindTextModule : BaseModule() {
                 when (matchModeStr) {
                     "包含" -> source.contains(text, ignoreCase = true)
                     "正则" -> try { Pattern.compile(text).matcher(source).find() } catch (e: Exception) { false }
-                    else -> source == text // 默认为 "完全匹配"
+                    else -> source == text // 默认为 \"完全匹配\"
                 }
             }
 

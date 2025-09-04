@@ -5,12 +5,12 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.workflow.module.device.ScreenElement
-import com.chaomixian.vflow.core.workflow.module.data.TextVariable
-import com.chaomixian.vflow.core.workflow.module.data.NumberVariable
-import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
-import com.chaomixian.vflow.core.workflow.module.data.ListVariable
-import com.chaomixian.vflow.core.workflow.module.data.DictionaryVariable
+import com.chaomixian.vflow.core.workflow.module.device.ScreenElement // This seems to be a local type, not from VariableTypes
+import com.chaomixian.vflow.core.module.TextVariable // 更新导入
+import com.chaomixian.vflow.core.module.NumberVariable // 更新导入
+import com.chaomixian.vflow.core.module.BooleanVariable // 更新导入
+import com.chaomixian.vflow.core.module.ListVariable // 更新导入
+import com.chaomixian.vflow.core.module.DictionaryVariable // 更新导入
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.util.regex.Pattern
 import kotlin.math.max
@@ -54,7 +54,7 @@ val OPERATORS_REQUIRING_ONE_INPUT = setOf(
     OP_STARTS_WITH, OP_ENDS_WITH, OP_MATCHES_REGEX,
     OP_NUM_EQ, OP_NUM_NEQ, OP_NUM_GT, OP_NUM_GTE, OP_NUM_LT, OP_NUM_LTE
 )
-// 需要两个额外输入值的操作符 (例如 "介于")
+// 需要两个额外输入值的操作符 (例如 \"介于\")
 val OPERATORS_REQUIRING_TWO_INPUTS = setOf(OP_NUM_BETWEEN)
 
 // 不同数据类型支持的操作符列表
@@ -67,7 +67,7 @@ val OPERATORS_FOR_COLLECTION = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY)
 val ALL_OPERATORS = (OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT + OPERATORS_FOR_NUMBER + OPERATORS_FOR_BOOLEAN + OPERATORS_FOR_COLLECTION).distinct()
 
 /**
- * "如果" (If) 模块，逻辑块的起点。
+ * \"如果\" (If) 模块，逻辑块的起点。
  * 根据条件判断结果，决定执行流程。
  */
 class IfModule : BaseBlockModule() {
@@ -102,7 +102,7 @@ class IfModule : BaseBlockModule() {
             dynamicInputs.add(staticInputs.first { it.id == "value1" })
         } else if (OPERATORS_REQUIRING_TWO_INPUTS.contains(selectedOperator)) {
             val originalValue1Def = staticInputs.first { it.id == "value1" }
-            // "介于" 操作需要两个数字输入，调整第一个比较值的类型
+            // \"介于\" 操作需要两个数字输入，调整第一个比较值的类型
             val newNumberValue1Def = originalValue1Def.copy(
                 staticType = ParameterType.NUMBER,
                 acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
@@ -273,7 +273,7 @@ class IfModule : BaseBlockModule() {
     /** 评估数字相关条件。 */
     private fun evaluateNumberCondition(num1: Double, operator: String, value1: Any?, value2: Any?): Boolean {
         val num2 = value1.toDoubleValue() // 获取第一个比较值
-        if (operator == OP_NUM_BETWEEN) { // "介于" 操作
+        if (operator == OP_NUM_BETWEEN) { // \"介于\" 操作
             val num3 = value2.toDoubleValue() // 获取第二个比较值
             if (num2 == null || num3 == null) return false // 比较值无效则条件不成立
             val minVal = min(num2, num3)
@@ -357,7 +357,7 @@ class IfModule : BaseBlockModule() {
 }
 
 /**
- * "否则" (Else) 模块，If 逻辑块的中间部分。
+ * \"否则\" (Else) 模块，If 逻辑块的中间部分。
  */
 class ElseModule : BaseModule() {
     override val id = ELSE_ID
@@ -400,7 +400,7 @@ class ElseModule : BaseModule() {
 }
 
 /**
- * "结束如果" (EndIf) 模块，If 逻辑块的结束点。
+ * \"结束如果\" (EndIf) 模块，If 逻辑块的结束点。
  */
 class EndIfModule : BaseModule() {
     override val id = IF_END_ID

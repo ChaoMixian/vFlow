@@ -5,8 +5,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.module.BaseModule
+// import com.chaomixian.vflow.core.module.BaseModule // 已移除多余的导入
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
+import com.chaomixian.vflow.core.module.NumberVariable // 新增的导入
 
 /**
  * 计算模块，用于执行两个数字之间的基本数学运算。
@@ -20,7 +21,7 @@ class CalculationModule : BaseModule() {
     override val metadata: ActionMetadata = ActionMetadata(
         name = "计算",
         description = "执行两个数字之间的数学运算。",
-        iconRes = R.drawable.rounded_calculate_24, 
+        iconRes = R.drawable.rounded_calculate_24,
         category = "数据"
     )
 
@@ -31,18 +32,18 @@ class CalculationModule : BaseModule() {
         InputDefinition(
             id = "operand1",
             name = "数字1",
-            staticType = ParameterType.NUMBER, 
-            acceptsMagicVariable = true,       
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME), 
-            defaultValue = 0.0                 
+            staticType = ParameterType.NUMBER,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
+            defaultValue = 0.0
         ),
         InputDefinition(
             id = "operator",
             name = "符号",
-            staticType = ParameterType.ENUM,   
-            options = listOf("+", "-", "*", "/"), 
-            defaultValue = "+",                
-            acceptsMagicVariable = false       
+            staticType = ParameterType.ENUM,
+            options = listOf("+", "-", "*", "/"),
+            defaultValue = "+",
+            acceptsMagicVariable = false
         ),
         InputDefinition(
             id = "operand2",
@@ -61,7 +62,7 @@ class CalculationModule : BaseModule() {
         OutputDefinition(
             id = "result",
             name = "结果",
-            typeName = NumberVariable.TYPE_NAME 
+            typeName = NumberVariable.TYPE_NAME
         )
     )
 
@@ -70,7 +71,7 @@ class CalculationModule : BaseModule() {
      */
     override suspend fun execute(
         context: ExecutionContext,
-        onProgress: suspend (ProgressUpdate) -> Unit 
+        onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val operand1Value = context.magicVariables["operand1"] ?: context.variables["operand1"]
         val operator = context.variables["operator"] as? String ?: "+"
@@ -106,10 +107,10 @@ class CalculationModule : BaseModule() {
      */
     private fun convertToDouble(value: Any?): Double? {
         return when (value) {
-            is NumberVariable -> value.value 
-            is Number -> value.toDouble()    
-            is String -> value.toDoubleOrNull() 
-            else -> null                     
+            is NumberVariable -> value.value
+            is Number -> value.toDouble()
+            is String -> value.toDoubleOrNull()
+            else -> null
         }
     }
 
@@ -130,12 +131,12 @@ class CalculationModule : BaseModule() {
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val params = step.parameters
-        val inputs = getInputs() 
+        val inputs = getInputs()
 
-        val operand1RawValue = params["operand1"] 
+        val operand1RawValue = params["operand1"]
         val operand1Text = operand1RawValue?.toString()
-            ?: inputs.find { it.id == "operand1" }?.defaultValue?.toString() 
-            ?: "..." 
+            ?: inputs.find { it.id == "operand1" }?.defaultValue?.toString()
+            ?: "..."
         val operand1IsVariable = operand1RawValue is String && operand1RawValue.startsWith("{{") && operand1RawValue.endsWith("}}")
 
         val operatorText = params["operator"]?.toString()
@@ -151,13 +152,13 @@ class CalculationModule : BaseModule() {
         val pillOperand1 = PillUtil.Pill(
             text = if (operand1IsVariable) operand1Text else (operand1RawValue as? Number)?.let { formatNumberForPill(it) } ?: operand1Text,
             isVariable = operand1IsVariable,
-            parameterId = "operand1" 
+            parameterId = "operand1"
         )
         val pillOperator = PillUtil.Pill(
             text = operatorText,
-            isVariable = false,       
+            isVariable = false,
             parameterId = "operator",
-            isModuleOption = true     
+            isModuleOption = true
         )
         val pillOperand2 = PillUtil.Pill(
             text = if (operand2IsVariable) operand2Text else (operand2RawValue as? Number)?.let { formatNumberForPill(it) } ?: operand2Text,
@@ -169,13 +170,13 @@ class CalculationModule : BaseModule() {
     }
 
     /**
-     * 格式化数字以便在 "药丸" 中显示。
+     * 格式化数字以便在 \"药丸\" 中显示。
      */
     private fun formatNumberForPill(number: Number): String {
         return if (number.toDouble() == number.toLong().toDouble()) {
-            number.toLong().toString() 
+            number.toLong().toString()
         } else {
-            String.format("%.2f", number.toDouble()) 
+            String.format("%.2f", number.toDouble())
         }
     }
 }

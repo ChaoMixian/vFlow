@@ -7,8 +7,8 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 // 确保从正确的包导入变量类型
-import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
-import com.chaomixian.vflow.core.workflow.module.data.TextVariable
+import com.chaomixian.vflow.core.module.BooleanVariable
+import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers

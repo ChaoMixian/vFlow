@@ -10,11 +10,11 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
-import com.chaomixian.vflow.core.workflow.module.data.TextVariable
+import com.chaomixian.vflow.core.module.BooleanVariable // 更新导入
+import com.chaomixian.vflow.core.module.TextVariable // 更新导入
 import com.chaomixian.vflow.permissions.PermissionManager
 // 为项目内的 AccessibilityService 设置别名，以区分 Android 框架的同名类
-import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService 
+import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.CompletableDeferred
 
@@ -199,7 +199,7 @@ class ClickModule : BaseModule() {
     }
 
     /**
-     * 将形如 "x,y" 的字符串解析为 Coordinate 对象。
+     * 将形如 \"x,y\" 的字符串解析为 Coordinate 对象。
      * @return 解析成功则返回 Coordinate 对象，否则返回 null。
      */
     private fun String.toCoordinate(): Coordinate? {
@@ -220,7 +220,7 @@ class ClickModule : BaseModule() {
      * 注意：此函数返回的节点（如果找到）需要调用者负责回收。
      *       在查找过程中产生的其他节点会被此函数回收。
      * @param service 无障碍服务实例。
-     * @param viewId 视图的资源ID名称 (例如 "com.example.app:id/button1")。
+     * @param viewId 视图的资源ID名称 (例如 \"com.example.app:id/button1\")。
      * @return 找到的第一个匹配节点，未找到则返回 null。
      */
     private fun findNodeByViewId(service: VFlowAccessibilityService, viewId: String): AccessibilityNodeInfo? {
@@ -230,7 +230,7 @@ class ClickModule : BaseModule() {
         
         // 回收获取到的节点列表中的其他节点（如果列表不为空且找到了要返回的节点）
         // 或者回收所有节点（如果未找到要返回的节点但列表不为空）
-        if (nodeToReturn == null) { 
+        if (nodeToReturn == null) {
             nodes?.forEach { it.recycle() } 
         } else {
             nodes?.filter { it != nodeToReturn }?.forEach { it.recycle() }
