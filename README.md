@@ -23,9 +23,9 @@
 
 <table>
   <tr>
-    <td><img src="docs/screenshot1.png" width="200"></td>
-    <td><img src="docs/screenshot2.png" width="200"></td>
-    <td><img src="docs/screenshot3.png" width="200"></td>
+    <td><img src="docs/screenshot1.jpg" width="200"></td>
+    <td><img src="docs/screenshot2.jpg" width="200"></td>
+    <td><img src="docs/screenshot3.jpg" width="200"></td>
   </tr>
   <tr>
     <td align="center">工作流列表</td>
