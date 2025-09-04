@@ -37,13 +37,27 @@ class DelayModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val durationValue = step.parameters["duration"]?.toString() ?: "1000"
-        val isVariable = durationValue.startsWith("{{")
+        val durationParam = step.parameters["duration"]
+        val isVariable = (durationParam as? String)?.startsWith("{{") == true
+
+        // 格式化数字，如果是整数则不显示小数点
+        val durationText = when {
+            isVariable -> durationParam.toString()
+            durationParam is Number -> {
+                if (durationParam.toDouble() == durationParam.toLong().toDouble()) {
+                    durationParam.toLong().toString()
+                } else {
+                    durationParam.toString()
+                }
+            }
+            else -> durationParam?.toString() ?: "1000"
+        }
+        // --- ✨ 核心修改 END ✨ ---
 
         return PillUtil.buildSpannable(
             context,
             "延迟",
-            PillUtil.Pill(durationValue, isVariable, parameterId = "duration"),
+            PillUtil.Pill(durationText, isVariable, parameterId = "duration"),
             " 毫秒"
         )
     }

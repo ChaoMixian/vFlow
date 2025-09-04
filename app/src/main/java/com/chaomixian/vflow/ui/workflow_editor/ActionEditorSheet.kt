@@ -287,7 +287,26 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             }
             else -> TextInputLayout(requireContext()).apply {
                 val editText = EditText(context).apply {
-                    setText(currentValue?.toString() ?: inputDef.defaultValue?.toString() ?: "")
+                    // --- ✨ 核心修改 START ✨ ---
+                    // 检查当前值是否为数字，如果是，则进行格式化
+                    val valueToDisplay = when (currentValue) {
+                        // 如果是数字类型
+                        is Number -> {
+                            // 检查它是否可以被无损地转换为长整型 (即没有小数部分)
+                            if (currentValue.toDouble() == currentValue.toLong().toDouble()) {
+                                // 如果是，则显示为整数
+                                currentValue.toLong().toString()
+                            } else {
+                                // 否则，保留小数部分
+                                currentValue.toString()
+                            }
+                        }
+                        // 对于其他类型，保持原样
+                        else -> currentValue?.toString() ?: ""
+                    }
+                    setText(valueToDisplay)
+                    // --- ✨ 核心修改 END ✨ ---
+
                     hint = "输入值..."
                     inputType = if (inputDef.staticType == ParameterType.NUMBER) {
                         InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
@@ -330,10 +349,15 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             }
 
             if (value != null) {
-                val inputDef = module.getInputs().find { it.id == id }
-                // 根据模块的定义，将读取到的字符串转换为正确的类型（特别是数字）
-                val convertedValue = when (inputDef?.staticType) {
-                    ParameterType.NUMBER -> value.toString().toDoubleOrNull() ?: value.toString().toLongOrNull() ?: value
+                val stepForUi = ActionStep(module.id, currentParameters)
+                val dynamicInputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == id }
+
+                // 处理数字类型转换
+                val convertedValue: Any? = when (dynamicInputDef?.staticType) {
+                    ParameterType.NUMBER -> {
+                        // 统一保存为Double，避免Parcelize和Gson转换问题
+                        value.toString().toDoubleOrNull()
+                    }
                     else -> value
                 }
                 currentParameters[id] = convertedValue

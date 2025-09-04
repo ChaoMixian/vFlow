@@ -33,13 +33,26 @@ class LoopModule : BaseBlockModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val countValue = step.parameters["count"]?.toString() ?: "5"
-        val isVariable = countValue.startsWith("{{")
+        val countParam = step.parameters["count"]
+        val isVariable = (countParam as? String)?.startsWith("{{") == true
+
+        // 格式化数字，如果是整数则不显示小数点
+        val countText = when {
+            isVariable -> countParam.toString()
+            countParam is Number -> {
+                if (countParam.toDouble() == countParam.toLong().toDouble()) {
+                    countParam.toLong().toString()
+                } else {
+                    countParam.toString()
+                }
+            }
+            else -> countParam?.toString() ?: "5"
+        }
 
         return PillUtil.buildSpannable(
             context,
             "循环 ",
-            PillUtil.Pill(countValue, isVariable, parameterId = "count"),
+            PillUtil.Pill(countText, isVariable, parameterId = "count"),
             " 次"
         )
     }

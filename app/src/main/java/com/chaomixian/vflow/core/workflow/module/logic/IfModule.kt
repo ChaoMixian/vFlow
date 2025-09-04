@@ -32,12 +32,12 @@ const val OP_NOT_CONTAINS = "不包含"
 const val OP_STARTS_WITH = "开头是"
 const val OP_ENDS_WITH = "结尾是"
 const val OP_MATCHES_REGEX = "匹配正则"
-const val OP_NUM_EQ = "=="
-const val OP_NUM_NEQ = "!="
-const val OP_NUM_GT = ">"
-const val OP_NUM_GTE = ">="
-const val OP_NUM_LT = "<"
-const val OP_NUM_LTE = "<="
+const val OP_NUM_EQ = "等于"
+const val OP_NUM_NEQ = "不等于"
+const val OP_NUM_GT = "大于"
+const val OP_NUM_GTE = "大于等于"
+const val OP_NUM_LT = "小于"
+const val OP_NUM_LTE = "小于等于"
 const val OP_NUM_BETWEEN = "介于"
 const val OP_IS_TRUE = "为真"
 const val OP_IS_FALSE = "为假"
@@ -101,9 +101,16 @@ class IfModule : BaseBlockModule() {
 
         // 根据当前选择的操作符，决定是否需要显示 "比较值1" 和 "比较值2"
         if (OPERATORS_REQUIRING_ONE_INPUT.contains(selectedOperator)) {
+            // 如果需要一个比较值，直接使用静态定义
             dynamicInputs.add(staticInputs.first { it.id == "value1" })
         } else if (OPERATORS_REQUIRING_TWO_INPUTS.contains(selectedOperator)) {
-            dynamicInputs.add(staticInputs.first { it.id == "value1" })
+            // 针对“介于”操作符，动态修改 value1 的类型
+            val originalValue1Def = staticInputs.first { it.id == "value1" }
+            val newNumberValue1Def = originalValue1Def.copy(
+                staticType = ParameterType.NUMBER,
+                acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+            )
+            dynamicInputs.add(newNumberValue1Def)
             dynamicInputs.add(staticInputs.first { it.id == "value2" })
         }
 
@@ -161,34 +168,59 @@ class IfModule : BaseBlockModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val input1Value = step.parameters["input1"]?.toString()
         val operator = step.parameters["operator"] as? String ?: OP_EXISTS
-        val value1 = step.parameters["value1"]?.toString()
-        val value2 = step.parameters["value2"]?.toString()
+        val value1Param = step.parameters["value1"]
+        val value2Param = step.parameters["value2"]
 
         val parts = mutableListOf<Any>()
         parts.add("如果 ")
         parts.add(PillUtil.Pill(input1Value ?: "...", input1Value != null, parameterId = "input1"))
         parts.add(" ")
 
+        // --- ✨ 核心修改 START ✨ ---
+        // 辅助函数，用于格式化数字或返回原始字符串
+        fun formatNumberForPill(param: Any?): String {
+            return when {
+                (param as? String)?.startsWith("{{") == true -> param.toString()
+                param is Number -> {
+                    if (param.toDouble() == param.toLong().toDouble()) {
+                        param.toLong().toString()
+                    } else {
+                        param.toString()
+                    }
+                }
+                else -> param?.toString() ?: "..."
+            }
+        }
+
         if (operator == OP_NUM_BETWEEN) {
             parts.add(PillUtil.Pill(OP_NUM_BETWEEN, false, parameterId = "operator", isModuleOption = true))
             parts.add(" ")
-            val isValue1Var = value1?.startsWith("{{") == true
-            parts.add(PillUtil.Pill(value1 ?: "...", isValue1Var, parameterId = "value1"))
+
+            val value1Text = formatNumberForPill(value1Param)
+            val isValue1Var = (value1Param as? String)?.startsWith("{{") == true
+            parts.add(PillUtil.Pill(value1Text, isValue1Var, parameterId = "value1"))
+
             parts.add(" 和 ")
-            val isValue2Var = value2?.startsWith("{{") == true
-            parts.add(PillUtil.Pill(value2 ?: "...", isValue2Var, parameterId = "value2"))
+
+            val value2Text = formatNumberForPill(value2Param)
+            val isValue2Var = (value2Param as? String)?.startsWith("{{") == true
+            parts.add(PillUtil.Pill(value2Text, isValue2Var, parameterId = "value2"))
+
             parts.add(" 之间")
         } else {
             parts.add(PillUtil.Pill(operator, false, parameterId = "operator", isModuleOption = true))
             if (OPERATORS_REQUIRING_ONE_INPUT.contains(operator)) {
                 parts.add(" ")
-                val isValue1Var = value1?.startsWith("{{") == true
-                parts.add(PillUtil.Pill(value1 ?: "...", isValue1Var, parameterId = "value1"))
+                val value1Text = formatNumberForPill(value1Param)
+                val isValue1Var = (value1Param as? String)?.startsWith("{{") == true
+                parts.add(PillUtil.Pill(value1Text, isValue1Var, parameterId = "value1"))
             }
         }
+        // --- ✨ 核心修改 END ✨ ---
 
         return PillUtil.buildSpannable(context, *parts.toTypedArray())
     }
+
 
     override suspend fun execute(
         context: ExecutionContext,

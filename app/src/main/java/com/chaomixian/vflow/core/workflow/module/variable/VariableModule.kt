@@ -75,12 +75,26 @@ class SetVariableModule : BaseModule() {
         val type = step.parameters["type"]?.toString() ?: "文本"
         val value = step.parameters["value"]
 
-        val valuePillText = when {
-            type == "布尔" -> value?.toString() ?: "false"
-            type == "字典" -> "{...}"
-            value is String && value.isNotEmpty() -> "'$value'"
-            value != null && value.toString().isNotEmpty() -> value.toString()
-            else -> "..."
+        // 根据变量类型格式化要显示的文本
+        val valuePillText = when (type) {
+            "布尔" -> value?.toString() ?: "false"
+            "字典" -> "{...}"
+            "数字" -> when (value) {
+                is Number -> {
+                    if (value.toDouble() == value.toLong().toDouble()) {
+                        value.toLong().toString()
+                    } else {
+                        value.toString()
+                    }
+                }
+                else -> value?.toString() ?: "..."
+            }
+            // "文本" 和其他类型
+            else -> when {
+                value is String && value.isNotEmpty() -> "'$value'"
+                value != null && value.toString().isNotEmpty() -> value.toString()
+                else -> "..."
+            }
         }
 
         return PillUtil.buildSpannable(
