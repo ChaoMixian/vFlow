@@ -88,6 +88,8 @@ vFlow 最常见的贡献方式就是添加新的模块。步骤如下：
 4.  在 `ModuleRegistry.kt` 的 `initialize()` 方法中注册你的新模块。
 5.  就是这样！你的模块现在应该会自动出现在动作选择器中并可以正常使用了。
 
+[开发指南](docs/CONTRIBUTION.md)
+
 ## 📄 许可证
 
 本项目采用 [GPL License](LICENSE) 许可证。
