@@ -23,9 +23,9 @@
 
 <table>
   <tr>
-    <td><img src="path/to/screenshot1.png" width="200"></td>
-    <td><img src="path/to/screenshot2.png" width="200"></td>
-    <td><img src="path/to/screenshot3.png" width="200"></td>
+    <td><img src="docs/screenshot1.png" width="200"></td>
+    <td><img src="docs/screenshot2.png" width="200"></td>
+    <td><img src="docs/screenshot3.png" width="200"></td>
   </tr>
   <tr>
     <td align="center">工作流列表</td>
@@ -62,7 +62,7 @@ vFlow 的核心是其高度解耦的模块化架构。
 
 1.  克隆仓库:
     ```bash
-    git clone [https://github.com/your-username/vflow.git](https://github.com/your-username/vflow.git)
+    git clone [https://github.com/ChaoMixian/vflow.git](https://github.com/ChaoMixian/vflow.git)
     ```
 2.  使用 Android Studio 打开项目。
 3.  等待 Gradle 同步完成。
