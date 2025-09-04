@@ -1,26 +1,29 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/logic/IfModule.kt
-
-package com.chaomixian.vflow.modules.logic
+package com.chaomixian.vflow.core.workflow.module.logic // Corrected package
 
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
-import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.module.* // Imports BaseModule, BaseBlockModule, ModuleRegistry etc.
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.modules.device.ScreenElement
-import com.chaomixian.vflow.modules.variable.*
+// Corrected import for ScreenElement
+import com.chaomixian.vflow.core.workflow.module.device.ScreenElement
+// Corrected specific imports for Variable types
+import com.chaomixian.vflow.core.workflow.module.data.TextVariable
+import com.chaomixian.vflow.core.workflow.module.data.NumberVariable
+import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
+import com.chaomixian.vflow.core.workflow.module.data.ListVariable
+import com.chaomixian.vflow.core.workflow.module.data.DictionaryVariable
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.min
 
-// --- 常量定义 ---
+// --- Constants remain the same ---
 const val IF_PAIRING_ID = "if"
 const val IF_START_ID = "vflow.logic.if.start"
 const val ELSE_ID = "vflow.logic.if.middle"
 const val IF_END_ID = "vflow.logic.if.end"
 
-// --- 条件操作符定义 ---
 const val OP_EXISTS = "存在"
 const val OP_NOT_EXISTS = "不存在"
 const val OP_IS_EMPTY = "为空"
@@ -42,7 +45,6 @@ const val OP_NUM_BETWEEN = "介于"
 const val OP_IS_TRUE = "为真"
 const val OP_IS_FALSE = "为假"
 
-// --- 操作符所需输入数量的定义 ---
 val OPERATORS_REQUIRING_ONE_INPUT = setOf(
     OP_TEXT_EQUALS, OP_TEXT_NOT_EQUALS, OP_CONTAINS, OP_NOT_CONTAINS,
     OP_STARTS_WITH, OP_ENDS_WITH, OP_MATCHES_REGEX,
@@ -50,62 +52,44 @@ val OPERATORS_REQUIRING_ONE_INPUT = setOf(
 )
 val OPERATORS_REQUIRING_TWO_INPUTS = setOf(OP_NUM_BETWEEN)
 
-// --- 按变量类型预定义操作符列表 ---
 val OPERATORS_FOR_ANY = listOf(OP_EXISTS, OP_NOT_EXISTS)
 val OPERATORS_FOR_TEXT = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY, OP_TEXT_EQUALS, OP_TEXT_NOT_EQUALS, OP_CONTAINS, OP_NOT_CONTAINS, OP_STARTS_WITH, OP_ENDS_WITH, OP_MATCHES_REGEX)
 val OPERATORS_FOR_NUMBER = listOf(OP_NUM_EQ, OP_NUM_NEQ, OP_NUM_GT, OP_NUM_GTE, OP_NUM_LT, OP_NUM_LTE, OP_NUM_BETWEEN)
 val OPERATORS_FOR_BOOLEAN = listOf(OP_IS_TRUE, OP_IS_FALSE)
 val OPERATORS_FOR_COLLECTION = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY)
 
-// 所有操作符的完整列表，供静态 `getInputs` 方法使用
 val ALL_OPERATORS = (OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT + OPERATORS_FOR_NUMBER + OPERATORS_FOR_BOOLEAN + OPERATORS_FOR_COLLECTION).distinct()
 
-class IfModule : BaseBlockModule() {
+
+class IfModule : BaseBlockModule() { // BaseBlockModule is in com.chaomixian.vflow.core.module
     override val id = IF_START_ID
     override val metadata = ActionMetadata("如果", "根据条件执行不同的操作", R.drawable.rounded_alt_route_24, "逻辑控制")
     override val pairingId = IF_PAIRING_ID
     override val stepIdsInBlock = listOf(IF_START_ID, ELSE_ID, IF_END_ID)
 
-    /**
-     * 【核心优化】
-     * 重写此方法以提供动态的输入项定义。
-     * 这是实现“智能条件”功能且不破坏编辑器耦合性的关键。
-     */
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
-        // --- 核心修复：将 super.getInputs() 修改为 getInputs() ---
-        val staticInputs = getInputs() // 获取静态的、完整的输入定义作为蓝本
+        val staticInputs = getInputs()
         val currentParameters = step?.parameters ?: emptyMap()
-
         val input1Value = currentParameters["input1"] as? String
 
-        // 如果 "输入" (input1) 还没有连接任何魔法变量，则编辑器中只应显示 "输入" 这一个选项
         if (input1Value == null) {
             return listOf(staticInputs.first { it.id == "input1" })
         }
 
-        // 解析 "输入" (input1) 连接的魔法变量的类型
         val input1TypeName = resolveMagicVariableType(input1Value, allSteps)
-
-        // 根据解析出的变量类型，获取专门为其筛选的、可用的条件操作符列表
         val availableOperators = getOperatorsForVariableType(input1TypeName)
 
-        // 开始构建将要动态显示在编辑器中的输入项列表
         val dynamicInputs = mutableListOf<InputDefinition>()
-        dynamicInputs.add(staticInputs.first { it.id == "input1" }) // 总是添加 "输入"
-
-        // 添加 "条件" (operator) 输入项，但将其选项列表 `options` 替换为我们筛选后的 `availableOperators`
+        dynamicInputs.add(staticInputs.first { it.id == "input1" })
         dynamicInputs.add(staticInputs.first { it.id == "operator" }.copy(options = availableOperators))
 
-        // 检查当前步骤中已保存的操作符
         val selectedOperator = currentParameters["operator"] as? String
 
-        // 根据当前选择的操作符，决定是否需要显示 "比较值1" 和 "比较值2"
         if (OPERATORS_REQUIRING_ONE_INPUT.contains(selectedOperator)) {
-            // 如果需要一个比较值，直接使用静态定义
             dynamicInputs.add(staticInputs.first { it.id == "value1" })
         } else if (OPERATORS_REQUIRING_TWO_INPUTS.contains(selectedOperator)) {
-            // 针对“介于”操作符，动态修改 value1 的类型
             val originalValue1Def = staticInputs.first { it.id == "value1" }
+            // Uses imported NumberVariable
             val newNumberValue1Def = originalValue1Def.copy(
                 staticType = ParameterType.NUMBER,
                 acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
@@ -113,29 +97,21 @@ class IfModule : BaseBlockModule() {
             dynamicInputs.add(newNumberValue1Def)
             dynamicInputs.add(staticInputs.first { it.id == "value2" })
         }
-
-        return dynamicInputs // 返回最终构建好的、动态的输入项列表
+        return dynamicInputs
     }
 
-    /**
-     * 根据输入的魔法变量类型，返回一个只包含适用条件操作符的列表。
-     * @param variableTypeName 变量类型的唯一名称，例如 "vflow.type.text"。
-     * @return 筛选后的操作符列表。
-     */
     private fun getOperatorsForVariableType(variableTypeName: String?): List<String> {
+        // Uses imported Variable types
         return when (variableTypeName) {
             TextVariable.TYPE_NAME, ScreenElement.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT
             NumberVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_NUMBER
             BooleanVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_BOOLEAN
             ListVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_COLLECTION
-            null -> OPERATORS_FOR_ANY // 如果没有输入，只提供最基础的判断
-            else -> OPERATORS_FOR_ANY // 对于未知类型，也只提供基础判断
+            null -> OPERATORS_FOR_ANY
+            else -> OPERATORS_FOR_ANY
         }.distinct()
     }
 
-    /**
-     * 解析一个魔法变量引用字符串，并从工作流上下文中找出其原始的类型名称。
-     */
     private fun resolveMagicVariableType(variableReference: String?, allSteps: List<ActionStep>?): String? {
         if (variableReference == null || !variableReference.startsWith("{{") || allSteps == null) {
             return null
@@ -145,16 +121,14 @@ class IfModule : BaseBlockModule() {
         val sourceOutputId = parts.getOrNull(1) ?: return null
 
         val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
+        // ModuleRegistry is in com.chaomixian.vflow.core.module
         val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
 
         return sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId }?.typeName
     }
 
-    /**
-     * 提供一个静态的、包含所有可能输入项的完整列表。
-     * 这是 `getDynamicInputs` 方法获取蓝本的来源。
-     */
     override fun getInputs(): List<InputDefinition> = listOf(
+        // Uses imported Variable types and ScreenElement
         InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(BooleanVariable.TYPE_NAME, NumberVariable.TYPE_NAME, TextVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME, ListVariable.TYPE_NAME, ScreenElement.TYPE_NAME)),
         InputDefinition(id = "operator", name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
         InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, NumberVariable.TYPE_NAME, BooleanVariable.TYPE_NAME)),
@@ -162,6 +136,7 @@ class IfModule : BaseBlockModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
+        // Uses imported BooleanVariable
         OutputDefinition("result", "条件结果", BooleanVariable.TYPE_NAME)
     )
 
@@ -176,8 +151,6 @@ class IfModule : BaseBlockModule() {
         parts.add(PillUtil.Pill(input1Value ?: "...", input1Value != null, parameterId = "input1"))
         parts.add(" ")
 
-        // --- ✨ 核心修改 START ✨ ---
-        // 辅助函数，用于格式化数字或返回原始字符串
         fun formatNumberForPill(param: Any?): String {
             return when {
                 (param as? String)?.startsWith("{{") == true -> param.toString()
@@ -195,17 +168,13 @@ class IfModule : BaseBlockModule() {
         if (operator == OP_NUM_BETWEEN) {
             parts.add(PillUtil.Pill(OP_NUM_BETWEEN, false, parameterId = "operator", isModuleOption = true))
             parts.add(" ")
-
             val value1Text = formatNumberForPill(value1Param)
             val isValue1Var = (value1Param as? String)?.startsWith("{{") == true
             parts.add(PillUtil.Pill(value1Text, isValue1Var, parameterId = "value1"))
-
             parts.add(" 和 ")
-
             val value2Text = formatNumberForPill(value2Param)
             val isValue2Var = (value2Param as? String)?.startsWith("{{") == true
             parts.add(PillUtil.Pill(value2Text, isValue2Var, parameterId = "value2"))
-
             parts.add(" 之间")
         } else {
             parts.add(PillUtil.Pill(operator, false, parameterId = "operator", isModuleOption = true))
@@ -216,11 +185,8 @@ class IfModule : BaseBlockModule() {
                 parts.add(PillUtil.Pill(value1Text, isValue1Var, parameterId = "value1"))
             }
         }
-        // --- ✨ 核心修改 END ✨ ---
-
         return PillUtil.buildSpannable(context, *parts.toTypedArray())
     }
-
 
     override suspend fun execute(
         context: ExecutionContext,
@@ -229,9 +195,9 @@ class IfModule : BaseBlockModule() {
         val input1 = context.magicVariables["input1"]
         val operator = context.variables["operator"] as? String ?: OP_EXISTS
         val value1 = context.magicVariables["value1"] ?: context.variables["value1"]
-        val value2 = context.magicVariables["value2"] ?: context.variables["value2"] // <-- 获取第二个值
+        val value2 = context.magicVariables["value2"] ?: context.variables["value2"]
 
-        val result = evaluateCondition(input1, operator, value1, value2) // <-- 传递第二个值
+        val result = evaluateCondition(input1, operator, value1, value2)
         onProgress(ProgressUpdate("条件判断: $result (操作: $operator)"))
 
         if (!result) {
@@ -244,32 +210,29 @@ class IfModule : BaseBlockModule() {
                 return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
             }
         }
+        // Uses imported BooleanVariable
         return ExecutionResult.Success(mapOf("result" to BooleanVariable(result)))
     }
 
     private fun evaluateCondition(input1: Any?, operator: String, value1: Any?, value2: Any?): Boolean {
-        // --- 通用条件 ---
         when (operator) {
             OP_EXISTS -> return input1 != null
             OP_NOT_EXISTS -> return input1 == null
         }
-
         if (input1 == null) return false
 
-        // --- 类型特定的条件 ---
+        // Uses imported Variable types and ScreenElement
         return when (input1) {
             is TextVariable, is String -> evaluateTextCondition(input1.toStringValue(), operator, value1)
-//            is NumberVariable, is Number -> evaluateNumberCondition(input1.toDoubleValue(), operator, value1, value2) // <-- 传递第二个值
             is BooleanVariable, is Boolean -> evaluateBooleanCondition(input1.toBooleanValue(), operator)
             is ListVariable, is Collection<*> -> evaluateCollectionCondition(input1, operator)
             is DictionaryVariable, is Map<*, *> -> evaluateMapCondition(input1, operator)
-//            is ScreenElement -> evaluateTextCondition(input1.text, operator, value1)
             is NumberVariable, is Number -> {
                 val value = input1.toDoubleValue() ?: return false
                 evaluateNumberCondition(value, operator, value1, value2)
             }
-            is ScreenElement -> {
-                val text = input1.text ?: return false
+            is ScreenElement -> { // Uses imported ScreenElement
+                val text = input1.text ?: return false // ScreenElement.text is nullable
                 evaluateTextCondition(text, operator, value1)
             }
             else -> false
@@ -294,16 +257,14 @@ class IfModule : BaseBlockModule() {
 
     private fun evaluateNumberCondition(num1: Double, operator: String, value1: Any?, value2: Any?): Boolean {
         val num2 = value1.toDoubleValue()
-
         if (operator == OP_NUM_BETWEEN) {
             val num3 = value2.toDoubleValue()
-            if (num2 == null || num3 == null) return false // “介于”必须有两个有效的数字
+            if (num2 == null || num3 == null) return false
             val minVal = min(num2, num3)
             val maxVal = max(num2, num3)
             return num1 >= minVal && num1 <= maxVal
         }
-
-        if (num2 == null) return false // 对于其他数字操作，第一个比较值必须有效
+        if (num2 == null) return false
         return when (operator) {
             OP_NUM_EQ -> num1 == num2
             OP_NUM_NEQ -> num1 != num2
@@ -324,6 +285,7 @@ class IfModule : BaseBlockModule() {
     }
 
     private fun evaluateCollectionCondition(col1: Any, operator: String): Boolean {
+        // Uses imported ListVariable
         val size = when(col1) {
             is ListVariable -> col1.value.size
             is Collection<*> -> col1.size
@@ -337,6 +299,7 @@ class IfModule : BaseBlockModule() {
     }
 
     private fun evaluateMapCondition(map1: Any, operator: String): Boolean {
+        // Uses imported DictionaryVariable
         val size = when(map1) {
             is DictionaryVariable -> map1.value.size
             is Map<*,*> -> map1.size
@@ -349,8 +312,8 @@ class IfModule : BaseBlockModule() {
         }
     }
 
-    // --- 类型转换辅助函数 ---
     private fun Any?.toStringValue(): String {
+        // Uses imported TextVariable
         return when(this) {
             is TextVariable -> this.value
             else -> this?.toString() ?: ""
@@ -358,6 +321,7 @@ class IfModule : BaseBlockModule() {
     }
 
     private fun Any?.toDoubleValue(): Double? {
+        // Uses imported NumberVariable
         return when(this) {
             is NumberVariable -> this.value
             is Number -> this.toDouble()
@@ -367,6 +331,7 @@ class IfModule : BaseBlockModule() {
     }
 
     private fun Any?.toBooleanValue(): Boolean {
+        // Uses imported BooleanVariable
         return when(this) {
             is BooleanVariable -> this.value
             is Boolean -> this
@@ -375,6 +340,7 @@ class IfModule : BaseBlockModule() {
     }
 }
 
+// ElseModule and EndIfModule extend BaseModule, which is in com.chaomixian.vflow.core.module
 class ElseModule : BaseModule() {
     override val id = ELSE_ID
     override val metadata = ActionMetadata("否则", "如果条件不满足，则执行这里的操作", R.drawable.rounded_alt_route_24, "逻辑控制")
@@ -382,13 +348,10 @@ class ElseModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "否则"
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        // 【核心修改】
-        // 1. 找到上一个 If 模块的执行结果
         val ifStepId = findPreviousStepInSameBlock(context.allSteps, context.currentStepIndex, IF_START_ID)
+        // Uses imported BooleanVariable
         val ifOutput = ifStepId?.let { context.stepOutputs[it]?.get("result") as? BooleanVariable }?.value
 
-        // 2. 如果 If 条件为真，则需要跳过整个 Else 块
-        //    (这说明流程是自然执行到这里的，而不是被 If 模块跳转过来的)
         if (ifOutput == true) {
             onProgress(ProgressUpdate("如果条件为真，跳过否则块。"))
             val jumpTo = findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(IF_END_ID))
@@ -396,14 +359,12 @@ class ElseModule : BaseModule() {
                 return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
             }
         }
-
-        // 3. 如果 If 条件为假，或者没有找到 If 的结果，则流程应正常执行 Else 块
         onProgress(ProgressUpdate("进入否则块"))
         return ExecutionResult.Success()
     }
 
-    // 辅助函数：向前查找同一块中的特定步骤
     private fun findPreviousStepInSameBlock(steps: List<ActionStep>, startPosition: Int, targetId: String): String? {
+        // ModuleRegistry is in com.chaomixian.vflow.core.module
         val pairingId = steps[startPosition].moduleId.let { ModuleRegistry.getModule(it)?.blockBehavior?.pairingId } ?: return null
         for (i in (startPosition - 1) downTo 0) {
             val currentStep = steps[i]
@@ -424,6 +385,7 @@ class EndIfModule : BaseModule() {
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit) = ExecutionResult.Success()
 }
 
+// Helper function findNextBlockPosition remains the same
 fun findNextBlockPosition(steps: List<ActionStep>, startPosition: Int, targetIds: Set<String>): Int {
     val startModule = ModuleRegistry.getModule(steps[startPosition].moduleId)
     val pairingId = startModule?.blockBehavior?.pairingId ?: return -1

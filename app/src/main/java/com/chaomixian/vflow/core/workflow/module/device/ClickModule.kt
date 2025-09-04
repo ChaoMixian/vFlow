@@ -1,8 +1,6 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/device/ClickModule.kt
+package com.chaomixian.vflow.core.workflow.module.device // Corrected package
 
-package com.chaomixian.vflow.modules.device
-
-import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityService // Android framework class
 import android.accessibilityservice.GestureDescription
 import android.content.Context
 import android.graphics.Path
@@ -12,10 +10,14 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.modules.variable.BooleanVariable
-import com.chaomixian.vflow.modules.variable.TextVariable
+// Corrected imports for Variable types
+import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
+import com.chaomixian.vflow.core.workflow.module.data.TextVariable
+// Added imports for ScreenElement and Coordinate from the same package (device)
+import com.chaomixian.vflow.core.workflow.module.device.ScreenElement
+import com.chaomixian.vflow.core.workflow.module.device.Coordinate
 import com.chaomixian.vflow.permissions.PermissionManager
-import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
+import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService // Alias for project's service
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.CompletableDeferred
 
@@ -28,19 +30,19 @@ class ClickModule : BaseModule() {
         InputDefinition(
             id = "target",
             name = "目标",
-            staticType = ParameterType.STRING, // 静态类型为字符串，用于输入坐标 "x,y" 或视图ID
+            staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(
-                ScreenElement.TYPE_NAME,
-                Coordinate.TYPE_NAME,
-                TextVariable.TYPE_NAME
+                ScreenElement.TYPE_NAME, // Uses imported ScreenElement
+                Coordinate.TYPE_NAME,    // Uses imported Coordinate
+                TextVariable.TYPE_NAME   // Uses imported TextVariable
             ),
             defaultValue = ""
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "点击成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "点击成功", BooleanVariable.TYPE_NAME) // Uses imported BooleanVariable
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -63,28 +65,29 @@ class ClickModule : BaseModule() {
 
         val target = context.magicVariables["target"] ?: context.variables["target"]
 
-        // 核心修改：根据输入类型，执行不同的点击操作
         val clickSuccess = when (target) {
-            is ScreenElement -> {
+            is ScreenElement -> { // Uses imported ScreenElement
                 onProgress(ProgressUpdate("正在点击找到的元素"))
-                // 尝试直接使用无障碍服务点击，如果失败则回退到坐标点击
                 val node = findNodeByBounds(service, target.bounds)
-                val success = node?.performAction(AccessibilityNodeInfo.ACTION_CLICK) ?: false
-                if(node != null) node.recycle()
+                var success = false
+                if (node != null) {
+                    success = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    node.recycle() // Ensure recycle after use
+                }
+                // If direct click on node failed or node not found by bounds, try gesture on original bounds
                 success || performGestureClick(service, target.bounds.centerX(), target.bounds.centerY(), onProgress)
             }
-            is Coordinate -> {
+            is Coordinate -> { // Uses imported Coordinate
                 onProgress(ProgressUpdate("正在点击坐标: (${target.x}, ${target.y})"))
                 performGestureClick(service, target.x, target.y, onProgress)
             }
-            is TextVariable -> {
+            is TextVariable -> { // Uses imported TextVariable
                 val viewId = target.value
                 onProgress(ProgressUpdate("正在点击视图ID: $viewId"))
                 performViewIdClick(service, viewId, onProgress)
             }
             is String -> {
-                // 首先尝试作为坐标解析，如果失败则作为视图ID处理
-                val coordinate = target.toCoordinate()
+                val coordinate = target.toCoordinate() // toCoordinate returns imported Coordinate
                 if (coordinate != null) {
                     onProgress(ProgressUpdate("正在点击坐标: (${coordinate.x}, ${coordinate.y})"))
                     performGestureClick(service, coordinate.x, coordinate.y, onProgress)
@@ -98,42 +101,52 @@ class ClickModule : BaseModule() {
                 false
             }
         }
-
+        // Uses imported BooleanVariable
         return ExecutionResult.Success(mapOf("success" to BooleanVariable(clickSuccess)))
     }
 
-    // 新增私有函数：处理基于视图ID的点击
     private suspend fun performViewIdClick(service: VFlowAccessibilityService, viewId: String, onProgress: suspend (ProgressUpdate) -> Unit): Boolean {
         val node = findNodeByViewId(service, viewId)
         if (node == null) {
             onProgress(ProgressUpdate("视图ID '$viewId' 未找到"))
             return false
         }
-        val clickSuccess = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        node.recycle()
-        if (!clickSuccess) {
-            onProgress(ProgressUpdate("视图ID '$viewId' 不可点击，回退到坐标点击"))
+        var clickSuccess = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        if (!clickSuccess) { // If direct click fails, try gesture on bounds
+            onProgress(ProgressUpdate("视图ID '$viewId' ACTION_CLICK 失败，尝试手势点击"))
             val bounds = Rect()
             node.getBoundsInScreen(bounds)
-            return performGestureClick(service, bounds.centerX(), bounds.centerY(), onProgress)
+            clickSuccess = performGestureClick(service, bounds.centerX(), bounds.centerY(), onProgress)
+        } else {
+            onProgress(ProgressUpdate("已通过 ACTION_CLICK 成功点击视图ID '$viewId'"))
         }
-        onProgress(ProgressUpdate("已通过视图ID成功点击"))
-        return true
+        node.recycle()
+        return clickSuccess
     }
 
-    // 新增私有函数：处理基于手势的点击
     private suspend fun performGestureClick(service: VFlowAccessibilityService, x: Int, y: Int, onProgress: suspend (ProgressUpdate) -> Unit): Boolean {
+        if (x < 0 || y < 0) {
+            onProgress(ProgressUpdate("手势点击失败：坐标 ($x, $y) 无效"))
+            return false
+        }
         val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, 100))
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 100L)) // Duration must be Long
             .build()
         val deferred = CompletableDeferred<Boolean>()
-        service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
-            override fun onCompleted(g: GestureDescription?) { deferred.complete(true) }
-            override fun onCancelled(g: GestureDescription?) { deferred.complete(false) }
+        service.dispatchGesture(gesture, object : android.accessibilityservice.AccessibilityService.GestureResultCallback() {
+            override fun onCompleted(g: GestureDescription?) {
+                super.onCompleted(g)
+                deferred.complete(true)
+            }
+            override fun onCancelled(g: GestureDescription?) {
+                super.onCancelled(g)
+                deferred.complete(false)
+            }
         }, null)
         val success = deferred.await()
-        if (success) onProgress(ProgressUpdate("已通过手势成功点击"))
+        if (success) onProgress(ProgressUpdate("已通过手势成功点击坐标: ($x, $y)"))
+        else onProgress(ProgressUpdate("手势点击坐标 ($x, $y) 失败或被取消"))
         return success
     }
 
@@ -149,22 +162,45 @@ class ClickModule : BaseModule() {
             null
         }
     }
-
+    
     private fun findNodeByViewId(service: VFlowAccessibilityService, viewId: String): AccessibilityNodeInfo? {
         val root = service.rootInActiveWindow ?: return null
         val nodes = root.findAccessibilityNodeInfosByViewId(viewId)
-        root.recycle()
-        return nodes?.firstOrNull()
+        val nodeToReturn = nodes?.firstOrNull()
+        if (nodeToReturn == null) { // If no node is found, or list is null/empty
+            nodes?.forEach { it.recycle() } // Recycle all if any were in the list
+        } else {
+            // If a node is being returned, recycle all OTHER nodes from the list
+            nodes?.filter { it != nodeToReturn }?.forEach { it.recycle() }
+        }
+        // root.recycle(); // Generally, rootInActiveWindow should not be recycled by the caller unless explicitly documented by the service.
+        return nodeToReturn // Caller is responsible for recycling the returned node
     }
 
-    private fun findNodeByBounds(service: VFlowAccessibilityService, bounds: Rect): AccessibilityNodeInfo? {
+    private fun findNodeByBounds(service: VFlowAccessibilityService, targetBounds: Rect): AccessibilityNodeInfo? {
         val root = service.rootInActiveWindow ?: return null
-        val node = root.findAccessibilityNodeInfosByText("").find {
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(AccessibilityNodeInfo.obtain(root)) 
+        var foundNode: AccessibilityNodeInfo? = null
+
+        while (queue.isNotEmpty()) {
+            val currentNode = queue.removeFirst()
             val nodeBounds = Rect()
-            it.getBoundsInScreen(nodeBounds)
-            nodeBounds.contains(bounds)
+            currentNode.getBoundsInScreen(nodeBounds)
+
+            if (nodeBounds == targetBounds) { // Using == for Rect comparison
+                foundNode = AccessibilityNodeInfo.obtain(currentNode) 
+                queue.forEach { it.recycle() } 
+                queue.clear()
+                currentNode.recycle() 
+                break 
+            }
+
+            for (i in 0 until currentNode.childCount) {
+                currentNode.getChild(i)?.let { child -> queue.add(child) }
+            }
+            currentNode.recycle() 
         }
-        root.recycle()
-        return node
+        return foundNode 
     }
 }

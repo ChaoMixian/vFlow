@@ -1,14 +1,13 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/device/DelayModule.kt
-
-package com.chaomixian.vflow.modules.device
+package com.chaomixian.vflow.core.workflow.module.device // Corrected package
 
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.modules.variable.BooleanVariable
-import com.chaomixian.vflow.modules.variable.NumberVariable
+// Corrected imports for Variable types
+import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
+import com.chaomixian.vflow.core.workflow.module.data.NumberVariable
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.delay
 
@@ -28,19 +27,18 @@ class DelayModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 1000L,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME) // Uses TYPE_NAME from the imported NumberVariable
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME) // Uses TYPE_NAME from the imported BooleanVariable
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val durationParam = step.parameters["duration"]
         val isVariable = (durationParam as? String)?.startsWith("{{") == true
 
-        // 格式化数字，如果是整数则不显示小数点
         val durationText = when {
             isVariable -> durationParam.toString()
             durationParam is Number -> {
@@ -52,7 +50,6 @@ class DelayModule : BaseModule() {
             }
             else -> durationParam?.toString() ?: "1000"
         }
-        // --- ✨ 核心修改 END ✨ ---
 
         return PillUtil.buildSpannable(
             context,
@@ -84,10 +81,11 @@ class DelayModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
+        // Ensure NumberVariable here refers to the correctly imported type
         val durationValue = context.magicVariables["duration"] ?: context.variables["duration"]
 
         val duration = when(durationValue) {
-            is NumberVariable -> durationValue.value.toLong()
+            is NumberVariable -> durationValue.value.toLong() // Uses the imported NumberVariable
             is Number -> durationValue.toLong()
             is String -> durationValue.toLongOrNull() ?: 1000L
             else -> 1000L
@@ -101,7 +99,7 @@ class DelayModule : BaseModule() {
             onProgress(ProgressUpdate("正在延迟 ${duration}ms..."))
             delay(duration)
         }
-
+        // Ensure BooleanVariable here refers to the correctly imported type
         return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
     }
 }

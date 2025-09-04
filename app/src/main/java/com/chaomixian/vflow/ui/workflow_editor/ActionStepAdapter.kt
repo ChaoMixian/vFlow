@@ -216,7 +216,7 @@ object PillUtil {
     fun getCategoryColor(category: String): Int = when (category) {
         "设备" -> R.color.category_device
         "逻辑控制" -> R.color.category_logic
-        "变量" -> R.color.category_variable
+        "数据" -> R.color.category_variable
         "触发器" -> R.color.category_trigger
         "其他" -> com.google.android.material.R.color.material_dynamic_neutral30
         else -> com.google.android.material.R.color.material_dynamic_neutral30

@@ -1,6 +1,4 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/device/FindModule.kt
-
-package com.chaomixian.vflow.modules.device
+package com.chaomixian.vflow.core.workflow.module.device // Corrected package
 
 import android.content.Context
 import android.graphics.Rect
@@ -10,7 +8,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.modules.variable.TextVariable
+// Corrected import for TextVariable
+import com.chaomixian.vflow.core.workflow.module.data.TextVariable
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.AccessibilityService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -42,16 +41,14 @@ class FindTextModule : BaseModule() {
     private val matchModeOptions = listOf("完全匹配", "包含", "正则")
     private val outputFormatOptions = listOf("元素", "坐标", "视图ID")
 
-    // --- 核心修改：移除了 uiProvider 的重写 ---
-
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "matchMode",
             name = "匹配模式",
-            staticType = ParameterType.ENUM, // 标准的 ENUM 类型
+            staticType = ParameterType.ENUM,
             defaultValue = "完全匹配",
             options = matchModeOptions,
-            acceptsMagicVariable = false // 不接受变量，通用编辑器会正确处理
+            acceptsMagicVariable = false
         ),
         InputDefinition(
             id = "targetText",
@@ -59,15 +56,15 @@ class FindTextModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME) // Uses imported TextVariable
         ),
         InputDefinition(
             id = "outputFormat",
             name = "输出格式",
-            staticType = ParameterType.ENUM, // 标准的 ENUM 类型
+            staticType = ParameterType.ENUM,
             defaultValue = "元素",
             options = outputFormatOptions,
-            acceptsMagicVariable = false // 不接受变量，通用编辑器会正确处理
+            acceptsMagicVariable = false
         )
     )
 
@@ -79,6 +76,7 @@ class FindTextModule : BaseModule() {
         )
         return when (format) {
             "坐标" -> listOf(OutputDefinition("result", "坐标", Coordinate.TYPE_NAME, conditions))
+            // Uses imported TextVariable for TYPE_NAME
             "视图ID" -> listOf(OutputDefinition("result", "视图ID", TextVariable.TYPE_NAME, conditions))
             else -> listOf(OutputDefinition("result", "找到的元素", ScreenElement.TYPE_NAME, conditions))
         }
@@ -108,6 +106,7 @@ class FindTextModule : BaseModule() {
         val service = context.services.get(AccessibilityService::class)
             ?: return ExecutionResult.Failure("服务未运行", "查找文本需要无障碍服务，但该服务当前未运行。")
 
+        // Uses imported TextVariable
         val targetText = (context.magicVariables["targetText"] as? TextVariable)?.value
             ?: context.variables["targetText"] as? String
 
@@ -124,7 +123,7 @@ class FindTextModule : BaseModule() {
 
             if (nodes.isEmpty()) {
                 onProgress(ProgressUpdate("未在屏幕上找到匹配的文本。"))
-                return ExecutionResult.Success()
+                return ExecutionResult.Success() // No 'result' output if nothing found
             }
 
             val foundNode = nodes.first()
@@ -134,6 +133,7 @@ class FindTextModule : BaseModule() {
             val outputFormat = context.variables["outputFormat"] as? String ?: "元素"
             val output: Parcelable = when (outputFormat) {
                 "坐标" -> Coordinate(bounds.centerX(), bounds.centerY())
+                 // Uses imported TextVariable
                 "视图ID" -> TextVariable(foundNode.viewIdResourceName ?: "")
                 else -> ScreenElement(
                     bounds = bounds,
@@ -141,7 +141,7 @@ class FindTextModule : BaseModule() {
                 )
             }
 
-            nodes.forEach { it.recycle() }
+            nodes.forEach { it.recycle() } // Make sure all obtained nodes are recycled
 
             return ExecutionResult.Success(outputs = mapOf("result" to output))
         } catch (e: Exception) {
@@ -154,7 +154,10 @@ class FindTextModule : BaseModule() {
     private fun findNodesByText(rootNode: AccessibilityNodeInfo, text: String, matchModeStr: String): List<AccessibilityNodeInfo> {
         val matchedNodes = mutableListOf<AccessibilityNodeInfo>()
         val queue = ArrayDeque<AccessibilityNodeInfo>()
-        queue.add(AccessibilityNodeInfo.obtain(rootNode))
+        // It's important to recycle nodes obtained from AccessibilityNodeInfo.obtain()
+        // The initial rootNode passed in might be a copy or the original, handle carefully.
+        // Here, we obtain a new reference for the queue.
+        queue.add(AccessibilityNodeInfo.obtain(rootNode)) 
 
         while (queue.isNotEmpty()) {
             val node = queue.removeFirst()
@@ -165,20 +168,27 @@ class FindTextModule : BaseModule() {
                 when (matchModeStr) {
                     "包含" -> source.contains(text, ignoreCase = true)
                     "正则" -> try { Pattern.compile(text).matcher(source).find() } catch (e: Exception) { false }
-                    else -> source == text
+                    else -> source == text // "完全匹配"
                 }
             }
 
+            var matchedThisNode = false
             if (nodeText != null && checkMatch(nodeText)) {
-                matchedNodes.add(AccessibilityNodeInfo.obtain(node))
-            } else if (nodeDesc != null && checkMatch(nodeDesc)) {
-                matchedNodes.add(AccessibilityNodeInfo.obtain(node))
+                matchedNodes.add(AccessibilityNodeInfo.obtain(node)) // Add a copy
+                matchedThisNode = true
+            }
+            // Check content description only if not already matched by text
+            if (!matchedThisNode && nodeDesc != null && checkMatch(nodeDesc)) {
+                matchedNodes.add(AccessibilityNodeInfo.obtain(node)) // Add a copy
             }
 
             for (i in 0 until node.childCount) {
-                node.getChild(i)?.let { queue.add(it) }
+                node.getChild(i)?.let { child ->
+                    // Add child to queue. It will be recycled when processed from queue.
+                    queue.add(child) 
+                }
             }
-            node.recycle()
+            node.recycle() // Recycle the node processed in this iteration
         }
         return matchedNodes
     }

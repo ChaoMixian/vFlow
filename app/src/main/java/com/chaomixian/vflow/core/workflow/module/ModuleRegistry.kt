@@ -1,9 +1,16 @@
 package com.chaomixian.vflow.core.module
 
-import com.chaomixian.vflow.modules.device.*
-import com.chaomixian.vflow.modules.logic.*
-import com.chaomixian.vflow.modules.triggers.*
-import com.chaomixian.vflow.modules.variable.*
+// Updated import paths for all module categories
+import com.chaomixian.vflow.core.workflow.module.data.CalculationModule
+import com.chaomixian.vflow.core.workflow.module.data.SetVariableModule
+import com.chaomixian.vflow.core.workflow.module.device.*
+import com.chaomixian.vflow.core.workflow.module.logic.*
+import com.chaomixian.vflow.core.workflow.module.triggers.*
+
+// ActionModule and BlockType are correctly in core.module
+import com.chaomixian.vflow.core.module.ActionModule
+import com.chaomixian.vflow.core.module.BlockType
+
 
 object ModuleRegistry {
     private val modules = mutableMapOf<String, ActionModule>()
@@ -18,7 +25,6 @@ object ModuleRegistry {
     fun getModule(id: String): ActionModule? = modules[id]
     fun getAllModules(): List<ActionModule> = modules.values.toList()
 
-    // 修复：过滤掉不应由用户直接添加的模块（如 end, middle）
     fun getModulesByCategory(): Map<String, List<ActionModule>> {
         return modules.values
             .filter { it.blockBehavior.type != BlockType.BLOCK_END && it.blockBehavior.type != BlockType.BLOCK_MIDDLE }
@@ -27,10 +33,12 @@ object ModuleRegistry {
 
     fun initialize() {
         modules.clear()
-        // 触发器
+        // These modules will now be resolved from the updated import paths above
+        //触发器
         register(ManualTriggerModule())
 
-        // 变量
+        // 数据
+        register(CalculationModule())
         register(SetVariableModule())
 
         // 设备

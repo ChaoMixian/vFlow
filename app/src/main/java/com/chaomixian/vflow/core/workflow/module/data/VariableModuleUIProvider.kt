@@ -1,6 +1,4 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/variable/VariableModuleUIProvider.kt
-
-package com.chaomixian.vflow.modules.variable
+package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
 import android.text.InputType
@@ -40,11 +38,6 @@ class VariableModuleUIProvider(
         return setOf("type", "value")
     }
 
-    /**
-     * --- 核心修复 ---
-     * 返回 null 来禁用自定义预览，并强制 ActionStepAdapter 回退到使用模块的 getSummary() 方法。
-     * 这确保了UI的一致性。
-     */
     override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep): View? {
         return null
     }
@@ -81,7 +74,7 @@ class VariableModuleUIProvider(
         updateValueInputView(context, holder, currentType, currentParameters["value"])
 
         typeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, v: View?, position: Int, id: Long) {
+            override fun onItemSelected(parentView: AdapterView<*>?, selectedItemView: View?, position: Int, id: Long) {
                 val selectedType = typeOptions[position]
                 val oldType = (holder.typeSpinner.tag as? String) ?: currentType
                 if (selectedType != oldType) {
@@ -90,7 +83,7 @@ class VariableModuleUIProvider(
                     onParametersChanged()
                 }
             }
-            override fun onNothingSelected(p: AdapterView<*>?) {}
+            override fun onNothingSelected(parentView: AdapterView<*>?) {}
         }
         holder.typeSpinner.tag = currentType
 
@@ -118,17 +111,28 @@ class VariableModuleUIProvider(
         holder.valueContainer.removeAllViews()
         holder.dictionaryAdapter = null
 
-        val valueView = when (type) {
+        val valueView: View = when (type) {
             "字典" -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.valueContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_dictionary)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_kv_pair)
+                
+                // --- 修改点 开始 ---
                 val currentMap = (currentValue as? Map<*, *>)
-                    ?.map { it.key.toString() to it.value.toString() }
+                    ?.mapNotNull { (key, value) ->
+                        val kStr = key?.toString()
+                        val vStr = value?.toString()
+                        if (kStr != null && vStr != null) {
+                            kStr to vStr
+                        } else {
+                            null
+                        }
+                    }
                     ?.toMutableList()
                     ?: mutableListOf()
+                // --- 修改点 结束 ---
 
-                val dictAdapter = DictionaryKVAdapter(currentMap)
+                val dictAdapter = DictionaryKVAdapter(currentMap) // 现在 currentMap 是 MutableList<Pair<String, String>>
                 holder.dictionaryAdapter = dictAdapter
                 recyclerView.adapter = dictAdapter
                 recyclerView.layoutManager = LinearLayoutManager(context)
@@ -136,15 +140,14 @@ class VariableModuleUIProvider(
                 editorView
             }
             "布尔" -> SwitchCompat(context).apply {
-                text = "值"
+                text = "值" // 临时修复: TODO: 请在 strings.xml 中添加 vflow_label_value 资源
                 isChecked = (currentValue as? Boolean) ?: false
             }
             else -> TextInputLayout(context).apply {
-                hint = "值"
-                val editText = EditText(context).apply {
-                    setText(currentValue?.toString() ?: "")
-                    inputType = if (type == "数字") InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
-                }
+                hint = "值" // 临时修复: TODO: 请在 strings.xml 中添加 vflow_label_value 资源
+                val editText = EditText(this.context)
+                editText.setText(currentValue?.toString() ?: "")
+                editText.inputType = if (type == "数字") InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED else InputType.TYPE_CLASS_TEXT
                 addView(editText)
             }
         }

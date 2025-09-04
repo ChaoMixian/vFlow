@@ -287,7 +287,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             }
             else -> TextInputLayout(requireContext()).apply {
                 val editText = EditText(context).apply {
-                    // --- ✨ 核心修改 START ✨ ---
                     // 检查当前值是否为数字，如果是，则进行格式化
                     val valueToDisplay = when (currentValue) {
                         // 如果是数字类型
@@ -305,7 +304,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                         else -> currentValue?.toString() ?: ""
                     }
                     setText(valueToDisplay)
-                    // --- ✨ 核心修改 END ✨ ---
 
                     hint = "输入值..."
                     inputType = if (inputDef.staticType == ParameterType.NUMBER) {

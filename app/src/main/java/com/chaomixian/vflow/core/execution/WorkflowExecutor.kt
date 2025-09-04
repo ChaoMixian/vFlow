@@ -7,7 +7,7 @@ import android.util.Log
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.modules.logic.LOOP_START_ID
+import com.chaomixian.vflow.core.workflow.module.logic.LOOP_START_ID
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

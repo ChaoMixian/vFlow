@@ -1,6 +1,4 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/variable/VariableModule.kt
-
-package com.chaomixian.vflow.modules.variable
+package com.chaomixian.vflow.core.workflow.module.data // 包名已修正
 
 import android.content.Context
 import android.os.Parcelable
@@ -35,7 +33,7 @@ data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelab
 
 class SetVariableModule : BaseModule() {
     override val id = "vflow.variable.set"
-    override val metadata = ActionMetadata("设置变量", "创建文本、数字、布尔值等变量", R.drawable.rounded_data_object_24, "变量")
+    override val metadata = ActionMetadata("设置变量", "创建文本、数字、布尔值等变量", R.drawable.rounded_data_object_24, "数据")
 
     private val typeOptions = listOf("文本", "数字", "布尔", "字典")
     override val uiProvider = VariableModuleUIProvider(typeOptions)

@@ -73,7 +73,6 @@ class MainActivity : BaseActivity() {
 
         // 3. 【通用解决方案】给 Fragment 容器增加下边距，防止内容被 BottomNavigationView 遮挡
         ViewCompat.setOnApplyWindowInsetsListener(fragmentContainer) { view, insets ->
-            // --- 核心修复 ---
             // 获取底部导航栏的高度，该高度已包含系统导航栏的边距
             val bottomNavHeight = bottomNav.height
 

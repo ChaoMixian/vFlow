@@ -1,6 +1,4 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/device/ToastModule.kt
-
-package com.chaomixian.vflow.modules.device
+package com.chaomixian.vflow.core.workflow.module.device // Corrected package
 
 import android.content.Context
 import android.widget.Toast
@@ -8,8 +6,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.modules.variable.BooleanVariable
-import com.chaomixian.vflow.modules.variable.TextVariable
+// Corrected imports for BooleanVariable and TextVariable
+import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
+import com.chaomixian.vflow.core.workflow.module.data.TextVariable
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +21,7 @@ class ToastModule : BaseModule() {
         name = "显示Toast",
         description = "在屏幕底部弹出一个简短的提示消息。",
         iconRes = R.drawable.rounded_call_to_action_24,
-        category = "其他"
+        category = "其他" // This category might need to be "device"
     )
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATIONS)
 
@@ -68,7 +67,8 @@ class ToastModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val message = (context.magicVariables["message"] as? TextVariable)?.value
+        // Corrected access to magicVariables to use TextVariable from the new path
+        val message = (context.magicVariables["message"] as? com.chaomixian.vflow.core.workflow.module.data.TextVariable)?.value
             ?: context.variables["message"] as? String
 
         if (message.isNullOrBlank()) {
@@ -84,10 +84,11 @@ class ToastModule : BaseModule() {
             Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
         }
 
-        kotlinx.coroutines.delay(1000)
+        kotlinx.coroutines.delay(1000) // Consider if this delay is necessary for compilation
 
+        // Corrected access to BooleanVariable from the new path for the output
         return ExecutionResult.Success(
-            outputs = mapOf("success" to BooleanVariable(true))
+            outputs = mapOf("success" to com.chaomixian.vflow.core.workflow.module.data.BooleanVariable(true))
         )
     }
 }

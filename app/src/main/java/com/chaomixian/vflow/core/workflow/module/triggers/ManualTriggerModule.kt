@@ -1,13 +1,14 @@
-package com.chaomixian.vflow.modules.triggers
+package com.chaomixian.vflow.core.workflow.module.triggers // Corrected package
 
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.modules.variable.BooleanVariable
+// Assuming BooleanVariable is now in core.workflow.module.variable based on VariableModule.kt's new package
+import com.chaomixian.vflow.core.workflow.module.data.BooleanVariable
 
-class ManualTriggerModule : BaseModule() {
+class ManualTriggerModule : BaseModule() { // BaseModule is from com.chaomixian.vflow.core.module
     override val id = "vflow.trigger.manual"
     override val metadata = ActionMetadata(
         name = "手动触发",
