@@ -1,16 +1,10 @@
 package com.chaomixian.vflow.core.module
 
-// Updated import paths for all module categories
 import com.chaomixian.vflow.core.workflow.module.data.CalculationModule
 import com.chaomixian.vflow.core.workflow.module.data.SetVariableModule
 import com.chaomixian.vflow.core.workflow.module.device.*
 import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.core.workflow.module.triggers.*
-
-// ActionModule and BlockType are correctly in core.module
-import com.chaomixian.vflow.core.module.ActionModule
-import com.chaomixian.vflow.core.module.BlockType
-
 
 object ModuleRegistry {
     private val modules = mutableMapOf<String, ActionModule>()
@@ -33,7 +27,7 @@ object ModuleRegistry {
 
     fun initialize() {
         modules.clear()
-        // These modules will now be resolved from the updated import paths above
+
         //触发器
         register(ManualTriggerModule())
 

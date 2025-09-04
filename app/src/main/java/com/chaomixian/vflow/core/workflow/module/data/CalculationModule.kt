@@ -6,38 +6,43 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.module.BaseModule
-// 修正导入：NumberVariable 来自 variable 包
-import com.chaomixian.vflow.core.workflow.module.data.NumberVariable
-// 添加 PillUtil 的导入
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
+/**
+ * 计算模块，用于执行两个数字之间的基本数学运算。
+ */
 class CalculationModule : BaseModule() {
 
+    // 模块的唯一标识符
     override val id: String = "data.calculation"
 
+    // 模块的元数据，定义其在编辑器中的显示名称、描述、图标和分类
     override val metadata: ActionMetadata = ActionMetadata(
         name = "计算",
         description = "执行两个数字之间的数学运算。",
-        iconRes = R.drawable.rounded_calculate_24, // 建议使用更相关的图标
-        category = "数据" // "数据" 类别在 PillUtil.getCategoryColor 中没有特定颜色，会回退
+        iconRes = R.drawable.rounded_calculate_24, 
+        category = "数据"
     )
 
+    /**
+     * 定义模块的输入参数。
+     */
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "operand1",
             name = "数字1",
-            staticType = ParameterType.NUMBER,
-            acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
-            defaultValue = 0.0 // 提供一个数字类型的默认值
+            staticType = ParameterType.NUMBER, 
+            acceptsMagicVariable = true,       
+            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME), 
+            defaultValue = 0.0                 
         ),
         InputDefinition(
             id = "operator",
             name = "符号",
-            staticType = ParameterType.ENUM,
-            options = listOf("+", "-", "*", "/"),
-            defaultValue = "+",
-            acceptsMagicVariable = false
+            staticType = ParameterType.ENUM,   
+            options = listOf("+", "-", "*", "/"), 
+            defaultValue = "+",                
+            acceptsMagicVariable = false       
         ),
         InputDefinition(
             id = "operand2",
@@ -45,21 +50,27 @@ class CalculationModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
-            defaultValue = 0.0 // 提供一个数字类型的默认值
+            defaultValue = 0.0
         )
     )
 
+    /**
+     * 定义模块的输出参数。
+     */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition(
             id = "result",
             name = "结果",
-            typeName = NumberVariable.TYPE_NAME
+            typeName = NumberVariable.TYPE_NAME 
         )
     )
 
+    /**
+     * 执行模块的核心逻辑。
+     */
     override suspend fun execute(
         context: ExecutionContext,
-        onProgress: suspend (ProgressUpdate) -> Unit
+        onProgress: suspend (ProgressUpdate) -> Unit 
     ): ExecutionResult {
         val operand1Value = context.magicVariables["operand1"] ?: context.variables["operand1"]
         val operator = context.variables["operator"] as? String ?: "+"
@@ -90,60 +101,63 @@ class CalculationModule : BaseModule() {
         return ExecutionResult.Success(mapOf("result" to NumberVariable(resultValue)))
     }
 
+    /**
+     * 将任意类型的值转换为 Double?。
+     */
     private fun convertToDouble(value: Any?): Double? {
         return when (value) {
-            is NumberVariable -> value.value
-            is Number -> value.toDouble()
-            is String -> value.toDoubleOrNull()
-            else -> null
+            is NumberVariable -> value.value 
+            is Number -> value.toDouble()    
+            is String -> value.toDoubleOrNull() 
+            else -> null                     
         }
     }
 
+    /**
+     * 验证模块参数的有效性。
+     */
     override fun validate(step: ActionStep): ValidationResult {
-        // 简单验证示例，可以根据需要扩展
-        // (省略之前的验证逻辑，通常 BaseModule 的默认实现或更简单的实现就足够了，
-        //  除非有特定于此模块的复杂验证规则)
         return ValidationResult(true)
     }
     
+    /**
+     * 创建此模块对应的默认动作步骤列表。
+     */
     override fun createSteps(): List<ActionStep> = listOf(ActionStep(moduleId = this.id, parameters = emptyMap()))
     
-    // --- 修改后的 getSummary 方法 ---
+    /**
+     * 生成在工作流编辑器中显示模块摘要的文本。
+     */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val params = step.parameters
-        val inputs = getInputs() // 获取输入定义以访问默认值
+        val inputs = getInputs() 
 
-        // 获取 Operand1 的文本和是否为变量的标记
-        val operand1RawValue = params["operand1"] // 首先获取原始值
+        val operand1RawValue = params["operand1"] 
         val operand1Text = operand1RawValue?.toString()
-            ?: inputs.find { it.id == "operand1" }?.defaultValue?.toString() // 如果为 null, 尝试获取默认值
-            ?: "..." // 最终回退
+            ?: inputs.find { it.id == "operand1" }?.defaultValue?.toString() 
+            ?: "..." 
         val operand1IsVariable = operand1RawValue is String && operand1RawValue.startsWith("{{") && operand1RawValue.endsWith("}}")
 
-
-        // 获取 Operator 的文本
         val operatorText = params["operator"]?.toString()
             ?: inputs.find { it.id == "operator" }?.defaultValue?.toString()
             ?: "+"
 
-        // 获取 Operand2 的文本和是否为变量的标记
         val operand2RawValue = params["operand2"]
         val operand2Text = operand2RawValue?.toString()
             ?: inputs.find { it.id == "operand2" }?.defaultValue?.toString()
             ?: "..."
         val operand2IsVariable = operand2RawValue is String && operand2RawValue.startsWith("{{") && operand2RawValue.endsWith("}}")
 
-        // 创建 Pills
         val pillOperand1 = PillUtil.Pill(
             text = if (operand1IsVariable) operand1Text else (operand1RawValue as? Number)?.let { formatNumberForPill(it) } ?: operand1Text,
             isVariable = operand1IsVariable,
-            parameterId = "operand1"
+            parameterId = "operand1" 
         )
         val pillOperator = PillUtil.Pill(
             text = operatorText,
-            isVariable = false,
+            isVariable = false,       
             parameterId = "operator",
-            isModuleOption = true
+            isModuleOption = true     
         )
         val pillOperand2 = PillUtil.Pill(
             text = if (operand2IsVariable) operand2Text else (operand2RawValue as? Number)?.let { formatNumberForPill(it) } ?: operand2Text,
@@ -154,12 +168,14 @@ class CalculationModule : BaseModule() {
         return PillUtil.buildSpannable(context, "计算 ", pillOperand1, " ", pillOperator, " ", pillOperand2)
     }
 
-    // 用于格式化数字显示的辅助函数 (如果需要，可以做得更复杂)
+    /**
+     * 格式化数字以便在 "药丸" 中显示。
+     */
     private fun formatNumberForPill(number: Number): String {
         return if (number.toDouble() == number.toLong().toDouble()) {
-            number.toLong().toString()
+            number.toLong().toString() 
         } else {
-            String.format("%.2f", number.toDouble()) // 例如，保留两位小数
+            String.format("%.2f", number.toDouble()) 
         }
     }
 }

@@ -1,4 +1,6 @@
-// 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/ActionEditorSheet.kt
+// 文件: ActionEditorSheet.kt
+// 描述: 通用的模块参数编辑底部动作表单 (BottomSheetDialogFragment)。
+//      UI根据模块定义动态生成，不硬编码特定模块逻辑。
 
 package com.chaomixian.vflow.ui.workflow_editor
 
@@ -8,7 +10,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.widget.SwitchCompat
+import androidx.appcompat.widget.SwitchCompat // androidx的Switch
 import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.*
@@ -17,164 +19,140 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.textfield.TextInputLayout
 
 /**
- * 一个通用的、用于编辑模块参数的底部动作表单。
- * 它不包含任何针对特定模块的硬编码逻辑，完全由模块自身的定义来驱动UI的生成。
+ * 模块参数编辑器底部表单。
+ * UI 由模块定义驱动，支持通用输入类型和模块自定义UI。
  */
 class ActionEditorSheet : BottomSheetDialogFragment() {
 
-    // --- 核心属性 ---
-    private lateinit var module: ActionModule // 当前正在编辑的模块
-    private var existingStep: ActionStep? = null // 如果是编辑现有步骤，则为该步骤的实例
-    private var focusedInputId: String? = null // 如果是只编辑单个参数，则为该参数的ID
-    private var allSteps: ArrayList<ActionStep>? = null // 整个工作流的步骤列表，用于为动态输入提供上下文
+    private lateinit var module: ActionModule // 当前编辑的模块
+    private var existingStep: ActionStep? = null // 若为编辑，此为现有步骤实例
+    private var focusedInputId: String? = null // 若为编辑单个参数，此为参数ID
+    private var allSteps: ArrayList<ActionStep>? = null // 工作流中所有步骤，用于动态输入上下文
 
-    // --- 回调函数 ---
-    var onSave: ((ActionStep) -> Unit)? = null
-    var onMagicVariableRequested: ((inputId: String) -> Unit)? = null
+    // 回调
+    var onSave: ((ActionStep) -> Unit)? = null // 保存回调
+    var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // 请求魔法变量选择器回调
 
-    // --- UI及状态管理 ---
-    private val inputViews = mutableMapOf<String, View>() // 存储每个通用输入控件的引用
-    private var customEditorHolder: CustomEditorViewHolder? = null // 用于持有模块自定义UI的ViewHolder
-    private val currentParameters = mutableMapOf<String, Any?>() // 存储编辑器中当前的参数值
+    // UI及状态
+    private val inputViews = mutableMapOf<String, View>() // 通用输入控件引用
+    private var customEditorHolder: CustomEditorViewHolder? = null // 模块自定义UI的ViewHolder
+    private val currentParameters = mutableMapOf<String, Any?>() // 编辑器中当前的参数值
 
     companion object {
-        /**
-         * 创建 ActionEditorSheet 实例的工厂方法。
-         */
+        /** 创建 ActionEditorSheet 实例。 */
         fun newInstance(
             module: ActionModule,
             existingStep: ActionStep?,
             focusedInputId: String?,
-            allSteps: List<ActionStep>? = null // 新增一个可选参数，用于传递整个工作流的上下文
+            allSteps: List<ActionStep>? = null // 工作流上下文，可选
         ): ActionEditorSheet {
             return ActionEditorSheet().apply {
                 arguments = Bundle().apply {
                     putString("moduleId", module.id)
                     putParcelable("existingStep", existingStep)
                     putString("focusedInputId", focusedInputId)
-                    allSteps?.let {
-                        putParcelableArrayList("allSteps", ArrayList(it))
-                    }
+                    allSteps?.let { putParcelableArrayList("allSteps", ArrayList(it)) }
                 }
             }
         }
     }
 
+    /** 初始化核心数据。 */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 从 arguments 中恢复核心数据
         val moduleId = arguments?.getString("moduleId")
         module = moduleId?.let { ModuleRegistry.getModule(it) } ?: return dismiss()
         existingStep = arguments?.getParcelable("existingStep")
         focusedInputId = arguments?.getString("focusedInputId")
         allSteps = arguments?.getParcelableArrayList("allSteps")
 
-        // 初始化当前参数：首先从模块定义中获取所有输入的默认值，然后用现有步骤的参数覆盖它们
+        // 初始化参数：模块默认值 -> 现有步骤参数值
         currentParameters.putAll(module.getInputs().associate { it.id to it.defaultValue }.filterValues { it != null })
         existingStep?.parameters?.let { currentParameters.putAll(it) }
     }
 
+    /** 创建视图并构建UI。 */
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.sheet_action_editor, container, false)
-        val title = view.findViewById<TextView>(R.id.text_view_bottom_sheet_title)
+        val titleTextView = view.findViewById<TextView>(R.id.text_view_bottom_sheet_title)
         val paramsContainer = view.findViewById<LinearLayout>(R.id.container_action_params)
         val saveButton = view.findViewById<Button>(R.id.button_save)
 
-        // 根据是编辑整个模块还是单个参数来设置标题
+        // 设置标题
         val focusedInputDef = module.getInputs().find { it.id == focusedInputId }
-        title.text = if (focusedInputId != null && focusedInputDef != null) {
+        titleTextView.text = if (focusedInputId != null && focusedInputDef != null) {
             "编辑 ${focusedInputDef.name}"
         } else {
             "编辑 ${module.metadata.name}"
         }
 
-        // 构建UI界面
-        buildUi(paramsContainer)
+        buildUi(paramsContainer) // 构建参数编辑界面
 
         saveButton.setOnClickListener {
-            // 1. 从UI控件中读取最新的参数值
-            readParametersFromUi()
+            readParametersFromUi() // 从UI读取最新参数
 
             val uiProvider = module.uiProvider
             val handledIds = uiProvider?.getHandledInputIds() ?: emptySet()
 
-            // 2. 根据编辑模式，决定要保存哪些参数
-            val paramsToSave: Map<String, Any?> = if (focusedInputId != null) {
-                // 只编辑单个参数模式
-                val id = focusedInputId!!  // 此时一定非空
+            // 根据编辑模式决定保存哪些参数
+            val paramsToSave: Map<String, Any?> = if (focusedInputId != null) { // 单参数编辑模式
+                val id = focusedInputId!!
                 if (handledIds.contains(id) && uiProvider != null && customEditorHolder != null) {
-                    uiProvider.readFromEditor(customEditorHolder!!)
+                    uiProvider.readFromEditor(customEditorHolder!!) // 从自定义UI读取
                 } else {
                     mapOf(id to currentParameters[id])
                 }
-            } else {
-                // 编辑整个模块模式
+            } else { // 整个模块编辑模式
                 currentParameters.toMap()
             }
 
-            // 3. 在验证前，合并旧参数和新参数，以提供完整的上下文
+            // 合并旧参数和新参数用于验证
             val finalParamsForValidation = existingStep?.parameters?.toMutableMap() ?: mutableMapOf()
             finalParamsForValidation.putAll(paramsToSave)
 
-            // 4. 执行模块的验证逻辑
             val stepForValidation = ActionStep(moduleId = module.id, parameters = finalParamsForValidation)
-            val validationResult = module.validate(stepForValidation)
+            val validationResult = module.validate(stepForValidation) // 执行模块验证
 
             if (validationResult.isValid) {
-                // 验证通过，调用回调函数保存数据并关闭窗口
                 val stepToSave = ActionStep(moduleId = module.id, parameters = paramsToSave)
-                onSave?.invoke(stepToSave)
+                onSave?.invoke(stepToSave) // 验证通过，保存并关闭
                 dismiss()
             } else {
-                // 验证失败，显示错误提示
-                Toast.makeText(context, validationResult.errorMessage, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, validationResult.errorMessage, Toast.LENGTH_LONG).show() // 验证失败，显示错误
             }
         }
         return view
     }
 
-    /**
-     * 公开方法：当魔法变量选择器返回结果时，更新参数并重建UI。
-     */
+    /** 当魔法变量选择器返回结果时，更新参数并重建UI。 */
     fun updateInputWithVariable(inputId: String, variableReference: String) {
         currentParameters[inputId] = variableReference
-        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let {
-            buildUi(it)
-        }
+        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
     }
 
-    /**
-     * 公开方法：当用户选择清除变量连接时，恢复为默认值并重建UI。
-     */
+    /** 当用户清除变量连接时，恢复默认值并重建UI。 */
     fun clearInputVariable(inputId: String) {
         val inputDef = module.getInputs().find { it.id == inputId } ?: return
         currentParameters[inputId] = inputDef.defaultValue
-        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let {
-            buildUi(it)
-        }
+        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
     }
 
-    /**
-     * 构建编辑器UI的核心函数。
-     */
+    /** 构建编辑器UI。 */
     private fun buildUi(container: LinearLayout) {
         container.removeAllViews()
         inputViews.clear()
         customEditorHolder = null
 
-        // 【核心解耦逻辑】
-        // 编辑器不再关心模块的具体类型。它只是向模块请求当前的输入项定义。
-        // `getDynamicInputs` 是实现这一解耦的关键。模块自己决定在当前状态下应该显示哪些输入项。
+        // 模块通过 getDynamicInputs 决定当前应显示的输入项
         val stepForUi = ActionStep(module.id, currentParameters)
         val inputsToShow = module.getDynamicInputs(stepForUi, allSteps)
 
-        // 自动校正：检查当前已选的参数值是否在新提供的选项列表中依然有效，如果无效则重置为默认值。
-        // 这能防止因输入类型改变而导致保存一个无效的旧值。
+        // 校正无效的枚举参数值
         inputsToShow.forEach { inputDef ->
             if (inputDef.staticType == ParameterType.ENUM) {
                 val currentValue = currentParameters[inputDef.id] as? String
                 if (currentValue != null && !inputDef.options.contains(currentValue)) {
-                    currentParameters[inputDef.id] = inputDef.defaultValue
+                    currentParameters[inputDef.id] = inputDef.defaultValue // 重置为默认值
                 }
             }
         }
@@ -182,24 +160,22 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val uiProvider = module.uiProvider
         val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
 
-        // 根据是编辑单个参数还是整个模块来决定渲染范围
-        if (focusedInputId != null) {
+        if (focusedInputId != null) { // 单参数编辑模式
             val inputDef = inputsToShow.find { it.id == focusedInputId } ?: return
-            if (handledInputIds.contains(inputDef.id) && uiProvider != null) {
+            if (handledInputIds.contains(inputDef.id) && uiProvider != null) { // 使用自定义UI
                 customEditorHolder = uiProvider.createEditor(requireContext(), container, currentParameters) { readParametersFromUi() }
                 container.addView(customEditorHolder!!.view)
-            } else {
+            } else { // 使用通用UI
                 val inputView = createViewForInputDefinition(inputDef, container)
                 container.addView(inputView)
                 inputViews[inputDef.id] = inputView
             }
-        } else {
-            // 渲染模块的所有输入项
-            if (uiProvider != null) {
+        } else { // 整个模块编辑模式
+            if (uiProvider != null) { // 若有自定义UI，先添加
                 customEditorHolder = uiProvider.createEditor(requireContext(), container, currentParameters) { readParametersFromUi() }
                 container.addView(customEditorHolder!!.view)
             }
-            inputsToShow.forEach { inputDef ->
+            inputsToShow.forEach { inputDef -> // 添加通用UI（未被自定义UI处理且非隐藏的）
                 if (!handledInputIds.contains(inputDef.id) && !inputDef.isHidden) {
                     val inputView = createViewForInputDefinition(inputDef, container)
                     container.addView(inputView)
@@ -209,29 +185,23 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
     }
 
-    /**
-     * 为单个输入项定义创建对应的UI视图（包含标签、输入区和魔法变量按钮）。
-     */
-    private fun createViewForInputDefinition(
-        inputDef: InputDefinition,
-        parent: ViewGroup
-    ): View {
+    /** 为单个输入定义创建视图 (标签、输入控件、魔法变量按钮)。 */
+    private fun createViewForInputDefinition(inputDef: InputDefinition, parent: ViewGroup): View {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, parent, false)
         row.findViewById<TextView>(R.id.input_name).text = inputDef.name
         val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
         val currentValue = currentParameters[inputDef.id]
 
-        magicButton.isVisible = inputDef.acceptsMagicVariable
+        magicButton.isVisible = inputDef.acceptsMagicVariable // 是否显示魔法变量按钮
         magicButton.setOnClickListener {
-            readParametersFromUi() // 在打开新窗口前，保存当前UI的状态
-            onMagicVariableRequested?.invoke(inputDef.id)
+            readParametersFromUi() // 保存当前UI状态
+            onMagicVariableRequested?.invoke(inputDef.id) // 请求魔法变量选择
         }
 
         valueContainer.removeAllViews()
-        // 判断当前值是否为魔法变量
         if (inputDef.acceptsMagicVariable && currentValue is String && currentValue.startsWith("{{")) {
-            // 如果是，则显示一个不可编辑的“药丸”
+            // 若已连接魔法变量，显示药丸
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
             pill.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
             pill.setOnClickListener {
@@ -240,28 +210,21 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             }
             valueContainer.addView(pill)
         } else {
-            // 如果不是，则创建对应的静态输入控件（输入框、开关等）
+            // 未连接魔法变量，创建静态输入控件
             val staticInputView = createBaseViewForInputType(inputDef, currentValue)
             valueContainer.addView(staticInputView)
         }
-
-        row.tag = inputDef.id // 将输入ID存入tag，便于后续读取
+        row.tag = inputDef.id // 存储输入ID
         return row
     }
 
-    /**
-     * 根据输入类型创建基础的输入控件（如输入框、开关、下拉菜单）。
-     */
-    private fun createBaseViewForInputType(
-        inputDef: InputDefinition,
-        currentValue: Any?
-    ): View {
+    /** 根据输入类型创建基础输入控件 (EditText, Switch, Spinner)。 */
+    private fun createBaseViewForInputType(inputDef: InputDefinition, currentValue: Any?): View {
         return when (inputDef.staticType) {
             ParameterType.BOOLEAN -> SwitchCompat(requireContext()).apply {
                 isChecked = currentValue as? Boolean ?: (inputDef.defaultValue as? Boolean ?: false)
             }
             ParameterType.ENUM -> Spinner(requireContext()).apply {
-                // 使用模块动态提供的选项列表
                 adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, inputDef.options).also {
                     it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                 }
@@ -269,42 +232,23 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 val selectionIndex = inputDef.options.indexOf(currentEnum)
                 if (selectionIndex != -1) setSelection(selectionIndex)
 
-                // 监听器现在变得通用：任何下拉菜单选项的改变都可能导致UI结构变化，因此需要重建UI。
                 onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                        val previousValue = currentParameters[inputDef.id]
-                        val newValue = selectedItem.toString()
-                        // 只有在值确实发生变化时才重建UI，防止不必要的刷新
-                        if (previousValue != newValue) {
-                            readParametersFromUi() // 在重建前，先读取所有控件的当前值
-                            view?.findViewById<LinearLayout>(R.id.container_action_params)?.let {
-                                buildUi(it)
-                            }
+                        if (currentParameters[inputDef.id] != selectedItem.toString()) {
+                            readParametersFromUi() // 读取所有控件当前值
+                            view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) } // 重建UI
                         }
                     }
                     override fun onNothingSelected(p0: AdapterView<*>?) {}
                 }
             }
-            else -> TextInputLayout(requireContext()).apply {
+            else -> TextInputLayout(requireContext()).apply { // STRING, NUMBER, ANY
                 val editText = EditText(context).apply {
-                    // 检查当前值是否为数字，如果是，则进行格式化
                     val valueToDisplay = when (currentValue) {
-                        // 如果是数字类型
-                        is Number -> {
-                            // 检查它是否可以被无损地转换为长整型 (即没有小数部分)
-                            if (currentValue.toDouble() == currentValue.toLong().toDouble()) {
-                                // 如果是，则显示为整数
-                                currentValue.toLong().toString()
-                            } else {
-                                // 否则，保留小数部分
-                                currentValue.toString()
-                            }
-                        }
-                        // 对于其他类型，保持原样
+                        is Number -> if (currentValue.toDouble() == currentValue.toLong().toDouble()) currentValue.toLong().toString() else currentValue.toString()
                         else -> currentValue?.toString() ?: ""
                     }
                     setText(valueToDisplay)
-
                     hint = "输入值..."
                     inputType = if (inputDef.staticType == ParameterType.NUMBER) {
                         InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
@@ -317,29 +261,23 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
     }
 
-    /**
-     * 从所有UI控件中读取用户输入的值，并更新到 `currentParameters` 这个Map中。
-     */
+    /** 从所有UI控件读取值并更新 `currentParameters`。 */
     private fun readParametersFromUi() {
-        // 如果有自定义UI，先从自定义UI中读取
+        // 1. 从自定义UI读取 (如果存在)
         val uiProvider = module.uiProvider
         if (uiProvider != null && customEditorHolder != null) {
-            val customParams = uiProvider.readFromEditor(customEditorHolder!!)
-            currentParameters.putAll(customParams)
+            currentParameters.putAll(uiProvider.readFromEditor(customEditorHolder!!))
         }
 
-        // 遍历所有通用的输入控件
+        // 2. 从通用UI控件读取
         inputViews.forEach { (id, view) ->
-            // 如果这个输入项已经连接了魔法变量，则它的值已经在currentParameters中了，无需读取
-            if ((currentParameters[id] as? String)?.startsWith("{{") == true) {
-                return@forEach
-            }
+            if ((currentParameters[id] as? String)?.startsWith("{{") == true) return@forEach // 跳过已连接魔法变量的
 
             val valueContainer = view.findViewById<FrameLayout>(R.id.input_value_container) ?: return@forEach
             if (valueContainer.childCount == 0) return@forEach
 
-            // 根据控件类型读取值
-            val value: Any? = when(val staticView = valueContainer.getChildAt(0)) {
+            val staticView = valueContainer.getChildAt(0)
+            val value: Any? = when(staticView) {
                 is TextInputLayout -> staticView.editText?.text?.toString()
                 is SwitchCompat -> staticView.isChecked
                 is Spinner -> staticView.selectedItem?.toString()
@@ -349,12 +287,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             if (value != null) {
                 val stepForUi = ActionStep(module.id, currentParameters)
                 val dynamicInputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == id }
-
-                // 处理数字类型转换
+                // 数字类型统一存为Double或Long，便于序列化和解析
                 val convertedValue: Any? = when (dynamicInputDef?.staticType) {
                     ParameterType.NUMBER -> {
-                        // 统一保存为Double，避免Parcelize和Gson转换问题
-                        value.toString().toDoubleOrNull()
+                        val strVal = value.toString()
+                        strVal.toLongOrNull() ?: strVal.toDoubleOrNull() // 优先尝试Long，失败则Double
                     }
                     else -> value
                 }

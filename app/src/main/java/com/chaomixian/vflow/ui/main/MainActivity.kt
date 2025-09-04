@@ -1,6 +1,5 @@
 package com.chaomixian.vflow.ui.main
 
-import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.ViewCompat
@@ -16,18 +15,28 @@ import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
+// 文件：MainActivity.kt
+// 描述：应用的主活动，承载底部导航和各个主页面 Fragment。
+
+/**
+ * 应用的主 Activity。
+ * 初始化模块注册表，设置Toolbar、底部导航栏和 NavHostFragment。
+ * 处理窗口边衬区 (WindowInsets) 以适配系统栏。
+ */
 class MainActivity : BaseActivity() {
 
+    // SharedPreferences 文件名常量
     companion object {
-        const val PREFS_NAME = "vFlowPrefs"
-        const val LOG_PREFS_NAME = "vFlowLogPrefs"
+        const val PREFS_NAME = "vFlowPrefs" // 应用主要偏好设置
+        const val LOG_PREFS_NAME = "vFlowLogPrefs" // 日志相关偏好设置
     }
 
-    private var insetsApplied = false
+    private var insetsApplied = false // 标记边衬区是否已应用
 
+    /** Activity 创建时的初始化。 */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ModuleRegistry.initialize()
+        ModuleRegistry.initialize() // 初始化模块注册表
         setContentView(R.layout.activity_main)
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -38,13 +47,15 @@ class MainActivity : BaseActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
 
+        // 配置 AppBar，定义顶级导航目标
         val appBarConfiguration = AppBarConfiguration(
             setOf(R.id.navigation_home, R.id.navigation_workflows, R.id.navigation_settings)
         )
-        setupActionBarWithNavController(navController, appBarConfiguration)
-        navView.setupWithNavController(navController)
+        setupActionBarWithNavController(navController, appBarConfiguration) // 将 Toolbar 与 NavController 集成
+        navView.setupWithNavController(navController) // 将 BottomNavigationView 与 NavController 集成
     }
 
+    /** Activity 启动时，如果尚未应用边衬区，则应用它们。 */
     override fun onStart() {
         super.onStart()
         if (!insetsApplied) {
@@ -56,29 +67,31 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 应用窗口边衬区到 AppBar、底部导航和 Fragment 容器。
+     * @param appBar AppBarLayout 视图。
+     * @param bottomNav BottomNavigationView 视图。
+     * @param fragmentContainer Fragment 容器视图。
+     */
     private fun applyWindowInsets(appBar: AppBarLayout, bottomNav: BottomNavigationView, fragmentContainer: View) {
-        // 1. 处理顶部状态栏，给 AppBar 增加上边距
+        // 1. 为 AppBar 顶部添加状态栏高度的 padding
         ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(top = systemBars.top)
             insets
         }
 
-        // 2. 处理底部系统导航栏，给 BottomNavigationView 增加下边距
+        // 2. 为底部导航栏底部添加系统导航栏高度的 padding
         ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(bottom = systemBars.bottom)
             insets
         }
 
-        // 3. 【通用解决方案】给 Fragment 容器增加下边距，防止内容被 BottomNavigationView 遮挡
+        // 3. 为 Fragment 容器底部添加 BottomNavigationView 高度的 padding，防止内容遮挡
         ViewCompat.setOnApplyWindowInsetsListener(fragmentContainer) { view, insets ->
-            // 获取底部导航栏的高度，该高度已包含系统导航栏的边距
             val bottomNavHeight = bottomNav.height
-
-            // 总的底部内边距仅为底部导航栏的高度
             view.updatePadding(bottom = bottomNavHeight)
-
             insets
         }
     }

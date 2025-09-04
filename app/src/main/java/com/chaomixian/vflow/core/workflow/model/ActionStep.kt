@@ -10,7 +10,6 @@ import java.util.UUID
 @Parcelize
 data class ActionStep(
     val moduleId: String,
-    // --- 核心修复 ---
     // 为 parameters 添加 @RawValue 注解，以解决 Parcelize 无法处理 Any? 类型的编译错误。
     val parameters: @RawValue Map<String, Any?>,
     var indentationLevel: Int = 0,
@@ -18,7 +17,7 @@ data class ActionStep(
     val id: String = UUID.randomUUID().toString()
 ) : Parcelable {
 
-    // 我们重写 equals 和 hashCode，让它们只依赖于唯一的 `id`。
+    // 重写 equals 和 hashCode，让它们只依赖于唯一的 `id`。
     // 这可以防止不稳定的 `parameters` map 在集合操作（如 DiffUtil）中导致问题。
     // 列表现在可以安全且唯一地识别每个步骤，无论其内容如何。
 

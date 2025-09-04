@@ -80,8 +80,8 @@ class WorkflowConnectionDecorator(private val steps: List<ActionStep>) : Recycle
     }
 
     /**
-     * 更健壮的坐标计算方法。
-     * 它计算一个视图相对于其祖先（这里是RecyclerView）的绘制位置。
+     * 获取视图在父视图中的相对坐标计算方法。
+     * 它计算一个视图相对于其父视图（这里是RecyclerView）的绘制位置。
      */
     private fun getRelativePos(view: View, parent: RecyclerView): IntArray {
         val pos = IntArray(2)
