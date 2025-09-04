@@ -1,1 +1,58 @@
-/build
+# Built application files
+*.apk
+*.aab
+*.ap_
+
+# Files for the Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+/build/
+**/build/
+/generated/
+
+# Gradle files
+.gradle/
+# build/ # Covered by /build/ and **/build/
+
+# Local configuration properties (sdk.dir, etc)
+local.properties
+
+# Log Files
+*.log
+
+# Android Studio Navigation editor files
+.idea/navEditor.xml
+
+# Android Studio captures folder
+captures/
+
+# Android Studio Profiler data files
+*.hprof
+
+# IntelliJ
+*.iml
+.idea/
+*.ipr
+*.iws
+
+# CMake
+.cxx/
+
+# macOS
+.DS_Store
+
+# Misc
+*~
+*.swp
+*.lock
+
+# Keystore files (if you don't want to commit them)
+# *.jks
+# *.keystore
+
+# Google Services (if you manage it securely and don't want to commit actual keys)
+# google-services.json
