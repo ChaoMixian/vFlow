@@ -78,3 +78,27 @@ data class ImageVariable(val uri: String) : Parcelable {
         const val TYPE_NAME = "vflow.type.image"
     }
 }
+
+/**
+ * 表示时间类型的变量。
+ * @param value 变量的时间值，格式为 "HH:mm"。
+ */
+@Parcelize
+data class TimeVariable(val value: String) : Parcelable {
+    companion object {
+        /** 时间变量的唯一类型标识符。 */
+        const val TYPE_NAME = "vflow.type.time"
+    }
+}
+
+/**
+ * 表示日期类型的变量。
+ * @param value 变量的日期值，格式为 "yyyy-MM-dd"。
+ */
+@Parcelize
+data class DateVariable(val value: String) : Parcelable {
+    companion object {
+        /** 日期变量的唯一类型标识符。 */
+        const val TYPE_NAME = "vflow.type.date"
+    }
+}

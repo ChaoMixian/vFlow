@@ -12,11 +12,28 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
     </style>
-  <!-- Base application theme. -->
+
+    <!-- 原来的 Theme.vFlow.Transparent，现在明确为动态版本 -->
+    <style name="Theme.vFlow.Transparent.Dynamic" parent="Theme.vFlow.Dynamic">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
+    <!-- 新增：非动态取色的透明主题 -->
+    <style name="Theme.vFlow.Transparent.Default" parent="Theme.vFlow">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <style name="Theme.VFlow" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
-        <!-- For example, setting primary color -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 
 </resources>

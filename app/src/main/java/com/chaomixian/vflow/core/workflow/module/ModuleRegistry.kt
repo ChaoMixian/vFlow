@@ -1,6 +1,7 @@
 package com.chaomixian.vflow.core.module
 
 import com.chaomixian.vflow.core.workflow.module.data.CalculationModule
+import com.chaomixian.vflow.core.workflow.module.data.InputModule
 import com.chaomixian.vflow.core.workflow.module.data.SetVariableModule
 import com.chaomixian.vflow.core.workflow.module.device.*
 import com.chaomixian.vflow.core.workflow.module.logic.*
@@ -34,6 +35,7 @@ object ModuleRegistry {
         // 数据
         register(CalculationModule())
         register(SetVariableModule())
+        register(InputModule())
 
         // 设备
         register(DelayModule())

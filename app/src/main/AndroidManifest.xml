@@ -34,6 +34,11 @@
             android:name=".permissions.PermissionActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.common.InputRequestActivity"
+            android:exported="false"
+            android:theme="@style/Theme.vFlow.Transparent.Default" />
+
         <service
             android:name=".services.AccessibilityService"
             android:exported="false"

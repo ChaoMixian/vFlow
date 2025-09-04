@@ -8,6 +8,7 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.logic.LOOP_START_ID
+import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,8 +23,12 @@ object WorkflowExecutor {
         executorScope.launch {
             Log.d("WorkflowExecutor", "开始执行工作流: ${workflow.name}")
 
+            // 创建并注册执行期间所需的服务
             val services = ExecutionServices()
             ServiceStateBus.getAccessibilityService()?.let { services.add(it) }
+            // 新增：将ExecutionUIService添加到服务容器中
+            services.add(ExecutionUIService(context.applicationContext))
+
 
             val stepOutputs = mutableMapOf<String, Map<String, Any?>>()
             val loopStack = Stack<LoopState>() // 新增：将循环堆栈移到这里

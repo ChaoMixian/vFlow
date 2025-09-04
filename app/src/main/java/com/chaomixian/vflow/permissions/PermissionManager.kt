@@ -27,14 +27,27 @@ object PermissionManager {
         type = PermissionType.RUNTIME
     )
 
+    // 新增：定义悬浮窗权限
+    val OVERLAY = Permission(
+        id = "vflow.permission.SYSTEM_ALERT_WINDOW",
+        name = "悬浮窗权限",
+        description = "允许应用在后台执行时显示输入框等窗口，这是实现复杂自动化流程的关键。",
+        type = PermissionType.SPECIAL
+    )
+
+
     /**
      * 获取单个权限的当前状态。
      */
     fun isGranted(context: Context, permission: Permission): Boolean {
         return when (permission.id) {
-            // --- 核心修复：权限检查只关心系统设置中的“开关”状态 ---
-            // 至于服务是否“正在运行”，这是执行器(Executor)在运行时需要关心和等待的事情。
             ACCESSIBILITY.id -> isAccessibilityServiceEnabledInSettings(context)
+            // 新增：检查悬浮窗权限
+            OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Settings.canDrawOverlays(context)
+            } else {
+                true // 6.0以下版本默认授予
+            }
             NOTIFICATIONS.id -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     NotificationManagerCompat.from(context).areNotificationsEnabled()
