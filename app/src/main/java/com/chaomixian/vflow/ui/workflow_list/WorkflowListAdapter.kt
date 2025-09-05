@@ -10,8 +10,10 @@ import android.widget.ImageButton
 import android.widget.PopupMenu
 import android.widget.RelativeLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.model.Workflow
 
 /**
@@ -24,7 +26,7 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
  * @param onExecute 点击执行按钮时的回调。
  */
 class WorkflowListAdapter(
-    private var workflows: List<Workflow>,
+    private var workflows: MutableList<Workflow>, // 改为 MutableList
     private val onEdit: (Workflow) -> Unit,
     private val onDelete: (Workflow) -> Unit,
     private val onDuplicate: (Workflow) -> Unit,
@@ -32,10 +34,15 @@ class WorkflowListAdapter(
     private val onExecute: (Workflow) -> Unit
 ) : RecyclerView.Adapter<WorkflowListAdapter.WorkflowViewHolder>() {
 
-    /** 更新适配器的数据并刷新列表显示。 */
+    /** 获取当前工作流列表的副本。 */
+    fun getWorkflows(): List<Workflow> {
+        return workflows.toList()
+    }
+
     fun updateData(newWorkflows: List<Workflow>) {
-        workflows = newWorkflows
-        notifyDataSetChanged() // 通知数据已更改
+        workflows.clear()
+        workflows.addAll(newWorkflows)
+        notifyDataSetChanged()
     }
 
     /** 创建新的 ViewHolder 实例。 */
@@ -67,7 +74,13 @@ class WorkflowListAdapter(
             popup.show()
         }
 
-        // “执行”按钮的点击逻辑
+        // 更新执行按钮的状态
+        if (WorkflowExecutor.isRunning(workflow.id)) {
+            holder.executeButton.setImageResource(R.drawable.rounded_pause_24) // 设为停止图标
+        } else {
+            holder.executeButton.setImageResource(R.drawable.ic_play_arrow) // 设为播放图标
+        }
+        // onExecute 回调现在会处理启动或停止
         holder.executeButton.setOnClickListener { onExecute(workflow) }
     }
 

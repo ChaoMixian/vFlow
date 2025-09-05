@@ -11,10 +11,12 @@ import android.widget.CheckBox
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.ExecutionState
+import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -26,16 +28,15 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.*
 
-/**
- * 工作流列表 Fragment。
- * 管理和显示用户创建的工作流，支持各种操作。
- */
 class WorkflowListFragment : Fragment() {
+    // ... (其他属性保持不变)
     private lateinit var workflowManager: WorkflowManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: WorkflowListAdapter
@@ -59,67 +60,66 @@ class WorkflowListFragment : Fragment() {
         pendingWorkflow = null
     }
 
-    // ActivityResultLauncher 用于处理单个工作流导出
-    private val exportSingleLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let { fileUri ->
-            pendingExportWorkflow?.let { workflow ->
+    private val exportSingleLauncher = // ... (保持不变)
+        registerForActivityResult(
+            ActivityResultContracts.CreateDocument("application/json")
+        ) { uri ->
+            uri?.let { fileUri ->
+                pendingExportWorkflow?.let { workflow ->
+                    try {
+                        val jsonString = gson.toJson(workflow)
+                        requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
+                        Toast.makeText(requireContext(), "导出成功", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) { Toast.makeText(requireContext(), "导出失败: ${e.message}", Toast.LENGTH_LONG).show() }
+                }
+            }
+            pendingExportWorkflow = null
+        }
+
+    private val backupLauncher = // ... (保持不变)
+        registerForActivityResult(
+            ActivityResultContracts.CreateDocument("application/json")
+        ) { uri ->
+            uri?.let { fileUri ->
                 try {
-                    val jsonString = gson.toJson(workflow)
+                    val allWorkflows = workflowManager.getAllWorkflows()
+                    val jsonString = gson.toJson(allWorkflows)
                     requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
-                    Toast.makeText(requireContext(), "导出成功", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) { Toast.makeText(requireContext(), "导出失败: ${e.message}", Toast.LENGTH_LONG).show() }
+                    Toast.makeText(requireContext(), "备份成功", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) { Toast.makeText(requireContext(), "备份失败: ${e.message}", Toast.LENGTH_LONG).show() }
             }
         }
-        pendingExportWorkflow = null
-    }
 
-    // ActivityResultLauncher 用于处理所有工作流备份
-    private val backupLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let { fileUri ->
-            try {
-                val allWorkflows = workflowManager.getAllWorkflows()
-                val jsonString = gson.toJson(allWorkflows)
-                requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
-                Toast.makeText(requireContext(), "备份成功", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) { Toast.makeText(requireContext(), "备份失败: ${e.message}", Toast.LENGTH_LONG).show() }
-        }
-    }
-
-    // ActivityResultLauncher 用于处理工作流导入
-    private val importLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { fileUri ->
-            try {
-                val jsonString = requireContext().contentResolver.openInputStream(fileUri)?.use {
-                    BufferedReader(InputStreamReader(it)).readText()
-                } ?: throw Exception("无法读取文件")
-
-                val workflowsToImport = mutableListOf<Workflow>()
-                // 智能识别：尝试解析为列表 (备份文件)，失败则尝试解析为单个对象
+    private val importLauncher = // ... (保持不变)
+        registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri ->
+            uri?.let { fileUri ->
                 try {
-                    val listType = object : TypeToken<List<Workflow>>() {}.type
-                    val list: List<Workflow> = gson.fromJson(jsonString, listType)
-                    if (list.any { it.id == null || it.name == null }) throw JsonSyntaxException("备份文件格式错误")
-                    workflowsToImport.addAll(list)
-                } catch (e: JsonSyntaxException) {
-                    val singleWorkflow: Workflow = gson.fromJson(jsonString, Workflow::class.java)
-                    if (singleWorkflow.id == null || singleWorkflow.name == null) throw JsonSyntaxException("单个工作流文件格式错误")
-                    workflowsToImport.add(singleWorkflow)
-                }
+                    val jsonString = requireContext().contentResolver.openInputStream(fileUri)?.use {
+                        BufferedReader(InputStreamReader(it)).readText()
+                    } ?: throw Exception("无法读取文件")
 
-                if (workflowsToImport.isNotEmpty()) {
-                    startImportProcess(workflowsToImport) // 开始导入流程
-                } else {
-                    Toast.makeText(requireContext(), "文件中没有可导入的工作流", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) { Toast.makeText(requireContext(), "导入失败: ${e.message}", Toast.LENGTH_LONG).show() }
+                    val workflowsToImport = mutableListOf<Workflow>()
+                    try {
+                        val listType = object : TypeToken<List<Workflow>>() {}.type
+                        val list: List<Workflow> = gson.fromJson(jsonString, listType)
+                        if (list.any { it.id == null || it.name == null }) throw JsonSyntaxException("备份文件格式错误")
+                        workflowsToImport.addAll(list)
+                    } catch (e: JsonSyntaxException) {
+                        val singleWorkflow: Workflow = gson.fromJson(jsonString, Workflow::class.java)
+                        if (singleWorkflow.id == null || singleWorkflow.name == null) throw JsonSyntaxException("单个工作流文件格式错误")
+                        workflowsToImport.add(singleWorkflow)
+                    }
+
+                    if (workflowsToImport.isNotEmpty()) {
+                        startImportProcess(workflowsToImport)
+                    } else {
+                        Toast.makeText(requireContext(), "文件中没有可导入的工作流", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) { Toast.makeText(requireContext(), "导入失败: ${e.message}", Toast.LENGTH_LONG).show() }
+            }
         }
-    }
 
     /** Fragment 创建时调用，启用选项菜单。 */
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,6 +139,25 @@ class WorkflowListFragment : Fragment() {
         view.findViewById<FloatingActionButton>(R.id.fab_add_workflow).setOnClickListener {
             startActivity(Intent(requireContext(), WorkflowEditorActivity::class.java))
         }
+
+        // 订阅执行状态的 Flow
+        lifecycleScope.launch {
+            ExecutionStateBus.stateFlow.collectLatest { state ->
+                // 当状态改变时，通知适配器刷新对应的项
+                val workflows = (recyclerView.adapter as? WorkflowListAdapter)?.getWorkflows()
+                val index = workflows?.indexOfFirst {
+                    when(state) {
+                        is ExecutionState.Running -> it.id == state.workflowId
+                        is ExecutionState.Finished -> it.id == state.workflowId
+                        is ExecutionState.Cancelled -> it.id == state.workflowId
+                    }
+                }
+                if (index != null && index != -1) {
+                    adapter.notifyItemChanged(index)
+                }
+            }
+        }
+
         return view
     }
 
@@ -173,32 +192,60 @@ class WorkflowListFragment : Fragment() {
 
     /** 加载工作流并设置到 RecyclerView 的 Adapter。 */
     private fun loadWorkflows() {
-        val workflows = workflowManager.getAllWorkflows().toMutableList()
-        adapter = WorkflowListAdapter(
-            workflows,
-            onEdit = { workflow -> // 编辑工作流
-                val intent = Intent(requireContext(), WorkflowEditorActivity::class.java).apply {
-                    putExtra(WorkflowEditorActivity.EXTRA_WORKFLOW_ID, workflow.id)
+        val workflows = workflowManager.getAllWorkflows()
+        // 检查 adapter 是否已初始化
+        if (::adapter.isInitialized) {
+            adapter.updateData(workflows)
+        } else {
+            adapter = WorkflowListAdapter(
+                workflows.toMutableList(), // 传递可变列表
+                onEdit = { workflow ->
+                    val intent = Intent(requireContext(), WorkflowEditorActivity::class.java).apply {
+                        putExtra(WorkflowEditorActivity.EXTRA_WORKFLOW_ID, workflow.id)
+                    }
+                    startActivity(intent)
+                },
+                onDelete = { workflow -> showDeleteConfirmationDialog(workflow) },
+                onDuplicate = { workflow ->
+                    workflowManager.duplicateWorkflow(workflow.id)
+                    Toast.makeText(requireContext(), "已复制为 '${workflow.name} (副本)'", Toast.LENGTH_SHORT).show()
+                    loadWorkflows()
+                },
+                onExport = { workflow ->
+                    pendingExportWorkflow = workflow
+                    exportSingleLauncher.launch("${workflow.name}.json")
+                },
+                onExecute = { workflow ->
+                    if (WorkflowExecutor.isRunning(workflow.id)) {
+                        WorkflowExecutor.stopExecution(workflow.id)
+                    } else {
+                        executeWorkflow(workflow)
+                    }
                 }
-                startActivity(intent)
-            },
-            onDelete = { workflow -> showDeleteConfirmationDialog(workflow) }, // 删除工作流
-            onDuplicate = { workflow -> // 复制工作流
-                workflowManager.duplicateWorkflow(workflow.id)
-                Toast.makeText(requireContext(), "已复制为 '${workflow.name} (副本)'", Toast.LENGTH_SHORT).show()
-                loadWorkflows() // 重新加载列表
-            },
-            onExport = { workflow -> // 导出单个工作流
-                pendingExportWorkflow = workflow
-                exportSingleLauncher.launch("${workflow.name}.json")
-            },
-            onExecute = { workflow -> executeWorkflow(workflow) } // 执行工作流
-        )
-        recyclerView.adapter = adapter
+            )
+            recyclerView.adapter = adapter
+        }
     }
 
-    // --- 导入与冲突处理 ---
-    /** 开始导入流程，初始化导入队列和冲突选择。 */
+    private fun setupRecyclerView() {
+        recyclerView.layoutManager = GridLayoutManager(requireContext(), 2)
+    }
+
+    private fun executeWorkflow(workflow: Workflow) {
+        val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
+        if (missingPermissions.isEmpty()) {
+            Toast.makeText(requireContext(), "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
+            WorkflowExecutor.execute(workflow, requireContext())
+        } else {
+            pendingWorkflow = workflow
+            val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
+                putParcelableArrayListExtra(PermissionActivity.EXTRA_PERMISSIONS, ArrayList(missingPermissions))
+                putExtra(PermissionActivity.EXTRA_WORKFLOW_NAME, workflow.name)
+            }
+            permissionLauncher.launch(intent)
+        }
+    }
+
     private fun startImportProcess(workflows: List<Workflow>) {
         importQueue.clear()
         importQueue.addAll(workflows)
@@ -269,27 +316,6 @@ class WorkflowListFragment : Fragment() {
         Toast.makeText(requireContext(), "'${workflow.name}' 已作为副本导入", Toast.LENGTH_SHORT).show()
     }
 
-    /** 设置 RecyclerView 的 LayoutManager。 */
-    private fun setupRecyclerView() {
-        recyclerView.layoutManager = GridLayoutManager(requireContext(), 2) // 网格布局，每行2列
-    }
-
-    /** 执行指定的工作流，处理权限请求。 */
-    private fun executeWorkflow(workflow: Workflow) {
-        val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
-        if (missingPermissions.isEmpty()) { // 无缺失权限，直接执行
-            Toast.makeText(requireContext(), "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
-            WorkflowExecutor.execute(workflow, requireContext())
-        } else { // 有缺失权限，启动权限请求 Activity
-            pendingWorkflow = workflow
-            val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
-                putParcelableArrayListExtra(PermissionActivity.EXTRA_PERMISSIONS, ArrayList(missingPermissions))
-                putExtra(PermissionActivity.EXTRA_WORKFLOW_NAME, workflow.name)
-            }
-            permissionLauncher.launch(intent)
-        }
-    }
-
     /** 显示删除确认对话框。 */
     private fun showDeleteConfirmationDialog(workflow: Workflow) {
         MaterialAlertDialogBuilder(requireContext())
@@ -301,22 +327,5 @@ class WorkflowListFragment : Fragment() {
                 loadWorkflows() // 重新加载列表
             }
             .show()
-    }
-
-    /** 设置 RecyclerView 的拖拽排序 (暂未完全启用或已移除)。 */
-    private fun setupDragAndDrop() {
-        val callback = object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, 0
-        ) {
-            override fun onMove(
-                recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder
-            ): Boolean {
-                // adapter.notifyItemMoved(viewHolder.adapterPosition, target.adapterPosition) // 实际的移动操作
-                return true
-            }
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
-        }
-        // itemTouchHelper = ItemTouchHelper(callback)
-        // itemTouchHelper.attachToRecyclerView(recyclerView)
     }
 }

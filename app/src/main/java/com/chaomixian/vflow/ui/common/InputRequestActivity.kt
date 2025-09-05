@@ -1,11 +1,11 @@
 package com.chaomixian.vflow.ui.common
 
-import android.content.Context // 新增导入
+import android.content.Context
 import android.os.Bundle
 import android.text.InputType
 import android.widget.EditText
-import androidx.appcompat.app.AppCompatActivity // 恢复父类为 AppCompatActivity
-import com.chaomixian.vflow.R // 新增导入
+import androidx.appcompat.app.AppCompatActivity
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -14,17 +14,18 @@ import com.google.android.material.timepicker.TimeFormat
 import java.util.*
 
 // 文件：InputRequestActivity.kt
-// 描述：一个透明的Activity，用于在工作流执行期间显示用户输入对话框。
+// 描述：一个透明的Activity，用于在工作流执行期间显示用户输入或信息查看对话框。
 
-class InputRequestActivity : AppCompatActivity() { // 父类改回 AppCompatActivity
+class InputRequestActivity : AppCompatActivity() {
 
     companion object {
+        const val EXTRA_REQUEST_TYPE = "request_type" // 'input' or 'quick_view'
         const val EXTRA_INPUT_TYPE = "input_type"
         const val EXTRA_TITLE = "title"
+        const val EXTRA_CONTENT = "content" // 新增
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 在 super.onCreate() 之前根据 SharedPreferences 设置主题
         val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
         val useDynamicColor = prefs.getBoolean("dynamicColorEnabled", false)
         if (useDynamicColor) {
@@ -36,14 +37,42 @@ class InputRequestActivity : AppCompatActivity() { // 父类改回 AppCompatActi
         super.onCreate(savedInstanceState)
         // 这是一个UI-host Activity，不需要设置 contentView
 
-        val inputType = intent.getStringExtra(EXTRA_INPUT_TYPE)
-        val title = intent.getStringExtra(EXTRA_TITLE) ?: "请输入"
+        val requestType = intent.getStringExtra(EXTRA_REQUEST_TYPE)
+        val title = intent.getStringExtra(EXTRA_TITLE) ?: "提示"
 
-        when (inputType) {
-            "时间" -> showTimePickerDialog(title)
-            "日期" -> showDatePickerDialog(title)
-            else -> showTextInputDialog(title, inputType)
+        when (requestType) {
+            "quick_view" -> {
+                val content = intent.getStringExtra(EXTRA_CONTENT) ?: ""
+                showQuickViewDialog(title, content)
+            }
+            "input" -> {
+                val inputType = intent.getStringExtra(EXTRA_INPUT_TYPE)
+                when (inputType) {
+                    "时间" -> showTimePickerDialog(title)
+                    "日期" -> showDatePickerDialog(title)
+                    else -> showTextInputDialog(title, inputType)
+                }
+            }
+            else -> finish() // 未知类型则直接关闭
         }
+    }
+
+    /**
+     * 新增：显示快速查看对话框。
+     */
+    private fun showQuickViewDialog(title: String, content: String) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setMessage(content) // 将内容设置为消息体
+            .setPositiveButton("关闭") { _, _ ->
+                ExecutionUIService.inputCompletable?.complete(true) // 通知Service可以继续执行
+                finish()
+            }
+            .setOnCancelListener {
+                ExecutionUIService.inputCompletable?.complete(true)
+                finish()
+            }
+            .show()
     }
 
     /**
@@ -112,7 +141,7 @@ class InputRequestActivity : AppCompatActivity() { // 父类改回 AppCompatActi
     }
 
     /**
-     * 新增：显示 Material 3 日期选择器对话框。
+     * 显示 Material 3 日期选择器对话框。
      */
     private fun showDatePickerDialog(title: String) {
         val picker =

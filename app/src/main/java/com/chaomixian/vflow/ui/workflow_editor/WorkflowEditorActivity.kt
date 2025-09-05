@@ -18,10 +18,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.ExecutionState
+import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.WorkflowManager
@@ -32,6 +35,9 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import java.util.*
 
 /**
@@ -50,6 +56,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private lateinit var nameEditText: EditText // 工作流名称输入框
     private lateinit var itemTouchHelper: ItemTouchHelper // RecyclerView 拖拽辅助类
     private var currentEditorSheet: ActionEditorSheet? = null // 当前打开的参数编辑底部表单
+    private lateinit var executeButton: MaterialButton // 将执行按钮提升为类属性
 
     private var pendingExecutionWorkflow: Workflow? = null // 执行前等待权限的待处理工作流
 
@@ -82,6 +89,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         workflowManager = WorkflowManager(this)
         nameEditText = findViewById(R.id.edit_text_workflow_name)
+        executeButton = findViewById(R.id.button_execute_workflow) // 初始化执行按钮引用
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar_editor)
         toolbar.setNavigationOnClickListener { finish() } // Toolbar 返回按钮
@@ -93,7 +101,8 @@ class WorkflowEditorActivity : BaseActivity() {
         // 添加、保存、执行按钮的点击监听
         findViewById<Button>(R.id.button_add_action).setOnClickListener { showActionPicker() }
         findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow() }
-        findViewById<Button>(R.id.button_execute_workflow).setOnClickListener {
+
+        executeButton.setOnClickListener {
             val name = nameEditText.text.toString().trim()
             if (name.isBlank()) {
                 Toast.makeText(this, "工作流名称不能为空", Toast.LENGTH_SHORT).show()
@@ -108,7 +117,30 @@ class WorkflowEditorActivity : BaseActivity() {
                 name = name,
                 steps = actionSteps.toList()
             )
-            executeWorkflow(workflowToExecute)
+
+            // 点击时判断是执行还是停止
+            if (WorkflowExecutor.isRunning(workflowToExecute.id)) {
+                WorkflowExecutor.stopExecution(workflowToExecute.id)
+            } else {
+                executeWorkflow(workflowToExecute)
+            }
+        }
+
+        // 订阅执行状态的 Flow，用于实时更新UI
+        lifecycleScope.launch {
+            ExecutionStateBus.stateFlow.collectLatest { state ->
+                val workflowId = currentWorkflow?.id ?: return@collectLatest
+
+                // 检查状态是否与当前正在编辑的工作流相关
+                val relevantState = when(state) {
+                    is ExecutionState.Running -> if (state.workflowId == workflowId) "running" else null
+                    is ExecutionState.Finished -> if (state.workflowId == workflowId) "finished" else null
+                    is ExecutionState.Cancelled -> if (state.workflowId == workflowId) "finished" else null
+                }
+                if (relevantState != null) {
+                    updateExecuteButton(relevantState == "running")
+                }
+            }
         }
     }
 
@@ -195,7 +227,7 @@ class WorkflowEditorActivity : BaseActivity() {
             module.getOutputs(step).forEach { outputDef ->
                 // 检查变量类型是否与目标输入参数兼容
                 val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
-                                   targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
+                        targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
                 if (isCompatible) {
                     availableVariables.add(
                         MagicVariableItem(
@@ -466,6 +498,8 @@ class WorkflowEditorActivity : BaseActivity() {
                 nameEditText.setText(it.name)
                 actionSteps.clear()
                 actionSteps.addAll(it.steps)
+                // 新增：加载时初始化按钮状态
+                updateExecuteButton(WorkflowExecutor.isRunning(it.id))
             }
         }
         if (actionSteps.isEmpty()) { // 新建工作流或加载失败，默认添加手动触发器
@@ -474,6 +508,20 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
         recalculateAndNotify() // 计算缩进并刷新列表
+    }
+
+    /**
+     * 新增：根据执行状态更新执行按钮的UI。
+     * @param isRunning 工作流是否正在运行。
+     */
+    private fun updateExecuteButton(isRunning: Boolean) {
+        if (isRunning) {
+            executeButton.text = "停止"
+            executeButton.setIconResource(R.drawable.rounded_pause_24)
+        } else {
+            executeButton.text = getString(R.string.workflow_editor_execute)
+            executeButton.setIconResource(R.drawable.ic_play_arrow)
+        }
     }
 
     /** 显示动作模块选择器 (ActionPickerSheet)。 */

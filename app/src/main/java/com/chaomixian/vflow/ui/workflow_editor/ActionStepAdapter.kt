@@ -61,7 +61,7 @@ private data class SourceInfo(val outputName: String, val color: Int)
  */
 class ActionStepAdapter(
     private val actionSteps: MutableList<ActionStep>,
-    private val hideConnections: Boolean, // TODO: 连接线绘制暂未实现
+    private val hideConnections: Boolean, // TODO: 连接线绘制暂未(不打算)实现
     private val onEditClick: (position: Int, inputId: String?) -> Unit, // 编辑回调
     private val onDeleteClick: (position: Int) -> Unit, // 删除回调
     private val onParameterPillClick: (position: Int, parameterId: String) -> Unit // 参数药丸点击回调
@@ -228,7 +228,7 @@ object PillUtil {
     fun getCategoryColor(category: String): Int = when (category) {
         "设备" -> R.color.category_device
         "逻辑控制" -> R.color.category_logic
-        "数据" -> R.color.category_variable
+        "数据" -> R.color.category_data
         "触发器" -> R.color.category_trigger
         "其他" -> com.google.android.material.R.color.material_dynamic_neutral30 // Material You 颜色
         else -> com.google.android.material.R.color.material_dynamic_neutral30
