@@ -12,7 +12,7 @@
                 android:title="备份所有工作流" />
             <item
                 android:id="@+id/menu_import_workflows"
-                android:title="导入工作流" />
+                android:title="导入/恢复工作流" />
         </menu>
     </item>
 </menu>
