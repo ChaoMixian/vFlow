@@ -4,7 +4,9 @@ import com.chaomixian.vflow.core.workflow.module.data.CalculationModule
 import com.chaomixian.vflow.core.workflow.module.data.InputModule
 import com.chaomixian.vflow.core.workflow.module.data.QuickViewModule
 import com.chaomixian.vflow.core.workflow.module.data.SetVariableModule
+import com.chaomixian.vflow.core.workflow.module.data.TextProcessingModule
 import com.chaomixian.vflow.core.workflow.module.device.*
+import com.chaomixian.vflow.core.workflow.module.file.AdjustImageModule
 import com.chaomixian.vflow.core.workflow.module.file.ImportImageModule
 import com.chaomixian.vflow.core.workflow.module.file.SaveImageModule
 import com.chaomixian.vflow.core.workflow.module.logic.*
@@ -52,16 +54,19 @@ object ModuleRegistry {
         register(SetVariableModule())
         register(InputModule())
         register(QuickViewModule())
+        register(TextProcessingModule())
 
         // 文件 (新增)
         register(ImportImageModule())
         register(SaveImageModule())
+        register(AdjustImageModule())
 
         // 设备
         register(DelayModule())
         register(FindTextModule())
         register(ClickModule())
         register(ToastModule())
+        register(SendKeyEventModule())
 
         // 逻辑控制
         register(IfModule())

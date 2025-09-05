@@ -63,6 +63,9 @@ dependencies {
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation(libs.androidx.scenecore)
 
+    // 图像处理
+    implementation("io.coil-kt:coil:2.6.0")
+
     // 测试库
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
