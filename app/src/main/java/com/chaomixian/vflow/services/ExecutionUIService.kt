@@ -63,4 +63,21 @@ class ExecutionUIService(private val context: Context) {
 
         deferred.await() // 等待用户关闭对话框
     }
+
+    /**
+     * 新增：挂起函数，用于请求用户选择一张图片。
+     * @return 用户选择的图片的URI字符串，如果用户取消则返回null。
+     */
+    suspend fun requestImage(): String? {
+        val deferred = CompletableDeferred<Any?>()
+        inputCompletable = deferred
+
+        val intent = Intent(context, InputRequestActivity::class.java).apply {
+            putExtra(InputRequestActivity.EXTRA_REQUEST_TYPE, "pick_image") // 新的请求类型
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+
+        return deferred.await() as? String
+    }
 }

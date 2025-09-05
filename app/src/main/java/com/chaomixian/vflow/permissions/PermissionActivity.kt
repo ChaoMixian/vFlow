@@ -1,3 +1,6 @@
+// 文件: PermissionActivity.kt
+// 描述: 权限请求 Activity，用于向用户请求工作流或应用所需的各项权限。
+
 package com.chaomixian.vflow.permissions
 
 import android.Manifest
@@ -13,7 +16,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.ui.common.BaseActivity // 导入 BaseActivity
+import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import android.widget.Button
 import android.widget.TextView
@@ -91,9 +94,15 @@ class PermissionActivity : BaseActivity() {
     private fun requestPermission(permission: Permission) {
         when (permission.type) {
             PermissionType.RUNTIME -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && permission.id == Manifest.permission.POST_NOTIFICATIONS) {
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                // 智能判断需要请求的具体权限
+                var permissionToRequest = permission.id
+                // 如果是我们定义的“存储权限”，并且系统版本是 Android 13 或更高
+                if (permission.id == Manifest.permission.READ_EXTERNAL_STORAGE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // 那么实际要请求的权限是 READ_MEDIA_IMAGES
+                    permissionToRequest = Manifest.permission.READ_MEDIA_IMAGES
                 }
+                // 使用最终确定的权限ID来发起请求
+                requestPermissionLauncher.launch(permissionToRequest)
             }
             PermissionType.SPECIAL -> {
                 val intent = when(permission.id) {

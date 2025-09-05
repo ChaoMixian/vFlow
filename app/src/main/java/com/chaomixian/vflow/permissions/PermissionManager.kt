@@ -27,12 +27,20 @@ object PermissionManager {
         type = PermissionType.RUNTIME
     )
 
-    // 新增：定义悬浮窗权限
+    // 定义悬浮窗权限
     val OVERLAY = Permission(
         id = "vflow.permission.SYSTEM_ALERT_WINDOW",
         name = "悬浮窗权限",
         description = "允许应用在后台执行时显示输入框等窗口，这是实现复杂自动化流程的关键。",
         type = PermissionType.SPECIAL
+    )
+
+    // 定义存储权限
+    val STORAGE = Permission(
+        id = Manifest.permission.READ_EXTERNAL_STORAGE, // 使用读取权限作为ID
+        name = "存储权限",
+        description = "用于读取和保存图片、文件等数据。",
+        type = PermissionType.RUNTIME
     )
 
 
@@ -42,7 +50,7 @@ object PermissionManager {
     fun isGranted(context: Context, permission: Permission): Boolean {
         return when (permission.id) {
             ACCESSIBILITY.id -> isAccessibilityServiceEnabledInSettings(context)
-            // 新增：检查悬浮窗权限
+            // 检查悬浮窗权限
             OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 Settings.canDrawOverlays(context)
             } else {
@@ -53,6 +61,16 @@ object PermissionManager {
                     NotificationManagerCompat.from(context).areNotificationsEnabled()
                 } else {
                     true
+                }
+            }
+            // 检查存储权限
+            STORAGE.id -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Android 13 (API 33) 及以上，检查新的图片权限
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                } else {
+                    // 旧版本，检查旧的存储权限
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 }
             }
             else -> {

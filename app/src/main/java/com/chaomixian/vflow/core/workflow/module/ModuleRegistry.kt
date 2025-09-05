@@ -5,6 +5,8 @@ import com.chaomixian.vflow.core.workflow.module.data.InputModule
 import com.chaomixian.vflow.core.workflow.module.data.QuickViewModule
 import com.chaomixian.vflow.core.workflow.module.data.SetVariableModule
 import com.chaomixian.vflow.core.workflow.module.device.*
+import com.chaomixian.vflow.core.workflow.module.file.ImportImageModule
+import com.chaomixian.vflow.core.workflow.module.file.SaveImageModule
 import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.core.workflow.module.triggers.*
 
@@ -25,6 +27,18 @@ object ModuleRegistry {
         return modules.values
             .filter { it.blockBehavior.type != BlockType.BLOCK_END && it.blockBehavior.type != BlockType.BLOCK_MIDDLE }
             .groupBy { it.metadata.category }
+            // 新增：对分类进行排序，将触发器放在最前
+            .toSortedMap(compareBy {
+                when (it) {
+                    "触发器" -> 0
+                    "数据" -> 1
+                    "文件" -> 2 // 新分类的位置
+                    "设备" -> 3
+                    "逻辑控制" -> 4
+                    "其他" -> 5
+                    else -> 99
+                }
+            })
     }
 
     fun initialize() {
@@ -38,6 +52,10 @@ object ModuleRegistry {
         register(SetVariableModule())
         register(InputModule())
         register(QuickViewModule())
+
+        // 文件 (新增)
+        register(ImportImageModule())
+        register(SaveImageModule())
 
         // 设备
         register(DelayModule())

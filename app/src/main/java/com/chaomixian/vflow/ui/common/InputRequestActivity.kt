@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.text.InputType
 import android.widget.EditText
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.services.ExecutionUIService
@@ -23,6 +24,18 @@ class InputRequestActivity : AppCompatActivity() {
         const val EXTRA_INPUT_TYPE = "input_type"
         const val EXTRA_TITLE = "title"
         const val EXTRA_CONTENT = "content" // 新增
+    }
+
+    // 新增：用于处理图片选择结果的 ActivityResultLauncher
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            // 用户成功选择了图片
+            ExecutionUIService.inputCompletable?.complete(uri.toString())
+        } else {
+            // 用户取消了选择
+            ExecutionUIService.inputCompletable?.complete(null)
+        }
+        finish() // 完成操作后关闭Activity
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +65,10 @@ class InputRequestActivity : AppCompatActivity() {
                     "日期" -> showDatePickerDialog(title)
                     else -> showTextInputDialog(title, inputType)
                 }
+            }
+            // 处理 "pick_image" 的分支
+            "pick_image" -> {
+                pickImageLauncher.launch("image/*") // 启动图片选择器
             }
             else -> finish() // 未知类型则直接关闭
         }
