@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionState
@@ -36,11 +37,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class WorkflowListFragment : Fragment() {
-    // ... (其他属性保持不变)
     private lateinit var workflowManager: WorkflowManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: WorkflowListAdapter
-    // private lateinit var itemTouchHelper: ItemTouchHelper // 拖拽排序暂未完全实现或启用
+    private lateinit var itemTouchHelper: ItemTouchHelper // 拖拽排序
     private var pendingWorkflow: Workflow? = null // 用于执行前权限请求的待处理工作流
     private var pendingExportWorkflow: Workflow? = null // 用于导出的待处理工作流
     private val gson = Gson()
@@ -60,7 +60,7 @@ class WorkflowListFragment : Fragment() {
         pendingWorkflow = null
     }
 
-    private val exportSingleLauncher = // ... (保持不变)
+    private val exportSingleLauncher =
         registerForActivityResult(
             ActivityResultContracts.CreateDocument("application/json")
         ) { uri ->
@@ -76,7 +76,7 @@ class WorkflowListFragment : Fragment() {
             pendingExportWorkflow = null
         }
 
-    private val backupLauncher = // ... (保持不变)
+    private val backupLauncher =
         registerForActivityResult(
             ActivityResultContracts.CreateDocument("application/json")
         ) { uri ->
@@ -90,7 +90,7 @@ class WorkflowListFragment : Fragment() {
             }
         }
 
-    private val importLauncher = // ... (保持不变)
+    private val importLauncher =
         registerForActivityResult(
             ActivityResultContracts.OpenDocument()
         ) { uri ->
@@ -135,7 +135,7 @@ class WorkflowListFragment : Fragment() {
         workflowManager = WorkflowManager(requireContext())
         recyclerView = view.findViewById(R.id.recycler_view_workflows)
         setupRecyclerView()
-        // setupDragAndDrop() // 拖拽排序功能暂缓
+        setupDragAndDrop() // 设置拖拽排序
         view.findViewById<FloatingActionButton>(R.id.fab_add_workflow).setOnClickListener {
             startActivity(Intent(requireContext(), WorkflowEditorActivity::class.java))
         }
@@ -192,13 +192,15 @@ class WorkflowListFragment : Fragment() {
 
     /** 加载工作流并设置到 RecyclerView 的 Adapter。 */
     private fun loadWorkflows() {
+        // 在 WorkflowManager 中增加一个方法来获取带顺序的工作流
+        // 这里我们假设 getAllWorkflows 已经能正确返回顺序
         val workflows = workflowManager.getAllWorkflows()
-        // 检查 adapter 是否已初始化
         if (::adapter.isInitialized) {
             adapter.updateData(workflows)
         } else {
+            // 在初始化adapter时传入 itemTouchHelper
             adapter = WorkflowListAdapter(
-                workflows.toMutableList(), // 传递可变列表
+                workflows.toMutableList(),
                 workflowManager,
                 onEdit = { workflow ->
                     val intent = Intent(requireContext(), WorkflowEditorActivity::class.java).apply {
@@ -222,7 +224,8 @@ class WorkflowListFragment : Fragment() {
                     } else {
                         executeWorkflow(workflow)
                     }
-                }
+                },
+                itemTouchHelper // 传入实例
             )
             recyclerView.adapter = adapter
         }
@@ -231,6 +234,37 @@ class WorkflowListFragment : Fragment() {
     private fun setupRecyclerView() {
         recyclerView.layoutManager = GridLayoutManager(requireContext(), 2)
     }
+
+    // 新增：设置拖拽排序功能
+    private fun setupDragAndDrop() {
+        val callback = object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, 0
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                val fromPosition = viewHolder.adapterPosition
+                val toPosition = target.adapterPosition
+                adapter.moveItem(fromPosition, toPosition)
+                return true
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                // 不处理滑动删除
+            }
+
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                // 拖动结束后保存顺序
+                adapter.saveOrder()
+            }
+        }
+        itemTouchHelper = ItemTouchHelper(callback)
+        itemTouchHelper.attachToRecyclerView(recyclerView)
+    }
+
 
     private fun executeWorkflow(workflow: Workflow) {
         val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)

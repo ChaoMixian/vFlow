@@ -66,7 +66,7 @@
                 app:srcCompat="@drawable/ic_more_vert"
                 app:tint="?attr/colorControlNormal" />
 
-            <androidx.appcompat.widget.SwitchCompat
+            <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/switch_workflow_enabled"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"

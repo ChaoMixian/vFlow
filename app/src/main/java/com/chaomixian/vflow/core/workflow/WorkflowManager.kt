@@ -47,7 +47,7 @@ class WorkflowManager(context: Context) {
         } else {
             workflows.add(workflowToSave) // 添加新工作流
         }
-        saveAll(workflows) // 保存所有工作流到持久化存储
+        saveAllWorkflows(workflows) // 保存所有工作流到持久化存储
     }
 
     /**
@@ -66,7 +66,7 @@ class WorkflowManager(context: Context) {
      */
     fun deleteWorkflow(id: String) {
         val workflows = getAllWorkflows().filter { it.id != id } // 过滤掉指定ID的工作流
-        saveAll(workflows)
+        saveAllWorkflows(workflows)
     }
 
     /**
@@ -112,9 +112,10 @@ class WorkflowManager(context: Context) {
 
     /**
      * 将所有工作流保存到 SharedPreferences。
+     * 这个方法会覆盖现有的列表，从而保存顺序。
      * @param workflows 要保存的工作流列表。
      */
-    private fun saveAll(workflows: List<Workflow>) {
+    fun saveAllWorkflows(workflows: List<Workflow>) {
         val json = gson.toJson(workflows) // 将工作流列表序列化为JSON字符串
         prefs.edit().putString("workflow_list", json).apply() // 保存JSON字符串
     }

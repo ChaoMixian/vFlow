@@ -3,21 +3,25 @@
 
 package com.chaomixian.vflow.ui.workflow_list
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.PopupMenu
 import android.widget.RelativeLayout
 import android.widget.TextView
-import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
+import com.google.android.material.materialswitch.MaterialSwitch
+import java.util.Collections
 
 /**
  * 工作流列表的 RecyclerView.Adapter。
@@ -27,6 +31,7 @@ import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
  * @param onDuplicate 点击复制菜单项时的回调。
  * @param onExport 点击导出菜单项时的回调。
  * @param onExecute 点击执行按钮时的回调。
+ * @param itemTouchHelper 用于启动拖拽的 ItemTouchHelper 实例。
  */
 class WorkflowListAdapter(
     private var workflows: MutableList<Workflow>, // 改为 MutableList
@@ -35,7 +40,8 @@ class WorkflowListAdapter(
     private val onDelete: (Workflow) -> Unit,
     private val onDuplicate: (Workflow) -> Unit,
     private val onExport: (Workflow) -> Unit,
-    private val onExecute: (Workflow) -> Unit
+    private val onExecute: (Workflow) -> Unit,
+    private val itemTouchHelper: ItemTouchHelper // 新增 ItemTouchHelper
 ) : RecyclerView.Adapter<WorkflowListAdapter.WorkflowViewHolder>() {
 
     /** 获取当前工作流列表的副本。 */
@@ -49,6 +55,26 @@ class WorkflowListAdapter(
         notifyDataSetChanged()
     }
 
+    // 新增：用于处理拖动排序
+    fun moveItem(fromPosition: Int, toPosition: Int) {
+        if (fromPosition < toPosition) {
+            for (i in fromPosition until toPosition) {
+                Collections.swap(workflows, i, i + 1)
+            }
+        } else {
+            for (i in fromPosition downTo toPosition + 1) {
+                Collections.swap(workflows, i, i - 1)
+            }
+        }
+        notifyItemMoved(fromPosition, toPosition)
+    }
+
+    // 新增：保存当前列表顺序
+    fun saveOrder() {
+        workflowManager.saveAllWorkflows(workflows)
+    }
+
+
     /** 创建新的 ViewHolder 实例。 */
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkflowViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_workflow, parent, false)
@@ -56,12 +82,20 @@ class WorkflowListAdapter(
     }
 
     /** 将数据绑定到指定位置的 ViewHolder。 */
+    @SuppressLint("ClickableViewAccessibility")
     override fun onBindViewHolder(holder: WorkflowViewHolder, position: Int) {
         val workflow = workflows[position]
         holder.bind(workflow)
 
         // 整个卡片点击时触发编辑回调
         holder.clickableWrapper.setOnClickListener { onEdit(workflow) }
+
+        // 长按卡片以启动拖动
+        holder.clickableWrapper.setOnLongClickListener {
+            itemTouchHelper.startDrag(holder)
+            true
+        }
+
 
         // “更多选项”按钮的点击逻辑
         holder.moreOptionsButton.setOnClickListener { view ->
@@ -117,7 +151,7 @@ class WorkflowListAdapter(
         val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
         val executeButton: ImageButton = itemView.findViewById(R.id.button_execute_workflow)
         val clickableWrapper: RelativeLayout = itemView.findViewById(R.id.clickable_wrapper) // 卡片整体的可点击区域
-        val enabledSwitch: SwitchCompat = itemView.findViewById(R.id.switch_workflow_enabled) // 新增开关引用
+        val enabledSwitch: MaterialSwitch = itemView.findViewById(R.id.switch_workflow_enabled) // 更新为 MaterialSwitch
 
         /** 将工作流数据显示到视图上。 */
         fun bind(workflow: Workflow) {
