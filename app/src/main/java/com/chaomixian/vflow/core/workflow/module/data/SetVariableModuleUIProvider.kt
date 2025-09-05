@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
 import androidx.appcompat.widget.SwitchCompat
@@ -19,6 +18,7 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
+import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
 /**
@@ -32,6 +32,7 @@ class SetVariableEditorViewHolder(
 ) : CustomEditorViewHolder(view) {
     var valueInputView: View? = null // 当前值输入视图的引用
     var dictionaryAdapter: DictionaryKVAdapter? = null // 如果类型是字典，则为该字典的适配器
+    var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // [新增] 用于存储回调
 }
 
 /**
@@ -64,7 +65,8 @@ class VariableModuleUIProvider(
         context: Context,
         parent: ViewGroup, // 父视图组
         currentParameters: Map<String, Any?>, // 当前已保存的参数值
-        onParametersChanged: () -> Unit // 参数发生变化时的回调
+        onParametersChanged: () -> Unit, // 参数发生变化时的回调
+        onMagicVariableRequested: ((inputId: String) -> Unit)?
     ): CustomEditorViewHolder {
         // 编辑器的主布局，垂直排列
         val view = LinearLayout(context).apply {
@@ -85,6 +87,7 @@ class VariableModuleUIProvider(
         }
 
         val holder = SetVariableEditorViewHolder(view, typeSpinner, valueContainer)
+        holder.onMagicVariableRequested = onMagicVariableRequested // [修改] 将回调存储在 holder 中
 
         // 设置 Spinner 的适配器和选项
         val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, typeOptions)
@@ -154,22 +157,27 @@ class VariableModuleUIProvider(
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.valueContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_dictionary)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_kv_pair)
-                
+
                 // 将 currentValue (如果是 Map) 转换为 List<Pair<String, String>> 以适配 DictionaryKVAdapter
                 val currentMap = (currentValue as? Map<*, *>)
                     ?.mapNotNull { (key, value) ->
                         val kStr = key?.toString()
                         val vStr = value?.toString()
-                        if (kStr != null && vStr != null) { // 确保键和值都不为 null
-                            kStr to vStr
+                        if (kStr != null) { // [修改] 允许值为空字符串
+                            kStr to (vStr ?: "")
                         } else {
-                            null // 如果键或值为 null，则过滤掉此项
+                            null // 如果键为 null，则过滤掉此项
                         }
                     }
                     ?.toMutableList()
                     ?: mutableListOf() // 如果 currentValue 不是 Map 或为空，则使用空列表
 
-                val dictAdapter = DictionaryKVAdapter(currentMap)
+                // [修改] 在创建适配器时传入魔法变量回调
+                val dictAdapter = DictionaryKVAdapter(currentMap) { key ->
+                    if (key.isNotBlank()) {
+                        holder.onMagicVariableRequested?.invoke("value.$key")
+                    }
+                }
                 holder.dictionaryAdapter = dictAdapter // 保存适配器引用
                 recyclerView.adapter = dictAdapter
                 recyclerView.layoutManager = LinearLayoutManager(context)
@@ -181,8 +189,8 @@ class VariableModuleUIProvider(
                 isChecked = (currentValue as? Boolean) ?: false // 设置初始选中状态
             }
             else -> TextInputLayout(context).apply { // 默认为文本或数字输入
-                hint = "值" // 提示文本，之后建议使用字符串资源
-                val editText = EditText(this.context)
+                hint = "值" // 提示文本
+                val editText = TextInputEditText(this.context)
                 editText.setText(currentValue?.toString() ?: "") // 设置初始文本
                 // 根据类型设置输入法类型
                 editText.inputType = if (type == "数字") InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED else InputType.TYPE_CLASS_TEXT

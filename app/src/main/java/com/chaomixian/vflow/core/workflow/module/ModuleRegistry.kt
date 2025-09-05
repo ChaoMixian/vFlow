@@ -2,14 +2,9 @@ package com.chaomixian.vflow.core.module
 
 import com.chaomixian.vflow.core.workflow.module.data.*
 import com.chaomixian.vflow.core.workflow.module.file.*
-import com.chaomixian.vflow.core.workflow.module.interaction.ClickModule
-import com.chaomixian.vflow.core.workflow.module.interaction.FindTextModule
-import com.chaomixian.vflow.core.workflow.module.interaction.SendKeyEventModule
+import com.chaomixian.vflow.core.workflow.module.interaction.*
 import com.chaomixian.vflow.core.workflow.module.logic.*
-import com.chaomixian.vflow.core.workflow.module.system.DelayModule
-import com.chaomixian.vflow.core.workflow.module.system.InputModule
-import com.chaomixian.vflow.core.workflow.module.system.QuickViewModule
-import com.chaomixian.vflow.core.workflow.module.system.ToastModule
+import com.chaomixian.vflow.core.workflow.module.system.*
 import com.chaomixian.vflow.core.workflow.module.triggers.*
 
 object ModuleRegistry {
@@ -77,5 +72,6 @@ object ModuleRegistry {
         register(InputModule())
         register(QuickViewModule())
         register(ToastModule())
+        register(LuaModule())
     }
 }

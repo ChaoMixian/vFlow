@@ -55,13 +55,15 @@ interface ModuleUIProvider {
      * @param parent 父视图组。
      * @param currentParameters 当前步骤已保存的参数值。
      * @param onParametersChanged 当参数发生变化时需要调用的回调函数。
+     * @param onMagicVariableRequested [修改] 当自定义UI需要请求魔法变量选择器时调用的回调。
      * @return 持有自定义编辑器视图的 CustomEditorViewHolder 实例。
      */
     fun createEditor(
         context: Context,
         parent: ViewGroup,
         currentParameters: Map<String, Any?>,
-        onParametersChanged: () -> Unit
+        onParametersChanged: () -> Unit,
+        onMagicVariableRequested: ((inputId: String) -> Unit)? = null
     ): CustomEditorViewHolder
 
     /**
@@ -205,7 +207,7 @@ enum class BlockType {
  * @param type 积木块的类型。
  * @param pairingId 如果模块是积木块的一部分，此ID用于将相关的积木块模块（如Start和End）配对。
  * @param isIndividuallyDeletable 标记积木块的某个部分（通常是Middle或End）是否可以被独立删除。
- *                               例如，If 的 End 块通常不能独立删除，必须与 Start 一起。
+ * 例如，If 的 End 块通常不能独立删除，必须与 Start 一起。
  */
 data class BlockBehavior(
     val type: BlockType,

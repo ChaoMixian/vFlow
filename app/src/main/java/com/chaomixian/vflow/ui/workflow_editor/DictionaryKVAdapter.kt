@@ -1,42 +1,45 @@
 // 文件：DictionaryKVAdapter.kt
-// 描述：用于在 ActionEditorSheet 中编辑字典 (Map)
-// 类型参数的键值对的 RecyclerView 适配器。
-
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.google.android.material.textfield.TextInputLayout
 
 /**
  * 字典键值对 (K-V) 编辑的 RecyclerView.Adapter。
  * @param data 存储键值对的可变列表，每个元素是一个 Pair<String, String>。
  */
 class DictionaryKVAdapter(
-    private val data: MutableList<Pair<String, String>> // 键值对数据列表
+    private val data: MutableList<Pair<String, String>>,
+    private val onMagicClick: ((key: String) -> Unit)? = null
 ) : RecyclerView.Adapter<DictionaryKVAdapter.ViewHolder>() {
 
     /** 将当前列表中的所有键值对转换为 Map<String, String>。 */
     fun getItemsAsMap(): Map<String, String> {
-        return data.associate { it } // 使用 Pair 的扩展函数直接转换为 Map
+        return data.filter { it.first.isNotBlank() }.associate { it }
     }
 
     /** 添加一个新的空键值对到列表末尾。 */
     fun addItem() {
-        data.add("" to "") // 添加空字符串对
-        notifyItemInserted(data.size - 1) // 通知适配器有新项插入
+        data.add("" to "")
+        notifyItemInserted(data.size - 1)
     }
 
     /** ViewHolder 定义，缓存视图引用。 */
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val keyEditText: EditText = view.findViewById(R.id.edit_text_key)
-        val valueEditText: EditText = view.findViewById(R.id.edit_text_value)
+        val valueContainer: FrameLayout = view.findViewById(R.id.value_container)
         val deleteButton: ImageButton = view.findViewById(R.id.button_delete_kv)
+        val magicButton: ImageButton = view.findViewById(R.id.button_magic_variable_for_value)
     }
 
     /** 创建 ViewHolder 实例。 */
@@ -49,36 +52,61 @@ class DictionaryKVAdapter(
     /** 将数据绑定到 ViewHolder。 */
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = data[position]
-        holder.keyEditText.setText(item.first) // 设置键
-        holder.valueEditText.setText(item.second) // 设置值
+        holder.keyEditText.setText(item.first)
 
-        // 移除旧的 TextWatcher，防止重复监听和更新
-        // (itemView.tag 用于存储 TextWatcher 实例，这里假设只存一个，可能需要更健壮的方案)
+        holder.valueContainer.removeAllViews()
+        val inflater = LayoutInflater.from(holder.itemView.context)
+
+        if (item.second.startsWith("{{") && item.second.endsWith("}}")) {
+            val pillView = inflater.inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
+            pillView.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
+            holder.valueContainer.addView(pillView)
+        } else {
+            // [UI修正] 使用和XML中一致的 TextInputEditText，并设置好布局参数
+            val textInputLayout = TextInputLayout(holder.itemView.context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                hint = "值"
+                val editText = com.google.android.material.textfield.TextInputEditText(this.context)
+                editText.setText(item.second)
+                addView(editText)
+
+                (editText.tag as? android.text.TextWatcher)?.let { editText.removeTextChangedListener(it) }
+                val valueWatcher = editText.doAfterTextChanged { text ->
+                    if (holder.adapterPosition != RecyclerView.NO_POSITION) {
+                        data[holder.adapterPosition] = data[holder.adapterPosition].first to text.toString()
+                    }
+                }
+                editText.tag = valueWatcher
+            }
+            holder.valueContainer.addView(textInputLayout)
+        }
+
         (holder.keyEditText.tag as? android.text.TextWatcher)?.let { holder.keyEditText.removeTextChangedListener(it) }
-        (holder.valueEditText.tag as? android.text.TextWatcher)?.let { holder.valueEditText.removeTextChangedListener(it) }
-
-        // 监听键 EditText 的文本变化，并更新数据源
         val keyWatcher = holder.keyEditText.doAfterTextChanged {
-            if (holder.adapterPosition != RecyclerView.NO_POSITION) { // 确保 ViewHolder 仍然有效
+            if (holder.adapterPosition != RecyclerView.NO_POSITION) {
                 data[holder.adapterPosition] = it.toString() to data[holder.adapterPosition].second
             }
         }
-        holder.keyEditText.tag = keyWatcher // 存储新的 TextWatcher
-
-        // 监听值 EditText 的文本变化，并更新数据源
-        val valueWatcher = holder.valueEditText.doAfterTextChanged {
-            if (holder.adapterPosition != RecyclerView.NO_POSITION) {
-                data[holder.adapterPosition] = data[holder.adapterPosition].first to it.toString()
-            }
-        }
-        holder.valueEditText.tag = valueWatcher
+        holder.keyEditText.tag = keyWatcher
 
         // 删除按钮点击事件
         holder.deleteButton.setOnClickListener {
             if (holder.adapterPosition != RecyclerView.NO_POSITION) {
                 data.removeAt(holder.adapterPosition)
                 notifyItemRemoved(holder.adapterPosition)
-                // notifyItemRangeChanged(holder.adapterPosition, data.size) // 可选：更新后续项的position
+            }
+        }
+
+        holder.magicButton.isVisible = onMagicClick != null
+        holder.magicButton.setOnClickListener {
+            if (holder.adapterPosition != RecyclerView.NO_POSITION) {
+                val currentKey = holder.keyEditText.text.toString()
+                if (currentKey.isNotBlank()) {
+                    onMagicClick?.invoke(currentKey)
+                }
             }
         }
     }
