@@ -1,15 +1,15 @@
 package com.chaomixian.vflow.core.module
 
-import com.chaomixian.vflow.core.workflow.module.data.CalculationModule
-import com.chaomixian.vflow.core.workflow.module.data.InputModule
-import com.chaomixian.vflow.core.workflow.module.data.QuickViewModule
-import com.chaomixian.vflow.core.workflow.module.data.SetVariableModule
-import com.chaomixian.vflow.core.workflow.module.data.TextProcessingModule
-import com.chaomixian.vflow.core.workflow.module.device.*
-import com.chaomixian.vflow.core.workflow.module.file.AdjustImageModule
-import com.chaomixian.vflow.core.workflow.module.file.ImportImageModule
-import com.chaomixian.vflow.core.workflow.module.file.SaveImageModule
+import com.chaomixian.vflow.core.workflow.module.data.*
+import com.chaomixian.vflow.core.workflow.module.file.*
+import com.chaomixian.vflow.core.workflow.module.interaction.ClickModule
+import com.chaomixian.vflow.core.workflow.module.interaction.FindTextModule
+import com.chaomixian.vflow.core.workflow.module.interaction.SendKeyEventModule
 import com.chaomixian.vflow.core.workflow.module.logic.*
+import com.chaomixian.vflow.core.workflow.module.system.DelayModule
+import com.chaomixian.vflow.core.workflow.module.system.InputModule
+import com.chaomixian.vflow.core.workflow.module.system.QuickViewModule
+import com.chaomixian.vflow.core.workflow.module.system.ToastModule
 import com.chaomixian.vflow.core.workflow.module.triggers.*
 
 object ModuleRegistry {
@@ -29,15 +29,15 @@ object ModuleRegistry {
         return modules.values
             .filter { it.blockBehavior.type != BlockType.BLOCK_END && it.blockBehavior.type != BlockType.BLOCK_MIDDLE }
             .groupBy { it.metadata.category }
-            // 新增：对分类进行排序，将触发器放在最前
+            // 更新为新的分类和排序
             .toSortedMap(compareBy {
                 when (it) {
                     "触发器" -> 0
-                    "数据" -> 1
-                    "文件" -> 2 // 新分类的位置
-                    "设备" -> 3
-                    "逻辑控制" -> 4
-                    "其他" -> 5
+                    "界面交互" -> 1
+                    "逻辑控制" -> 2
+                    "数据" -> 3
+                    "文件" -> 4
+                    "应用与系统" -> 5
                     else -> 99
                 }
             })
@@ -46,26 +46,12 @@ object ModuleRegistry {
     fun initialize() {
         modules.clear()
 
-        //触发器
+        // 触发器
         register(ManualTriggerModule())
 
-        // 数据
-        register(CalculationModule())
-        register(SetVariableModule())
-        register(InputModule())
-        register(QuickViewModule())
-        register(TextProcessingModule())
-
-        // 文件 (新增)
-        register(ImportImageModule())
-        register(SaveImageModule())
-        register(AdjustImageModule())
-
-        // 设备
-        register(DelayModule())
+        // 界面交互
         register(FindTextModule())
         register(ClickModule())
-        register(ToastModule())
         register(SendKeyEventModule())
 
         // 逻辑控制
@@ -74,5 +60,21 @@ object ModuleRegistry {
         register(EndIfModule())
         register(LoopModule())
         register(EndLoopModule())
+
+        // 数据
+        register(CalculationModule())
+        register(SetVariableModule())
+        register(TextProcessingModule())
+
+        // 文件
+        register(ImportImageModule())
+        register(SaveImageModule())
+        register(AdjustImageModule())
+
+        // 应用与系统
+        register(DelayModule())
+        register(InputModule())
+        register(QuickViewModule())
+        register(ToastModule())
     }
 }

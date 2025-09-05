@@ -1,4 +1,4 @@
-package com.chaomixian.vflow.core.workflow.module.device
+package com.chaomixian.vflow.core.workflow.module.system
 
 import android.content.Context
 import android.widget.Toast
@@ -12,6 +12,7 @@ import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 // 文件：ToastModule.kt
@@ -30,10 +31,10 @@ class ToastModule : BaseModule() {
         name = "显示Toast",
         description = "在屏幕底部弹出一个简短的提示消息。",
         iconRes = R.drawable.rounded_call_to_action_24, // 图标资源
-        category = "其他" // 模块分类，也可以考虑归为 "设备" 或 "通知"
+        category = "应用与系统" // 更新分类
     )
     // 此模块可能需要的权限（如果应用的目标SDK版本较高，显示通知可能需要特定权限）
-    override val requiredPermissions = listOf(PermissionManager.NOTIFICATIONS) 
+    override val requiredPermissions = listOf(PermissionManager.NOTIFICATIONS)
 
     /**
      * 定义模块的输入参数。
@@ -67,7 +68,7 @@ class ToastModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val message = step.parameters["message"]?.toString() ?: "..." // 获取消息内容或占位符
         // 判断消息内容是否为魔法变量引用
-        val isVariable = message.startsWith("{{") && message.endsWith("}}") 
+        val isVariable = message.startsWith("{{") && message.endsWith("}}")
 
         // 使用 PillUtil 构建带样式的摘要
         return PillUtil.buildSpannable(
@@ -117,7 +118,7 @@ class ToastModule : BaseModule() {
         }
 
         // 此处的短暂延迟可能是为了确保Toast有足够时间显示，或用于调试，可以根据实际需求评估是否必要
-        kotlinx.coroutines.delay(100) // 短暂延迟，例如100毫秒
+        delay(100) // 短暂延迟，例如100毫秒
 
         // 返回成功结果
         return ExecutionResult.Success(

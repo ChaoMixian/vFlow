@@ -27,7 +27,7 @@ class SaveImageModule : BaseModule() {
         name = "保存图片",
         description = "将图片保存到相册。",
         iconRes = R.drawable.rounded_save_24,
-        category = "文件"
+        category = "文件" // 更新分类
     )
 
     // 此模块需要存储权限

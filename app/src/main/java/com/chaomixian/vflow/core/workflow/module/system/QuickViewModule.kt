@@ -1,7 +1,7 @@
 // 文件: QuickViewModule.kt
 // 描述: 定义了在工作流执行期间快速查看内容的模块。
 
-package com.chaomixian.vflow.core.workflow.module.data
+package com.chaomixian.vflow.core.workflow.module.system
 
 import android.content.Context
 import com.chaomixian.vflow.R
@@ -23,7 +23,7 @@ class QuickViewModule : BaseModule() {
         name = "快速查看",
         description = "在悬浮窗中显示文本、数字、图片等各种类型的内容。",
         iconRes = R.drawable.rounded_preview_24, // 使用新创建的图标
-        category = "数据"
+        category = "应用与系统" // 更新分类
     )
 
     // 此模块需要悬浮窗权限才能显示UI

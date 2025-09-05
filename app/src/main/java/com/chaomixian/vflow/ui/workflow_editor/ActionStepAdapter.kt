@@ -226,11 +226,12 @@ object PillUtil {
 
     /** 根据模块分类获取颜色资源ID。 */
     fun getCategoryColor(category: String): Int = when (category) {
-        "设备" -> R.color.category_device
+        "触发器" -> R.color.category_trigger
+        "界面交互" -> R.color.category_ui_interaction
         "逻辑控制" -> R.color.category_logic
         "数据" -> R.color.category_data
-        "触发器" -> R.color.category_trigger
-        "其他" -> com.google.android.material.R.color.material_dynamic_neutral30 // Material You 颜色
+        "文件" -> R.color.category_file
+        "应用与系统" -> R.color.category_system
         else -> com.google.android.material.R.color.material_dynamic_neutral30
     }
 

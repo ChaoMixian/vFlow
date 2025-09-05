@@ -29,7 +29,7 @@ class AdjustImageModule : BaseModule() {
         name = "调整图像",
         description = "调整图像的曝光、对比度、饱和度等参数。",
         iconRes = R.drawable.rounded_photo_prints_24, // 使用新创建的图标
-        category = "文件与图像"
+        category = "文件" // 更新分类
     )
 
     // 定义所有可调整参数的常量

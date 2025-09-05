@@ -1,4 +1,4 @@
-package com.chaomixian.vflow.core.workflow.module.device
+package com.chaomixian.vflow.core.workflow.module.system
 
 import android.content.Context
 import com.chaomixian.vflow.R
@@ -26,7 +26,7 @@ class DelayModule : BaseModule() {
         name = "延迟",
         description = "暂停工作流一段时间",
         iconRes = R.drawable.rounded_avg_time_24, // 使用一个与时间相关的图标
-        category = "设备" // 模块分类
+        category = "应用与系统" // 更新分类
     )
 
     /**
@@ -91,7 +91,7 @@ class DelayModule : BaseModule() {
         if (duration is String) {
             try {
                 // 如果不是魔法变量，尝试转换为长整型并检查是否为负
-                if (!duration.startsWith("{{")) { 
+                if (!duration.startsWith("{{")) {
                     if (duration.toLong() < 0) {
                         return ValidationResult(false, "延迟时间不能为负数")
                     }

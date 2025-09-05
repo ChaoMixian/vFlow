@@ -5,7 +5,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.workflow.module.device.ScreenElement // This seems to be a local type, not from VariableTypes
+import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement // This seems to be a local type, not from VariableTypes
 import com.chaomixian.vflow.core.module.TextVariable // 更新导入
 import com.chaomixian.vflow.core.module.NumberVariable // 更新导入
 import com.chaomixian.vflow.core.module.BooleanVariable // 更新导入

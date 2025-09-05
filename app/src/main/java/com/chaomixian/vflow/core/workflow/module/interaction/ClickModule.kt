@@ -1,4 +1,4 @@
-package com.chaomixian.vflow.core.workflow.module.device
+package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.accessibilityservice.AccessibilityService // Android 框架类
 import android.accessibilityservice.GestureDescription
@@ -31,7 +31,7 @@ class ClickModule : BaseModule() {
     // 模块的唯一ID
     override val id = "vflow.device.click"
     // 模块的元数据，用于在UI中展示
-    override val metadata = ActionMetadata("点击", "点击一个屏幕元素、坐标或视图ID", R.drawable.rounded_ads_click_24, "设备")
+    override val metadata = ActionMetadata("点击", "点击一个屏幕元素、坐标或视图ID", R.drawable.rounded_ads_click_24, "界面交互") // 更新分类
     // 此模块需要的权限列表
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
@@ -178,7 +178,7 @@ class ClickModule : BaseModule() {
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 100L)) // 0ms延迟, 100ms持续时间
             .build()
-        
+
         // 异步派发手势并等待回调
         val deferred = CompletableDeferred<Boolean>()
         service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
@@ -191,7 +191,7 @@ class ClickModule : BaseModule() {
                 deferred.complete(false) // 手势取消
             }
         }, null)
-        
+
         val success = deferred.await() // 等待手势结果
         if (success) onProgress(ProgressUpdate("已通过手势成功点击坐标: ($x, $y)"))
         else onProgress(ProgressUpdate("手势点击坐标 ($x, $y) 失败或被取消"))
@@ -214,11 +214,11 @@ class ClickModule : BaseModule() {
             null
         }
     }
-    
+
     /**
      * 根据视图ID查找 AccessibilityNodeInfo。
      * 注意：此函数返回的节点（如果找到）需要调用者负责回收。
-     *       在查找过程中产生的其他节点会被此函数回收。
+     * 在查找过程中产生的其他节点会被此函数回收。
      * @param service 无障碍服务实例。
      * @param viewId 视图的资源ID名称 (例如 \"com.example.app:id/button1\")。
      * @return 找到的第一个匹配节点，未找到则返回 null。
@@ -227,16 +227,16 @@ class ClickModule : BaseModule() {
         val root = service.rootInActiveWindow ?: return null // 获取当前活动窗口的根节点
         val nodes = root.findAccessibilityNodeInfosByViewId(viewId) // 查找匹配ID的节点列表
         val nodeToReturn = nodes?.firstOrNull() // 取第一个匹配的节点
-        
+
         // 回收获取到的节点列表中的其他节点（如果列表不为空且找到了要返回的节点）
         // 或者回收所有节点（如果未找到要返回的节点但列表不为空）
         if (nodeToReturn == null) {
-            nodes?.forEach { it.recycle() } 
+            nodes?.forEach { it.recycle() }
         } else {
             nodes?.filter { it != nodeToReturn }?.forEach { it.recycle() }
         }
         // 通常不应回收 rootInActiveWindow 返回的根节点，除非服务文档明确指出
-        // root.recycle(); 
+        // root.recycle();
         return nodeToReturn // 调用者需要回收此返回的节点
     }
 
@@ -244,7 +244,7 @@ class ClickModule : BaseModule() {
      * 根据精确的屏幕边界 (Rect) 查找 AccessibilityNodeInfo。
      * 通过层级遍历查找与目标边界完全匹配的节点。
      * 注意：此函数返回的节点（如果找到）需要调用者负责回收。
-     *       在查找过程中产生的其他节点会被此函数回收。
+     * 在查找过程中产生的其他节点会被此函数回收。
      * @param service 无障碍服务实例。
      * @param targetBounds 目标节点的精确屏幕边界。
      * @return 找到的匹配节点，未找到则返回 null。
@@ -263,7 +263,7 @@ class ClickModule : BaseModule() {
             if (nodeBounds == targetBounds) { // 如果边界完全匹配
                 foundNode = AccessibilityNodeInfo.obtain(currentNode) // 复制找到的节点以返回
                 // 清理队列中剩余的节点，并回收它们
-                queue.forEach { it.recycle() } 
+                queue.forEach { it.recycle() }
                 queue.clear()
                 currentNode.recycle() // 回收当前处理的节点副本
                 break // 已找到，跳出循环

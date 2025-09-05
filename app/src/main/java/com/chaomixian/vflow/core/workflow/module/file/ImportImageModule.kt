@@ -22,7 +22,7 @@ class ImportImageModule : BaseModule() {
         name = "导入图片",
         description = "从相册或文件中选择一张图片。",
         iconRes = R.drawable.rounded_add_photo_alternate_24,
-        category = "文件"
+        category = "文件" // 更新分类
     )
 
     // 此模块需要存储权限来读取图片

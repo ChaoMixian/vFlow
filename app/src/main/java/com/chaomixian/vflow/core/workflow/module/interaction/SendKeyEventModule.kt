@@ -1,7 +1,7 @@
 // 文件: SendKeyEventModule.kt
 // 描述: 定义了通过无障碍服务发送模拟按键事件的模块。
 
-package com.chaomixian.vflow.core.workflow.module.device
+package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
@@ -15,7 +15,7 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 /**
  * “输入按键”模块。
- * 模拟系统级的全局操作事件，如返回、主屏幕等。
+ * 模拟物理或虚拟按键的按下事件，如回车、返回、删除等。
  */
 class SendKeyEventModule : BaseModule() {
 
@@ -24,14 +24,13 @@ class SendKeyEventModule : BaseModule() {
         name = "执行全局操作", // 名称更新以反映真实功能
         description = "执行系统级操作，如返回、回到主屏幕、打开通知等。",
         iconRes = R.drawable.rounded_keyboard_24,
-        category = "设备"
+        category = "界面交互"
     )
 
-    // 需要无障碍服务权限来发送全局操作
+    // 需要无障碍服务权限来发送全局按键事件
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
-    // 定义支持的全局操作及其对应的系统常量
-    // 修正：只保留 performGlobalAction 支持的常量
+    // 定义支持的按键及其对应的系统常量
     private val keyOptions = mapOf(
         "返回" to AccessibilityService.GLOBAL_ACTION_BACK,
         "主屏幕" to AccessibilityService.GLOBAL_ACTION_HOME,
@@ -39,7 +38,6 @@ class SendKeyEventModule : BaseModule() {
         "通知中心" to AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS,
         "快速设置" to AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS,
         "电源菜单" to AccessibilityService.GLOBAL_ACTION_POWER_DIALOG
-        // 移除了不支持的按键，如回车、删除、音量控制等
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -47,7 +45,7 @@ class SendKeyEventModule : BaseModule() {
             id = "key_action",
             name = "全局操作", // 名称更新
             staticType = ParameterType.ENUM,
-            defaultValue = "返回", // 默认值更改为常用且支持的操作
+            defaultValue = "返回",
             options = keyOptions.keys.toList(),
             acceptsMagicVariable = false
         )

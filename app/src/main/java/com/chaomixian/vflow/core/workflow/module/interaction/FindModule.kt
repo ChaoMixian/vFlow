@@ -1,4 +1,7 @@
-package com.chaomixian.vflow.core.workflow.module.device
+// 文件：FindModule.kt
+// 描述：定义了屏幕查找相关的模块（FindTextModule）以及支持的数据结构（ScreenElement, Coordinate）。
+
+package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.content.Context
 import android.graphics.Rect
@@ -15,9 +18,6 @@ import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityS
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.parcelize.Parcelize
 import java.util.regex.Pattern
-
-// 文件：FindModule.kt
-// 描述：定义了屏幕查找相关的模块（FindTextModule）以及支持的数据结构（ScreenElement, Coordinate）。
 
 /**
  * 表示屏幕上的一个UI元素。
@@ -57,7 +57,7 @@ class FindTextModule : BaseModule() {
     // 模块的唯一ID
     override val id = "vflow.device.find.text"
     // 模块的元数据
-    override val metadata = ActionMetadata("查找文本", "在屏幕上查找元素", R.drawable.rounded_feature_search_24, "设备")
+    override val metadata = ActionMetadata("查找文本", "在屏幕上查找元素", R.drawable.rounded_feature_search_24, "界面交互") // 更新分类
     // 此模块需要的权限
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
@@ -187,7 +187,7 @@ class FindTextModule : BaseModule() {
             }
 
             // 回收所有在 findNodesByText 中获取的节点副本
-            nodes.forEach { it.recycle() } 
+            nodes.forEach { it.recycle() }
 
             return ExecutionResult.Success(outputs = mapOf("result" to output))
         } catch (e: Exception) {
@@ -208,9 +208,9 @@ class FindTextModule : BaseModule() {
     private fun findNodesByText(rootNode: AccessibilityNodeInfo, text: String, matchModeStr: String): List<AccessibilityNodeInfo> {
         val matchedNodes = mutableListOf<AccessibilityNodeInfo>()
         val queue = ArrayDeque<AccessibilityNodeInfo>() // 用于广度优先搜索的队列
-        
+
         // 将根节点（的副本）加入队列开始遍历，确保原始 rootNode 不被意外回收
-        queue.add(AccessibilityNodeInfo.obtain(rootNode)) 
+        queue.add(AccessibilityNodeInfo.obtain(rootNode))
 
         while (queue.isNotEmpty()) {
             val node = queue.removeFirst() // 取出当前待处理节点（此为副本，使用后需回收）
@@ -241,7 +241,7 @@ class FindTextModule : BaseModule() {
             for (i in 0 until node.childCount) {
                 node.getChild(i)?.let { child ->
                     // 直接添加子节点，它们在从队列中取出并处理时会被创建副本并回收
-                    queue.add(child) 
+                    queue.add(child)
                 }
             }
             node.recycle() // 回收当前处理的节点副本

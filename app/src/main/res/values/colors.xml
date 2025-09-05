@@ -8,13 +8,13 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <color name="category_device">#42B39E</color>
-    <color name="category_logic">#F09076</color>
-    <color name="category_data">#AA86ED</color>
     <color name="category_trigger">#607D8B</color>
+    <color name="category_ui_interaction">#F09076</color>
+    <color name="category_logic">#FFC107</color>
+    <color name="category_data">#AA86ED</color>
     <color name="category_file">#4CAF50</color>
+    <color name="category_system">#03A9F4</color>
     <color name="variable_pill_color">#93B1CF</color>
     <color name="static_pill_color">#687E89</color>
-
 
 </resources>
