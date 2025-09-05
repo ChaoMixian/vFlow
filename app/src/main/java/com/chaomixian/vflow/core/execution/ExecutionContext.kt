@@ -3,6 +3,7 @@
 package com.chaomixian.vflow.core.execution
 
 import android.content.Context
+import android.os.Parcelable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import java.util.*
 
@@ -24,6 +25,7 @@ data class LoopState(
  * @param currentStepIndex 当前正在执行的步骤的索引。
  * @param stepOutputs 存储所有已执行步骤的输出结果。
  * @param loopStack 一个用于管理嵌套循环状态的堆栈。
+ * @param triggerData 触发器传入的外部数据（例如分享的内容）。
  */
 data class ExecutionContext(
     val applicationContext: Context,
@@ -33,5 +35,6 @@ data class ExecutionContext(
     val allSteps: List<ActionStep>,
     val currentStepIndex: Int,
     val stepOutputs: Map<String, Map<String, Any?>>,
-    val loopStack: Stack<LoopState> // 新增：将循环堆栈传递给上下文
+    val loopStack: Stack<LoopState>, // 新增：将循环堆栈传递给上下文
+    val triggerData: Parcelable? = null // 新增：用于接收触发器数据
 )

@@ -3,6 +3,7 @@
 package com.chaomixian.vflow.core.execution
 
 import android.content.Context
+import android.os.Parcelable
 import android.util.Log
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -49,8 +50,9 @@ object WorkflowExecutor {
      * 执行一个工作流。
      * @param workflow 要执行的工作流。
      * @param context Android 上下文。
+     * @param triggerData (可选) 触发器传入的外部数据。
      */
-    fun execute(workflow: Workflow, context: Context) {
+    fun execute(workflow: Workflow, context: Context, triggerData: Parcelable? = null) {
         // 如果工作流已在运行，则不允许重复执行
         if (isRunning(workflow.id)) {
             Log.w("WorkflowExecutor", "工作流 '${workflow.name}' 已在运行，忽略新的执行请求。")
@@ -89,7 +91,8 @@ object WorkflowExecutor {
                         allSteps = workflow.steps,
                         currentStepIndex = pc,
                         stepOutputs = stepOutputs,
-                        loopStack = loopStack
+                        loopStack = loopStack,
+                        triggerData = triggerData // 将 triggerData 传递给上下文
                     )
 
                     step.parameters.forEach { (key, value) ->

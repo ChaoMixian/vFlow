@@ -38,9 +38,26 @@
             android:exported="false" />
 
         <activity
-            android:name=".ui.common.InputRequestActivity"
+            android:name=".ui.common.OverlayUIActivity"
+            android:theme="@style/Theme.vFlow.Transparent.Default"
             android:exported="false"
-            android:theme="@style/Theme.vFlow.Transparent.Default" />
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
+
+        <activity android:name=".ui.common.ShareReceiverActivity"
+            android:theme="@style/Theme.vFlow.Transparent.Default"
+            android:label="@string/share_to_vflow"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".services.AccessibilityService"

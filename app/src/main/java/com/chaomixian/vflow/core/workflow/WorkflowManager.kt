@@ -2,6 +2,8 @@ package com.chaomixian.vflow.core.workflow
 
 import android.content.Context
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
+import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerModule
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.util.UUID
@@ -27,14 +29,36 @@ class WorkflowManager(context: Context) {
      */
     fun saveWorkflow(workflow: Workflow) {
         val workflows = getAllWorkflows().toMutableList()
-        val index = workflows.indexOfFirst { it.id == workflow.id } // 查找现有工作流的索引
+        val index = workflows.indexOfFirst { it.id == workflow.id }
+
+        // 自动从第一个步骤（触发器）中提取配置信息
+        val firstStep = workflow.steps.firstOrNull()
+        var config: Map<String, Any?>? = null
+        if (firstStep != null && firstStep.moduleId != ManualTriggerModule().id) {
+            config = mapOf(
+                "type" to firstStep.moduleId
+            )
+        }
+        val workflowToSave = workflow.copy(triggerConfig = config)
+
+
         if (index != -1) {
-            workflows[index] = workflow // 更新现有工作流
+            workflows[index] = workflowToSave // 更新现有工作流
         } else {
-            workflows.add(workflow) // 添加新工作流
+            workflows.add(workflowToSave) // 添加新工作流
         }
         saveAll(workflows) // 保存所有工作流到持久化存储
     }
+
+    /**
+     * 新增：查找所有已启用的、可用于分享的工作流。
+     */
+    fun findShareableWorkflows(): List<Workflow> {
+        return getAllWorkflows().filter {
+            it.isEnabled && it.triggerConfig?.get("type") == ReceiveShareTriggerModule().id
+        }
+    }
+
 
     /**
      * 根据ID删除一个工作流。

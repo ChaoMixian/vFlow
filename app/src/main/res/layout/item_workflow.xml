@@ -66,6 +66,15 @@
                 app:srcCompat="@drawable/ic_more_vert"
                 app:tint="?attr/colorControlNormal" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switch_workflow_enabled"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentBottom="true"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
             <ImageButton
                 android:id="@+id/button_execute_workflow"
                 android:layout_width="48dp"

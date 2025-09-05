@@ -10,11 +10,14 @@ import android.widget.ImageButton
 import android.widget.PopupMenu
 import android.widget.RelativeLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
+import androidx.appcompat.widget.SwitchCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 
 /**
  * 工作流列表的 RecyclerView.Adapter。
@@ -27,6 +30,7 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
  */
 class WorkflowListAdapter(
     private var workflows: MutableList<Workflow>, // 改为 MutableList
+    private val workflowManager: WorkflowManager, // 增加 WorkflowManager 依赖
     private val onEdit: (Workflow) -> Unit,
     private val onDelete: (Workflow) -> Unit,
     private val onDuplicate: (Workflow) -> Unit,
@@ -74,14 +78,31 @@ class WorkflowListAdapter(
             popup.show()
         }
 
-        // 更新执行按钮的状态
-        if (WorkflowExecutor.isRunning(workflow.id)) {
-            holder.executeButton.setImageResource(R.drawable.rounded_pause_24) // 设为停止图标
+        // --- UI切换逻辑 ---
+        val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
+        holder.executeButton.isVisible = isManualTrigger
+        holder.enabledSwitch.isVisible = !isManualTrigger
+
+        if(isManualTrigger) {
+            // 更新执行按钮的状态
+            if (WorkflowExecutor.isRunning(workflow.id)) {
+                holder.executeButton.setImageResource(R.drawable.rounded_pause_24) // 设为停止图标
+            } else {
+                holder.executeButton.setImageResource(R.drawable.ic_play_arrow) // 设为播放图标
+            }
+            // onExecute 回调现在会处理启动或停止
+            holder.executeButton.setOnClickListener { onExecute(workflow) }
         } else {
-            holder.executeButton.setImageResource(R.drawable.ic_play_arrow) // 设为播放图标
+            // 设置开关状态并处理变化
+            holder.enabledSwitch.setOnCheckedChangeListener(null) // 先移除监听器防止重复触发
+            holder.enabledSwitch.isChecked = workflow.isEnabled
+            holder.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
+                val updatedWorkflow = workflow.copy(isEnabled = isChecked)
+                workflowManager.saveWorkflow(updatedWorkflow)
+                // 更新列表中的数据，以便UI保持同步
+                workflows[position] = updatedWorkflow
+            }
         }
-        // onExecute 回调现在会处理启动或停止
-        holder.executeButton.setOnClickListener { onExecute(workflow) }
     }
 
     /** 返回数据项的总数。 */
@@ -96,6 +117,7 @@ class WorkflowListAdapter(
         val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
         val executeButton: ImageButton = itemView.findViewById(R.id.button_execute_workflow)
         val clickableWrapper: RelativeLayout = itemView.findViewById(R.id.clickable_wrapper) // 卡片整体的可点击区域
+        val enabledSwitch: SwitchCompat = itemView.findViewById(R.id.switch_workflow_enabled) // 新增开关引用
 
         /** 将工作流数据显示到视图上。 */
         fun bind(workflow: Workflow) {

@@ -528,10 +528,20 @@ class WorkflowEditorActivity : BaseActivity() {
     private fun showActionPicker() {
         val picker = ActionPickerSheet()
         picker.onActionSelected = { module ->
-            if (module.metadata.category == "触发器") { // 触发器只能有一个且在开头
-                Toast.makeText(this, "触发器只能位于工作流的开始。", Toast.LENGTH_SHORT).show()
+            if (module.metadata.category == "触发器") {
+                // 如果选择的是触发器，则替换掉第一个步骤
+                val newTriggerSteps = module.createSteps()
+                if (actionSteps.isNotEmpty()) {
+                    actionSteps.removeAt(0)
+                }
+                actionSteps.addAll(0, newTriggerSteps)
+                recalculateAndNotify() // 重新计算并刷新列表
+
+                // 替换后，立即打开编辑器让用户配置新触发器
+                showActionEditor(module, actionSteps.first(), 0, null)
+
             } else {
-                // 添加新模块，position为-1表示添加到末尾，focusedInputId为null表示编辑整个模块
+                // 否则，正常添加新模块到末尾
                 showActionEditor(module, null, -1, null)
             }
         }

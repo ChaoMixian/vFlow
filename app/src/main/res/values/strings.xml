@@ -36,4 +36,5 @@
     <string name="workflow_editor_add_action">添加动作</string>
     <string name="workflow_editor_execute">执行</string>
     <string name="workflow_editor_save">保存</string>
+    <string name="share_to_vflow">分享到 vFlow</string>
 </resources>

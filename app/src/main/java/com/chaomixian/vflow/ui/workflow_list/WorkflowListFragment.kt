@@ -199,6 +199,7 @@ class WorkflowListFragment : Fragment() {
         } else {
             adapter = WorkflowListAdapter(
                 workflows.toMutableList(), // 传递可变列表
+                workflowManager,
                 onEdit = { workflow ->
                     val intent = Intent(requireContext(), WorkflowEditorActivity::class.java).apply {
                         putExtra(WorkflowEditorActivity.EXTRA_WORKFLOW_ID, workflow.id)
