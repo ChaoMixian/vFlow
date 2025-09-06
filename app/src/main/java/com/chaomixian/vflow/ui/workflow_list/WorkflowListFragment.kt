@@ -12,8 +12,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionState
@@ -23,6 +23,7 @@ import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.ui.common.ShortcutHelper
 import com.chaomixian.vflow.ui.workflow_editor.WorkflowEditorActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -37,6 +38,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class WorkflowListFragment : Fragment() {
+    // ... (其他属性保持不变)
     private lateinit var workflowManager: WorkflowManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: WorkflowListAdapter
@@ -192,15 +194,13 @@ class WorkflowListFragment : Fragment() {
 
     /** 加载工作流并设置到 RecyclerView 的 Adapter。 */
     private fun loadWorkflows() {
-        // 在 WorkflowManager 中增加一个方法来获取带顺序的工作流
-        // 这里我们假设 getAllWorkflows 已经能正确返回顺序
         val workflows = workflowManager.getAllWorkflows()
+        // 检查 adapter 是否已初始化
         if (::adapter.isInitialized) {
             adapter.updateData(workflows)
         } else {
-            // 在初始化adapter时传入 itemTouchHelper
             adapter = WorkflowListAdapter(
-                workflows.toMutableList(),
+                workflows.toMutableList(), // 传递可变列表
                 workflowManager,
                 onEdit = { workflow ->
                     val intent = Intent(requireContext(), WorkflowEditorActivity::class.java).apply {
@@ -225,14 +225,17 @@ class WorkflowListFragment : Fragment() {
                         executeWorkflow(workflow)
                     }
                 },
-                itemTouchHelper // 传入实例
+                itemTouchHelper
             )
             recyclerView.adapter = adapter
         }
+        // 每次加载/刷新工作流后，都更新快捷方式
+        ShortcutHelper.updateShortcuts(requireContext())
     }
 
     private fun setupRecyclerView() {
-        recyclerView.layoutManager = GridLayoutManager(requireContext(), 2)
+        // 更新为 LinearLayoutManager 以实现单列列表
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
     }
 
     // 新增：设置拖拽排序功能
@@ -257,8 +260,9 @@ class WorkflowListFragment : Fragment() {
 
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
-                // 拖动结束后保存顺序
+                // 拖动结束后保存顺序并更新快捷方式
                 adapter.saveOrder()
+                ShortcutHelper.updateShortcuts(requireContext())
             }
         }
         itemTouchHelper = ItemTouchHelper(callback)

@@ -5,21 +5,24 @@ package com.chaomixian.vflow.ui.workflow_list
 
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.PopupMenu
-import android.widget.RelativeLayout
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import java.util.Collections
 
@@ -96,6 +99,17 @@ class WorkflowListAdapter(
             true
         }
 
+        // 收藏按钮逻辑
+        holder.favoriteButton.setImageResource(
+            if (workflow.isFavorite) R.drawable.ic_star else R.drawable.ic_star_border
+        )
+        holder.favoriteButton.setOnClickListener {
+            val updatedWorkflow = workflow.copy(isFavorite = !workflow.isFavorite)
+            workflowManager.saveWorkflow(updatedWorkflow)
+            workflows[position] = updatedWorkflow
+            notifyItemChanged(position)
+        }
+
 
         // “更多选项”按钮的点击逻辑
         holder.moreOptionsButton.setOnClickListener { view ->
@@ -147,17 +161,47 @@ class WorkflowListAdapter(
      */
     class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val name: TextView = itemView.findViewById(R.id.text_view_workflow_name)
-        val description: TextView = itemView.findViewById(R.id.text_view_workflow_description)
+        val infoChipGroup: ChipGroup = itemView.findViewById(R.id.chip_group_info) // 更新引用
         val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
-        val executeButton: ImageButton = itemView.findViewById(R.id.button_execute_workflow)
-        val clickableWrapper: RelativeLayout = itemView.findViewById(R.id.clickable_wrapper) // 卡片整体的可点击区域
-        val enabledSwitch: MaterialSwitch = itemView.findViewById(R.id.switch_workflow_enabled) // 更新为 MaterialSwitch
-
+        val executeButton: FloatingActionButton = itemView.findViewById(R.id.button_execute_workflow)
+        val clickableWrapper: ConstraintLayout = itemView.findViewById(R.id.clickable_wrapper)
+        val enabledSwitch: MaterialSwitch = itemView.findViewById(R.id.switch_workflow_enabled)
+        val favoriteButton: ImageButton = itemView.findViewById(R.id.button_favorite)
         /** 将工作流数据显示到视图上。 */
         fun bind(workflow: Workflow) {
+            val context = itemView.context
             name.text = workflow.name
+
+            // --- 动态添加所有信息Chip ---
+            infoChipGroup.removeAllViews() // 先清空
+            val inflater = LayoutInflater.from(context)
+
+            // 1. 添加步骤数Chip
             val stepCount = workflow.steps.size - 1 // 减去触发器步骤
-            description.text = "包含 ${stepCount.coerceAtLeast(0)} 个步骤"
+            if (stepCount >= 0) {
+                val stepChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
+                stepChip.text = "${stepCount.coerceAtLeast(0)} 个步骤"
+                stepChip.setChipIconResource(R.drawable.ic_workflows)
+                infoChipGroup.addView(stepChip)
+            }
+
+            // 2. 添加权限Chips
+            val requiredPermissions = workflow.steps
+                .mapNotNull { ModuleRegistry.getModule(it.moduleId)?.requiredPermissions }
+                .flatten()
+                .distinct()
+
+            if (requiredPermissions.isNotEmpty()) {
+                for (permission in requiredPermissions) {
+                    val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
+                    permissionChip.text = permission.name
+                    permissionChip.setChipIconResource(R.drawable.ic_shield)
+                    infoChipGroup.addView(permissionChip)
+                }
+            }
+
+            // 如果没有任何Chip，则隐藏ChipGroup
+            infoChipGroup.isVisible = infoChipGroup.childCount > 0
         }
     }
 }

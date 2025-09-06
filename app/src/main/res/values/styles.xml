@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Widget.App.Chip.Info" parent="Widget.Material3.Chip.Assist.Elevated">
+        <item name="android:textAppearance">?attr/textAppearanceLabelSmall</item>
+        <item name="chipMinHeight">24dp</item>
+        <item name="chipIconSize">14dp</item>
+        <item name="chipStartPadding">8dp</item>
+        <item name="chipEndPadding">8dp</item>
+    </style>
+</resources>

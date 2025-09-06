@@ -45,6 +45,19 @@
             android:excludeFromRecents="true"
             android:noHistory="true" />
 
+        <activity
+            android:name=".ui.common.ShortcutExecutorActivity"
+            android:theme="@style/Theme.vFlow.Transparent.Default"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="com.chaomixian.vflow.EXECUTE_WORKFLOW_SHORTCUT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <activity android:name=".ui.common.ShareReceiverActivity"
             android:theme="@style/Theme.vFlow.Transparent.Default"
             android:label="@string/share_to_vflow"

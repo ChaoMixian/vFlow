@@ -9,84 +9,106 @@
         android:id="@+id/card_view"
         style="?attr/materialCardViewElevatedStyle"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_margin="8dp"
-        app:cardCornerRadius="22dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="6dp"
+        app:cardCornerRadius="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <RelativeLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/clickable_wrapper"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackground"
             android:clickable="true"
             android:focusable="true"
             android:padding="16dp">
 
+            <ImageButton
+                android:id="@+id/button_more_options"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="更多选项"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_more_vert"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
             <LinearLayout
                 android:id="@+id/workflow_info_container"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_alignParentTop="true"
-                android:layout_toStartOf="@id/button_more_options"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                app:layout_constraintEnd_toStartOf="@id/button_more_options"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
 
                 <TextView
                     android:id="@+id/text_view_workflow_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
-                    android:maxLines="3"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
+                    android:maxLines="2"
+                    android:textAppearance="?attr/textAppearanceTitleLarge"
                     tools:text="每日自动签到" />
 
-                <TextView
-                    android:id="@+id/text_view_workflow_description"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    tools:text="包含 5 个步骤" />
             </LinearLayout>
 
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_info"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                app:chipSpacingVertical="0dp"
+                app:chipSpacingHorizontal="4dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/workflow_info_container" />
+
+
             <ImageButton
-                android:id="@+id/button_more_options"
+                android:id="@+id/button_favorite"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_alignParentTop="true"
-                android:layout_alignParentEnd="true"
+                android:layout_marginTop="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="更多选项"
-                app:srcCompat="@drawable/ic_more_vert"
-                app:tint="?attr/colorControlNormal" />
+                android:contentDescription="收藏"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/chip_group_info"
+                app:srcCompat="@drawable/ic_star_border"
+                app:tint="?attr/colorOnSurfaceVariant" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/switch_workflow_enabled"
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:layout_alignParentEnd="true"
-                android:layout_alignParentBottom="true"
+                android:layout_height="wrap_content"
                 android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
                 tools:visibility="visible" />
 
-            <ImageButton
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/button_execute_workflow"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_alignParentEnd="true"
-                android:layout_alignParentBottom="true"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:contentDescription="执行工作流"
+                app:backgroundTint="?attr/colorPrimaryContainer"
+                app:elevation="1dp"
+                app:fabSize="mini"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:srcCompat="@drawable/ic_play_arrow"
-                app:tint="?attr/colorPrimary" />
+                app:tint="?attr/colorOnPrimaryContainer" />
 
-        </RelativeLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
     </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
