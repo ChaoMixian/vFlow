@@ -74,5 +74,6 @@ object ModuleRegistry {
         register(QuickViewModule())
         register(ToastModule())
         register(LuaModule())
+        register(LaunchAppModule())
     }
 }
