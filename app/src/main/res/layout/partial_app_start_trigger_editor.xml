@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="目标应用/Activity"
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+    <TextView
+        android:id="@+id/text_selected_app_summary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        tools:text="已选择：微信" />
+
+    <Button
+        android:id="@+id/button_pick_app"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="选择应用或Activity" />
+
+</LinearLayout>

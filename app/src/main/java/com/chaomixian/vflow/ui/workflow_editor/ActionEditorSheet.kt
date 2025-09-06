@@ -1,6 +1,7 @@
 // 文件: ActionEditorSheet.kt
 package com.chaomixian.vflow.ui.workflow_editor
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
@@ -30,6 +31,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     // 回调
     var onSave: ((ActionStep) -> Unit)? = null // 保存回调
     var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // 请求魔法变量选择器回调
+    // [新增] 回调，用于从编辑器内部请求启动一个新的Activity并获取结果
+    var onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
 
     // UI及状态
     private val inputViews = mutableMapOf<String, View>() // 通用输入控件引用
@@ -64,9 +67,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         focusedInputId = arguments?.getString("focusedInputId")
         allSteps = arguments?.getParcelableArrayList("allSteps")
 
+        // 初始化参数，首先使用模块定义的默认值
         module.getInputs().forEach { def ->
             def.defaultValue?.let { currentParameters[def.id] = it }
         }
+        // 然后用步骤已有的参数覆盖默认值
         existingStep?.parameters?.let { currentParameters.putAll(it) }
     }
 
@@ -103,8 +108,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         return view
     }
 
+    /**
+     * 更新指定输入框的值为魔法变量引用。
+     * @param inputId 目标输入参数的ID。
+     * @param variableReference 魔法变量的引用字符串, e.g., "{{stepId.outputId}}"。
+     */
     fun updateInputWithVariable(inputId: String, variableReference: String) {
-        // [通用增强] 支持更新点分隔的嵌套参数
+        // 支持更新点分隔的嵌套参数 (主要用于字典类型)
         if (inputId.contains('.')) {
             val parts = inputId.split('.', limit = 2)
             val mainInputId = parts[0]
@@ -115,23 +125,31 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         } else {
             currentParameters[inputId] = variableReference
         }
+        // 更新参数后，重建UI以显示“已连接变量”的药丸
         view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
     }
 
-    /** 当用户清除变量连接时，恢复默认值并重建UI。 */
+    fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {
+        currentParameters.putAll(newParameters)
+        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
+    }
+
+
+    /** 当用户清除变量连接时，恢复为默认值并重建UI。 */
     fun clearInputVariable(inputId: String) {
-        // [通用增强] 支持清除点分隔的嵌套参数
+        // 支持清除点分隔的嵌套参数
         if (inputId.contains('.')) {
             val parts = inputId.split('.', limit = 2)
             val mainInputId = parts[0]
             val subKey = parts[1]
             val dict = (currentParameters[mainInputId] as? Map<*, *>)?.toMutableMap() ?: return
-            dict[subKey] = ""
+            dict[subKey] = "" // 将值设置为空字符串
             currentParameters[mainInputId] = dict
         } else {
             val inputDef = module.getInputs().find { it.id == inputId } ?: return
-            currentParameters[inputId] = inputDef.defaultValue
+            currentParameters[inputId] = inputDef.defaultValue // 恢复为模块定义的默认值
         }
+        // 清除后重建UI
         view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
     }
 
@@ -145,7 +163,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val stepForUi = ActionStep(module.id, currentParameters)
         val inputsToShow = module.getDynamicInputs(stepForUi, allSteps)
 
-        // 校正无效的枚举参数值
+        // 校正无效的枚举参数值，防止因模块更新导致崩溃
         inputsToShow.forEach { inputDef ->
             if (inputDef.staticType == ParameterType.ENUM) {
                 val currentValue = currentParameters[inputDef.id] as? String
@@ -158,6 +176,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val uiProvider = module.uiProvider
         val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
 
+        // 如果模块提供了自定义UI，则创建并添加它
         if (uiProvider != null) {
             customEditorHolder = uiProvider.createEditor(
                 context = requireContext(),
@@ -167,11 +186,14 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 onMagicVariableRequested = { inputId ->
                     readParametersFromUi()
                     this.onMagicVariableRequested?.invoke(inputId)
-                }
+                },
+                // 将启动Activity的回调传递给自定义UI提供者
+                onStartActivityForResult = onStartActivityForResult
             )
             container.addView(customEditorHolder!!.view)
         }
 
+        // 为其余未被自定义UI处理的参数创建通用输入控件
         inputsToShow.forEach { inputDef ->
             if (!handledInputIds.contains(inputDef.id) && !inputDef.isHidden) {
                 val inputView = createViewForInputDefinition(inputDef, container)
@@ -230,6 +252,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
                 onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+                        // 当用户选择新选项时，可能需要更新其他动态输入，因此重建整个UI
                         if (currentParameters[inputDef.id] != selectedItem.toString()) {
                             readParametersFromUi() // 读取所有控件当前值
                             view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) } // 重建UI
@@ -238,7 +261,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                     override fun onNothingSelected(p0: AdapterView<*>?) {}
                 }
             }
-            else -> TextInputLayout(requireContext()).apply {
+            else -> TextInputLayout(requireContext()).apply { // 默认是文本或数字输入
                 hint = "值" // 将提示文本放在 TextInputLayout 上
                 val editText = TextInputEditText(context).apply {
                     val valueToDisplay = when (currentValue) {
@@ -246,11 +269,10 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                         else -> currentValue?.toString() ?: ""
                     }
                     setText(valueToDisplay)
-                    hint = "输入值..."
                     inputType = if (inputDef.staticType == ParameterType.NUMBER) {
                         InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
                     } else {
-                        InputType.TYPE_CLASS_TEXT // 默认单行文本
+                        InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE //允许多行输入
                     }
                 }
                 addView(editText)

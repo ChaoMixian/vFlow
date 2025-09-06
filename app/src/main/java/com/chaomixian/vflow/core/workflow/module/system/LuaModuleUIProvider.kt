@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.workflow.module.system
 
 import android.content.Context
+import android.content.Intent
 import android.text.InputType
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -26,14 +27,26 @@ class LuaModuleUIProvider : ModuleUIProvider {
 
     override fun getHandledInputIds(): Set<String> = setOf("script", "inputs")
 
-    override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep): View? = null
+    /**
+     * [修复] 更新方法签名以匹配 ModuleUIProvider 接口。
+     */
+    override fun createPreview(
+        context: Context,
+        parent: ViewGroup,
+        step: ActionStep,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): View? = null
 
+    /**
+     * [修复] 更新方法签名以匹配 ModuleUIProvider 接口。
+     */
     override fun createEditor(
         context: Context,
         parent: ViewGroup,
         currentParameters: Map<String, Any?>,
         onParametersChanged: () -> Unit,
-        onMagicVariableRequested: ((inputId: String) -> Unit)?
+        onMagicVariableRequested: ((inputId: String) -> Unit)?,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         val inflater = LayoutInflater.from(context)
         val view = LinearLayout(context).apply {

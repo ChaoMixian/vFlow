@@ -44,6 +44,7 @@ object ModuleRegistry {
         // 触发器
         register(ManualTriggerModule())
         register(ReceiveShareTriggerModule())
+        register(AppStartTriggerModule())
 
         // 界面交互
         register(FindTextModule())

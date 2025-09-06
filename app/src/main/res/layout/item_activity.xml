@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:id="@+id/activity_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceBodyLarge"
+        tools:text="com.chaomixian.vflow.MainActivity"/>
+
+    <TextView
+        android:id="@+id/activity_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        tools:text="vFlow"/>
+</LinearLayout>

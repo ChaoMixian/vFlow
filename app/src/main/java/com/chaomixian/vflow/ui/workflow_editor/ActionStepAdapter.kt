@@ -5,6 +5,7 @@
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -39,21 +40,21 @@ import java.util.*
 import kotlin.math.roundToInt
 
 /**
- * 可点击参数药丸的 Span。
- * @param parameterId 参数ID。
+ * 可点击参数药丸的 Span。这是一个自定义的ClickableSpan，用于标记摘要中的可点击部分。
+ * @param parameterId 关联的参数ID，用于告知回调哪个参数被点击了。
  * @param isVariable 是否为魔法变量。
- * @param isModuleOption 是否为模块自身配置选项。
+ * @param isModuleOption 是否为模块自身配置选项（例如If模块的条件操作符）。
  */
 private class ParameterPillSpan(
     val parameterId: String,
     val isVariable: Boolean,
     val isModuleOption: Boolean
 ) : ClickableSpan() {
-    override fun onClick(widget: View) { /* 点击事件由外部处理 */ }
-    override fun updateDrawState(ds: TextPaint) { /* 外观由 RoundedBackgroundSpan 处理 */ }
+    override fun onClick(widget: View) { /* 点击事件由外部的OnTouchListener统一处理 */ }
+    override fun updateDrawState(ds: TextPaint) { /* 外观由下面的RoundedBackgroundSpan处理，这里不需要额外操作 */ }
 }
 
-/** 魔法变量来源信息。 */
+/** 魔法变量来源信息的数据类。 */
 private data class SourceInfo(val outputName: String, val color: Int)
 
 /**
@@ -64,12 +65,13 @@ class ActionStepAdapter(
     private val hideConnections: Boolean, // TODO: 连接线绘制暂未(不打算)实现
     private val onEditClick: (position: Int, inputId: String?) -> Unit, // 编辑回调
     private val onDeleteClick: (position: Int) -> Unit, // 删除回调
-    private val onParameterPillClick: (position: Int, parameterId: String) -> Unit // 参数药丸点击回调
+    private val onParameterPillClick: (position: Int, parameterId: String) -> Unit, // 参数药丸点击回调
+    // [新增] 回调，允许列表项请求启动一个Activity并获取结果
+    private val onStartActivityForResult: (position: Int, Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit
 ) : RecyclerView.Adapter<ActionStepAdapter.ActionStepViewHolder>() {
 
     /** 移动列表项 (用于拖拽排序)。 */
     fun moveItem(fromPosition: Int, toPosition: Int) {
-        // 确保在有效范围内移动 (不包括触发器步骤)
         if (fromPosition > 0 && toPosition > 0 && fromPosition < actionSteps.size && toPosition < actionSteps.size) {
             Collections.swap(actionSteps, fromPosition, toPosition)
             notifyItemMoved(fromPosition, toPosition)
@@ -113,14 +115,25 @@ class ActionStepAdapter(
 
             contentContainer.removeAllViews()
 
-            // 优先使用模块自定义预览UI
-            val customPreview = module.uiProvider?.createPreview(context, contentContainer, step)
+            // [修改] 优先使用模块自定义预览UI，并传递onStartActivityForResult回调
+            val customPreview = module.uiProvider?.createPreview(
+                context,
+                contentContainer,
+                step
+            ) { intent, callback ->
+                // 当自定义预览视图请求启动Activity时，调用Adapter的回调
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    onStartActivityForResult(adapterPosition, intent, callback)
+                }
+            }
+
             if (customPreview != null) {
                 contentContainer.addView(customPreview)
             } else {
                 // 否则，使用模块生成的摘要文本
                 val rawSummary = module.getSummary(context, step)
                 val finalSummary = PillUtil.processSummarySpans(context, rawSummary, allSteps, step)
+                // 为摘要添加步骤编号前缀
                 val prefix = "#$position "
                 val spannablePrefix = SpannableStringBuilder(prefix).apply {
                     setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -132,10 +145,10 @@ class ActionStepAdapter(
                 contentContainer.addView(headerView)
             }
 
-            deleteButton.setOnClickListener { // 删除按钮点击
+            deleteButton.setOnClickListener {
                 if(adapterPosition != RecyclerView.NO_POSITION) onDeleteClick(adapterPosition)
             }
-            itemView.setOnClickListener { // 列表项点击 (编辑整个模块)
+            itemView.setOnClickListener {
                 if (adapterPosition != RecyclerView.NO_POSITION) {
                     onEditClick(adapterPosition, null)
                 }
@@ -165,11 +178,10 @@ class ActionStepAdapter(
                 if (text is Spanned && event.action == MotionEvent.ACTION_UP) {
                     val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
                     val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
-                    val layout = widget.layout ?: return@setOnTouchListener false // 安全检查
+                    val layout = widget.layout ?: return@setOnTouchListener false
                     val line = layout.getLineForVertical(y)
-                    // 检查点击是否在文本行内，避免越界
                     if (x < 0 || x > layout.getLineWidth(line)) {
-                        itemView.performClick() // 点击在文本外，视为列表项点击
+                        itemView.performClick()
                         return@setOnTouchListener true
                     }
                     val offset = layout.getOffsetForHorizontal(line, x.toFloat())
@@ -178,19 +190,20 @@ class ActionStepAdapter(
                         if (adapterPosition != RecyclerView.NO_POSITION) {
                             onParameterPillClick(adapterPosition, links[0].parameterId)
                         }
-                        true // 消费事件
+                        true
                     } else { // 未点击到药丸，视为列表项点击
                         itemView.performClick()
-                        true // 消费事件
+                        true
                     }
                 } else {
-                    false // 其他事件类型不处理
+                    false
                 }
             }
             return textView
         }
     }
 }
+// ... (PillUtil 和 RoundedBackgroundSpan 的代码不变，这里省略以保持清晰)
 
 /**
  * 参数药丸 (Pill) UI 工具类。

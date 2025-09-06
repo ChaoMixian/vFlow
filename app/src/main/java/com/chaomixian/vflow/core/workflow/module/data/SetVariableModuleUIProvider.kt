@@ -1,6 +1,9 @@
+// 文件: SetVariableModuleUIProvider.kt
+// 描述: 为变量设置模块提供自定义UI。
 package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
+import android.content.Intent
 import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
@@ -32,7 +35,7 @@ class SetVariableEditorViewHolder(
 ) : CustomEditorViewHolder(view) {
     var valueInputView: View? = null // 当前值输入视图的引用
     var dictionaryAdapter: DictionaryKVAdapter? = null // 如果类型是字典，则为该字典的适配器
-    var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // [新增] 用于存储回调
+    var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // 用于存储魔法变量请求的回调
 }
 
 /**
@@ -52,21 +55,28 @@ class VariableModuleUIProvider(
 
     /**
      * 创建模块在工作流编辑器中的预览视图。
-     * 对于此 UIProvider，返回 null 以使用模块自身的 getSummary() 方法进行预览。
+     * [修复] 更新方法签名以匹配 ModuleUIProvider 接口。
      */
-    override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep): View? {
+    override fun createPreview(
+        context: Context,
+        parent: ViewGroup,
+        step: ActionStep,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): View? {
         return null // 不提供自定义预览，将回退到模块的 getSummary
     }
 
     /**
      * 创建用于在模块详情页编辑参数的自定义视图。
+     * [修复] 更新方法签名以匹配 ModuleUIProvider 接口。
      */
     override fun createEditor(
         context: Context,
         parent: ViewGroup, // 父视图组
         currentParameters: Map<String, Any?>, // 当前已保存的参数值
         onParametersChanged: () -> Unit, // 参数发生变化时的回调
-        onMagicVariableRequested: ((inputId: String) -> Unit)?
+        onMagicVariableRequested: ((inputId: String) -> Unit)?,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         // 编辑器的主布局，垂直排列
         val view = LinearLayout(context).apply {
@@ -87,7 +97,7 @@ class VariableModuleUIProvider(
         }
 
         val holder = SetVariableEditorViewHolder(view, typeSpinner, valueContainer)
-        holder.onMagicVariableRequested = onMagicVariableRequested // [修改] 将回调存储在 holder 中
+        holder.onMagicVariableRequested = onMagicVariableRequested // 存储回调
 
         // 设置 Spinner 的适配器和选项
         val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, typeOptions)
@@ -163,7 +173,7 @@ class VariableModuleUIProvider(
                     ?.mapNotNull { (key, value) ->
                         val kStr = key?.toString()
                         val vStr = value?.toString()
-                        if (kStr != null) { // [修改] 允许值为空字符串
+                        if (kStr != null) {
                             kStr to (vStr ?: "")
                         } else {
                             null // 如果键为 null，则过滤掉此项
@@ -172,7 +182,7 @@ class VariableModuleUIProvider(
                     ?.toMutableList()
                     ?: mutableListOf() // 如果 currentValue 不是 Map 或为空，则使用空列表
 
-                // [修改] 在创建适配器时传入魔法变量回调
+                // 在创建适配器时传入魔法变量回调
                 val dictAdapter = DictionaryKVAdapter(currentMap) { key ->
                     if (key.isNotBlank()) {
                         holder.onMagicVariableRequested?.invoke("value.$key")
@@ -185,7 +195,7 @@ class VariableModuleUIProvider(
                 editorView
             }
             "布尔" -> SwitchCompat(context).apply {
-                text = "值" // 标签文本，之后建议使用字符串资源
+                text = "值" // 标签文本
                 isChecked = (currentValue as? Boolean) ?: false // 设置初始选中状态
             }
             else -> TextInputLayout(context).apply { // 默认为文本或数字输入

@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <application
         android:allowBackup="true"
@@ -35,6 +36,13 @@
 
         <activity
             android:name=".permissions.PermissionActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.app_picker.AppPickerActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.app_picker.ActivityPickerActivity"
             android:exported="false" />
 
         <activity

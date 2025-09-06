@@ -12,75 +12,66 @@ import com.chaomixian.vflow.core.module.ActionModule
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
-// 文件：ActionPickerSheet.kt
-// 描述：用于选择新动作模块的底部动作表单。
-
-/**
- * 动作模块选择器底部表单。
- * 显示按类别分组的可用模块列表，供用户选择添加到工作流中。
- */
 class ActionPickerSheet : BottomSheetDialogFragment() {
-
-    /** 当用户选择一个模块时的回调。 */
     var onActionSelected: ((ActionModule) -> Unit)? = null
 
-    /** 创建并返回底部表单的视图。 */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.sheet_action_picker, container, false)
         val recyclerView = view.findViewById<RecyclerView>(R.id.recycler_view_action_picker)
+        val title = view.findViewById<TextView>(R.id.text_view_bottom_sheet_title)
 
-        // 从模块注册表获取按类别分组的模块
-        val categorizedModules = ModuleRegistry.getModulesByCategory()
-        val pickerItems = mutableListOf<PickerItem>() // 用于Adapter的数据列表
+        // [修改] 根据参数判断是选择触发器还是动作
+        val isTriggerPicker = arguments?.getBoolean("is_trigger_picker", false) ?: false
 
-        // 将模块数据转换为 Adapter 使用的 PickerItem 列表 (含类别标题和模块项)
+        val categorizedModules = if (isTriggerPicker) {
+            title.text = "选择一个触发器"
+            // 只获取“触发器”分类的模块
+            ModuleRegistry.getModulesByCategory().filterKeys { it == "触发器" }
+        } else {
+            title.text = "选择一个动作"
+            // 排除“触发器”分类，获取所有其他模块
+            ModuleRegistry.getModulesByCategory().filterKeys { it != "触发器" }
+        }
+
+        val pickerItems = mutableListOf<PickerItem>()
         categorizedModules.forEach { (category, modules) ->
-            pickerItems.add(PickerItem.Category(category)) // 添加类别项
+            pickerItems.add(PickerItem.Category(category))
             modules.forEach { module ->
-                pickerItems.add(PickerItem.Action(module)) // 添加模块项
+                pickerItems.add(PickerItem.Action(module))
             }
         }
 
         recyclerView.adapter = ActionPickerAdapter(pickerItems) { module ->
-            onActionSelected?.invoke(module) // 触发回调
-            dismiss() // 关闭底部表单
+            onActionSelected?.invoke(module)
+            dismiss()
         }
         return view
     }
 }
-
-/** RecyclerView 列表项的密封类定义 (类别或动作模块)。 */
+// PickerItem 和 ActionPickerAdapter 类保持不变
 sealed class PickerItem {
-    data class Category(val name: String) : PickerItem() // 代表一个类别标题
-    data class Action(val module: ActionModule) : PickerItem() // 代表一个可选择的动作模块
+    data class Category(val name: String) : PickerItem()
+    data class Action(val module: ActionModule) : PickerItem()
 }
 
-/**
- * ActionPickerSheet 中 RecyclerView 的适配器。
- * 处理类别标题和动作模块两种视图类型。
- */
 class ActionPickerAdapter(
     private val items: List<PickerItem>,
-    private val onClick: (ActionModule) -> Unit // 模块点击回调
+    private val onClick: (ActionModule) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
+    // ... 此适配器代码完全不变
     companion object {
-        private const val TYPE_CATEGORY = 0 // 视图类型：类别
-        private const val TYPE_ACTION = 1   // 视图类型：动作模块
+        private const val TYPE_CATEGORY = 0
+        private const val TYPE_ACTION = 1
     }
-
-    /** 根据位置返回列表项的视图类型。 */
     override fun getItemViewType(position: Int): Int {
         return when (items[position]) {
             is PickerItem.Category -> TYPE_CATEGORY
             is PickerItem.Action -> TYPE_ACTION
         }
     }
-
-    /** 创建 ViewHolder 实例。 */
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return if (viewType == TYPE_CATEGORY) {
@@ -91,27 +82,19 @@ class ActionPickerAdapter(
             ActionViewHolder(view)
         }
     }
-
-    /** 将数据绑定到 ViewHolder。 */
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
             is PickerItem.Category -> (holder as CategoryViewHolder).bind(item)
             is PickerItem.Action -> (holder as ActionViewHolder).bind(item.module, onClick)
         }
     }
-
-    /** 返回列表项总数。 */
     override fun getItemCount() = items.size
-
-    /** 类别项的 ViewHolder。 */
     class CategoryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val name: TextView = view.findViewById(R.id.text_view_category_name)
         fun bind(item: PickerItem.Category) {
             name.text = item.name
         }
     }
-
-    /** 动作模块项的 ViewHolder。 */
     class ActionViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val name: TextView = view.findViewById(R.id.text_view_action_name)
         private val icon: ImageView = view.findViewById(R.id.icon_action_type)
