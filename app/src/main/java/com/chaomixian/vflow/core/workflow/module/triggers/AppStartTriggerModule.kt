@@ -14,9 +14,9 @@ class AppStartTriggerModule : BaseModule() {
 
     override val id = "vflow.trigger.app_start"
     override val metadata = ActionMetadata(
-        name = "应用/Activity启动",
+        name = "应用/活动启动",
         description = "当指定的应用程序或页面启动时，触发此工作流。",
-        iconRes = R.drawable.rounded_activity_zone_24, // 使用新图标
+        iconRes = R.drawable.rounded_activity_zone_24,
         category = "触发器"
     )
 

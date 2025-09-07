@@ -16,9 +16,9 @@ class LaunchAppModule : BaseModule() {
 
     override val id = "vflow.system.launch_app"
     override val metadata = ActionMetadata(
-        name = "启动应用/Activity",
+        name = "启动应用/活动",
         description = "启动一个指定的应用程序或其内部的某个页面(Activity)。",
-        iconRes = R.drawable.rounded_activity_zone_24, // 使用新图标
+        iconRes = R.drawable.rounded_activity_zone_24,
         category = "应用与系统"
     )
 
