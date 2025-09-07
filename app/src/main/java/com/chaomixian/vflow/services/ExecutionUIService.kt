@@ -2,7 +2,10 @@ package com.chaomixian.vflow.services
 
 import android.content.Context
 import android.content.Intent
+import com.chaomixian.vflow.core.module.ImageVariable
+import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.ui.common.OverlayUIActivity
 import kotlinx.coroutines.CompletableDeferred
 import java.io.Serializable
 
@@ -83,5 +86,32 @@ class ExecutionUIService(private val context: Context) {
             putExtra("workflow_list", workflowInfo as Serializable)
         }
         return startActivityAndAwaitResult(intent).await() as? String
+    }
+
+    /**
+     * 新增：挂起函数，用于请求系统分享。
+     * @param content 要分享的内容（文本或图片变量）。
+     * @return 分享是否成功启动。
+     */
+    suspend fun requestShare(content: Any?): Boolean? {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
+            putExtra("request_type", "share")
+            when(content) {
+                is TextVariable -> {
+                    putExtra("share_type", "text")
+                    putExtra("share_content", content.value)
+                }
+                is String -> {
+                    putExtra("share_type", "text")
+                    putExtra("share_content", content)
+                }
+                is ImageVariable -> {
+                    putExtra("share_type", "image")
+                    putExtra("share_content", content.uri)
+                }
+                else -> return false // 不支持的类型
+            }
+        }
+        return startActivityAndAwaitResult(intent).await() as? Boolean
     }
 }

@@ -1,18 +1,23 @@
 package com.chaomixian.vflow.ui.common
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.widget.EditText
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import java.io.File
 import java.util.*
+import android.widget.Toast
 
 class OverlayUIActivity : AppCompatActivity() {
 
@@ -54,9 +59,59 @@ class OverlayUIActivity : AppCompatActivity() {
                 val workflows = intent.getSerializableExtra("workflow_list") as? Map<String, String>
                 workflows?.let { showWorkflowChooserDialog(it) } ?: finishWithError()
             }
+            // 新增：处理分享请求
+            "share" -> {
+                handleShareRequest()
+            }
             else -> finishWithError()
         }
     }
+
+    private fun handleShareRequest() {
+        val shareType = intent.getStringExtra("share_type")
+        val shareContent = intent.getStringExtra("share_content")
+
+        if (shareContent.isNullOrEmpty()) {
+            finishWithError()
+            return
+        }
+
+        val shareIntent = Intent(Intent.ACTION_SEND)
+
+        when(shareType) {
+            "text" -> {
+                shareIntent.type = "text/plain"
+                shareIntent.putExtra(Intent.EXTRA_TEXT, shareContent)
+            }
+            "image" -> {
+                try {
+                    val imageFile = File(java.net.URI(shareContent))
+                    val authority = "$packageName.provider"
+                    val safeUri = FileProvider.getUriForFile(this, authority, imageFile)
+
+                    shareIntent.type = contentResolver.getType(safeUri)
+                    shareIntent.putExtra(Intent.EXTRA_STREAM, safeUri)
+                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this, "分享图片失败: ${e.message}", Toast.LENGTH_LONG).show()
+                    finishWithError()
+                    return
+                }
+            }
+            else -> {
+                finishWithError()
+                return
+            }
+        }
+
+        // 创建一个选择器，让用户选择用哪个应用分享
+        val chooser = Intent.createChooser(shareIntent, "分享内容")
+        startActivity(chooser)
+        // 启动分享后，我们认为任务已完成，可以立即返回
+        complete(true)
+    }
+
 
     private fun showWorkflowChooserDialog(workflows: Map<String, String>) {
         val items = workflows.values.toTypedArray()

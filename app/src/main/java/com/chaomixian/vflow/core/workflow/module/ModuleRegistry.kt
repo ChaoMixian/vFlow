@@ -77,5 +77,6 @@ object ModuleRegistry {
         register(LaunchAppModule())
         register(GetClipboardModule())
         register(SetClipboardModule())
+        register(ShareModule())
     }
 }
