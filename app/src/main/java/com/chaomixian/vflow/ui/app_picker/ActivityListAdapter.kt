@@ -18,6 +18,7 @@ class ActivityListAdapter(
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val activityName: TextView = view.findViewById(R.id.activity_name)
         val activityLabel: TextView = view.findViewById(R.id.activity_label)
+        val activityWarning: TextView = view.findViewById(R.id.activity_warning)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -31,6 +32,7 @@ class ActivityListAdapter(
         if (position == 0) {
             holder.activityName.text = "启动应用"
             holder.activityLabel.visibility = View.GONE
+            holder.activityWarning.visibility = View.GONE // 隐藏警告
             // [修改] 为整个列表项设置点击事件
             holder.itemView.setOnClickListener { onItemClick("LAUNCH") }
             return
@@ -42,7 +44,15 @@ class ActivityListAdapter(
         holder.activityName.text = activity.name
         holder.activityLabel.text = activity.loadLabel(holder.itemView.context.packageManager).toString()
 
-        // [修改] 为整个列表项设置点击事件
+        // 检查 Activity 是否被导出，并据此显示/隐藏警告
+        if (activity.exported) {
+            holder.activityWarning.visibility = View.GONE
+        } else {
+            holder.activityWarning.visibility = View.VISIBLE
+        }
+
+
+        // 为整个列表项设置点击事件
         holder.itemView.setOnClickListener { onItemClick(activity.name) }
     }
 

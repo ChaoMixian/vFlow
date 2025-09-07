@@ -25,7 +25,7 @@ class ActivityPickerActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_activity_picker)
 
-        // [新增] 适配全面屏，为顶部栏添加内边距
+        // 适配全面屏，为顶部栏添加内边距
         val appBarLayout = findViewById<AppBarLayout>(R.id.app_bar_layout)
         ViewCompat.setOnApplyWindowInsetsListener(appBarLayout) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())

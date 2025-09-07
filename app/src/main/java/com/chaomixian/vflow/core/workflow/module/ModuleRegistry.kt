@@ -75,5 +75,7 @@ object ModuleRegistry {
         register(ToastModule())
         register(LuaModule())
         register(LaunchAppModule())
+        register(GetClipboardModule())
+        register(SetClipboardModule())
     }
 }

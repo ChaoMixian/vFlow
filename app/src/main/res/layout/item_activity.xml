@@ -23,4 +23,15 @@
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="?attr/colorOnSurfaceVariant"
         tools:text="vFlow"/>
+
+    <TextView
+        android:id="@+id/activity_warning"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="此 Activity 未导出，常规方式可能无法启动"
+        android:textAppearance="?attr/textAppearanceCaption"
+        android:textColor="?attr/colorError"
+        android:visibility="gone"
+        tools:visibility="visible"/>
 </LinearLayout>
