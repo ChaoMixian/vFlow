@@ -79,5 +79,9 @@ object ModuleRegistry {
         register(GetClipboardModule())
         register(SetClipboardModule())
         register(ShareModule())
+        register(SendNotificationModule())
+        register(WifiModule())
+        register(BluetoothModule())
+        register(BrightnessModule())
     }
 }

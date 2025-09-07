@@ -110,6 +110,10 @@ class PermissionActivity : BaseActivity() {
                     PermissionManager.OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
                     } else null
+                    // [修复] 添加对 WRITE_SETTINGS 权限的处理
+                    PermissionManager.WRITE_SETTINGS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))
+                    } else null
                     else -> null
                 }
                 intent?.let { appSettingsLauncher.launch(it) }

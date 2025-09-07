@@ -2,6 +2,8 @@ package com.chaomixian.vflow.permissions
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.text.TextUtils
@@ -43,6 +45,22 @@ object PermissionManager {
         type = PermissionType.RUNTIME
     )
 
+    // 新增：蓝牙权限 (Android 12+)
+    val BLUETOOTH = Permission(
+        id = Manifest.permission.BLUETOOTH_CONNECT,
+        name = "蓝牙权限",
+        description = "用于控制设备的蓝牙开关状态。",
+        type = PermissionType.RUNTIME
+    )
+
+    // 新增：修改系统设置权限
+    val WRITE_SETTINGS = Permission(
+        id = "vflow.permission.WRITE_SETTINGS",
+        name = "修改系统设置",
+        description = "用于调整屏幕亮度等系统级别的设置。",
+        type = PermissionType.SPECIAL
+    )
+
 
     /**
      * 获取单个权限的当前状态。
@@ -53,6 +71,11 @@ object PermissionManager {
             // 检查悬浮窗权限
             OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 Settings.canDrawOverlays(context)
+            } else {
+                true // 6.0以下版本默认授予
+            }
+            WRITE_SETTINGS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Settings.System.canWrite(context)
             } else {
                 true // 6.0以下版本默认授予
             }
@@ -71,6 +94,13 @@ object PermissionManager {
                 } else {
                     // 旧版本，检查旧的存储权限
                     ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+            }
+            BLUETOOTH.id -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                } else {
+                    true // 12以下版本不需要此运行时权限
                 }
             }
             else -> {
