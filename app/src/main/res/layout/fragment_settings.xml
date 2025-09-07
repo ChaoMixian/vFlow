@@ -83,6 +83,19 @@
                     android:text="@string/settings_switch_hide_connections_desc"
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_progress_notification"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/settings_switch_progress_notification" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/settings_switch_progress_notification_desc"
+                    android:textAppearance="?attr/textAppearanceBodySmall" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

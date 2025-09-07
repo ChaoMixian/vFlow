@@ -13,6 +13,8 @@
     <string name="settings_switch_expert_mode">专家模式</string>
     <string name="settings_switch_expert_mode_desc">启用后，将显示用于高级脚本和操作的模块。</string>
     <string name="settings_switch_hide_connections">隐藏连接线</string>
+    <string name="settings_switch_progress_notification">显示执行进度通知</string>
+    <string name="settings_switch_progress_notification_desc">当工作流在后台执行时，在状态栏显示一个进度通知。</string>
     <string name="settings_switch_hide_connections_desc">在工作流编辑器中，隐藏连接点和输出行，以获得更简洁的视图。</string>
 
     <string name="settings_section_permissions">权限管理器</string>

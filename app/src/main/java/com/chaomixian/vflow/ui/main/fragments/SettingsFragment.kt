@@ -1,3 +1,5 @@
+// 文件：SettingsFragment.kt
+// 描述：主界面中的“设置”屏幕。
 package com.chaomixian.vflow.ui.main.fragments
 
 import android.content.Context
@@ -12,9 +14,6 @@ import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.materialswitch.MaterialSwitch
-
-// 文件：SettingsFragment.kt
-// 描述：主界面中的“设置”屏幕。
 
 /**
  * “设置” Fragment。
@@ -43,6 +42,14 @@ class SettingsFragment : Fragment() {
         hideConnectionsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("hideConnections", isChecked).apply()
         }
+
+        // 进度通知开关逻辑
+        val progressNotificationSwitch = view.findViewById<MaterialSwitch>(R.id.switch_progress_notification)
+        progressNotificationSwitch.isChecked = prefs.getBoolean("progressNotificationEnabled", true) // 默认开启
+        progressNotificationSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("progressNotificationEnabled", isChecked).apply()
+        }
+
 
         // 权限管理器入口卡片点击逻辑
         view.findViewById<MaterialCardView>(R.id.card_permission_manager).setOnClickListener {

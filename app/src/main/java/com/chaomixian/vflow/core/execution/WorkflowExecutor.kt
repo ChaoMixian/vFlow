@@ -9,6 +9,8 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.logic.LOOP_START_ID
+import com.chaomixian.vflow.services.ExecutionNotificationManager
+import com.chaomixian.vflow.services.ExecutionNotificationState
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.*
@@ -37,12 +39,7 @@ object WorkflowExecutor {
     fun stopExecution(workflowId: String) {
         runningWorkflows[workflowId]?.let {
             it.cancel() // 取消 Coroutine Job
-            runningWorkflows.remove(workflowId)
             Log.d("WorkflowExecutor", "工作流 '$workflowId' 已被用户手动停止。")
-            // 发送取消状态的广播
-            executorScope.launch {
-                ExecutionStateBus.postState(ExecutionState.Cancelled(workflowId))
-            }
         }
     }
 
@@ -63,6 +60,8 @@ object WorkflowExecutor {
             // 广播开始执行的状态
             ExecutionStateBus.postState(ExecutionState.Running(workflow.id))
             Log.d("WorkflowExecutor", "开始执行工作流: ${workflow.name} (ID: ${workflow.id})")
+            ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
+
 
             try {
                 // 创建并注册执行期间所需的服务
@@ -82,6 +81,12 @@ object WorkflowExecutor {
                         pc++
                         continue
                     }
+
+                    // 更新进度通知
+                    val progress = (pc * 100) / workflow.steps.size
+                    val progressMessage = "步骤 ${pc + 1}/${workflow.steps.size}: ${module.metadata.name}"
+                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(progress, progressMessage))
+
 
                     val executionContext = ExecutionContext(
                         applicationContext = context.applicationContext,
@@ -111,8 +116,10 @@ object WorkflowExecutor {
 
 
                     Log.d("WorkflowExecutor", "[$pc] -> 执行: ${module.metadata.name}")
-                    val result = module.execute(executionContext) { progress ->
-                        Log.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progress.message}")
+                    val result = module.execute(executionContext) { progressUpdate ->
+                        Log.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progressUpdate.message}")
+                        // 在模块内部进度更新时，也刷新通知
+                        ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(progress, progressUpdate.message))
                     }
 
                     when (result) {
@@ -124,6 +131,7 @@ object WorkflowExecutor {
                         }
                         is ExecutionResult.Failure -> {
                             Log.e("WorkflowExecutor", "模块执行失败: ${result.errorTitle} - ${result.errorMessage}")
+                            ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("失败: ${result.errorMessage}"))
                             break // 终止工作流
                         }
                         is ExecutionResult.Signal -> {
@@ -149,18 +157,33 @@ object WorkflowExecutor {
                         }
                     }
                 }
+                // 如果循环正常结束（没有break），则显示完成通知
+                if (pc >= workflow.steps.size) {
+                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Completed("执行完毕"))
+                }
+
             } catch (e: CancellationException) {
                 Log.d("WorkflowExecutor", "工作流 '${workflow.name}' 已被取消。")
-                // 状态已经在 stopExecution 中发送
+                ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("已停止"))
+                // 状态在 finally 块中发送
             } catch (e: Exception) {
                 Log.e("WorkflowExecutor", "工作流 '${workflow.name}' 执行时发生未捕获的异常。", e)
+                ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("执行异常"))
             } finally {
-                // 确保 job 从 map 中移除，并广播最终状态
+                // 广播最终状态
+                val wasCancelled = !isActive
                 if (runningWorkflows.containsKey(workflow.id)) {
                     runningWorkflows.remove(workflow.id)
-                    ExecutionStateBus.postState(ExecutionState.Finished(workflow.id))
+                    if(wasCancelled) {
+                        ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id))
+                    } else {
+                        ExecutionStateBus.postState(ExecutionState.Finished(workflow.id))
+                    }
                     Log.d("WorkflowExecutor", "工作流 '${workflow.name}' 执行完毕。")
                 }
+                // 延迟后取消通知，给用户时间查看最终状态
+                delay(3000)
+                ExecutionNotificationManager.cancelNotification()
             }
         }
         // 将 Job 实例存入 map
