@@ -1,14 +1,22 @@
 package com.chaomixian.vflow.ui.common
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
+import android.view.LayoutInflater
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import coil.load
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.google.android.material.datepicker.MaterialDatePicker
@@ -17,7 +25,6 @@ import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import java.io.File
 import java.util.*
-import android.widget.Toast
 
 class OverlayUIActivity : AppCompatActivity() {
 
@@ -45,6 +52,14 @@ class OverlayUIActivity : AppCompatActivity() {
                 val content = intent.getStringExtra("content") ?: ""
                 showQuickViewDialog(title ?: "快速查看", content)
             }
+            "quick_view_image" -> {
+                val imageUri = intent.getStringExtra("content")
+                if (imageUri != null) {
+                    showQuickViewImageDialog(title ?: "图片预览", imageUri)
+                } else {
+                    finishWithError()
+                }
+            }
             "input" -> {
                 val inputType = intent.getStringExtra("input_type")
                 when (inputType) {
@@ -59,7 +74,6 @@ class OverlayUIActivity : AppCompatActivity() {
                 val workflows = intent.getSerializableExtra("workflow_list") as? Map<String, String>
                 workflows?.let { showWorkflowChooserDialog(it) } ?: finishWithError()
             }
-            // 新增：处理分享请求
             "share" -> {
                 handleShareRequest()
             }
@@ -67,12 +81,55 @@ class OverlayUIActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 更新：显示包含图片的对话框，并重写按钮行为以防止意外关闭。
+     */
+    private fun showQuickViewImageDialog(title: String, imageUriString: String) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_image_view, null)
+        val imageView = dialogView.findViewById<ImageView>(R.id.image_view_preview)
+
+        val imageUri = Uri.parse(imageUriString)
+        imageView.load(imageUri) {
+            crossfade(true)
+            placeholder(R.drawable.rounded_cached_24)
+            error(R.drawable.rounded_close_small_24)
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setView(dialogView)
+            .setPositiveButton("关闭") { _, _ -> complete(true) }
+            .setNeutralButton("复制", null) // 占位，稍后重写
+            .setNegativeButton("分享", null) // 占位，稍后重写
+            .setOnCancelListener { cancel() }
+            .show()
+
+        // **核心修复**：在对话框显示后，获取按钮并设置我们自己的点击监听器
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            copyImageToClipboard(imageUriString)
+            // 这里不调用 dialog.dismiss()，所以对话框会保持打开
+        }
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+            shareContent("image", imageUriString)
+            // 这里也不调用 dialog.dismiss()
+        }
+    }
+
+
     private fun handleShareRequest() {
         val shareType = intent.getStringExtra("share_type")
         val shareContent = intent.getStringExtra("share_content")
+        shareContent(shareType, shareContent)
+        // 启动分享后，我们认为任务已完成，可以立即返回
+        complete(true)
+    }
 
+    /**
+     * 抽离出通用的分享逻辑
+     */
+    private fun shareContent(shareType: String?, shareContent: String?) {
         if (shareContent.isNullOrEmpty()) {
-            finishWithError()
+            Toast.makeText(this, "没有可分享的内容", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -95,21 +152,34 @@ class OverlayUIActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     e.printStackTrace()
                     Toast.makeText(this, "分享图片失败: ${e.message}", Toast.LENGTH_LONG).show()
-                    finishWithError()
                     return
                 }
             }
             else -> {
-                finishWithError()
+                Toast.makeText(this, "不支持的分享类型", Toast.LENGTH_SHORT).show()
                 return
             }
         }
 
-        // 创建一个选择器，让用户选择用哪个应用分享
         val chooser = Intent.createChooser(shareIntent, "分享内容")
         startActivity(chooser)
-        // 启动分享后，我们认为任务已完成，可以立即返回
-        complete(true)
+    }
+
+    /**
+     * 新增：将图片URI复制到剪贴板的逻辑
+     */
+    private fun copyImageToClipboard(imageUriString: String) {
+        try {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val imageFile = File(java.net.URI(imageUriString))
+            val authority = "$packageName.provider"
+            val safeUri = FileProvider.getUriForFile(this, authority, imageFile)
+            val clip = ClipData.newUri(contentResolver, "vFlow Image", safeUri)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "图片已复制到剪贴板", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "复制图片失败: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
 
@@ -126,14 +196,31 @@ class OverlayUIActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * 更新：为文本快速查看对话框添加复制和分享按钮，并重写行为
+     */
     private fun showQuickViewDialog(title: String, content: String) {
-        MaterialAlertDialogBuilder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setMessage(content)
             .setPositiveButton("关闭") { _, _ -> complete(true) }
-            .setOnCancelListener { complete(true) }
+            .setNeutralButton("复制", null) // 占位
+            .setNegativeButton("分享", null) // 占位
+            .setOnCancelListener { cancel() }
             .show()
+
+        // **核心修复**：重写按钮监听器
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("vFlow Text", content)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(applicationContext, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+        }
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+            shareContent("text", content)
+        }
     }
+
 
     private fun showTextInputDialog(title: String, type: String?) {
         val editText = EditText(this).apply {

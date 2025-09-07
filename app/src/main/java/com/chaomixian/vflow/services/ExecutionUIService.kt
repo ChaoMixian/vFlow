@@ -64,6 +64,21 @@ class ExecutionUIService(private val context: Context) {
     }
 
     /**
+     * 新增：挂起函数，用于显示快速查看图片窗口。
+     * @param title 窗口标题。
+     * @param imageUri 要显示的图片的URI字符串。
+     */
+    suspend fun showQuickViewImage(title: String, imageUri: String) {
+        val intent = Intent(context, com.chaomixian.vflow.ui.common.OverlayUIActivity::class.java).apply {
+            putExtra("request_type", "quick_view_image")
+            putExtra("title", title)
+            putExtra("content", imageUri)
+        }
+        startActivityAndAwaitResult(intent).await()
+    }
+
+
+    /**
      * 新增：挂起函数，用于请求用户选择一张图片。
      * @return 用户选择的图片的URI字符串，如果用户取消则返回null。
      */

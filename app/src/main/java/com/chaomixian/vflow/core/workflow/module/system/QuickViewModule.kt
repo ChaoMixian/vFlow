@@ -72,21 +72,26 @@ class QuickViewModule : BaseModule() {
         // 获取要显示的内容，优先从魔法变量
         val content = context.magicVariables["content"] ?: context.variables["content"]
 
-        // 将任何类型的内容转换为可读的字符串
-        val contentAsString = when (content) {
-            is TextVariable -> content.value
-            is NumberVariable -> content.value.toString()
-            is BooleanVariable -> content.value.toString()
-            is DictionaryVariable -> content.value.entries.joinToString("\n") { "${it.key}: ${it.value}" }
-            is ListVariable -> content.value.joinToString("\n")
-            null -> "[空值]"
-            else -> content.toString()
-        }
-
         onProgress(ProgressUpdate("正在显示内容..."))
 
-        // 调用UI服务显示内容，并等待用户关闭悬浮窗
-        uiService.showQuickView("快速查看", contentAsString)
+        // **核心修改**：检查内容是否为图片变量
+        if (content is ImageVariable) {
+            // 如果是图片，调用专门显示图片的服务
+            uiService.showQuickViewImage("快速查看", content.uri)
+        } else {
+            // 否则，将内容转换为字符串并显示
+            val contentAsString = when (content) {
+                is TextVariable -> content.value
+                is NumberVariable -> content.value.toString()
+                is BooleanVariable -> content.value.toString()
+                is DictionaryVariable -> content.value.entries.joinToString("\n") { "${it.key}: ${it.value}" }
+                is ListVariable -> content.value.joinToString("\n")
+                null -> "[空值]"
+                else -> content.toString()
+            }
+            // 调用UI服务显示文本内容，并等待用户关闭悬浮窗
+            uiService.showQuickView("快速查看", contentAsString)
+        }
 
         onProgress(ProgressUpdate("用户已关闭查看窗口"))
         return ExecutionResult.Success()
