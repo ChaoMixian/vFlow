@@ -80,7 +80,7 @@
         </GridLayout>
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_service_status"
+            android:id="@+id/card_permission_health"
             style="?attr/materialCardViewFilledStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -96,10 +96,10 @@
                 android:padding="16dp">
 
                 <ImageView
-                    android:id="@+id/icon_service_status"
+                    android:id="@+id/icon_permission_health"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:src="@drawable/ic_settings"
+                    android:src="@drawable/ic_shield"
                     app:tint="?attr/colorPrimary" />
 
                 <LinearLayout
@@ -110,20 +110,55 @@
                     android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/text_service_status_title"
+                        android:id="@+id/text_permission_health_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="核心服务"
+                        android:text="权限健康检查"
                         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                     <TextView
-                        android:id="@+id/text_service_status_desc"
+                        android:id="@+id/text_permission_health_desc"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:textAppearance="?attr/textAppearanceBodyMedium"
-                        tools:text="运行中" />
+                        tools:text="状态：良好" />
                 </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_recent_logs"
+            style="?attr/materialCardViewFilledStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="24dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="20dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:text="最近日志"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <LinearLayout
+                    android:id="@+id/container_recent_logs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -133,6 +168,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            app:cardCornerRadius="24dp"
             android:visibility="gone"
             tools:visibility="visible">
 

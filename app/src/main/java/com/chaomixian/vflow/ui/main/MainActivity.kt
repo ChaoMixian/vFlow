@@ -1,4 +1,4 @@
-// 文件：MainActivity.kt
+// 文件：main/java/com/chaomixian/vflow/ui/main/MainActivity.kt
 // 描述：应用的主活动，承载底部导航和各个主页面 Fragment。
 package com.chaomixian.vflow.ui.main
 
@@ -7,11 +7,14 @@ import android.view.View
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.logging.ExecutionLogger
+import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.ui.common.BaseActivity
@@ -38,6 +41,10 @@ class MainActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         ModuleRegistry.initialize() // 初始化模块注册表
         ExecutionNotificationManager.initialize(this) // 初始化通知管理器
+        // [新增] 初始化日志管理器和执行监听器
+        LogManager.initialize(applicationContext)
+        ExecutionLogger.initialize(applicationContext, lifecycleScope)
+
         setContentView(R.layout.activity_main)
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
