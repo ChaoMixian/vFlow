@@ -1,5 +1,3 @@
-// 文件: main/java/com/chaomixian/vflow/services/TriggerService.kt
-// 描述: 已通过重构核心逻辑，最终修复所有已知的单击/双击冲突问题。
 package com.chaomixian.vflow.services
 
 import android.app.Notification
@@ -18,7 +16,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
-import com.chaomixian.vflow.core.workflow.model.Workflow
 import kotlinx.coroutines.*
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -34,15 +31,23 @@ class TriggerService : Service() {
         val isSlider: Boolean = false
     )
 
+    // 按键状态枚举
+    private enum class KeyState {
+        IDLE,           // 空闲状态
+        WAIT_FOR_DOUBLE, // 等待双击状态
+        PROCESSING      // 处理中状态
+    }
+
     private lateinit var workflowManager: WorkflowManager
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var keyEventJob: Job? = null
 
     private val resolvedTriggers = CopyOnWriteArrayList<ResolvedKeyEventTrigger>()
 
-    // --- 单按键状态管理 ---
-    private val singleClickJobs = ConcurrentHashMap<String, Job>()
-    private val lastPressTimestampMap = ConcurrentHashMap<String, Long>()
+    // --- 重新设计的按键状态管理 ---
+    private val keyStates = ConcurrentHashMap<String, KeyState>()
+    private val pendingClickJobs = ConcurrentHashMap<String, Job>()
+    private val firstClickTimestamps = ConcurrentHashMap<String, Long>()
     private val doubleClickThreshold = 400L // 毫秒
     private val longPressThreshold = 500L  // 毫秒
 
@@ -100,7 +105,7 @@ class TriggerService : Service() {
     }
 
     /**
-     * [最终修复] 采用全新的状态机逻辑，彻底根除单击/双击的连锁误判问题。
+     * 重新设计的按键事件处理逻辑，使用清晰的状态机模式
      */
     private fun handleKeyEvent(intent: Intent) {
         val device = intent.getStringExtra("device") ?: return
@@ -111,51 +116,103 @@ class TriggerService : Service() {
         val uniqueKey = "$device-$keyCode"
 
         if (eventType == "UP") {
-            // 1. 长按事件处理 (最高优先级)
+            // 1. 首先检查是否为长按事件
             if (pressDuration >= longPressThreshold) {
-                Log.d(TAG, "长按事件 for $uniqueKey")
-                singleClickJobs[uniqueKey]?.cancel()
-                lastPressTimestampMap.remove(uniqueKey)
+                Log.d(TAG, "长按事件 for $uniqueKey (${pressDuration}ms)")
+                resetKeyState(uniqueKey)
                 executeMatchingWorkflows(device, keyCode, "长按")
                 return
             }
 
-            // 2. 短按(立即触发)事件处理
-            executeMatchingWorkflows(device, keyCode, "短按 (立即触发)")
-
-            // 3. 决定性的单击/双击互斥逻辑
+            // 2. 处理短按事件的状态机逻辑
+            val currentState = keyStates[uniqueKey] ?: KeyState.IDLE
             val now = System.currentTimeMillis()
-            val lastPressTime = lastPressTimestampMap[uniqueKey]
 
-            // 检查这是否是一次双击的第二次点击
-            if (lastPressTime != null && (now - lastPressTime <= doubleClickThreshold)) {
-                // --- 确认是双击 ---
-                Log.d(TAG, "双击事件 for $uniqueKey")
-                // 1. 取消之前为第一次点击安排的单击任务
-                singleClickJobs[uniqueKey]?.cancel()
-                // 2. 立即清除时间戳，将状态机彻底重置为“初始状态”，这是防止连锁反应的关键！
-                lastPressTimestampMap.remove(uniqueKey)
-                // 3. 执行双击工作流
-                executeMatchingWorkflows(device, keyCode, "双击")
-                // 4. 任务已完成，必须立即返回，不再将此次点击视为任何其他操作的开始
-                return
-            }
+            when (currentState) {
+                KeyState.IDLE -> {
+                    // 第一次点击
+                    Log.d(TAG, "第一次点击 for $uniqueKey")
+                    keyStates[uniqueKey] = KeyState.WAIT_FOR_DOUBLE
+                    firstClickTimestamps[uniqueKey] = now
 
-            // --- 如果不是双击，则这是一次潜在的单击 ---
-            // 1. 记录下这次点击的时间，为下一次可能的双击做准备
-            lastPressTimestampMap[uniqueKey] = now
-            // 2. 安排一个延迟任务。如果这个任务在指定时间内没有被下一次点击（即双击）取消，
-            //    那么它就是一个确定的、独立的单击事件。
-            singleClickJobs[uniqueKey] = serviceScope.launch {
-                delay(doubleClickThreshold)
-                if (isActive) {
-                    Log.d(TAG, "单击事件 for $uniqueKey")
-                    executeMatchingWorkflows(device, keyCode, "单击")
-                    // 单击任务执行完成后，同样清除时间戳，保持状态干净
-                    lastPressTimestampMap.remove(uniqueKey)
+                    // 检查是否需要立即触发短按
+                    if (hasActionType(device, keyCode, "短按 (立即触发)")) {
+                        executeMatchingWorkflows(device, keyCode, "短按 (立即触发)")
+                    }
+
+                    // 启动延迟任务，等待可能的第二次点击
+                    pendingClickJobs[uniqueKey] = serviceScope.launch {
+                        delay(doubleClickThreshold)
+                        if (isActive && keyStates[uniqueKey] == KeyState.WAIT_FOR_DOUBLE) {
+                            Log.d(TAG, "确认单击事件 for $uniqueKey")
+                            executeMatchingWorkflows(device, keyCode, "单击")
+                            resetKeyState(uniqueKey)
+                        }
+                    }
+                }
+
+                KeyState.WAIT_FOR_DOUBLE -> {
+                    // 第二次点击，检查是否在双击时间窗口内
+                    val firstClickTime = firstClickTimestamps[uniqueKey] ?: 0
+                    if (now - firstClickTime <= doubleClickThreshold) {
+                        Log.d(TAG, "确认双击事件 for $uniqueKey")
+                        keyStates[uniqueKey] = KeyState.PROCESSING
+
+                        // 取消单击任务
+                        pendingClickJobs[uniqueKey]?.cancel()
+
+                        // 执行双击工作流
+                        executeMatchingWorkflows(device, keyCode, "双击")
+
+                        // 重置状态
+                        resetKeyState(uniqueKey)
+                    } else {
+                        // 超出双击时间窗口，当作新的第一次点击处理
+                        Log.d(TAG, "双击超时，当作新的第一次点击 for $uniqueKey")
+                        pendingClickJobs[uniqueKey]?.cancel()
+                        keyStates[uniqueKey] = KeyState.WAIT_FOR_DOUBLE
+                        firstClickTimestamps[uniqueKey] = now
+
+                        if (hasActionType(device, keyCode, "短按 (立即触发)")) {
+                            executeMatchingWorkflows(device, keyCode, "短按 (立即触发)")
+                        }
+
+                        pendingClickJobs[uniqueKey] = serviceScope.launch {
+                            delay(doubleClickThreshold)
+                            if (isActive && keyStates[uniqueKey] == KeyState.WAIT_FOR_DOUBLE) {
+                                Log.d(TAG, "确认单击事件 for $uniqueKey")
+                                executeMatchingWorkflows(device, keyCode, "单击")
+                                resetKeyState(uniqueKey)
+                            }
+                        }
+                    }
+                }
+
+                KeyState.PROCESSING -> {
+                    // 正在处理中，忽略额外的点击
+                    Log.d(TAG, "正在处理中，忽略点击 for $uniqueKey")
                 }
             }
         }
+    }
+
+    /**
+     * 检查是否有指定动作类型的触发器
+     */
+    private fun hasActionType(devicePath: String, keyCode: String, actionType: String): Boolean {
+        return resolvedTriggers.any {
+            it.devicePath == devicePath && it.keyCode == keyCode && it.actionType == actionType
+        }
+    }
+
+    /**
+     * 重置按键状态
+     */
+    private fun resetKeyState(uniqueKey: String) {
+        keyStates.remove(uniqueKey)
+        firstClickTimestamps.remove(uniqueKey)
+        pendingClickJobs[uniqueKey]?.cancel()
+        pendingClickJobs.remove(uniqueKey)
     }
 
     private fun handleSliderEvent(intent: Intent) {
@@ -210,11 +267,48 @@ class TriggerService : Service() {
 
     private fun reloadKeyEventTriggers() {
         keyEventJob?.cancel()
-        Log.d(TAG, "正在停止旧的按键监听任务...")
+        Log.d(TAG, "请求重新加载触发器，正在停止所有旧的监听脚本...")
 
         keyEventJob = serviceScope.launch {
+            // --- 新增的、更可靠的停止和清理逻辑 ---
+            try {
+                // 1. 扫描所有可能的 PID 文件
+                val pidFiles = cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }
+
+                if (pidFiles != null && pidFiles.isNotEmpty()) {
+                    Log.d(TAG, "找到 ${pidFiles.size} 个旧的 PID 文件，正在停止相关脚本进程...")
+                    pidFiles.forEach { pidFile ->
+                        try {
+                            val pid = pidFile.readText().trim()
+                            if (pid.isNotEmpty()) {
+                                Log.d(TAG, "正在停止 PID: $pid (来自 ${pidFile.name})")
+                                // 2. 使用 kill 命令终止脚本进程，这将触发脚本内的 trap 来删除 pid 文件
+                                ShizukuManager.execShellCommand(applicationContext, "kill $pid")
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "处理 PID 文件 ${pidFile.name} 时出错: ", e)
+                        }
+                    }
+                    // 3. 等待一小段时间让 trap 命令执行清理
+                    delay(500)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "扫描或停止旧监听进程时出错: ", e)
+            }
+
+            // 4. 作为最终保险措施，强制清理所有残留的 PID 文件
+            try {
+                cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }?.forEach { it.delete() }
+                Log.d(TAG, "已强制清理所有残留的 PID 文件。")
+            } catch (e: Exception) {
+                Log.e(TAG, "强制清理 PID 文件时出错: ", e)
+            }
+            // 同样，保留 killall 作为备用方案
             ShizukuManager.execShellCommand(applicationContext, "killall getevent")
-            delay(500)
+            // --- 清理逻辑结束 ---
+
+            // 在启动新脚本前稍作等待
+            delay(200)
 
             val keyEventWorkflows = workflowManager.findKeyEventTriggerWorkflows()
             resolvedTriggers.clear()
@@ -235,8 +329,9 @@ class TriggerService : Service() {
                         Log.d(TAG, "解析到 '一加 13T' 预设, 使用设备路径: $devicePath")
                     }
                     "一加 13 (三段式)" -> {
-                        val deviceName = (config["_internal_device_name"] as? String) ?: "oplus,hall_tri_state_key"
-                        devicePath = findDeviceByName(deviceName)
+//                        val deviceName = (config["_internal_device_name"] as? String) ?: "oplus,hall_tri_state_key"
+//                        devicePath = findDeviceByName(deviceName)
+                        devicePath = "/dev/input/event6"
                         keyCode = (config["_internal_key_code"] as? String) ?: "KEY_F3"
                         isSlider = true
                         Log.d(TAG, "解析到 '一加 13' 预设, 查找到设备路径: $devicePath")
@@ -264,13 +359,15 @@ class TriggerService : Service() {
             val triggersByDevice = resolvedTriggers.groupBy { it.devicePath }
             Log.d(TAG, "找到 ${triggersByDevice.size} 个需要监听的输入设备。")
 
+            val cacheDirPath = cacheDir.absolutePath
+
             triggersByDevice.forEach { (path, triggers) ->
                 val isSlider = triggers.any { it.isSlider }
                 val script = if (isSlider) {
-                    createSliderScriptForDevice(path)
+                    createSliderScriptForDevice(path, cacheDirPath)
                 } else {
                     val keyCodes = triggers.map { it.keyCode }.distinct()
-                    createShellScriptForDevice(path, keyCodes)
+                    createShellScriptForDevice(path, keyCodes, cacheDirPath)
                 }
 
                 if (script.isNotBlank()) {
@@ -279,7 +376,7 @@ class TriggerService : Service() {
                             val scriptFile = File(cacheDir, "key_listener_${path.replace('/', '_')}.sh")
                             scriptFile.writeText(script)
                             scriptFile.setExecutable(true)
-                            Log.d(TAG, "为设备 $path 创建脚本: ${scriptFile.absolutePath}")
+                            Log.d(TAG, "为设备 $path 创建并启动新脚本: ${scriptFile.absolutePath}")
                             ShizukuManager.execShellCommand(applicationContext, "sh ${scriptFile.absolutePath}")
                         } catch (e: Exception) {
                             if (e !is CancellationException) {
@@ -298,14 +395,33 @@ class TriggerService : Service() {
         return if (result.startsWith("/dev/input/event")) result.trim() else null
     }
 
-    private fun createSliderScriptForDevice(device: String): String {
+    private fun createSliderScriptForDevice(device: String, cacheDir: String): String {
         val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
         val getModeCommand = "case \$(settings get global three_keys_mode) in 1) echo 静音;; 2) echo 振动;; 3) echo 响铃;; *) echo 未知;; esac"
+        val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
+        val pidFilePath = "$cacheDir/$pidFileName"
 
         return """
             #!/system/bin/sh
             DEVICE="$device"
             SERVICE_COMPONENT="$serviceComponent"
+            PID_FILE="$pidFilePath"
+
+            # --- PID 机制开始 ---
+            if [ -f "${'$'}PID_FILE" ]; then
+                EXISTING_PID=$ (cat "${'$'}PID_FILE")
+                if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
+                    echo "监听器 (${'$'}DEVICE) 已在运行 (PID: ${'$'}EXISTING_PID)，新脚本退出。"
+                    exit 0
+                else
+                    echo "发现无效的 PID 文件，已删除。"
+                    rm -f "${'$'}PID_FILE"
+                fi
+            fi
+
+            echo "$$" > "${'$'}PID_FILE"
+            trap 'rm -f "${'$'}PID_FILE"; exit' INT TERM EXIT
+            # --- PID 机制结束 ---
             
             CURRENT_MODE=`$getModeCommand`
             am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es slider_mode "${'$'}CURRENT_MODE"
@@ -320,16 +436,35 @@ class TriggerService : Service() {
         """.trimIndent()
     }
 
-    private fun createShellScriptForDevice(device: String, keyCodes: List<String>): String {
+    private fun createShellScriptForDevice(device: String, keyCodes: List<String>, cacheDir: String): String {
         if (keyCodes.isEmpty()) return ""
         val grepPattern = keyCodes.joinToString("|")
         val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
+        val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
+        val pidFilePath = "$cacheDir/$pidFileName"
 
         return """
             #!/system/bin/sh
             DEVICE="$device"
             GREP_PATTERN="$grepPattern"
             SERVICE_COMPONENT="$serviceComponent"
+            PID_FILE="$pidFilePath"
+
+            # --- PID 机制开始 ---
+            if [ -f "${'$'}PID_FILE" ]; then
+                EXISTING_PID=$ (cat "${'$'}PID_FILE")
+                if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
+                    echo "监听器 (${'$'}DEVICE) 已在运行 (PID: ${'$'}EXISTING_PID)，新脚本退出。"
+                    exit 0
+                else
+                    echo "发现无效的 PID 文件，已删除。"
+                    rm -f "${'$'}PID_FILE"
+                fi
+            fi
+
+            echo "$$" > "${'$'}PID_FILE"
+            trap 'rm -f "${'$'}PID_FILE"; exit' INT TERM EXIT
+            # --- PID 机制结束 ---
 
             while true; do
               getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
@@ -370,6 +505,15 @@ class TriggerService : Service() {
         super.onDestroy()
         serviceScope.cancel()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(workflowUpdateReceiver)
+
+        // 清理所有状态
+        keyStates.clear()
+        firstClickTimestamps.clear()
+        pendingClickJobs.values.forEach { it.cancel() }
+        pendingClickJobs.clear()
+        sliderDebounceJobs.values.forEach { it.cancel() }
+        sliderDebounceJobs.clear()
+
         Log.d(TAG, "TriggerService 已销毁。")
     }
 
