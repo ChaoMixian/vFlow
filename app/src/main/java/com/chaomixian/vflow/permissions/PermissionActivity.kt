@@ -138,6 +138,10 @@ class PermissionActivity : BaseActivity() {
                     PermissionManager.WRITE_SETTINGS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))
                     } else null
+                    // [新增] 添加对电池优化权限的处理
+                    PermissionManager.IGNORE_BATTERY_OPTIMIZATIONS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
+                    } else null
                     else -> null
                 }
                 intent?.let { appSettingsLauncher.launch(it) }

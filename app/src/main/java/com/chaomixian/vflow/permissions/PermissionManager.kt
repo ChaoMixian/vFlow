@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
 import androidx.core.app.NotificationManagerCompat
@@ -72,6 +73,14 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
+    // [新增] 定义电池优化白名单权限
+    val IGNORE_BATTERY_OPTIMIZATIONS = Permission(
+        id = "vflow.permission.IGNORE_BATTERY_OPTIMIZATIONS",
+        name = "后台运行权限",
+        description = "将应用加入电池优化白名单，确保后台触发器（如按键监听）能长时间稳定运行。",
+        type = PermissionType.SPECIAL
+    )
+
 
     /**
      * 获取单个权限的当前状态。
@@ -89,6 +98,15 @@ object PermissionManager {
                 Settings.System.canWrite(context)
             } else {
                 true // 6.0以下版本默认授予
+            }
+            // [新增] 检查电池优化
+            IGNORE_BATTERY_OPTIMIZATIONS.id -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+                    pm.isIgnoringBatteryOptimizations(context.packageName)
+                } else {
+                    true // 6.0以下版本无此限制
+                }
             }
             NOTIFICATIONS.id -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -138,9 +156,10 @@ object PermissionManager {
      * 获取应用中所有模块定义的所有权限。
      */
     fun getAllRegisteredPermissions(): List<Permission> {
-        return ModuleRegistry.getAllModules()
+        // [新增] 将电池优化权限也加入到权限管理器中
+        return (ModuleRegistry.getAllModules()
             .map { it.requiredPermissions }
-            .flatten()
+            .flatten() + IGNORE_BATTERY_OPTIMIZATIONS)
             .distinct()
     }
 

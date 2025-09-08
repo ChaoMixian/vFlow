@@ -2,6 +2,7 @@
 // 描述：应用的主活动，承载底部导航和各个主页面 Fragment。
 package com.chaomixian.vflow.ui.main
 
+import android.content.Intent // [新增]
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.ViewCompat
@@ -18,6 +19,7 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ShizukuManager
+import com.chaomixian.vflow.services.TriggerService // [新增]
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -47,6 +49,9 @@ class MainActivity : BaseActivity() {
         ExecutionLogger.initialize(applicationContext, lifecycleScope)
         // 应用启动时，立即发起 Shizuku 预连接
         ShizukuManager.proactiveConnect(applicationContext)
+        // [新增] 启动后台触发器服务
+        startService(Intent(this, TriggerService::class.java))
+
 
         setContentView(R.layout.activity_main)
 

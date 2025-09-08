@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:shizuku="http://schemas.android.com/apk/res-auto">
 
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -93,6 +97,13 @@
         </activity>
 
         <service
+            android:name=".services.TriggerService"
+            android:exported="false"
+            android:permission="android.permission.FOREGROUND_SERVICE"
+            android:foregroundServiceType="specialUse" />
+
+
+        <service
             android:name=".services.AccessibilityService"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
@@ -104,6 +115,21 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <receiver
+            android:name=".services.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".services.KeyEventReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.chaomixian.vflow.KEY_EVENT_TRIGGERED" />
+            </intent-filter>
+        </receiver>
 
 
         <provider
