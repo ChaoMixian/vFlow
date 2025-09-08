@@ -16,6 +16,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import kotlinx.coroutines.*
 import java.io.File
@@ -31,6 +32,8 @@ class TriggerService : Service() {
         private const val NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "trigger_service_channel"
         const val ACTION_RELOAD_TRIGGERS = "com.chaomixian.vflow.RELOAD_TRIGGERS"
+        // [新增] 定义接收按键事件的 Action
+        const val ACTION_KEY_EVENT_RECEIVED = "com.chaomixian.vflow.KEY_EVENT_RECEIVED"
     }
 
     // 监听工作流更新的广播接收器
@@ -55,13 +58,57 @@ class TriggerService : Service() {
         startForeground(NOTIFICATION_ID, createNotification())
         Log.d(TAG, "TriggerService 已启动。")
 
-        if (intent?.action == ACTION_RELOAD_TRIGGERS) {
-            Log.d(TAG, "通过 Intent 请求重新加载触发器。")
+        // [修改] 扩展 onStartCommand 的功能
+        when (intent?.action) {
+            ACTION_KEY_EVENT_RECEIVED -> {
+                // 如果是按键事件，则处理它
+                handleKeyEvent(intent)
+            }
+            else -> {
+                // 否则，执行原有的启动/重载逻辑
+                if (intent?.action == ACTION_RELOAD_TRIGGERS) {
+                    Log.d(TAG, "通过 Intent 请求重新加载触发器。")
+                }
+                reloadKeyEventTriggers()
+            }
         }
-        reloadKeyEventTriggers()
 
         return START_STICKY
     }
+
+    /**
+     * [新增] 处理接收到的按键事件
+     */
+    private fun handleKeyEvent(intent: Intent) {
+        val device = intent.getStringExtra("device")
+        val keyCode = intent.getStringExtra("key_code")
+
+        if (device.isNullOrBlank() || keyCode.isNullOrBlank()) {
+            Log.w(TAG, "接收到无效的按键事件: device=$device, keyCode=$keyCode")
+            return
+        }
+
+        Log.d(TAG, "服务已唤醒并接收到按键事件: device=$device, keyCode=$keyCode")
+
+        // 在一个新的协程中查找并执行工作流，避免阻塞服务主线程
+        serviceScope.launch {
+            val workflowsToExecute = workflowManager.findKeyEventTriggerWorkflows()
+                .filter {
+                    val config = it.triggerConfig
+                    config?.get("device") == device && config?.get("key_code") == keyCode
+                }
+
+            if (workflowsToExecute.isNotEmpty()) {
+                Log.i(TAG, "找到 ${workflowsToExecute.size} 个匹配的工作流，准备执行。")
+                workflowsToExecute.forEach {
+                    WorkflowExecutor.execute(it, applicationContext)
+                }
+            } else {
+                Log.w(TAG, "未找到匹配此按键事件的工作流。")
+            }
+        }
+    }
+
 
     private fun reloadKeyEventTriggers() {
         // 先停止当前正在运行的监听任务
@@ -123,6 +170,8 @@ class TriggerService : Service() {
      * [最终修复] 修正了按键码的提取逻辑。
      * - 使用 `awk '{print $2}'` 来精确提取事件行中的第二列（即按键码），替换了之前错误的 `sed` 命令。
      * - [修复] 移除了 `KEY_CODE=` 和 `$(...` 之间的空格来修复 'unexpected `|`' 语法错误。
+     * - [新增] 将 getevent 命令放入 `while true` 循环中，以在进程被杀后自动重启。
+     * - [修改] 将 `am broadcast` 替换为 `am start-service` 来直接唤醒服务。
      */
     private fun createShellScriptForDevice(device: String, keyCodes: List<String>): String {
         if (keyCodes.isEmpty()) return ""
@@ -130,31 +179,33 @@ class TriggerService : Service() {
         val grepPattern = keyCodes.joinToString("|") { "($it.*DOWN|$it.*UP)" }
 
         val logFile = "${applicationContext.cacheDir.absolutePath}/key_listener.log"
-        val receiverComponent = "${applicationContext.packageName}/.services.KeyEventReceiver"
+        // [修改] 定义服务的组件名
+        val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
 
         return """
             #!/system/bin/sh
             LOG_FILE="$logFile"
-            echo "--- SCRIPT START (v4) ---" >> "${'$'}LOG_FILE"
+            echo "--- SCRIPT START (v6-service-wake) ---" >> "${'$'}LOG_FILE"
             echo "PID: $$" >> "${'$'}LOG_FILE"
             echo "Listening on device: $device" >> "${'$'}LOG_FILE"
-            echo "Grep pattern: $grepPattern" >> "${'$'}LOG_FILE"
-
-            getevent -l "$device" | while IFS= read -r line; do
-              echo "[EVENT]: ${'$'}{line}" >> "${'$'}LOG_FILE"
-              if echo "${'$'}{line}" | grep -E -q "$grepPattern"; then
-                  echo "[MATCH]: Condition met for line: ${'$'}{line}" >> "${'$'}LOG_FILE"
-                  # [修复] 移除了 KEY_CODE= 和 $( 之间的空格
-                  KEY_CODE=$(echo "${'$'}{line}" | awk '{print ${'$'}2}')
-                  echo "[ACTION]: Extracted KEY_CODE: ${'$'}{KEY_CODE}" >> "${'$'}LOG_FILE"
-                  
-                  if [ -n "${'$'}{KEY_CODE}" ]; then
-                     am broadcast -n "$receiverComponent" -a com.chaomixian.vflow.KEY_EVENT_TRIGGERED --es device "$device" --es key_code "${'$'}{KEY_CODE}"
-                     echo "[BROADCAST]: Sent for KEY_CODE: ${'$'}{KEY_CODE}" >> "${'$'}LOG_FILE"
-                  else
-                     echo "[ERROR]: Failed to extract KEY_CODE from line." >> "${'$'}LOG_FILE"
-                  fi
-              fi
+            
+            while true; do
+              echo "Starting getevent process..." >> "${'$'}LOG_FILE"
+              getevent -l "$device" | while IFS= read -r line; do
+                if echo "${'$'}{line}" | grep -E -q "$grepPattern"; then
+                    echo "[MATCH]: Condition met for line: ${'$'}{line}" >> "${'$'}LOG_FILE"
+                    KEY_CODE=$(echo "${'$'}{line}" | awk '{print ${'$'}2}')
+                    echo "[ACTION]: Extracted KEY_CODE: ${'$'}{KEY_CODE}" >> "${'$'}LOG_FILE"
+                    
+                    if [ -n "${'$'}{KEY_CODE}" ]; then
+                       # [修改] 使用 am start-service 来直接唤醒应用
+                       am start-service -n "$serviceComponent" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "$device" --es key_code "${'$'}{KEY_CODE}"
+                       echo "[WAKE_UP]: Sent start-service for KEY_CODE: ${'$'}{KEY_CODE}" >> "${'$'}LOG_FILE"
+                    fi
+                fi
+              done
+              echo "getevent process for $device exited. Restarting in 1s..." >> "${'$'}LOG_FILE"
+              sleep 1
             done
         """.trimIndent()
     }

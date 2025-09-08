@@ -98,8 +98,7 @@
 
         <service
             android:name=".services.TriggerService"
-            android:exported="false"
-            android:permission="android.permission.FOREGROUND_SERVICE"
+            android:exported="true" android:permission="android.permission.FOREGROUND_SERVICE"
             android:foregroundServiceType="specialUse" />
 
 
@@ -122,15 +121,6 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-
-        <receiver
-            android:name=".services.KeyEventReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.chaomixian.vflow.KEY_EVENT_TRIGGERED" />
-            </intent-filter>
-        </receiver>
-
 
         <provider
             android:name="androidx.core.content.FileProvider"
