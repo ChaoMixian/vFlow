@@ -56,21 +56,22 @@ class AppStartTriggerModule : BaseModule() {
             val appInfo = pm.getApplicationInfo(packageName, 0)
             appInfo.loadLabel(pm).toString()
         } catch (e: PackageManager.NameNotFoundException) {
-            packageName // 如果找不到应用，就显示包名
+            packageName
         }
 
         val displayText = if (activityName == "LAUNCH" || activityName.isNullOrEmpty()) {
             appName
         } else {
-            // 如果Activity名称过长，只显示类名
             activityName.substringAfterLast('.')
         }
 
-        return PillUtil.buildSpannable(context,
-            "当启动 ",
-            // 创建一个药丸(Pill)，让用户可以点击它来重新选择应用/Activity
-            PillUtil.Pill(displayText, false, "packageName")
-        )
+        // 这里的 Pill 只是为了样式和点击响应，其文本内容是动态拼接的
+        val appPill = PillUtil.Pill(displayText, false, "packageName")
+
+        // 前缀根据模块不同而变化
+        val prefix = if (this.id.contains("trigger")) "当启动 " else "启动 "
+
+        return PillUtil.buildSpannable(context, prefix, appPill)
     }
 
     override suspend fun execute(

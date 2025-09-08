@@ -130,53 +130,22 @@ class CalculationModule : BaseModule() {
      * 生成在工作流编辑器中显示模块摘要的文本。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val params = step.parameters
         val inputs = getInputs()
 
-        val operand1RawValue = params["operand1"]
-        val operand1Text = operand1RawValue?.toString()
-            ?: inputs.find { it.id == "operand1" }?.defaultValue?.toString()
-            ?: "..."
-        val operand1IsVariable = operand1RawValue is String && operand1RawValue.startsWith("{{") && operand1RawValue.endsWith("}}")
-
-        val operatorText = params["operator"]?.toString()
-            ?: inputs.find { it.id == "operator" }?.defaultValue?.toString()
-            ?: "+"
-
-        val operand2RawValue = params["operand2"]
-        val operand2Text = operand2RawValue?.toString()
-            ?: inputs.find { it.id == "operand2" }?.defaultValue?.toString()
-            ?: "..."
-        val operand2IsVariable = operand2RawValue is String && operand2RawValue.startsWith("{{") && operand2RawValue.endsWith("}}")
-
-        val pillOperand1 = PillUtil.Pill(
-            text = if (operand1IsVariable) operand1Text else (operand1RawValue as? Number)?.let { formatNumberForPill(it) } ?: operand1Text,
-            isVariable = operand1IsVariable,
-            parameterId = "operand1"
+        val pillOperand1 = PillUtil.createPillFromParam(
+            step.parameters["operand1"],
+            inputs.find { it.id == "operand1" }
         )
-        val pillOperator = PillUtil.Pill(
-            text = operatorText,
-            isVariable = false,
-            parameterId = "operator",
+        val pillOperator = PillUtil.createPillFromParam(
+            step.parameters["operator"],
+            inputs.find { it.id == "operator" },
             isModuleOption = true
         )
-        val pillOperand2 = PillUtil.Pill(
-            text = if (operand2IsVariable) operand2Text else (operand2RawValue as? Number)?.let { formatNumberForPill(it) } ?: operand2Text,
-            isVariable = operand2IsVariable,
-            parameterId = "operand2"
+        val pillOperand2 = PillUtil.createPillFromParam(
+            step.parameters["operand2"],
+            inputs.find { it.id == "operand2" }
         )
-        
-        return PillUtil.buildSpannable(context, "计算 ", pillOperand1, " ", pillOperator, " ", pillOperand2)
-    }
 
-    /**
-     * 格式化数字以便在 \"药丸\" 中显示。
-     */
-    private fun formatNumberForPill(number: Number): String {
-        return if (number.toDouble() == number.toLong().toDouble()) {
-            number.toLong().toString()
-        } else {
-            String.format("%.2f", number.toDouble())
-        }
+        return PillUtil.buildSpannable(context, "计算 ", pillOperand1, " ", pillOperator, " ", pillOperand2)
     }
 }

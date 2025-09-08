@@ -83,57 +83,37 @@ class TextProcessingModule : BaseModule() {
      * 生成模块摘要。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val inputs = getInputs()
         val operation = step.parameters["operation"]?.toString() ?: "拼接"
-
-        // 辅助函数，用于获取参数值和是否为变量，并创建Pill对象
-        fun createPill(paramId: String, defaultValue: String = "..."): PillUtil.Pill {
-            val value = step.parameters[paramId]?.toString() ?: defaultValue
-            val isVariable = value.startsWith("{{") && value.endsWith("}}")
-            // 对于非变量的空字符串，显示更友好的提示
-            val displayText = if (!isVariable && value.isEmpty()) "空" else value
-            return PillUtil.Pill(displayText, isVariable, paramId)
-        }
-
-        // 创建操作类型本身的药丸
-        val operationPill = PillUtil.Pill(operation, false, "operation", isModuleOption = true)
+        val operationPill = PillUtil.createPillFromParam(
+            operation,
+            inputs.find { it.id == "operation" },
+            isModuleOption = true
+        )
 
         return when (operation) {
             "拼接" -> {
-                val listPill = createPill("join_list", "[列表]")
-                val delimiterPill = createPill("join_delimiter", ",")
-                // 拼接操作的摘要不显示前后缀，保持简洁，因为它们不常用
-                PillUtil.buildSpannable(context,
-                    operationPill, ": 将列表 ", listPill,
-                    " 用 ", delimiterPill, " 连接"
-                )
+                val listPill = PillUtil.createPillFromParam(step.parameters["join_list"], inputs.find { it.id == "join_list" })
+                val delimiterPill = PillUtil.createPillFromParam(step.parameters["join_delimiter"], inputs.find { it.id == "join_delimiter" })
+                PillUtil.buildSpannable(context, operationPill, ": 将列表 ", listPill, " 用 ", delimiterPill, " 连接")
             }
             "分割" -> {
-                val sourcePill = createPill("source_text", "[源文本]")
-                val delimiterPill = createPill("split_delimiter", ",")
-                PillUtil.buildSpannable(context,
-                    operationPill, ": 将 ", sourcePill,
-                    " 用 ", delimiterPill, " 分割"
-                )
+                val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
+                val delimiterPill = PillUtil.createPillFromParam(step.parameters["split_delimiter"], inputs.find { it.id == "split_delimiter" })
+                PillUtil.buildSpannable(context, operationPill, ": 将 ", sourcePill, " 用 ", delimiterPill, " 分割")
             }
             "替换" -> {
-                val sourcePill = createPill("source_text", "[源文本]")
-                val fromPill = createPill("replace_from")
-                val toPill = createPill("replace_to")
-                PillUtil.buildSpannable(context,
-                    operationPill, ": 在 ", sourcePill,
-                    " 中将 ", fromPill,
-                    " 替换为 ", toPill
-                )
+                val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
+                val fromPill = PillUtil.createPillFromParam(step.parameters["replace_from"], inputs.find { it.id == "replace_from" })
+                val toPill = PillUtil.createPillFromParam(step.parameters["replace_to"], inputs.find { it.id == "replace_to" })
+                PillUtil.buildSpannable(context, operationPill, ": 在 ", sourcePill, " 中将 ", fromPill, " 替换为 ", toPill)
             }
             "正则提取" -> {
-                val sourcePill = createPill("source_text", "[源文本]")
-                val patternPill = createPill("regex_pattern")
-                PillUtil.buildSpannable(context,
-                    operationPill, ": 从 ", sourcePill,
-                    " 提取 ", patternPill
-                )
+                val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
+                val patternPill = PillUtil.createPillFromParam(step.parameters["regex_pattern"], inputs.find { it.id == "regex_pattern" })
+                PillUtil.buildSpannable(context, operationPill, ": 从 ", sourcePill, " 提取 ", patternPill)
             }
-            else -> operation // 备用
+            else -> operation
         }
     }
 

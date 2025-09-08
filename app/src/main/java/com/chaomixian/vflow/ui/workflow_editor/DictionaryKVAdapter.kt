@@ -12,6 +12,7 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.module.isMagicVariable
 import com.google.android.material.textfield.TextInputLayout
 
 /**
@@ -57,7 +58,7 @@ class DictionaryKVAdapter(
         holder.valueContainer.removeAllViews()
         val inflater = LayoutInflater.from(holder.itemView.context)
 
-        if (item.second.startsWith("{{") && item.second.endsWith("}}")) {
+        if (item.second.isMagicVariable()) {
             val pillView = inflater.inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
             pillView.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
             holder.valueContainer.addView(pillView)

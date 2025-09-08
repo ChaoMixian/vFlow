@@ -60,16 +60,23 @@ class InputModule : BaseModule() {
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val inputType = step.parameters["inputType"]?.toString() ?: "文本"
-        val prompt = step.parameters["prompt"]?.toString() ?: "..."
-        val isVariable = prompt.startsWith("{{") && prompt.endsWith("}}")
+        val inputs = getInputs()
+        val inputTypePill = PillUtil.createPillFromParam(
+            step.parameters["inputType"],
+            inputs.find { it.id == "inputType" },
+            isModuleOption = true
+        )
+        val promptPill = PillUtil.createPillFromParam(
+            step.parameters["prompt"],
+            inputs.find { it.id == "prompt" }
+        )
 
         return PillUtil.buildSpannable(
             context,
             "请求 ",
-            PillUtil.Pill(inputType, false, parameterId = "inputType", isModuleOption = true),
+            inputTypePill,
             " 输入，提示信息为 ",
-            PillUtil.Pill(prompt, isVariable, parameterId = "prompt")
+            promptPill
         )
     }
 

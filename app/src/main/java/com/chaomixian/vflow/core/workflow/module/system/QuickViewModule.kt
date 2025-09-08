@@ -49,14 +49,11 @@ class QuickViewModule : BaseModule() {
      * 生成模块摘要。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val content = step.parameters["content"]?.toString() ?: "..."
-        val isVariable = content.startsWith("{{") && content.endsWith("}}")
-
-        return PillUtil.buildSpannable( // 修复方法名
-            context,
-            "快速查看 ",
-            PillUtil.Pill(content, isVariable, parameterId = "content")
+        val contentPill = PillUtil.createPillFromParam(
+            step.parameters["content"],
+            getInputs().find { it.id == "content" }
         )
+        return PillUtil.buildSpannable(context, "快速查看 ", contentPill)
     }
 
     /**

@@ -57,16 +57,23 @@ class ApplyMaskModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val image = step.parameters["image"]?.toString() ?: "..."
-        val isVariable = image.startsWith("{{") && image.endsWith("}}")
-        val maskShape = step.parameters["mask_shape"]?.toString() ?: "圆角矩形"
+        val inputs = getInputs()
+        val imagePill = PillUtil.createPillFromParam(
+            step.parameters["image"],
+            inputs.find { it.id == "image" }
+        )
+        val maskShapePill = PillUtil.createPillFromParam(
+            step.parameters["mask_shape"],
+            inputs.find { it.id == "mask_shape" },
+            isModuleOption = true
+        )
 
         return PillUtil.buildSpannable(
             context,
             "为图像 ",
-            PillUtil.Pill(image, isVariable, parameterId = "image"),
+            imagePill,
             " 应用 ",
-            PillUtil.Pill(maskShape, false, parameterId = "mask_shape", isModuleOption = true),
+            maskShapePill,
             " 蒙版"
         )
     }

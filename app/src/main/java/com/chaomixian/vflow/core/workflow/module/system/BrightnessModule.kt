@@ -38,9 +38,10 @@ class BrightnessModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val level = step.parameters["brightness_level"]?.toString() ?: "128"
-        val isVariable = level.startsWith("{{") && level.endsWith("}}")
-        val levelPill = PillUtil.Pill(level, isVariable, "brightness_level")
+        val levelPill = PillUtil.createPillFromParam(
+            step.parameters["brightness_level"],
+            getInputs().find { it.id == "brightness_level" }
+        )
         return PillUtil.buildSpannable(context, "设置屏幕亮度为 ", levelPill)
     }
 

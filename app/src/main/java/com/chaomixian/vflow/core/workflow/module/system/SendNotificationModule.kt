@@ -60,16 +60,21 @@ class SendNotificationModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val title = step.parameters["title"]?.toString() ?: "..."
-        val message = step.parameters["message"]?.toString() ?: "..."
-        val isTitleVar = title.startsWith("{{") && title.endsWith("}}")
-        val isMessageVar = message.startsWith("{{") && message.endsWith("}}")
+        val inputs = getInputs()
+        val titlePill = PillUtil.createPillFromParam(
+            step.parameters["title"],
+            inputs.find { it.id == "title" }
+        )
+        val messagePill = PillUtil.createPillFromParam(
+            step.parameters["message"],
+            inputs.find { it.id == "message" }
+        )
 
         return PillUtil.buildSpannable(context,
             "发送通知: ",
-            PillUtil.Pill(title, isTitleVar, "title"),
+            titlePill,
             " - ",
-            PillUtil.Pill(message, isMessageVar, "message")
+            messagePill
         )
     }
 

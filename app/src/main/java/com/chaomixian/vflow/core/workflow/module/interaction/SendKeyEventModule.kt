@@ -56,10 +56,14 @@ class SendKeyEventModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val key = step.parameters["key_action"]?.toString() ?: "返回"
+        val keyPill = PillUtil.createPillFromParam(
+            step.parameters["key_action"],
+            getInputs().find { it.id == "key_action" },
+            isModuleOption = true
+        )
         return PillUtil.buildSpannable(context,
             "执行全局操作 ",
-            PillUtil.Pill(key, false, "key_action", isModuleOption = true)
+            keyPill
         )
     }
 

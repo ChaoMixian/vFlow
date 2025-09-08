@@ -127,7 +127,7 @@ class IfModule : BaseBlockModule() {
 
     /** 解析魔法变量引用的类型。 */
     private fun resolveMagicVariableType(variableReference: String?, allSteps: List<ActionStep>?): String? {
-        if (variableReference == null || !variableReference.startsWith("{{") || allSteps == null) {
+        if (variableReference == null || !variableReference.isMagicVariable() || allSteps == null) {
             return null
         }
         val parts = variableReference.removeSurrounding("{{", "}}").split('.')
@@ -156,47 +156,40 @@ class IfModule : BaseBlockModule() {
 
     /** 生成模块摘要。 */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val input1Value = step.parameters["input1"]?.toString()
-        val operator = step.parameters["operator"] as? String ?: OP_EXISTS
-        val value1Param = step.parameters["value1"]
-        val value2Param = step.parameters["value2"]
+        val allInputs = getInputs() // 获取静态输入定义作为参考
+        val inputsForStep = getDynamicInputs(step, null) // 获取当前步骤的动态输入
 
-        val parts = mutableListOf<Any>()
-        parts.add("如果 ")
-        parts.add(PillUtil.Pill(input1Value ?: "...", input1Value != null, parameterId = "input1"))
-        parts.add(" ")
+        val input1Pill = PillUtil.createPillFromParam(
+            step.parameters["input1"],
+            allInputs.find { it.id == "input1" }
+        )
+        val operatorPill = PillUtil.createPillFromParam(
+            step.parameters["operator"],
+            allInputs.find { it.id == "operator" },
+            isModuleOption = true
+        )
 
-        // 格式化数字用于药丸显示
-        fun formatNumberForPill(param: Any?): String {
-            return when {
-                (param as? String)?.startsWith("{{") == true -> param.toString()
-                param is Number -> {
-                    if (param.toDouble() == param.toLong().toDouble()) param.toLong().toString() else param.toString()
-                }
-                else -> param?.toString() ?: "..."
-            }
-        }
+        val parts = mutableListOf<Any>("如果 ", input1Pill, " ", operatorPill)
 
-        if (operator == OP_NUM_BETWEEN) {
-            parts.add(PillUtil.Pill(OP_NUM_BETWEEN, false, parameterId = "operator", isModuleOption = true))
+        // 仅当比较值输入框实际存在时才添加它们的Pill
+        if (inputsForStep.any { it.id == "value1" }) {
+            val value1Pill = PillUtil.createPillFromParam(
+                step.parameters["value1"],
+                allInputs.find { it.id == "value1" }
+            )
             parts.add(" ")
-            val value1Text = formatNumberForPill(value1Param)
-            val isValue1Var = (value1Param as? String)?.startsWith("{{") == true
-            parts.add(PillUtil.Pill(value1Text, isValue1Var, parameterId = "value1"))
-            parts.add(" 和 ")
-            val value2Text = formatNumberForPill(value2Param)
-            val isValue2Var = (value2Param as? String)?.startsWith("{{") == true
-            parts.add(PillUtil.Pill(value2Text, isValue2Var, parameterId = "value2"))
-            parts.add(" 之间")
-        } else {
-            parts.add(PillUtil.Pill(operator, false, parameterId = "operator", isModuleOption = true))
-            if (OPERATORS_REQUIRING_ONE_INPUT.contains(operator)) {
-                parts.add(" ")
-                val value1Text = formatNumberForPill(value1Param)
-                val isValue1Var = (value1Param as? String)?.startsWith("{{") == true
-                parts.add(PillUtil.Pill(value1Text, isValue1Var, parameterId = "value1"))
-            }
+            parts.add(value1Pill)
         }
+        if (inputsForStep.any { it.id == "value2" }) {
+            val value2Pill = PillUtil.createPillFromParam(
+                step.parameters["value2"],
+                allInputs.find { it.id == "value2" }
+            )
+            parts.add(" 和 ")
+            parts.add(value2Pill)
+            parts.add(" 之间")
+        }
+
         return PillUtil.buildSpannable(context, *parts.toTypedArray())
     }
 

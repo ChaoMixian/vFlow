@@ -85,20 +85,28 @@ class AdjustImageModule : BaseModule() {
      * 生成模块摘要。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val image = step.parameters[INPUT_IMAGE]?.toString() ?: "..."
-        val isVariable = image.startsWith("{{") && image.endsWith("}}")
+        val inputs = getInputs()
+        val imagePill = PillUtil.createPillFromParam(
+            step.parameters["image"],
+            inputs.find { it.id == "image" }
+        )
 
         val adjustments = getInputs().asSequence().drop(1) // 跳过源图像输入
-            .map { it.id to (step.parameters[it.id] as? Number ?: 0.0) }
-            .filter { it.second.toDouble() != 0.0 }
-            .joinToString(", ") { (id, value) ->
-                val name = getInputs().find { it.id == id }?.name ?: id
-                "$name: $value"
+            .map {
+                val paramValue = step.parameters[it.id]
+                // 只显示非零的调整项
+                if (paramValue is Number && paramValue.toDouble() != 0.0) {
+                    "${it.name}: ${paramValue}"
+                } else {
+                    null
+                }
             }
+            .filterNotNull()
+            .joinToString(", ")
 
         return PillUtil.buildSpannable(context,
             "调整图像 ",
-            PillUtil.Pill(image, isVariable, parameterId = INPUT_IMAGE),
+            imagePill,
             if (adjustments.isNotEmpty()) " 使用: $adjustments" else " (无调整)"
         )
     }

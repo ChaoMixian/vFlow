@@ -65,14 +65,14 @@ class ClickModule : BaseModule() {
      * 例如：“点击 [目标元素]”
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val targetValue = step.parameters["target"]?.toString() ?: "..." // 获取目标参数的值或占位符
-        val isVariable = targetValue.startsWith("{{") && targetValue.endsWith("}}") // 判断是否为魔法变量引用
-
-        // 使用 PillUtil 构建带样式的摘要
+        val targetPill = PillUtil.createPillFromParam(
+            step.parameters["target"],
+            getInputs().find { it.id == "target" }
+        )
         return PillUtil.buildSpannable(
             context,
             "点击 ",
-            PillUtil.Pill(targetValue, isVariable, parameterId = "target") // 目标药丸
+            targetPill
         )
     }
 

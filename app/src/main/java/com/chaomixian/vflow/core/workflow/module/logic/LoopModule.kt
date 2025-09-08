@@ -41,24 +41,17 @@ class LoopModule : BaseBlockModule() {
 
     /** 生成模块摘要。 */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val countParam = step.parameters["count"]
-        val isVariable = (countParam as? String)?.startsWith("{{") == true
-
-        val countText = when {
-            isVariable -> countParam.toString()
-            countParam is Number -> {
-                if (countParam.toDouble() == countParam.toLong().toDouble()) countParam.toLong().toString() else countParam.toString()
-            }
-            else -> countParam?.toString() ?: getInputs().firstOrNull { it.id == "count" }?.defaultValue?.toString() ?: "5"
-        }
-
-        return PillUtil.buildSpannable(context, "循环 ", PillUtil.Pill(countText, isVariable, parameterId = "count"), " 次")
+        val countPill = PillUtil.createPillFromParam(
+            step.parameters["count"],
+            getInputs().find { it.id == "count" }
+        )
+        return PillUtil.buildSpannable(context, "循环 ", countPill, " 次")
     }
 
     /** 验证参数：循环次数必须为正数。 */
     override fun validate(step: ActionStep): ValidationResult {
         val count = step.parameters["count"]
-        if (count is String && !count.startsWith("{{")) { // 非魔法变量字符串
+        if (count is String && !count.isMagicVariable()) { // 非魔法变量字符串
             val countAsLong = count.toLongOrNull()
             if (countAsLong == null) return ValidationResult(false, "无效的数字格式")
             if (countAsLong <= 0) return ValidationResult(false, "循环次数必须大于0")

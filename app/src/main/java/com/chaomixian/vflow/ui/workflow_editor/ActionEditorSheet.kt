@@ -218,7 +218,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         valueContainer.removeAllViews()
-        if (inputDef.acceptsMagicVariable && currentValue is String && currentValue.startsWith("{{")) {
+        if (inputDef.acceptsMagicVariable && (currentValue as? String).isMagicVariable()) {
             // 若已连接魔法变量，显示药丸
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
             pill.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
@@ -290,7 +290,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
         // 2. 从通用UI控件读取
         inputViews.forEach { (id, view) ->
-            if ((currentParameters[id] as? String)?.startsWith("{{") == true) return@forEach // 跳过已连接魔法变量的
+            if ((currentParameters[id] as? String)?.isMagicVariable() == true) return@forEach // 跳过已连接魔法变量的
 
             val valueContainer = view.findViewById<FrameLayout>(R.id.input_value_container) ?: return@forEach
             if (valueContainer.childCount == 0) return@forEach

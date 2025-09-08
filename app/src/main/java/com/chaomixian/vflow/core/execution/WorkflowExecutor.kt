@@ -101,7 +101,7 @@ object WorkflowExecutor {
                     )
 
                     step.parameters.forEach { (key, value) ->
-                        if (value is String && value.startsWith("{{") && value.endsWith("}}")) {
+                        if (value is String && value.isMagicVariable()) {
                             val parts = value.removeSurrounding("{{", "}}").split('.')
                             val sourceStepId = parts.getOrNull(0)
                             val sourceOutputId = parts.getOrNull(1)

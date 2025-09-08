@@ -40,14 +40,11 @@ class ShareModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val content = step.parameters["content"]?.toString() ?: "..."
-        val isVariable = content.startsWith("{{") && content.endsWith("}}")
-
-        return PillUtil.buildSpannable(
-            context,
-            "分享 ",
-            PillUtil.Pill(content, isVariable, "content")
+        val contentPill = PillUtil.createPillFromParam(
+            step.parameters["content"],
+            getInputs().find { it.id == "content" }
         )
+        return PillUtil.buildSpannable(context, "分享 ", contentPill)
     }
 
     /**

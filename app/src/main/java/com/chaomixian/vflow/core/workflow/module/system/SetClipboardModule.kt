@@ -48,15 +48,11 @@ class SetClipboardModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val content = step.parameters["content"]?.toString() ?: "..."
-        val isVariable = content.startsWith("{{") && content.endsWith("}}")
-
-        return PillUtil.buildSpannable(
-            context,
-            "将 ",
-            PillUtil.Pill(content, isVariable, parameterId = "content"),
-            " 写入剪贴板"
+        val contentPill = PillUtil.createPillFromParam(
+            step.parameters["content"],
+            getInputs().find { it.id == "content" }
         )
+        return PillUtil.buildSpannable(context, "将 ", contentPill, " 写入剪贴板")
     }
 
     /**

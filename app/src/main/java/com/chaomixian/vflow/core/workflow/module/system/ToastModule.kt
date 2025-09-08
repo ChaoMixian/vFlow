@@ -66,16 +66,11 @@ class ToastModule : BaseModule() {
      * 例如：“显示消息 [Hello, vFlow!]”
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val message = step.parameters["message"]?.toString() ?: "..." // 获取消息内容或占位符
-        // 判断消息内容是否为魔法变量引用
-        val isVariable = message.startsWith("{{") && message.endsWith("}}")
-
-        // 使用 PillUtil 构建带样式的摘要
-        return PillUtil.buildSpannable(
-            context,
-            "显示消息 ",
-            PillUtil.Pill(message, isVariable, parameterId = "message") // 消息内容药丸
+        val messagePill = PillUtil.createPillFromParam(
+            step.parameters["message"],
+            getInputs().find { it.id == "message" }
         )
+        return PillUtil.buildSpannable(context, "显示消息 ", messagePill)
     }
 
     /**
@@ -85,7 +80,7 @@ class ToastModule : BaseModule() {
     override fun validate(step: ActionStep): ValidationResult {
         val message = step.parameters["message"]?.toString()
         // 如果消息为空白，并且它不是一个魔法变量引用，则验证失败
-        if (message.isNullOrBlank() && (message == null || !(message.startsWith("{{") && message.endsWith("}}")))) {
+        if (message.isNullOrBlank() && (message == null || !(message.isMagicVariable()))) {
             return ValidationResult(isValid = false, errorMessage = "消息内容不能为空")
         }
         return ValidationResult(isValid = true) // 默认有效

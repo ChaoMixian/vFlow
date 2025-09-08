@@ -9,6 +9,7 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
+import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 
 class WorkflowConnectionDecorator(private val steps: List<ActionStep>) : RecyclerView.ItemDecoration() {
@@ -27,7 +28,7 @@ class WorkflowConnectionDecorator(private val steps: List<ActionStep>) : Recycle
 
         steps.forEachIndexed { index, currentStep ->
             currentStep.parameters.forEach { (inputId, value) ->
-                if (value is String && value.startsWith("{{")) {
+                if (value is String && value.isMagicVariable()) {
                     val parts = value.removeSurrounding("{{", "}}").split('.')
                     val sourceStepId = parts.getOrNull(0) ?: return@forEach
                     val sourceOutputId = parts.getOrNull(1) ?: return@forEach

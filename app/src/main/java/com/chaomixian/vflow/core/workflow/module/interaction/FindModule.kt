@@ -119,20 +119,30 @@ class FindTextModule : BaseModule() {
      * 例如：“使用 [包含] 模式查找文本 [搜索词] 并输出 [坐标]”
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val mode = step.parameters["matchMode"]?.toString() ?: "完全匹配"
-        val target = step.parameters["targetText"]?.toString() ?: "..."
-        val format = step.parameters["outputFormat"]?.toString() ?: "元素"
-        val isVariable = target.startsWith("{{") && target.endsWith("}}") // 判断目标文本是否为魔法变量
+        val inputs = getInputs()
+        val modePill = PillUtil.createPillFromParam(
+            step.parameters["matchMode"],
+            inputs.find { it.id == "matchMode" },
+            isModuleOption = true
+        )
+        val targetPill = PillUtil.createPillFromParam(
+            step.parameters["targetText"],
+            inputs.find { it.id == "targetText" }
+        )
+        val formatPill = PillUtil.createPillFromParam(
+            step.parameters["outputFormat"],
+            inputs.find { it.id == "outputFormat" },
+            isModuleOption = true
+        )
 
-        // 使用 PillUtil 构建带样式的摘要
         return PillUtil.buildSpannable(
             context,
             "使用 ",
-            PillUtil.Pill(mode, false, parameterId = "matchMode", isModuleOption = true),
+            modePill,
             " 模式查找文本 ",
-            PillUtil.Pill(target, isVariable, parameterId = "targetText"),
+            targetPill,
             " 并输出 ",
-            PillUtil.Pill(format, false, parameterId = "outputFormat", isModuleOption = true)
+            formatPill
         )
     }
 

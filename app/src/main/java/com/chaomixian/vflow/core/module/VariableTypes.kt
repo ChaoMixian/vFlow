@@ -102,3 +102,9 @@ data class DateVariable(val value: String) : Parcelable {
         const val TYPE_NAME = "vflow.type.date"
     }
 }
+
+/**
+ * 检查字符串是否为魔法变量引用的通用函数。
+ * e.g., "{{stepId.outputId}}"
+ */
+fun String?.isMagicVariable(): Boolean = this?.startsWith("{{") == true && this.endsWith("}}")

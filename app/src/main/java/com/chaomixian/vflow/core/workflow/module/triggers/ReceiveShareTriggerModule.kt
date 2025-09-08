@@ -55,10 +55,14 @@ class ReceiveShareTriggerModule : BaseModule() {
      * 生成模块摘要
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val type = step.parameters["acceptedType"]?.toString() ?: "任意"
+        val typePill = PillUtil.createPillFromParam(
+            step.parameters["acceptedType"],
+            getInputs().find { it.id == "acceptedType" },
+            isModuleOption = true
+        )
         return PillUtil.buildSpannable(context,
             "当分享 ",
-            PillUtil.Pill(type, false, "acceptedType", true),
+            typePill,
             " 内容时"
         )
     }

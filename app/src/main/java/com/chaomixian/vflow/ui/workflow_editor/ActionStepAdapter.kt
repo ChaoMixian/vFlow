@@ -33,7 +33,9 @@ import androidx.core.text.getSpans
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.BlockType
+import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.color.MaterialColors
 import java.util.*
@@ -210,6 +212,41 @@ class ActionStepAdapter(
  * 提供构建和处理摘要中药丸样式的 Spannable 的方法。
  */
 object PillUtil {
+    /**
+     * 从模块参数创建 Pill 的标准方法。
+     * 封装了魔法变量检测和数字格式化逻辑。
+     *
+     * @param paramValue 步骤中存储的原始参数值。
+     * @param inputDef 该参数的输入定义，用于获取默认值和ID。
+     * @param isModuleOption 是否为模块的内置选项（如操作符）。
+     * @return 一个配置好的 Pill 对象。
+     */
+    fun createPillFromParam(
+        paramValue: Any?,
+        inputDef: InputDefinition?,
+        isModuleOption: Boolean = false
+    ): Pill {
+        val isVariable = (paramValue as? String)?.isMagicVariable() == true
+        val text: String
+
+        if (isVariable) {
+            text = paramValue.toString()
+        } else {
+            val valueToFormat = paramValue ?: inputDef?.defaultValue
+            text = when (valueToFormat) {
+                is Number -> {
+                    if (valueToFormat.toDouble() == valueToFormat.toLong().toDouble()) {
+                        valueToFormat.toLong().toString()
+                    } else {
+                        String.format("%.2f", valueToFormat.toDouble())
+                    }
+                }
+                else -> valueToFormat?.toString() ?: "..."
+            }
+        }
+        return Pill(text, isVariable, inputDef?.id ?: "", isModuleOption)
+    }
+
     /** 构建包含药丸的 Spannable 文本。 */
     fun buildSpannable(context: Context, vararg parts: Any): CharSequence {
         val builder = SpannableStringBuilder()
@@ -250,7 +287,7 @@ object PillUtil {
 
     /** 查找魔法变量的来源步骤和输出信息。 */
     private fun findSourceInfo(context: Context, variableRef: String, allSteps: List<ActionStep>): SourceInfo? {
-        if (!variableRef.startsWith("{{")) return null // 不是合法的魔法变量引用
+        if (!variableRef.isMagicVariable()) return null // 不是合法的魔法变量引用
         val (sourceStepId, sourceOutputId) = variableRef.removeSurrounding("{{", "}}").split('.').let { it.getOrNull(0) to it.getOrNull(1) }
         if (sourceStepId == null || sourceOutputId == null) return null
 

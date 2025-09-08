@@ -40,8 +40,11 @@ class WifiModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val state = step.parameters["state"] as? String ?: "切换"
-        val statePill = PillUtil.Pill(state, false, "state", true)
+        val statePill = PillUtil.createPillFromParam(
+            step.parameters["state"],
+            getInputs().find { it.id == "state" },
+            isModuleOption = true
+        )
         return PillUtil.buildSpannable(context, statePill, " Wi-Fi")
     }
 

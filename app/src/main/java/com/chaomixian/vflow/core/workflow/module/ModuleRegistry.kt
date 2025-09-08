@@ -67,6 +67,7 @@ object ModuleRegistry {
         register(ImportImageModule())
         register(SaveImageModule())
         register(AdjustImageModule())
+        register(RotateImageModule())
         register(ApplyMaskModule())
 
         // 应用与系统

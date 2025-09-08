@@ -50,9 +50,13 @@ class LuaModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val script = step.parameters["script"] as? String ?: "..."
         val firstLine = script.trim().lines().firstOrNull { it.isNotBlank() && !it.trim().startsWith("--") } ?: "空脚本"
+
+        // Lua 模块的 Pill 代表整个脚本，所以直接创建
+        val scriptPill = PillUtil.Pill(firstLine, false, "script")
+
         return PillUtil.buildSpannable(context,
             "执行Lua脚本: ",
-            PillUtil.Pill(firstLine, false, "script")
+            scriptPill
         )
     }
 
@@ -69,7 +73,7 @@ class LuaModule : BaseModule() {
         val inputMappings = context.variables["inputs"] as? Map<String, String> ?: emptyMap()
 
         inputMappings.forEach { (varName, magicVarRef) ->
-            if (magicVarRef.startsWith("{{") && magicVarRef.endsWith("}}")) {
+            if (magicVarRef.isMagicVariable()) {
                 val parts = magicVarRef.removeSurrounding("{{", "}}").split('.')
                 val sourceStepId = parts.getOrNull(0)
                 val sourceOutputId = parts.getOrNull(1)

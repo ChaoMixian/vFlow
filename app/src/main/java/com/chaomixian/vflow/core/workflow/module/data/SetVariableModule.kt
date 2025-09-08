@@ -75,36 +75,35 @@ class SetVariableModule : BaseModule() {
      * 生成在工作流编辑器中显示模块摘要的文本。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val inputs = getInputs()
         val type = step.parameters["type"]?.toString() ?: "文本"
         val value = step.parameters["value"]
+
+        val typePill = PillUtil.createPillFromParam(
+            type,
+            inputs.find { it.id == "type" },
+            isModuleOption = true
+        )
 
         val valuePillText = when (type) {
             "布尔" -> value?.toString() ?: "false"
             "字典" -> "{...}"
             "图像" -> "[图像]"
-            "数字" -> when (value) {
-                is Number -> {
-                    if (value.toDouble() == value.toLong().toDouble()) {
-                        value.toLong().toString()
-                    } else {
-                        value.toString()
-                    }
-                }
-                else -> value?.toString() ?: "..."
-            }
-            else -> when {
-                value is String && value.isNotEmpty() -> "'$value'"
-                value != null && value.toString().isNotEmpty() -> value.toString()
-                else -> "..."
-            }
+            else -> null // 其他类型让 createPillFromParam 自己处理
+        }
+
+        val valuePill = if (valuePillText != null) {
+            PillUtil.Pill(valuePillText, false, "value")
+        } else {
+            PillUtil.createPillFromParam(value, inputs.find { it.id == "value" })
         }
 
         return PillUtil.buildSpannable(
             context,
             "设置变量 ",
-            PillUtil.Pill(type, false, parameterId = "type", isModuleOption = true),
+            typePill,
             " 为 ",
-            PillUtil.Pill(valuePillText, false, parameterId = "value")
+            valuePill
         )
     }
 

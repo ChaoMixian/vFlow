@@ -55,28 +55,16 @@ class DelayModule : BaseModule() {
      * 例如：“延迟 [1000] 毫秒”
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val durationParam = step.parameters["duration"]
-        // 判断参数值是否为魔法变量引用
-        val isVariable = (durationParam as? String)?.startsWith("{{") == true && (durationParam as? String)?.endsWith("}}") == true
+        val inputs = getInputs()
+        val durationPill = PillUtil.createPillFromParam(
+            step.parameters["duration"],
+            inputs.find { it.id == "duration" }
+        )
 
-        // 格式化延迟时间的显示文本
-        val durationText = when {
-            isVariable -> durationParam.toString() // 如果是魔法变量，直接显示其引用字符串
-            durationParam is Number -> { // 如果是数字，整数不显示小数点
-                if (durationParam.toDouble() == durationParam.toLong().toDouble()) {
-                    durationParam.toLong().toString()
-                } else {
-                    durationParam.toString() // 小数则按原样显示，或可进一步格式化
-                }
-            }
-            else -> durationParam?.toString() ?: "1000" // 其他情况或默认值
-        }
-
-        // 使用 PillUtil 构建带样式的摘要
         return PillUtil.buildSpannable(
             context,
             "延迟 ",
-            PillUtil.Pill(durationText, isVariable, parameterId = "duration"), // 延迟时间药丸
+            durationPill,
             " 毫秒"
         )
     }
@@ -91,14 +79,14 @@ class DelayModule : BaseModule() {
         if (duration is String) {
             try {
                 // 如果不是魔法变量，尝试转换为长整型并检查是否为负
-                if (!duration.startsWith("{{")) {
+                if (!duration.isMagicVariable()) {
                     if (duration.toLong() < 0) {
                         return ValidationResult(false, "延迟时间不能为负数")
                     }
                 }
             } catch (e: Exception) {
                 // 如果转换失败且不是魔法变量，则格式无效
-                if (!duration.startsWith("{{")) {
+                if (!duration.isMagicVariable()) {
                     return ValidationResult(false, "无效的数字格式")
                 }
             }
