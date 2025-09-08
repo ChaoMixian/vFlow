@@ -18,8 +18,10 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.model.Workflow
 import kotlinx.coroutines.*
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 class TriggerService : Service() {
 
@@ -27,13 +29,21 @@ class TriggerService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var keyEventJob: Job? = null
 
+    // [核心修复] 为每个按键独立维护单击/双击状态
+    private val singleClickJobs = ConcurrentHashMap<String, Job>()
+    private val lastPressTimestampMap = ConcurrentHashMap<String, Long>()
+    private val doubleClickThreshold = 400L // 双击时间窗口 (毫秒)
+    private val longPressThreshold = 500L  // 长按阈值 (毫秒)
+
+
     companion object {
         private const val TAG = "TriggerService"
         private const val NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "trigger_service_channel"
         const val ACTION_RELOAD_TRIGGERS = "com.chaomixian.vflow.RELOAD_TRIGGERS"
-        // [新增] 定义接收按键事件的 Action
         const val ACTION_KEY_EVENT_RECEIVED = "com.chaomixian.vflow.KEY_EVENT_RECEIVED"
+        const val EXTRA_EVENT_TYPE = "event_type" // "UP" or "DOWN"
+        const val EXTRA_ACTION_TYPE = "action_type" // 旧版脚本兼容字段
     }
 
     // 监听工作流更新的广播接收器
@@ -58,14 +68,11 @@ class TriggerService : Service() {
         startForeground(NOTIFICATION_ID, createNotification())
         Log.d(TAG, "TriggerService 已启动。")
 
-        // [修改] 扩展 onStartCommand 的功能
         when (intent?.action) {
             ACTION_KEY_EVENT_RECEIVED -> {
-                // 如果是按键事件，则处理它
                 handleKeyEvent(intent)
             }
             else -> {
-                // 否则，执行原有的启动/重载逻辑
                 if (intent?.action == ACTION_RELOAD_TRIGGERS) {
                     Log.d(TAG, "通过 Intent 请求重新加载触发器。")
                 }
@@ -77,48 +84,92 @@ class TriggerService : Service() {
     }
 
     /**
-     * [新增] 处理接收到的按键事件
+     * [核心修复] 使用 per-key 的时间戳处理按键事件，解决冲突
      */
     private fun handleKeyEvent(intent: Intent) {
         val device = intent.getStringExtra("device")
         val keyCode = intent.getStringExtra("key_code")
+        val eventType = intent.getStringExtra(EXTRA_EVENT_TYPE)
+        val pressDuration = intent.getLongExtra("duration", 0)
 
-        if (device.isNullOrBlank() || keyCode.isNullOrBlank()) {
-            Log.w(TAG, "接收到无效的按键事件: device=$device, keyCode=$keyCode")
+        if (device.isNullOrBlank() || keyCode.isNullOrBlank() || eventType.isNullOrBlank()) {
             return
         }
 
-        Log.d(TAG, "服务已唤醒并接收到按键事件: device=$device, keyCode=$keyCode")
+        val uniqueKey = "$device-$keyCode"
 
-        // 在一个新的协程中查找并执行工作流，避免阻塞服务主线程
+        if (eventType == "UP") {
+            // 1. 长按事件处理 (优先级最高，无冲突)
+            if (pressDuration >= longPressThreshold) {
+                Log.d(TAG, "长按事件检测成功 for $uniqueKey")
+                // 长按会取消任何待处理的单击/双击逻辑
+                singleClickJobs[uniqueKey]?.cancel()
+                lastPressTimestampMap.remove(uniqueKey)
+                executeMatchingWorkflows(device, keyCode, "长按")
+                return
+            }
+
+            // 2. 短按 (立即触发) 事件处理
+            executeMatchingWorkflows(device, keyCode, "短按 (立即触发)")
+
+            // 3. 单击 与 双击 的互斥逻辑处理
+            val now = System.currentTimeMillis()
+            val lastPressTimestamp = lastPressTimestampMap[uniqueKey] ?: 0L
+
+            // 取消上一次单击可能安排的延迟任务
+            singleClickJobs[uniqueKey]?.cancel()
+
+            if (now - lastPressTimestamp <= doubleClickThreshold) {
+                // 如果两次点击间隔很短，确认为“双击”
+                Log.d(TAG, "双击事件检测成功 for $uniqueKey")
+                lastPressTimestampMap.remove(uniqueKey) // 重置时间戳，防止三连击
+                executeMatchingWorkflows(device, keyCode, "双击")
+            } else {
+                // 否则，这可能是一次“单击”
+                lastPressTimestampMap[uniqueKey] = now
+                // 安排一个延迟任务。如果这个任务在延迟时间内没有被下一次点击取消，
+                // 那么它就是一次确定的“单击”。
+                singleClickJobs[uniqueKey] = serviceScope.launch {
+                    delay(doubleClickThreshold)
+                    if (isActive) { // 检查任务是否在延迟期间被取消
+                        Log.d(TAG, "单击事件触发 for $uniqueKey")
+                        executeMatchingWorkflows(device, keyCode, "单击")
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 辅助函数，用于查找并执行匹配的工作流
+     */
+    private fun executeMatchingWorkflows(device: String, keyCode: String, actionType: String) {
         serviceScope.launch {
             val workflowsToExecute = workflowManager.findKeyEventTriggerWorkflows()
                 .filter {
                     val config = it.triggerConfig
-                    config?.get("device") == device && config?.get("key_code") == keyCode
+                    config?.get("device") == device &&
+                            config?.get("key_code") == keyCode &&
+                            config?.get("action_type") == actionType
                 }
 
             if (workflowsToExecute.isNotEmpty()) {
-                Log.i(TAG, "找到 ${workflowsToExecute.size} 个匹配的工作流，准备执行。")
+                Log.i(TAG, "找到 ${workflowsToExecute.size} 个匹配 '$actionType' 的工作流，准备执行。")
                 workflowsToExecute.forEach {
                     WorkflowExecutor.execute(it, applicationContext)
                 }
-            } else {
-                Log.w(TAG, "未找到匹配此按键事件的工作流。")
             }
         }
     }
 
 
     private fun reloadKeyEventTriggers() {
-        // 先停止当前正在运行的监听任务
         keyEventJob?.cancel()
         Log.d(TAG, "正在停止旧的按键监听任务...")
 
         keyEventJob = serviceScope.launch {
-            // 确保旧进程已终止
             ShizukuManager.execShellCommand(applicationContext, "killall getevent")
-            delay(500) // 等待进程被完全终止
+            delay(500)
 
             val keyEventWorkflows = workflowManager.findKeyEventTriggerWorkflows()
             if (keyEventWorkflows.isEmpty()) {
@@ -126,7 +177,6 @@ class TriggerService : Service() {
                 return@launch
             }
 
-            // 按输入设备对触发器进行分组
             val triggersByDevice = keyEventWorkflows.groupBy {
                 it.triggerConfig?.get("device") as? String
             }
@@ -136,21 +186,16 @@ class TriggerService : Service() {
             triggersByDevice.forEach { (device, workflows) ->
                 if (device.isNullOrBlank()) return@forEach
 
-                // 为每个设备创建一个监听脚本
-                val script = createShellScriptForDevice(device, workflows.mapNotNull {
-                    it.triggerConfig?.get("key_code") as? String
-                })
+                val script = createShellScriptForDevice(device, workflows)
 
                 if (script.isNotBlank()) {
                     launch {
                         try {
-                            // 将脚本写入临时文件
                             val scriptFile = File(cacheDir, "key_listener_${device.replace('/', '_')}.sh")
                             scriptFile.writeText(script)
                             scriptFile.setExecutable(true)
                             Log.d(TAG, "为设备 $device 创建脚本: ${scriptFile.absolutePath}")
 
-                            // 通过 Shizuku 执行脚本，这是一个长期运行的命令
                             val result = ShizukuManager.execShellCommand(applicationContext, "sh ${scriptFile.absolutePath}")
                             Log.d(TAG, "设备 $device 的监听脚本已结束，输出: $result")
                         } catch (e: Exception) {
@@ -167,44 +212,60 @@ class TriggerService : Service() {
     }
 
     /**
-     * [最终修复] 修正了按键码的提取逻辑。
-     * - 使用 `awk '{print $2}'` 来精确提取事件行中的第二列（即按键码），替换了之前错误的 `sed` 命令。
-     * - [修复] 移除了 `KEY_CODE=` 和 `$(...` 之间的空格来修复 'unexpected `|`' 语法错误。
-     * - [新增] 将 getevent 命令放入 `while true` 循环中，以在进程被杀后自动重启。
-     * - [修改] 将 `am broadcast` 替换为 `am start-service` 来直接唤醒服务。
+     * [v11] 脚本现在只上报 UP/DOWN 事件和持续时间
      */
-    private fun createShellScriptForDevice(device: String, keyCodes: List<String>): String {
-        if (keyCodes.isEmpty()) return ""
+    private fun createShellScriptForDevice(device: String, workflows: List<Workflow>): String {
+        if (workflows.isEmpty()) return ""
 
-        val grepPattern = keyCodes.joinToString("|") { "($it.*DOWN|$it.*UP)" }
+        val grepPattern = workflows.mapNotNull { it.triggerConfig?.get("key_code") as? String }.distinct().joinToString("|")
 
         val logFile = "${applicationContext.cacheDir.absolutePath}/key_listener.log"
-        // [修改] 定义服务的组件名
         val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
 
         return """
             #!/system/bin/sh
             LOG_FILE="$logFile"
-            echo "--- SCRIPT START (v6-service-wake) ---" >> "${'$'}LOG_FILE"
+            DEVICE="$device"
+            GREP_PATTERN="$grepPattern"
+            SERVICE_COMPONENT="$serviceComponent"
+
+            echo "--- SCRIPT START (v11-simplified-reporter) ---" >> "${'$'}LOG_FILE"
             echo "PID: $$" >> "${'$'}LOG_FILE"
-            echo "Listening on device: $device" >> "${'$'}LOG_FILE"
-            
+            echo "Listening on device: ${'$'}DEVICE with pattern: ${'$'}GREP_PATTERN" >> "${'$'}LOG_FILE"
+
             while true; do
               echo "Starting getevent process..." >> "${'$'}LOG_FILE"
-              getevent -l "$device" | while IFS= read -r line; do
-                if echo "${'$'}{line}" | grep -E -q "$grepPattern"; then
-                    echo "[MATCH]: Condition met for line: ${'$'}{line}" >> "${'$'}LOG_FILE"
-                    KEY_CODE=$(echo "${'$'}{line}" | awk '{print ${'$'}2}')
-                    echo "[ACTION]: Extracted KEY_CODE: ${'$'}{KEY_CODE}" >> "${'$'}LOG_FILE"
-                    
-                    if [ -n "${'$'}{KEY_CODE}" ]; then
-                       # [修改] 使用 am start-service 来直接唤醒应用
-                       am start-service -n "$serviceComponent" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "$device" --es key_code "${'$'}{KEY_CODE}"
-                       echo "[WAKE_UP]: Sent start-service for KEY_CODE: ${'$'}{KEY_CODE}" >> "${'$'}LOG_FILE"
+              getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
+                if echo "${'$'}line" | grep -E -q "(${'$'}GREP_PATTERN)"; then
+                    TIMESTAMP=`date +%s%3N`
+                    EVENT_TYPE=`echo ${'$'}line | awk '{print ${'$'}NF}'`
+                    KEY_CODE=`echo ${'$'}line | awk '{print ${'$'}2}'`
+
+                    if [ "${'$'}EVENT_TYPE" = "DOWN" ]; then
+                        DOWN_TIMESTAMP=${'$'}TIMESTAMP
+                        am start-service -n "${'$'}SERVICE_COMPONENT" \
+                            -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} \
+                            --es device "${'$'}DEVICE" \
+                            --es key_code "${'$'}{KEY_CODE}" \
+                            --es event_type "DOWN"
+                    elif [ "${'$'}EVENT_TYPE" = "UP" ]; then
+                        if [ -z "${'$'}DOWN_TIMESTAMP" ]; then
+                            continue
+                        fi
+                        
+                        PRESS_DURATION=$((TIMESTAMP - DOWN_TIMESTAMP))
+                        DOWN_TIMESTAMP=""
+
+                        am start-service -n "${'$'}SERVICE_COMPONENT" \
+                            -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} \
+                            --es device "${'$'}DEVICE" \
+                            --es key_code "${'$'}{KEY_CODE}" \
+                            --es event_type "UP" \
+                            --el duration ${'$'}PRESS_DURATION
                     fi
                 fi
               done
-              echo "getevent process for $device exited. Restarting in 1s..." >> "${'$'}LOG_FILE"
+              echo "getevent process for ${'$'}DEVICE exited. Restarting in 1s..." >> "${'$'}LOG_FILE"
               sleep 1
             done
         """.trimIndent()

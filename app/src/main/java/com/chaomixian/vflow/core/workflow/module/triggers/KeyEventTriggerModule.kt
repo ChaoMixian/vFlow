@@ -37,17 +37,29 @@ class KeyEventTriggerModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "BTN_TRIGGER_HAPPY32",
             acceptsMagicVariable = false
+        ),
+        InputDefinition( // [修改] 更新操作类型
+            id = "action_type",
+            name = "操作类型",
+            staticType = ParameterType.ENUM,
+            defaultValue = "单击", // 默认使用更安全的“单击”
+            options = listOf("单击", "双击", "长按", "短按 (立即触发)"),
+            acceptsMagicVariable = false
         )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val device = step.parameters["device"] as? String
         val keyCode = step.parameters["key_code"] as? String
+        val actionType = step.parameters["action_type"] as? String ?: "单击"
 
         if (device.isNullOrEmpty() || keyCode.isNullOrEmpty()) {
             return "配置按键触发器"
         }
-        return PillUtil.buildSpannable(context, "当按下 ", PillUtil.Pill(keyCode, false, "key_code"), " 键时")
+        val keyCodePill = PillUtil.Pill(keyCode, false, "key_code")
+        val actionTypePill = PillUtil.Pill(actionType.replace(" (立即触发)", ""), false, "action_type", isModuleOption = true)
+
+        return PillUtil.buildSpannable(context, "当 ", actionTypePill, " ", keyCodePill, " 键时")
     }
 
     override suspend fun execute(
