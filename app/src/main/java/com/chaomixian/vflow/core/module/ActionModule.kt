@@ -1,3 +1,7 @@
+// 文件：ActionModule.kt
+// 描述：定义了所有可执行模块必须实现的核心接口。
+//      它规定了模块的基本属性、参数定义、UI交互、验证和执行逻辑。
+
 package com.chaomixian.vflow.core.module
 
 import android.content.Context
@@ -92,6 +96,21 @@ interface ActionModule {
      * @return 如果成功处理了删除（例如，移除了步骤），则返回 true；否则返回 false。
      */
     fun onStepDeleted(steps: MutableList<ActionStep>, position: Int): Boolean
+
+    /**
+     * [新增] 当一个参数在编辑器中被用户更新后，此函数会被调用。
+     * 它允许模块根据一个参数的变动，来动态修改其他参数的值或状态。
+     *
+     * @param step 当前的 ActionStep 实例，包含更新前的参数。
+     * @param updatedParameterId 刚刚被用户修改的参数的 ID。
+     * @param updatedValue 新的参数值。
+     * @return 返回一个新的 Map，代表更新后的完整参数集。
+     */
+    fun onParameterUpdated(
+        step: ActionStep,
+        updatedParameterId: String,
+        updatedValue: Any?
+    ): Map<String, Any?>
 
     /**
      * 模块的核心执行逻辑。

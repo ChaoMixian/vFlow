@@ -153,6 +153,31 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
     }
 
+    /**
+     * [新增] 当一个参数值在UI上发生变化时调用此方法。
+     * @param updatedId 被更新的参数的ID。
+     * @param updatedValue 新的参数值。
+     */
+    private fun parameterUpdated(updatedId: String, updatedValue: Any?) {
+        // 1. 基于当前参数状态，应用刚刚发生变化的那个值
+        val parametersBeforeModuleUpdate = currentParameters.toMutableMap()
+        parametersBeforeModuleUpdate[updatedId] = updatedValue
+
+        // 2. 创建一个临时的ActionStep实例，用于传递给模块
+        val stepForUpdate = ActionStep(module.id, parametersBeforeModuleUpdate)
+
+        // 3. 调用模块的onParameterUpdated方法，获取模块处理后的全新参数集
+        val newParametersFromServer = module.onParameterUpdated(stepForUpdate, updatedId, updatedValue)
+
+        // 4. 使用模块返回的参数集，完全更新编辑器内部的当前参数状态
+        currentParameters.clear()
+        currentParameters.putAll(newParametersFromServer)
+
+        // 5. 使用新的参数状态，重建整个UI
+        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
+    }
+
+
     /** 构建编辑器UI。 */
     private fun buildUi(container: LinearLayout) {
         container.removeAllViews()
@@ -241,6 +266,10 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         return when (inputDef.staticType) {
             ParameterType.BOOLEAN -> SwitchCompat(requireContext()).apply {
                 isChecked = currentValue as? Boolean ?: (inputDef.defaultValue as? Boolean ?: false)
+                // [修改] 添加监听器以触发参数更新流程
+                setOnCheckedChangeListener { _, isChecked ->
+                    parameterUpdated(inputDef.id, isChecked)
+                }
             }
             ParameterType.ENUM -> Spinner(requireContext()).apply {
                 adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, inputDef.options).also {
@@ -250,12 +279,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 val selectionIndex = inputDef.options.indexOf(currentEnum)
                 if (selectionIndex != -1) setSelection(selectionIndex)
 
+                // [修改] 修改监听器以调用新的参数更新流程
                 onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                        // 当用户选择新选项时，可能需要更新其他动态输入，因此重建整个UI
-                        if (currentParameters[inputDef.id] != selectedItem.toString()) {
-                            readParametersFromUi() // 读取所有控件当前值
-                            view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) } // 重建UI
+                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
+                        val selectedValue = inputDef.options.getOrNull(position)
+                        // 仅当选项实际发生变化时才触发更新，避免不必要地重建UI
+                        if (currentParameters[inputDef.id] != selectedValue) {
+                            parameterUpdated(inputDef.id, selectedValue)
                         }
                     }
                     override fun onNothingSelected(p0: AdapterView<*>?) {}

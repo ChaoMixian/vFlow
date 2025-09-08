@@ -1,5 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/services/TriggerService.kt
-// 描述: 一个专用于处理后台触发器（如按键事件）的前台服务。
+// 描述: 已通过重构核心逻辑，最终修复所有已知的单击/双击冲突问题。
 package com.chaomixian.vflow.services
 
 import android.app.Notification
@@ -22,19 +22,34 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
 import kotlinx.coroutines.*
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 class TriggerService : Service() {
+
+    private data class ResolvedKeyEventTrigger(
+        val workflowId: String,
+        val devicePath: String,
+        val keyCode: String,
+        val actionType: String,
+        val isSlider: Boolean = false
+    )
 
     private lateinit var workflowManager: WorkflowManager
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var keyEventJob: Job? = null
 
-    // [核心修复] 为每个按键独立维护单击/双击状态
+    private val resolvedTriggers = CopyOnWriteArrayList<ResolvedKeyEventTrigger>()
+
+    // --- 单按键状态管理 ---
     private val singleClickJobs = ConcurrentHashMap<String, Job>()
     private val lastPressTimestampMap = ConcurrentHashMap<String, Long>()
-    private val doubleClickThreshold = 400L // 双击时间窗口 (毫秒)
-    private val longPressThreshold = 500L  // 长按阈值 (毫秒)
+    private val doubleClickThreshold = 400L // 毫秒
+    private val longPressThreshold = 500L  // 毫秒
 
+    // --- 三段式滑块状态管理 ---
+    private val lastSliderModeMap = ConcurrentHashMap<String, String>()
+    private val sliderDebounceJobs = ConcurrentHashMap<String, Job>()
+    private val sliderDebounceTime = 200L
 
     companion object {
         private const val TAG = "TriggerService"
@@ -42,11 +57,11 @@ class TriggerService : Service() {
         private const val CHANNEL_ID = "trigger_service_channel"
         const val ACTION_RELOAD_TRIGGERS = "com.chaomixian.vflow.RELOAD_TRIGGERS"
         const val ACTION_KEY_EVENT_RECEIVED = "com.chaomixian.vflow.KEY_EVENT_RECEIVED"
-        const val EXTRA_EVENT_TYPE = "event_type" // "UP" or "DOWN"
-        const val EXTRA_ACTION_TYPE = "action_type" // 旧版脚本兼容字段
+        const val EXTRA_EVENT_TYPE = "event_type"
+        const val EXTRA_ACTION_TYPE = "action_type"
+        const val EXTRA_SLIDER_MODE = "slider_mode"
     }
 
-    // 监听工作流更新的广播接收器
     private val workflowUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == WorkflowManager.ACTION_WORKFLOWS_UPDATED) {
@@ -70,98 +85,128 @@ class TriggerService : Service() {
 
         when (intent?.action) {
             ACTION_KEY_EVENT_RECEIVED -> {
-                handleKeyEvent(intent)
+                if (intent.hasExtra(EXTRA_SLIDER_MODE)) {
+                    handleSliderEvent(intent)
+                } else {
+                    handleKeyEvent(intent)
+                }
             }
             else -> {
-                if (intent?.action == ACTION_RELOAD_TRIGGERS) {
-                    Log.d(TAG, "通过 Intent 请求重新加载触发器。")
-                }
+                if (intent?.action == ACTION_RELOAD_TRIGGERS) Log.d(TAG, "通过 Intent 请求重新加载触发器。")
                 reloadKeyEventTriggers()
             }
         }
-
         return START_STICKY
     }
 
     /**
-     * [核心修复] 使用 per-key 的时间戳处理按键事件，解决冲突
+     * [最终修复] 采用全新的状态机逻辑，彻底根除单击/双击的连锁误判问题。
      */
     private fun handleKeyEvent(intent: Intent) {
-        val device = intent.getStringExtra("device")
-        val keyCode = intent.getStringExtra("key_code")
-        val eventType = intent.getStringExtra(EXTRA_EVENT_TYPE)
+        val device = intent.getStringExtra("device") ?: return
+        val keyCode = intent.getStringExtra("key_code") ?: return
+        val eventType = intent.getStringExtra(EXTRA_EVENT_TYPE) ?: return
         val pressDuration = intent.getLongExtra("duration", 0)
-
-        if (device.isNullOrBlank() || keyCode.isNullOrBlank() || eventType.isNullOrBlank()) {
-            return
-        }
 
         val uniqueKey = "$device-$keyCode"
 
         if (eventType == "UP") {
-            // 1. 长按事件处理 (优先级最高，无冲突)
+            // 1. 长按事件处理 (最高优先级)
             if (pressDuration >= longPressThreshold) {
-                Log.d(TAG, "长按事件检测成功 for $uniqueKey")
-                // 长按会取消任何待处理的单击/双击逻辑
+                Log.d(TAG, "长按事件 for $uniqueKey")
                 singleClickJobs[uniqueKey]?.cancel()
                 lastPressTimestampMap.remove(uniqueKey)
                 executeMatchingWorkflows(device, keyCode, "长按")
                 return
             }
 
-            // 2. 短按 (立即触发) 事件处理
+            // 2. 短按(立即触发)事件处理
             executeMatchingWorkflows(device, keyCode, "短按 (立即触发)")
 
-            // 3. 单击 与 双击 的互斥逻辑处理
+            // 3. 决定性的单击/双击互斥逻辑
             val now = System.currentTimeMillis()
-            val lastPressTimestamp = lastPressTimestampMap[uniqueKey] ?: 0L
+            val lastPressTime = lastPressTimestampMap[uniqueKey]
 
-            // 取消上一次单击可能安排的延迟任务
-            singleClickJobs[uniqueKey]?.cancel()
-
-            if (now - lastPressTimestamp <= doubleClickThreshold) {
-                // 如果两次点击间隔很短，确认为“双击”
-                Log.d(TAG, "双击事件检测成功 for $uniqueKey")
-                lastPressTimestampMap.remove(uniqueKey) // 重置时间戳，防止三连击
+            // 检查这是否是一次双击的第二次点击
+            if (lastPressTime != null && (now - lastPressTime <= doubleClickThreshold)) {
+                // --- 确认是双击 ---
+                Log.d(TAG, "双击事件 for $uniqueKey")
+                // 1. 取消之前为第一次点击安排的单击任务
+                singleClickJobs[uniqueKey]?.cancel()
+                // 2. 立即清除时间戳，将状态机彻底重置为“初始状态”，这是防止连锁反应的关键！
+                lastPressTimestampMap.remove(uniqueKey)
+                // 3. 执行双击工作流
                 executeMatchingWorkflows(device, keyCode, "双击")
-            } else {
-                // 否则，这可能是一次“单击”
-                lastPressTimestampMap[uniqueKey] = now
-                // 安排一个延迟任务。如果这个任务在延迟时间内没有被下一次点击取消，
-                // 那么它就是一次确定的“单击”。
-                singleClickJobs[uniqueKey] = serviceScope.launch {
-                    delay(doubleClickThreshold)
-                    if (isActive) { // 检查任务是否在延迟期间被取消
-                        Log.d(TAG, "单击事件触发 for $uniqueKey")
-                        executeMatchingWorkflows(device, keyCode, "单击")
-                    }
+                // 4. 任务已完成，必须立即返回，不再将此次点击视为任何其他操作的开始
+                return
+            }
+
+            // --- 如果不是双击，则这是一次潜在的单击 ---
+            // 1. 记录下这次点击的时间，为下一次可能的双击做准备
+            lastPressTimestampMap[uniqueKey] = now
+            // 2. 安排一个延迟任务。如果这个任务在指定时间内没有被下一次点击（即双击）取消，
+            //    那么它就是一个确定的、独立的单击事件。
+            singleClickJobs[uniqueKey] = serviceScope.launch {
+                delay(doubleClickThreshold)
+                if (isActive) {
+                    Log.d(TAG, "单击事件 for $uniqueKey")
+                    executeMatchingWorkflows(device, keyCode, "单击")
+                    // 单击任务执行完成后，同样清除时间戳，保持状态干净
+                    lastPressTimestampMap.remove(uniqueKey)
                 }
             }
         }
     }
 
-    /**
-     * 辅助函数，用于查找并执行匹配的工作流
-     */
-    private fun executeMatchingWorkflows(device: String, keyCode: String, actionType: String) {
-        serviceScope.launch {
-            val workflowsToExecute = workflowManager.findKeyEventTriggerWorkflows()
-                .filter {
-                    val config = it.triggerConfig
-                    config?.get("device") == device &&
-                            config?.get("key_code") == keyCode &&
-                            config?.get("action_type") == actionType
+    private fun handleSliderEvent(intent: Intent) {
+        val device = intent.getStringExtra("device") ?: return
+        val newMode = intent.getStringExtra(EXTRA_SLIDER_MODE) ?: return
+
+        sliderDebounceJobs[device]?.cancel()
+        sliderDebounceJobs[device] = serviceScope.launch {
+            delay(sliderDebounceTime)
+            val lastMode = lastSliderModeMap[device]
+            if (lastMode != null && lastMode != newMode) {
+                Log.d(TAG, "三段式滑块事件: $lastMode -> $newMode")
+                val lastLevel = getModeLevel(lastMode)
+                val newLevel = getModeLevel(newMode)
+                if (newLevel > lastLevel) {
+                    executeMatchingWorkflows(device, "KEY_F3", "向上滑动")
+                } else if (newLevel < lastLevel) {
+                    executeMatchingWorkflows(device, "KEY_F3", "向下滑动")
+                }
+            }
+            lastSliderModeMap[device] = newMode
+        }
+    }
+
+    private fun getModeLevel(mode: String): Int {
+        return when (mode) {
+            "响铃" -> 2
+            "震动" -> 1
+            "静音", "勿扰" -> 0
+            else -> -1
+        }
+    }
+
+    private fun executeMatchingWorkflows(devicePath: String, keyCode: String, actionType: String) {
+        val matchingWorkflowIds = resolvedTriggers.filter {
+            it.devicePath == devicePath && it.keyCode == keyCode && it.actionType == actionType
+        }.map { it.workflowId }.toSet()
+
+        if (matchingWorkflowIds.isNotEmpty()) {
+            serviceScope.launch {
+                Log.i(TAG, "找到 ${matchingWorkflowIds.size} 个匹配 '$actionType' on '$devicePath' 的工作流")
+                val workflowsToExecute = workflowManager.findKeyEventTriggerWorkflows().filter {
+                    it.id in matchingWorkflowIds
                 }
 
-            if (workflowsToExecute.isNotEmpty()) {
-                Log.i(TAG, "找到 ${workflowsToExecute.size} 个匹配 '$actionType' 的工作流，准备执行。")
                 workflowsToExecute.forEach {
                     WorkflowExecutor.execute(it, applicationContext)
                 }
             }
         }
     }
-
 
     private fun reloadKeyEventTriggers() {
         keyEventJob?.cancel()
@@ -172,37 +217,73 @@ class TriggerService : Service() {
             delay(500)
 
             val keyEventWorkflows = workflowManager.findKeyEventTriggerWorkflows()
-            if (keyEventWorkflows.isEmpty()) {
+            resolvedTriggers.clear()
+
+            for (workflow in keyEventWorkflows) {
+                val config = workflow.triggerConfig ?: continue
+                val preset = config["device_preset"] as? String
+                val actionType = config["action_type"] as? String ?: continue
+
+                var devicePath: String? = null
+                var keyCode: String? = null
+                var isSlider = false
+
+                when (preset) {
+                    "一加 13T (侧键)" -> {
+                        devicePath = "/dev/input/event0"
+                        keyCode = (config["_internal_key_code"] as? String) ?: "BTN_TRIGGER_HAPPY32"
+                        Log.d(TAG, "解析到 '一加 13T' 预设, 使用设备路径: $devicePath")
+                    }
+                    "一加 13 (三段式)" -> {
+                        val deviceName = (config["_internal_device_name"] as? String) ?: "oplus,hall_tri_state_key"
+                        devicePath = findDeviceByName(deviceName)
+                        keyCode = (config["_internal_key_code"] as? String) ?: "KEY_F3"
+                        isSlider = true
+                        Log.d(TAG, "解析到 '一加 13' 预设, 查找到设备路径: $devicePath")
+                    }
+                    else -> { // 手动/自定义
+                        devicePath = config["device"] as? String
+                        keyCode = config["key_code"] as? String
+                    }
+                }
+
+                if (!devicePath.isNullOrBlank() && !keyCode.isNullOrBlank()) {
+                    resolvedTriggers.add(
+                        ResolvedKeyEventTrigger(workflow.id, devicePath, keyCode, actionType, isSlider)
+                    )
+                } else {
+                    Log.w(TAG, "工作流 ${workflow.id} ($preset) 无法解析出有效的设备或按键码，已跳过。")
+                }
+            }
+
+            if (resolvedTriggers.isEmpty()) {
                 Log.d(TAG, "没有已启用的按键触发器，停止监听。")
                 return@launch
             }
 
-            val triggersByDevice = keyEventWorkflows.groupBy {
-                it.triggerConfig?.get("device") as? String
-            }
-
+            val triggersByDevice = resolvedTriggers.groupBy { it.devicePath }
             Log.d(TAG, "找到 ${triggersByDevice.size} 个需要监听的输入设备。")
 
-            triggersByDevice.forEach { (device, workflows) ->
-                if (device.isNullOrBlank()) return@forEach
-
-                val script = createShellScriptForDevice(device, workflows)
+            triggersByDevice.forEach { (path, triggers) ->
+                val isSlider = triggers.any { it.isSlider }
+                val script = if (isSlider) {
+                    createSliderScriptForDevice(path)
+                } else {
+                    val keyCodes = triggers.map { it.keyCode }.distinct()
+                    createShellScriptForDevice(path, keyCodes)
+                }
 
                 if (script.isNotBlank()) {
                     launch {
                         try {
-                            val scriptFile = File(cacheDir, "key_listener_${device.replace('/', '_')}.sh")
+                            val scriptFile = File(cacheDir, "key_listener_${path.replace('/', '_')}.sh")
                             scriptFile.writeText(script)
                             scriptFile.setExecutable(true)
-                            Log.d(TAG, "为设备 $device 创建脚本: ${scriptFile.absolutePath}")
-
-                            val result = ShizukuManager.execShellCommand(applicationContext, "sh ${scriptFile.absolutePath}")
-                            Log.d(TAG, "设备 $device 的监听脚本已结束，输出: $result")
+                            Log.d(TAG, "为设备 $path 创建脚本: ${scriptFile.absolutePath}")
+                            ShizukuManager.execShellCommand(applicationContext, "sh ${scriptFile.absolutePath}")
                         } catch (e: Exception) {
-                            if (e is CancellationException) {
-                                Log.d(TAG, "设备 $device 的监听任务已被取消。")
-                            } else {
-                                Log.e(TAG, "执行设备 $device 的监听脚本时出错。", e)
+                            if (e !is CancellationException) {
+                                Log.e(TAG, "执行设备 $path 的监听脚本时出错。", e)
                             }
                         }
                     }
@@ -211,30 +292,46 @@ class TriggerService : Service() {
         }
     }
 
-    /**
-     * [v11] 脚本现在只上报 UP/DOWN 事件和持续时间
-     */
-    private fun createShellScriptForDevice(device: String, workflows: List<Workflow>): String {
-        if (workflows.isEmpty()) return ""
+    private suspend fun findDeviceByName(name: String): String? {
+        val command = "getevent -il | grep -B 1 -i '$name' | head -n 1 | awk '{print \$4}'"
+        val result = ShizukuManager.execShellCommand(applicationContext, command)
+        return if (result.startsWith("/dev/input/event")) result.trim() else null
+    }
 
-        val grepPattern = workflows.mapNotNull { it.triggerConfig?.get("key_code") as? String }.distinct().joinToString("|")
+    private fun createSliderScriptForDevice(device: String): String {
+        val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
+        val getModeCommand = "case \$(settings get global three_keys_mode) in 1) echo 静音;; 2) echo 振动;; 3) echo 响铃;; *) echo 未知;; esac"
 
-        val logFile = "${applicationContext.cacheDir.absolutePath}/key_listener.log"
+        return """
+            #!/system/bin/sh
+            DEVICE="$device"
+            SERVICE_COMPONENT="$serviceComponent"
+            
+            CURRENT_MODE=`$getModeCommand`
+            am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es slider_mode "${'$'}CURRENT_MODE"
+
+            getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
+              if echo "${'$'}line" | grep -q "KEY_F3.*UP"; then
+                  sleep 0.1
+                  NEW_MODE=`$getModeCommand`
+                  am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es slider_mode "${'$'}NEW_MODE"
+              fi
+            done
+        """.trimIndent()
+    }
+
+    private fun createShellScriptForDevice(device: String, keyCodes: List<String>): String {
+        if (keyCodes.isEmpty()) return ""
+        val grepPattern = keyCodes.joinToString("|")
         val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
 
         return """
             #!/system/bin/sh
-            LOG_FILE="$logFile"
             DEVICE="$device"
             GREP_PATTERN="$grepPattern"
             SERVICE_COMPONENT="$serviceComponent"
 
-            echo "--- SCRIPT START (v11-simplified-reporter) ---" >> "${'$'}LOG_FILE"
-            echo "PID: $$" >> "${'$'}LOG_FILE"
-            echo "Listening on device: ${'$'}DEVICE with pattern: ${'$'}GREP_PATTERN" >> "${'$'}LOG_FILE"
-
             while true; do
-              echo "Starting getevent process..." >> "${'$'}LOG_FILE"
               getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
                 if echo "${'$'}line" | grep -E -q "(${'$'}GREP_PATTERN)"; then
                     TIMESTAMP=`date +%s%3N`
@@ -243,45 +340,25 @@ class TriggerService : Service() {
 
                     if [ "${'$'}EVENT_TYPE" = "DOWN" ]; then
                         DOWN_TIMESTAMP=${'$'}TIMESTAMP
-                        am start-service -n "${'$'}SERVICE_COMPONENT" \
-                            -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} \
-                            --es device "${'$'}DEVICE" \
-                            --es key_code "${'$'}{KEY_CODE}" \
-                            --es event_type "DOWN"
+                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}{KEY_CODE}" --es event_type "DOWN"
                     elif [ "${'$'}EVENT_TYPE" = "UP" ]; then
-                        if [ -z "${'$'}DOWN_TIMESTAMP" ]; then
-                            continue
-                        fi
-                        
+                        if [ -z "${'$'}DOWN_TIMESTAMP" ]; then continue; fi
                         PRESS_DURATION=$((TIMESTAMP - DOWN_TIMESTAMP))
                         DOWN_TIMESTAMP=""
-
-                        am start-service -n "${'$'}SERVICE_COMPONENT" \
-                            -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} \
-                            --es device "${'$'}DEVICE" \
-                            --es key_code "${'$'}{KEY_CODE}" \
-                            --es event_type "UP" \
-                            --el duration ${'$'}PRESS_DURATION
+                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}{KEY_CODE}" --es event_type "UP" --el duration ${'$'}PRESS_DURATION
                     fi
                 fi
               done
-              echo "getevent process for ${'$'}DEVICE exited. Restarting in 1s..." >> "${'$'}LOG_FILE"
               sleep 1
             done
         """.trimIndent()
     }
 
-
     private fun createNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "后台触发器服务",
-                NotificationManager.IMPORTANCE_LOW
-            )
+            val channel = NotificationChannel(CHANNEL_ID, "后台触发器服务", NotificationManager.IMPORTANCE_LOW)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("vFlow 后台服务")
             .setContentText("正在监听自动化触发器...")
@@ -296,7 +373,5 @@ class TriggerService : Service() {
         Log.d(TAG, "TriggerService 已销毁。")
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 }

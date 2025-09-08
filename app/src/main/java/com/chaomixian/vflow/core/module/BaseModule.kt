@@ -41,6 +41,26 @@ abstract class BaseModule : ActionModule {
     }
 
     /**
+     * [新增] 当一个参数在编辑器中被用户更新后，此函数会被调用。
+     * 它允许模块根据一个参数的变动，来动态修改其他参数的值或状态。
+     *
+     * @param step 当前的 ActionStep 实例，包含更新前的参数。
+     * @param updatedParameterId 刚刚被用户修改的参数的 ID。
+     * @param updatedValue 新的参数值。
+     * @return 返回一个新的 Map，代表更新后的完整参数集。
+     * 默认实现是简单地将新值应用到现有参数中。
+     */
+    override fun onParameterUpdated(
+        step: ActionStep,
+        updatedParameterId: String,
+        updatedValue: Any?
+    ): Map<String, Any?> {
+        val newParameters = step.parameters.toMutableMap()
+        newParameters[updatedParameterId] = updatedValue
+        return newParameters
+    }
+
+    /**
      * 创建此模块的一个或多个默认动作步骤实例。
      * 默认实现会基于 getInputs() 中定义的参数及其 defaultValue 创建一个 ActionStep。
      * @return 包含新创建的 ActionStep 的列表。
