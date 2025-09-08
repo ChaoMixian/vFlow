@@ -1,17 +1,22 @@
+// 文件: main/java/com/chaomixian/vflow/ui/main/fragments/HomeFragment.kt
 package com.chaomixian.vflow.ui.main.fragments
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import androidx.core.view.setMargins
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.chaomixian.vflow.R
@@ -21,9 +26,11 @@ import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
+import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.divider.MaterialDivider
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -46,6 +53,20 @@ class HomeFragment : Fragment() {
     private lateinit var quickExecuteContainer: LinearLayout
 
     private val quickExecuteViews = mutableMapOf<String, View>() // 存储快速执行按钮视图，Key为workflowId
+    private var pendingWorkflow: Workflow? = null // [新增] 用于权限请求后待执行的工作流
+
+    // [新增] 用于接收权限请求页面返回结果的 Launcher
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // 如果权限授予成功，执行之前被挂起的工作流
+            pendingWorkflow?.let { executeWorkflow(it, checkPermissions = false) }
+        }
+        // 清理待处理的工作流
+        pendingWorkflow = null
+    }
+
 
     /** 创建并返回 Fragment 的视图。 */
     override fun onCreateView(
@@ -118,7 +139,9 @@ class HomeFragment : Fragment() {
         }
     }
 
-    /** 更新快速执行卡片 */
+    /**
+     * 更新快速执行卡片，以列表形式添加项目和分隔线
+     */
     private fun updateQuickExecuteCard() {
         val favoritedManualWorkflows = workflowManager.getAllWorkflows()
             .filter { it.isFavorite && it.steps.firstOrNull()?.moduleId == ManualTriggerModule().id }
@@ -131,7 +154,8 @@ class HomeFragment : Fragment() {
         } else {
             quickExecuteCard.isVisible = true
             val inflater = LayoutInflater.from(context)
-            favoritedManualWorkflows.forEach { workflow ->
+            favoritedManualWorkflows.forEachIndexed { index, workflow ->
+                // 1. 添加列表项
                 val itemView = inflater.inflate(R.layout.item_quick_execute, quickExecuteContainer, false)
                 itemView.findViewById<TextView>(R.id.quick_execute_name).text = workflow.name
 
@@ -141,10 +165,50 @@ class HomeFragment : Fragment() {
 
                 quickExecuteContainer.addView(itemView)
                 quickExecuteViews[workflow.id] = itemView
+
+                // 2. 如果不是最后一项，则添加分隔线
+                if (index < favoritedManualWorkflows.size - 1) {
+                    val divider = MaterialDivider(requireContext())
+                    // 为分隔线同时设置左右边距
+                    val lp = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    val marginStart = (64 * resources.displayMetrics.density).toInt() // 左边距，与图标和文本的间距对齐
+                    val marginEnd = (20 * resources.displayMetrics.density).toInt()   // 右边距
+                    lp.setMargins(marginStart, 0, marginEnd, 0)
+                    divider.layoutParams = lp
+                    quickExecuteContainer.addView(divider)
+                }
             }
             updateQuickExecuteButtonsState()
         }
     }
+
+
+    /**
+     * [修改] 封装统一的执行逻辑，增加权限检查
+     */
+    private fun executeWorkflow(workflow: Workflow, checkPermissions: Boolean = true) {
+        if (checkPermissions) {
+            val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
+            if (missingPermissions.isNotEmpty()) {
+                // 如果有缺失的权限，则暂存工作流并启动权限请求页面
+                pendingWorkflow = workflow
+                val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
+                    putParcelableArrayListExtra(PermissionActivity.EXTRA_PERMISSIONS, ArrayList(missingPermissions))
+                    putExtra(PermissionActivity.EXTRA_WORKFLOW_NAME, workflow.name)
+                }
+                permissionLauncher.launch(intent)
+                return // 终止当前执行流程，等待权限回调
+            }
+        }
+
+        // 如果没有缺失的权限，或明确跳过检查，则直接执行
+        Toast.makeText(context, "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
+        WorkflowExecutor.execute(workflow, requireContext())
+    }
+
 
     /** 处理快速执行按钮的点击事件 */
     private fun handleQuickExecuteClick(workflow: Workflow) {
@@ -152,9 +216,8 @@ class HomeFragment : Fragment() {
             WorkflowExecutor.stopExecution(workflow.id)
             Toast.makeText(context, "已停止: ${workflow.name}", Toast.LENGTH_SHORT).show()
         } else {
-            // 注意：这里的快速执行暂不检查权限，为简化逻辑
-            WorkflowExecutor.execute(workflow, requireContext())
-            Toast.makeText(context, "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
+            // [修改] 调用封装好的执行方法，该方法会处理权限检查
+            executeWorkflow(workflow)
         }
     }
 

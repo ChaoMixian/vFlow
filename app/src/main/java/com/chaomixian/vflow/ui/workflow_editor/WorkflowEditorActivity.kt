@@ -1,4 +1,4 @@
-// 文件: WorkflowEditorActivity.kt
+// 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/WorkflowEditorActivity.kt
 // 描述: 工作流编辑器 Activity，用于创建和修改工作流的步骤和参数。
 //      核心功能包括：显示步骤列表、添加/编辑/删除步骤、拖拽排序、
 //      处理模块参数（通过 ActionEditorSheet 和 MagicVariablePickerSheet）、
@@ -6,6 +6,8 @@
 
 package com.chaomixian.vflow.ui.workflow_editor
 
+import android.animation.Animator
+import android.animation.AnimatorInflater
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -62,6 +64,11 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private var appPickerCallback: ((resultCode: Int, data: Intent?) -> Unit)? = null
     private var editingPositionForAppPicker: Int = -1
+
+    // 存储动画 Animator 实例
+    private var dragGlowAnimator: Animator? = null
+    private var dragBreathAnimator: Animator? = null
+
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -335,18 +342,42 @@ class WorkflowEditorActivity : BaseActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
 
+            /**
+             * 在 onSelectedChanged 中启动拖拽动画。
+             */
             override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
                 super.onSelectedChanged(viewHolder, actionState)
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
                     viewHolder?.let {
                         dragStartPosition = it.adapterPosition
                         listBeforeDrag = actionSteps.toList()
+                        // 启动动画
+                        dragGlowAnimator = AnimatorInflater.loadAnimator(this@WorkflowEditorActivity, R.animator.drag_glow).apply {
+                            setTarget(it.itemView)
+                            start()
+                        }
+                        dragBreathAnimator = AnimatorInflater.loadAnimator(this@WorkflowEditorActivity, R.animator.drag_breath).apply {
+                            setTarget(it.itemView)
+                            start()
+                        }
                     }
                 }
             }
 
+
+            /**
+             * 在 clearView 中停止并清理动画。
+             */
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
+                // 停止并清理动画
+                dragGlowAnimator?.cancel()
+                dragBreathAnimator?.cancel()
+                viewHolder.itemView.alpha = 1.0f
+                viewHolder.itemView.scaleX = 1.0f
+                viewHolder.itemView.scaleY = 1.0f
+
+
                 val originalList = listBeforeDrag
                 val fromPos = dragStartPosition
                 val toPos = viewHolder.adapterPosition

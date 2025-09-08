@@ -12,7 +12,6 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- GridLayout 提前 -->
         <GridLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -80,7 +79,6 @@
 
         </GridLayout>
 
-        <!-- 核心服务 card 移到 GridLayout 后面 -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_service_status"
             style="?attr/materialCardViewFilledStyle"
@@ -129,7 +127,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 快速执行 保持不变 -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_quick_execute"
             style="?attr/materialCardViewFilledStyle"
@@ -143,11 +140,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingBottom="8dp"
+                android:paddingTop="8dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:paddingHorizontal="20dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
                     android:text="快速执行"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
@@ -155,8 +156,8 @@
                     android:id="@+id/container_quick_execute"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
                     android:orientation="vertical" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
