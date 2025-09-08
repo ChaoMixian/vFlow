@@ -17,6 +17,7 @@ import com.chaomixian.vflow.core.logging.ExecutionLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
+import com.chaomixian.vflow.services.ShizukuManager
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -41,9 +42,11 @@ class MainActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         ModuleRegistry.initialize() // 初始化模块注册表
         ExecutionNotificationManager.initialize(this) // 初始化通知管理器
-        // [新增] 初始化日志管理器和执行监听器
+        // 初始化日志管理器和执行监听器
         LogManager.initialize(applicationContext)
         ExecutionLogger.initialize(applicationContext, lifecycleScope)
+        // 应用启动时，立即发起 Shizuku 预连接
+        ShizukuManager.proactiveConnect(applicationContext)
 
         setContentView(R.layout.activity_main)
 

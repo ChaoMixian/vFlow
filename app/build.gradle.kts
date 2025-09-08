@@ -38,6 +38,7 @@ android {
     // 启用 ViewBinding，可以更安全地访问视图
     buildFeatures {
         viewBinding = true
+        aidl = true           // 启用aidl
     }
 }
 
@@ -52,13 +53,13 @@ dependencies {
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
 
-    // 新增：JSON 解析库，用于保存和读取工作流
+    // JSON 解析库，用于保存和读取工作流
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // 新增：Lua 脚本解释器引擎
+    // Lua 脚本解释器引擎
     implementation("org.luaj:luaj-jse:3.0.1")
 
-    // 新增：Shizuku API (未来重新引入高级功能时需要)
+    // Shizuku API (未来重新引入高级功能时需要)
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation(libs.androidx.scenecore)

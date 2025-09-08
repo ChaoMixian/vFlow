@@ -282,6 +282,7 @@ object PillUtil {
         "数据" -> R.color.category_data
         "文件" -> R.color.category_file
         "应用与系统" -> R.color.category_system
+        "Shizuku" -> R.color.category_shizuku
         else -> com.google.android.material.R.color.material_dynamic_neutral30
     }
 

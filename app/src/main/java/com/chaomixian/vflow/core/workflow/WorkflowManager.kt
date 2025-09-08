@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
+import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerModule
 import com.google.gson.Gson
@@ -57,6 +58,12 @@ class WorkflowManager(private val context: Context) { // [修改] 将 context �
     fun findAppStartTriggerWorkflows(): List<Workflow> {
         return getAllWorkflows().filter {
             it.isEnabled && it.triggerConfig?.get("type") == AppStartTriggerModule().id
+        }
+    }
+
+    fun findKeyEventTriggerWorkflows(): List<Workflow> {
+        return getAllWorkflows().filter {
+            it.isEnabled && it.triggerConfig?.get("type") == KeyEventTriggerModule().id
         }
     }
 

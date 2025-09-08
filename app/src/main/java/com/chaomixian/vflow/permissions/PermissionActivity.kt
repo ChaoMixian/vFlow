@@ -20,6 +20,7 @@ import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import android.widget.Button
 import android.widget.TextView
+import rikka.shizuku.Shizuku
 
 // 继承 BaseActivity 以应用动态主题
 class PermissionActivity : BaseActivity() {
@@ -30,6 +31,7 @@ class PermissionActivity : BaseActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: PermissionAdapter
     private var workflowName: String? = null
+    private val SHIZUKU_PERMISSION_REQUEST_CODE = 123
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -39,6 +41,15 @@ class PermissionActivity : BaseActivity() {
     private val appSettingsLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             // 从设置页面返回后，不需要做特殊处理，onResume会统一刷新
+        }
+
+    // 定义 Shizuku 权限请求结果监听器
+    private val shizukuPermissionListener =
+        Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+            if (requestCode == SHIZUKU_PERMISSION_REQUEST_CODE) {
+                // 收到结果后，刷新权限状态
+                refreshPermissionsStatus()
+            }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +69,15 @@ class PermissionActivity : BaseActivity() {
         continueButton = findViewById(R.id.button_permission_continue)
         recyclerView = findViewById(R.id.recycler_view_permissions)
 
+        Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
+
         setupUI()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 移除监听器，防止内存泄漏
+        Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
     }
 
     override fun onResume() {
@@ -105,6 +124,11 @@ class PermissionActivity : BaseActivity() {
                 requestPermissionLauncher.launch(permissionToRequest)
             }
             PermissionType.SPECIAL -> {
+                if (permission.id == PermissionManager.SHIZUKU.id) {
+                    Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
+                    return // 直接返回，等待回调
+                }
+
                 val intent = when(permission.id) {
                     PermissionManager.ACCESSIBILITY.id -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                     PermissionManager.OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

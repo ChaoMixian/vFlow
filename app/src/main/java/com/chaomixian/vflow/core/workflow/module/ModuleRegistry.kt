@@ -4,6 +4,7 @@ import com.chaomixian.vflow.core.workflow.module.data.*
 import com.chaomixian.vflow.core.workflow.module.file.*
 import com.chaomixian.vflow.core.workflow.module.interaction.*
 import com.chaomixian.vflow.core.workflow.module.logic.*
+import com.chaomixian.vflow.core.workflow.module.shizuku.*
 import com.chaomixian.vflow.core.workflow.module.system.*
 import com.chaomixian.vflow.core.workflow.module.triggers.*
 
@@ -33,6 +34,7 @@ object ModuleRegistry {
                     "数据" -> 3
                     "文件" -> 4
                     "应用与系统" -> 5
+                    "Shizuku" -> 6
                     else -> 99
                 }
             })
@@ -45,6 +47,7 @@ object ModuleRegistry {
         register(ManualTriggerModule())
         register(ReceiveShareTriggerModule())
         register(AppStartTriggerModule())
+        register(KeyEventTriggerModule())
 
         // 界面交互
         register(FindTextModule())
@@ -84,5 +87,8 @@ object ModuleRegistry {
         register(WifiModule())
         register(BluetoothModule())
         register(BrightnessModule())
+
+        // Shizuku 模块
+        register(ShellCommandModule())
     }
 }

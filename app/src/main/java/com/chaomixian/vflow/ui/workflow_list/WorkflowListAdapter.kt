@@ -44,7 +44,7 @@ class WorkflowListAdapter(
     private val onDuplicate: (Workflow) -> Unit,
     private val onExport: (Workflow) -> Unit,
     private val onExecute: (Workflow) -> Unit,
-    private val itemTouchHelper: ItemTouchHelper // 新增 ItemTouchHelper
+    private val itemTouchHelper: ItemTouchHelper
 ) : RecyclerView.Adapter<WorkflowListAdapter.WorkflowViewHolder>() {
 
     /** 获取当前工作流列表的副本。 */
@@ -58,7 +58,7 @@ class WorkflowListAdapter(
         notifyDataSetChanged()
     }
 
-    // 新增：用于处理拖动排序
+    // 用于处理拖动排序
     fun moveItem(fromPosition: Int, toPosition: Int) {
         if (fromPosition < toPosition) {
             for (i in fromPosition until toPosition) {
@@ -72,7 +72,7 @@ class WorkflowListAdapter(
         notifyItemMoved(fromPosition, toPosition)
     }
 
-    // 新增：保存当前列表顺序
+    // 保存当前列表顺序
     fun saveOrder() {
         workflowManager.saveAllWorkflows(workflows)
     }
@@ -126,7 +126,7 @@ class WorkflowListAdapter(
             popup.show()
         }
 
-        // --- UI切换逻辑 ---
+        // UI切换逻辑
         val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
         holder.executeButton.isVisible = isManualTrigger
         holder.enabledSwitch.isVisible = !isManualTrigger

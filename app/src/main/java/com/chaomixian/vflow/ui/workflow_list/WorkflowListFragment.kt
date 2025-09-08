@@ -38,7 +38,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class WorkflowListFragment : Fragment() {
-    // ... (其他属性保持不变)
     private lateinit var workflowManager: WorkflowManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: WorkflowListAdapter
@@ -169,7 +168,7 @@ class WorkflowListFragment : Fragment() {
         loadWorkflows()
     }
 
-    // --- 选项菜单处理 ---
+    // 选项菜单处理
     /** 创建选项菜单。 */
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.workflow_list_menu, menu)
@@ -238,7 +237,7 @@ class WorkflowListFragment : Fragment() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
     }
 
-    // 新增：设置拖拽排序功能
+    // 设置拖拽排序功能
     private fun setupDragAndDrop() {
         val callback = object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, 0

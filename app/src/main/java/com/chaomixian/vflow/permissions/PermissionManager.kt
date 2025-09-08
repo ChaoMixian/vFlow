@@ -3,6 +3,7 @@ package com.chaomixian.vflow.permissions
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -12,6 +13,8 @@ import androidx.core.content.ContextCompat
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.AccessibilityService
+import com.chaomixian.vflow.services.ShizukuManager
+import rikka.shizuku.Shizuku
 
 object PermissionManager {
 
@@ -45,7 +48,7 @@ object PermissionManager {
         type = PermissionType.RUNTIME
     )
 
-    // 新增：蓝牙权限 (Android 12+)
+    // 蓝牙权限 (Android 12+)
     val BLUETOOTH = Permission(
         id = Manifest.permission.BLUETOOTH_CONNECT,
         name = "蓝牙权限",
@@ -53,11 +56,19 @@ object PermissionManager {
         type = PermissionType.RUNTIME
     )
 
-    // 新增：修改系统设置权限
+    // 修改系统设置权限
     val WRITE_SETTINGS = Permission(
         id = "vflow.permission.WRITE_SETTINGS",
         name = "修改系统设置",
         description = "用于调整屏幕亮度等系统级别的设置。",
+        type = PermissionType.SPECIAL
+    )
+
+    // 定义 Shizuku 权限
+    val SHIZUKU = Permission(
+        id = "vflow.permission.SHIZUKU",
+        name = "Shizuku",
+        description = "允许应用通过 Shizuku 执行需要更高权限的操作，例如 Shell 命令。",
         type = PermissionType.SPECIAL
     )
 
@@ -103,6 +114,8 @@ object PermissionManager {
                     true // 12以下版本不需要此运行时权限
                 }
             }
+            // Shizuku 权限检查逻辑
+            SHIZUKU.id -> ShizukuManager.isShizukuActive(context)
             else -> {
                 ContextCompat.checkSelfPermission(context, permission.id) == android.content.pm.PackageManager.PERMISSION_GRANTED
             }
