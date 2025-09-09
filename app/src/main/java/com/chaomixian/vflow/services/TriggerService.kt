@@ -52,9 +52,9 @@ class TriggerService : Service() {
     private val longPressThreshold = 500L  // 毫秒
 
     // --- 三段式滑块状态管理 ---
-    private val lastSliderModeMap = ConcurrentHashMap<String, String>()
+    private val lastSliderModeMap = ConcurrentHashMap<String, Int>() // 改为存储Int类型的ringer_mode值
     private val sliderDebounceJobs = ConcurrentHashMap<String, Job>()
-    private val sliderDebounceTime = 200L
+    private val sliderDebounceTime = 200L // 防抖时间
 
     companion object {
         private const val TAG = "TriggerService"
@@ -64,7 +64,7 @@ class TriggerService : Service() {
         const val ACTION_KEY_EVENT_RECEIVED = "com.chaomixian.vflow.KEY_EVENT_RECEIVED"
         const val EXTRA_EVENT_TYPE = "event_type"
         const val EXTRA_ACTION_TYPE = "action_type"
-        const val EXTRA_SLIDER_MODE = "slider_mode"
+        const val EXTRA_RINGER_MODE = "ringer_mode" // 改为ringer_mode
     }
 
     private val workflowUpdateReceiver = object : BroadcastReceiver() {
@@ -90,7 +90,7 @@ class TriggerService : Service() {
 
         when (intent?.action) {
             ACTION_KEY_EVENT_RECEIVED -> {
-                if (intent.hasExtra(EXTRA_SLIDER_MODE)) {
+                if (intent.hasExtra(EXTRA_RINGER_MODE)) {
                     handleSliderEvent(intent)
                 } else {
                     handleKeyEvent(intent)
@@ -215,34 +215,64 @@ class TriggerService : Service() {
         pendingClickJobs.remove(uniqueKey)
     }
 
+    /**
+     * 处理三段式滑块事件
+     * 使用ringer_mode值：0=静音，1=震动，2=响铃
+     */
     private fun handleSliderEvent(intent: Intent) {
         val device = intent.getStringExtra("device") ?: return
-        val newMode = intent.getStringExtra(EXTRA_SLIDER_MODE) ?: return
+        val ringerModeStr = intent.getStringExtra(EXTRA_RINGER_MODE) ?: return
 
+        // 将ringer_mode字符串转换为整数
+        val newRingerMode = ringerModeStr.toIntOrNull() ?: return
+
+        // 使用防抖机制，避免快速切换时的重复触发
         sliderDebounceJobs[device]?.cancel()
         sliderDebounceJobs[device] = serviceScope.launch {
             delay(sliderDebounceTime)
-            val lastMode = lastSliderModeMap[device]
-            if (lastMode != null && lastMode != newMode) {
-                Log.d(TAG, "三段式滑块事件: $lastMode -> $newMode")
-                val lastLevel = getModeLevel(lastMode)
-                val newLevel = getModeLevel(newMode)
-                if (newLevel > lastLevel) {
-                    executeMatchingWorkflows(device, "KEY_F3", "向上滑动")
-                } else if (newLevel < lastLevel) {
-                    executeMatchingWorkflows(device, "KEY_F3", "向下滑动")
+
+            val lastRingerMode = lastSliderModeMap[device]
+
+            if (lastRingerMode != null && lastRingerMode != newRingerMode) {
+                Log.d(TAG, "三段式滑块事件: ${getRingerModeDescription(lastRingerMode)} -> ${getRingerModeDescription(newRingerMode)}")
+
+                // 判断滑动方向：根据ringer_mode的数值大小来判断
+                when {
+                    newRingerMode > lastRingerMode -> {
+                        // 数值增大，表示向上滑动（静音 -> 震动 -> 响铃）
+                        Log.d(TAG, "检测到向上滑动: $lastRingerMode -> $newRingerMode")
+                        executeMatchingWorkflows(device, "KEY_F3", "向上滑动")
+                    }
+                    newRingerMode < lastRingerMode -> {
+                        // 数值减小，表示向下滑动（响铃 -> 震动 -> 静音）
+                        Log.d(TAG, "检测到向下滑动: $lastRingerMode -> $newRingerMode")
+                        executeMatchingWorkflows(device, "KEY_F3", "向下滑动")
+                    }
+                    else -> {
+                        Log.d(TAG, "ringer_mode未发生变化，忽略此次事件")
+                    }
                 }
+            } else if (lastRingerMode == null) {
+                // 首次获取到ringer_mode值，只是记录下来，不触发任何动作
+                Log.d(TAG, "首次记录三段式滑块状态: ${getRingerModeDescription(newRingerMode)}")
             }
-            lastSliderModeMap[device] = newMode
+
+            // 更新最后记录的ringer_mode值
+            lastSliderModeMap[device] = newRingerMode
         }
     }
 
-    private fun getModeLevel(mode: String): Int {
-        return when (mode) {
-            "响铃" -> 2
-            "震动" -> 1
-            "静音", "勿扰" -> 0
-            else -> -1
+    /**
+     * 获取ringer_mode的描述文字
+     * @param ringerMode ringer_mode值（0=静音，1=震动，2=响铃）
+     * @return 对应的中文描述
+     */
+    private fun getRingerModeDescription(ringerMode: Int): String {
+        return when (ringerMode) {
+            0 -> "静音"
+            1 -> "震动"
+            2 -> "响铃"
+            else -> "未知($ringerMode)"
         }
     }
 
@@ -329,8 +359,6 @@ class TriggerService : Service() {
                         Log.d(TAG, "解析到 '一加 13T' 预设, 使用设备路径: $devicePath")
                     }
                     "一加 13 (三段式)" -> {
-//                        val deviceName = (config["_internal_device_name"] as? String) ?: "oplus,hall_tri_state_key"
-//                        devicePath = findDeviceByName(deviceName)
                         devicePath = "/dev/input/event6"
                         keyCode = (config["_internal_key_code"] as? String) ?: "KEY_F3"
                         isSlider = true
@@ -395,9 +423,12 @@ class TriggerService : Service() {
         return if (result.startsWith("/dev/input/event")) result.trim() else null
     }
 
+    /**
+     * 为三段式滑块设备创建监听脚本
+     * 使用 settings get system ringer_mode 命令获取当前状态
+     */
     private fun createSliderScriptForDevice(device: String, cacheDir: String): String {
         val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
-        val getModeCommand = "case \$(settings get global three_keys_mode) in 1) echo 静音;; 2) echo 振动;; 3) echo 响铃;; *) echo 未知;; esac"
         val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
         val pidFilePath = "$cacheDir/$pidFileName"
 
@@ -408,8 +439,9 @@ class TriggerService : Service() {
             PID_FILE="$pidFilePath"
 
             # --- PID 机制开始 ---
+            # 检查是否已有监听器在运行，避免重复启动
             if [ -f "${'$'}PID_FILE" ]; then
-                EXISTING_PID=$ (cat "${'$'}PID_FILE")
+                EXISTING_PID=`cat "${'$'}PID_FILE"`
                 if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
                     echo "监听器 (${'$'}DEVICE) 已在运行 (PID: ${'$'}EXISTING_PID)，新脚本退出。"
                     exit 0
@@ -419,23 +451,34 @@ class TriggerService : Service() {
                 fi
             fi
 
+            # 记录当前进程PID并设置退出时的清理动作
             echo "$$" > "${'$'}PID_FILE"
             trap 'rm -f "${'$'}PID_FILE"; exit' INT TERM EXIT
             # --- PID 机制结束 ---
             
-            CURRENT_MODE=`$getModeCommand`
-            am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es slider_mode "${'$'}CURRENT_MODE"
+            # 获取当前ringer_mode状态并发送初始状态给Service
+            CURRENT_RINGER_MODE=`settings get system ringer_mode`
+            echo "初始ringer_mode状态: ${'$'}CURRENT_RINGER_MODE"
+            am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es ringer_mode "${'$'}CURRENT_RINGER_MODE"
 
+            # 监听设备事件，当检测到KEY_F3的UP事件时检查ringer_mode变化
             getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
               if echo "${'$'}line" | grep -q "KEY_F3.*UP"; then
+                  # 稍等片刻让系统更新ringer_mode设置
                   sleep 0.1
-                  NEW_MODE=`$getModeCommand`
-                  am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es slider_mode "${'$'}NEW_MODE"
+                  # 获取新的ringer_mode状态
+                  NEW_RINGER_MODE=`settings get system ringer_mode`
+                  echo "检测到KEY_F3 UP事件，新ringer_mode状态: ${'$'}NEW_RINGER_MODE"
+                  # 将新状态发送给Service进行处理
+                  am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es ringer_mode "${'$'}NEW_RINGER_MODE"
               fi
             done
         """.trimIndent()
     }
 
+    /**
+     * 为普通按键设备创建监听脚本
+     */
     private fun createShellScriptForDevice(device: String, keyCodes: List<String>, cacheDir: String): String {
         if (keyCodes.isEmpty()) return ""
         val grepPattern = keyCodes.joinToString("|")
@@ -451,8 +494,9 @@ class TriggerService : Service() {
             PID_FILE="$pidFilePath"
 
             # --- PID 机制开始 ---
+            # 检查是否已有监听器在运行，避免重复启动
             if [ -f "${'$'}PID_FILE" ]; then
-                EXISTING_PID=$ (cat "${'$'}PID_FILE")
+                EXISTING_PID=`cat "${'$'}PID_FILE"`
                 if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
                     echo "监听器 (${'$'}DEVICE) 已在运行 (PID: ${'$'}EXISTING_PID)，新脚本退出。"
                     exit 0
@@ -462,33 +506,42 @@ class TriggerService : Service() {
                 fi
             fi
 
+            # 记录当前进程PID并设置退出时的清理动作
             echo "$$" > "${'$'}PID_FILE"
             trap 'rm -f "${'$'}PID_FILE"; exit' INT TERM EXIT
             # --- PID 机制结束 ---
 
+            # 持续监听按键事件
             while true; do
               getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
+                # 检查是否匹配目标按键码
                 if echo "${'$'}line" | grep -E -q "(${'$'}GREP_PATTERN)"; then
-                    TIMESTAMP=`date +%s%3N`
-                    EVENT_TYPE=`echo ${'$'}line | awk '{print ${'$'}NF}'`
-                    KEY_CODE=`echo ${'$'}line | awk '{print ${'$'}2}'`
+                    TIMESTAMP=`date +%s%3N`  # 获取毫秒级时间戳
+                    EVENT_TYPE=`echo ${'$'}line | awk '{print ${'$'}NF}'`  # 获取事件类型(DOWN/UP)
+                    KEY_CODE=`echo ${'$'}line | awk '{print ${'$'}2}'`     # 获取按键码
 
                     if [ "${'$'}EVENT_TYPE" = "DOWN" ]; then
+                        # 记录按下时的时间戳
                         DOWN_TIMESTAMP=${'$'}TIMESTAMP
-                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}{KEY_CODE}" --es event_type "DOWN"
+                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}KEY_CODE" --es event_type "DOWN"
                     elif [ "${'$'}EVENT_TYPE" = "UP" ]; then
+                        # 计算按压持续时间
                         if [ -z "${'$'}DOWN_TIMESTAMP" ]; then continue; fi
                         PRESS_DURATION=$((TIMESTAMP - DOWN_TIMESTAMP))
                         DOWN_TIMESTAMP=""
-                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}{KEY_CODE}" --es event_type "UP" --el duration ${'$'}PRESS_DURATION
+                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}KEY_CODE" --es event_type "UP" --el duration ${'$'}PRESS_DURATION
                     fi
                 fi
               done
+              # 如果getevent意外退出，等待1秒后重新启动
               sleep 1
             done
         """.trimIndent()
     }
 
+    /**
+     * 创建前台服务通知
+     */
     private fun createNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(CHANNEL_ID, "后台触发器服务", NotificationManager.IMPORTANCE_LOW)
