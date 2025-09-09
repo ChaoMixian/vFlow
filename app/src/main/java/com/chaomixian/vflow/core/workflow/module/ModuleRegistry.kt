@@ -90,5 +90,9 @@ object ModuleRegistry {
 
         // Shizuku 模块
         register(ShellCommandModule())
+        register(AlipayShortcutsModule())
+        register(WeChatShortcutsModule())
+        register(ColorOSShortcutsModule())
+        register(GeminiAssistantModule())
     }
 }
