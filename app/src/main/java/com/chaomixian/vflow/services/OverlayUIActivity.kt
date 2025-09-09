@@ -1,3 +1,4 @@
+// 文件：OverlayUIActivity.kt
 package com.chaomixian.vflow.ui.common
 
 import android.content.ClipData
@@ -23,6 +24,8 @@ import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.io.File
 import java.util.*
 
@@ -36,6 +39,9 @@ class OverlayUIActivity : AppCompatActivity() {
         }
         finish()
     }
+
+    // [新增] 用于JSON反序列化
+    private val gson = Gson()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,8 +76,22 @@ class OverlayUIActivity : AppCompatActivity() {
             }
             "pick_image" -> pickImageLauncher.launch("image/*")
             "workflow_chooser" -> {
+                // [核心修改] 优先尝试读取 Serializable，失败则回退到读取 JSON 字符串
                 @Suppress("UNCHECKED_CAST")
-                val workflows = intent.getSerializableExtra("workflow_list") as? Map<String, String>
+                var workflows = intent.getSerializableExtra("workflow_list") as? Map<String, String>
+                if (workflows == null) {
+                    val jsonString = intent.getStringExtra("workflow_list_json")
+                    if (jsonString != null) {
+                        try {
+                            val type = object : TypeToken<Map<String, String>>() {}.type
+                            workflows = gson.fromJson(jsonString, type)
+                        } catch (e: Exception) {
+                            finishWithError()
+                            return
+                        }
+                    }
+                }
+
                 workflows?.let { showWorkflowChooserDialog(it) } ?: finishWithError()
             }
             "share" -> {
@@ -99,12 +119,11 @@ class OverlayUIActivity : AppCompatActivity() {
             .setTitle(title)
             .setView(dialogView)
             .setPositiveButton("关闭") { _, _ -> complete(true) }
-            .setNeutralButton("复制", null) // 占位，稍后重写
-            .setNegativeButton("分享", null) // 占位，稍后重写
+            .setNeutralButton("复制", null)
+            .setNegativeButton("分享", null)
             .setOnCancelListener { cancel() }
             .show()
 
-        // **核心修复**：在对话框显示后，获取按钮并设置我们自己的点击监听器
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
             copyImageToClipboard(imageUriString)
             // 这里不调用 dialog.dismiss()，所以对话框会保持打开
@@ -204,12 +223,11 @@ class OverlayUIActivity : AppCompatActivity() {
             .setTitle(title)
             .setMessage(content)
             .setPositiveButton("关闭") { _, _ -> complete(true) }
-            .setNeutralButton("复制", null) // 占位
-            .setNegativeButton("分享", null) // 占位
+            .setNeutralButton("复制", null)
+            .setNegativeButton("分享", null)
             .setOnCancelListener { cancel() }
             .show()
 
-        // **核心修复**：重写按钮监听器
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("vFlow Text", content)

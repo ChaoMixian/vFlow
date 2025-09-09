@@ -1,52 +1,159 @@
+// 文件：ExecutionUIService.kt
+// 描述：提供一个在工作流执行期间请求用户界面交互的服务。
 package com.chaomixian.vflow.services
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.ui.common.OverlayUIActivity
+import com.google.gson.Gson
 import kotlinx.coroutines.CompletableDeferred
 import java.io.Serializable
-
-// 文件：ExecutionUIService.kt
-// 描述：提供一个在工作流执行期间请求用户界面交互的服务。
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * 执行时UI服务。
  * 负责处理模块在执行过程中需要用户交互的请求，例如弹出输入对话框或显示信息。
- * (注意：此类现在不再直接处理UI，而是作为启动OverlayUIActivity的接口)
+ * [修改] 优化了 Shizuku 启动逻辑，通过 JSON 字符串传递复杂数据。
  */
 class ExecutionUIService(private val context: Context) {
 
     companion object {
-        // 用于在Activity和Service之间传递结果的CompletableDeferred对象
+        private const val TAG = "ExecutionUIService"
         var inputCompletable: CompletableDeferred<Any?>? = null
+        private const val INTERACTIVE_CHANNEL_ID = "vflow_interactive_notifications"
+        private const val INTERACTIVE_CHANNEL_NAME = "交互式请求"
+        private val notificationIdCounter = AtomicInteger(1000)
     }
 
-    private fun startActivityAndAwaitResult(intent: Intent): CompletableDeferred<Any?> {
+    private val gson = Gson() // [新增] 用于JSON序列化
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                INTERACTIVE_CHANNEL_ID,
+                INTERACTIVE_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "用于在工作流执行期间请求用户交互"
+            }
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private suspend fun startActivityAndAwaitResult(intent: Intent, title: String, content: String): CompletableDeferred<Any?> {
         val deferred = CompletableDeferred<Any?>()
         inputCompletable = deferred
-        // 必须使用此Flag，因为我们从一个没有UI的上下文（Service/Executor）启动Activity
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+
+        if (ShizukuManager.isShizukuActive(context)) {
+            Log.d(TAG, "尝试 1: 使用 Shizuku...")
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                val command = buildAmStartCommand(intent)
+                Log.d(TAG, "正在通过 Shizuku 执行: $command")
+                val result = ShizukuManager.execShellCommand(context, command)
+
+                if (!result.startsWith("Error:") && !result.contains("Exception")) {
+                    Log.d(TAG, "尝试 1: Shizuku 启动成功。")
+                    return deferred
+                } else {
+                    Log.w(TAG, "尝试 1: Shizuku 命令执行失败: $result。回退到通知。")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "尝试 1: Shizuku 执行时抛出异常。回退到通知。", e)
+            }
+        } else {
+            Log.d(TAG, "尝试 1: Shizuku 未激活，跳过。")
+        }
+
+        Log.d(TAG, "尝试 2: 回退到发送通知。")
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        postNotification(intent, title, content)
+
         return deferred
     }
 
     /**
-     * 挂起函数，用于请求用户输入。
-     * @param type 输入类型 ("文本", "数字", "时间", "日期")。
-     * @param title 对话框的标题或提示信息。
-     * @return 用户输入的值，如果用户取消则返回null。
+     * [核心修改] 从 Intent 构建 `am start` 命令，并处理 Serializable extra。
      */
+    private fun buildAmStartCommand(intent: Intent): String {
+        val component = intent.component?.flattenToString() ?: throw IllegalArgumentException("Intent 必须有明确的组件")
+        val commandBuilder = StringBuilder("am start -n $component")
+
+        val flags = intent.flags
+        if (flags != 0) {
+            commandBuilder.append(" -f $flags")
+        }
+
+        intent.extras?.let { extras ->
+            for (key in extras.keySet()) {
+                val value = extras.get(key)
+
+                // [新增] 特殊处理 workflow_list，将其序列化为JSON字符串
+                if (key == "workflow_list" && value is Serializable) {
+                    val jsonValue = gson.toJson(value)
+                    val escapedJson = "'${jsonValue.replace("'", "'\\''")}'"
+                    commandBuilder.append(" --es \"workflow_list_json\" $escapedJson")
+                    continue // 继续下一个 extra
+                }
+
+                val escapedValue = if (value is String) "'${value.replace("'", "'\\''")}'" else value?.toString()
+
+                when (value) {
+                    is String -> commandBuilder.append(" --es \"$key\" $escapedValue")
+                    is Boolean -> commandBuilder.append(" --ez \"$key\" $value")
+                    is Int -> commandBuilder.append(" --ei \"$key\" $value")
+                    is Long -> commandBuilder.append(" --el \"$key\" $value")
+                    is Float -> commandBuilder.append(" --ef \"$key\" $value")
+                }
+            }
+        }
+        return commandBuilder.toString()
+    }
+
+    private fun postNotification(intent: Intent, title: String, content: String) {
+        val notificationId = notificationIdCounter.getAndIncrement()
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        createNotificationChannel()
+
+        val notification = NotificationCompat.Builder(context, INTERACTIVE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.rounded_keyboard_external_input_24)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(notificationId, notification)
+        Log.d(TAG, "已发送交互式通知 (ID: $notificationId)。")
+    }
+
     suspend fun requestInput(type: String, title: String): Any? {
-        // 通过启动一个透明的Activity来承载对话框
-        val intent = Intent(context, com.chaomixian.vflow.ui.common.OverlayUIActivity::class.java).apply {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
             putExtra("request_type", "input")
             putExtra("input_type", type)
             putExtra("title", title)
         }
-        return startActivityAndAwaitResult(intent).await()
+        return startActivityAndAwaitResult(intent, title, "点击这里输入 $type").await()
     }
 
     /**
@@ -55,12 +162,12 @@ class ExecutionUIService(private val context: Context) {
      * @param content 要显示的文本内容。
      */
     suspend fun showQuickView(title: String, content: String) {
-        val intent = Intent(context, com.chaomixian.vflow.ui.common.OverlayUIActivity::class.java).apply {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
             putExtra("request_type", "quick_view")
             putExtra("title", title)
             putExtra("content", content)
         }
-        startActivityAndAwaitResult(intent).await()
+        startActivityAndAwaitResult(intent, title, content.take(50)).await()
     }
 
     /**
@@ -69,12 +176,12 @@ class ExecutionUIService(private val context: Context) {
      * @param imageUri 要显示的图片的URI字符串。
      */
     suspend fun showQuickViewImage(title: String, imageUri: String) {
-        val intent = Intent(context, com.chaomixian.vflow.ui.common.OverlayUIActivity::class.java).apply {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
             putExtra("request_type", "quick_view_image")
             putExtra("title", title)
             putExtra("content", imageUri)
         }
-        startActivityAndAwaitResult(intent).await()
+        startActivityAndAwaitResult(intent, title, "点击查看图片").await()
     }
 
 
@@ -83,10 +190,10 @@ class ExecutionUIService(private val context: Context) {
      * @return 用户选择的图片的URI字符串，如果用户取消则返回null。
      */
     suspend fun requestImage(): String? {
-        val intent = Intent(context, com.chaomixian.vflow.ui.common.OverlayUIActivity::class.java).apply {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
             putExtra("request_type", "pick_image")
         }
-        return startActivityAndAwaitResult(intent).await() as? String
+        return startActivityAndAwaitResult(intent, "选择图片", "请点击以从相册中选择一张图片").await() as? String
     }
 
     /**
@@ -96,11 +203,11 @@ class ExecutionUIService(private val context: Context) {
      */
     suspend fun showWorkflowChooser(workflows: List<Workflow>): String? {
         val workflowInfo = workflows.associate { it.id to it.name }
-        val intent = Intent(context, com.chaomixian.vflow.ui.common.OverlayUIActivity::class.java).apply {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
             putExtra("request_type", "workflow_chooser")
             putExtra("workflow_list", workflowInfo as Serializable)
         }
-        return startActivityAndAwaitResult(intent).await() as? String
+        return startActivityAndAwaitResult(intent, "选择工作流", "有多个工作流可处理此操作，请选择一个").await() as? String
     }
 
     /**
@@ -111,7 +218,7 @@ class ExecutionUIService(private val context: Context) {
     suspend fun requestShare(content: Any?): Boolean? {
         val intent = Intent(context, OverlayUIActivity::class.java).apply {
             putExtra("request_type", "share")
-            when(content) {
+            when (content) {
                 is TextVariable -> {
                     putExtra("share_type", "text")
                     putExtra("share_content", content.value)
@@ -124,9 +231,9 @@ class ExecutionUIService(private val context: Context) {
                     putExtra("share_type", "image")
                     putExtra("share_content", content.uri)
                 }
-                else -> return false // 不支持的类型
+                else -> return false
             }
         }
-        return startActivityAndAwaitResult(intent).await() as? Boolean
+        return startActivityAndAwaitResult(intent, "分享", "点击以打开系统分享菜单").await() as? Boolean
     }
 }

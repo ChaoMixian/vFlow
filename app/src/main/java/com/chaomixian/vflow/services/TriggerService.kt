@@ -1,3 +1,4 @@
+// 文件: main/java/com/chaomixian/vflow/services/TriggerService.kt
 package com.chaomixian.vflow.services
 
 import android.app.Notification
@@ -16,6 +17,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.model.Workflow
 import kotlinx.coroutines.*
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -276,6 +278,10 @@ class TriggerService : Service() {
         }
     }
 
+    /**
+     * [核心修改] 查找并执行匹配的工作流。
+     * 如果有多个匹配，则弹出选择器。
+     */
     private fun executeMatchingWorkflows(devicePath: String, keyCode: String, actionType: String) {
         val matchingWorkflowIds = resolvedTriggers.filter {
             it.devicePath == devicePath && it.keyCode == keyCode && it.actionType == actionType
@@ -288,12 +294,41 @@ class TriggerService : Service() {
                     it.id in matchingWorkflowIds
                 }
 
-                workflowsToExecute.forEach {
-                    WorkflowExecutor.execute(it, applicationContext)
+                when {
+                    workflowsToExecute.isEmpty() -> {
+                        // 理论上不应发生，因为我们是从 resolvedTriggers 反查的
+                        Log.w(TAG, "警告：找到了匹配的触发器ID，但无法在数据库中找到对应的工作流。")
+                    }
+                    workflowsToExecute.size == 1 -> {
+                        // 只有一个匹配，直接执行
+                        WorkflowExecutor.execute(workflowsToExecute.first(), applicationContext)
+                    }
+                    else -> {
+                        // 有多个匹配，调用UI服务显示选择器
+                        handleMultipleMatches(workflowsToExecute)
+                    }
                 }
             }
         }
     }
+
+    /**
+     * [新增] 处理多个工作流匹配同一触发器的情况。
+     * @param workflows 匹配到的工作流列表。
+     */
+    private suspend fun handleMultipleMatches(workflows: List<Workflow>) {
+        val uiService = ExecutionUIService(applicationContext)
+        // 显示一个悬浮窗让用户选择要执行哪个工作流
+        val selectedWorkflowId = uiService.showWorkflowChooser(workflows)
+        if (selectedWorkflowId != null) {
+            // 如果用户选择了，就执行对应的工作流
+            val selectedWorkflow = workflowManager.getWorkflow(selectedWorkflowId)
+            if (selectedWorkflow != null) {
+                WorkflowExecutor.execute(selectedWorkflow, applicationContext)
+            }
+        }
+    }
+
 
     private fun reloadKeyEventTriggers() {
         keyEventJob?.cancel()
