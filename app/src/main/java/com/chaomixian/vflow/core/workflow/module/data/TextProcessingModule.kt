@@ -25,6 +25,8 @@ class TextProcessingModule : BaseModule() {
         category = "数据"
     )
 
+    override val uiProvider: ModuleUIProvider? = TextProcessingModuleUIProvider()
+
     // 定义所有支持的操作
     private val operationOptions = listOf("拼接", "分割", "替换", "正则提取")
 

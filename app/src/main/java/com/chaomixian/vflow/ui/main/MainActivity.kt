@@ -2,11 +2,12 @@
 // 描述：应用的主活动，承载底部导航和各个主页面 Fragment。
 package com.chaomixian.vflow.ui.main
 
-import android.content.Intent // [新增]
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -19,7 +20,7 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ShizukuManager
-import com.chaomixian.vflow.services.TriggerService // [新增]
+import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -49,7 +50,7 @@ class MainActivity : BaseActivity() {
         ExecutionLogger.initialize(applicationContext, lifecycleScope)
         // 应用启动时，立即发起 Shizuku 预连接
         ShizukuManager.proactiveConnect(applicationContext)
-        // [新增] 启动后台触发器服务
+        // 启动后台触发器服务
         startService(Intent(this, TriggerService::class.java))
 
 
@@ -71,7 +72,10 @@ class MainActivity : BaseActivity() {
         navView.setupWithNavController(navController) // 将 BottomNavigationView 与 NavController 集成
     }
 
-    /** Activity 启动时，如果尚未应用边衬区，则应用它们。 */
+    /**
+     * [修复] Activity 启动时，如果尚未应用边衬区，则应用它们。
+     * 将逻辑放在 onStart 可以确保 Fragment 的 View 已经创建。
+     */
     override fun onStart() {
         super.onStart()
         if (!insetsApplied) {
@@ -84,7 +88,7 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * 应用窗口边衬区到 AppBar、底部导航和 Fragment 容器。
+     * [修复] 应用窗口边衬区到 AppBar、底部导航和 Fragment 容器。
      * @param appBar AppBarLayout 视图。
      * @param bottomNav BottomNavigationView 视图。
      * @param fragmentContainer Fragment 容器视图。
@@ -104,11 +108,12 @@ class MainActivity : BaseActivity() {
             insets
         }
 
-        // 3. 为 Fragment 容器底部添加 BottomNavigationView 高度的 padding，防止内容遮挡
-        ViewCompat.setOnApplyWindowInsetsListener(fragmentContainer) { view, insets ->
-            val bottomNavHeight = bottomNav.height
-            view.updatePadding(bottom = bottomNavHeight)
-            insets
+        // 3. 为 Fragment 容器底部添加 BottomNavigationView 高度的 padding
+        //    使用 doOnPreDraw 可以确保我们在 bottomNav 视图被测量并准备好绘制之前执行代码，
+        //    这样就能获取到它正确的高度，解决了时序问题。
+        bottomNav.doOnPreDraw {
+            // 在这里，it 指的是 bottomNav 视图，it.height 是它测量后的实际高度。
+            fragmentContainer.updatePadding(bottom = it.height)
         }
     }
 }

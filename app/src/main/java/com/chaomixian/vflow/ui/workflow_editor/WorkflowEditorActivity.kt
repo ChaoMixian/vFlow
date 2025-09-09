@@ -69,6 +69,10 @@ class WorkflowEditorActivity : BaseActivity() {
     private var dragGlowAnimator: Animator? = null
     private var dragBreathAnimator: Animator? = null
 
+    // [新增] 用于保存和恢复状态的常量
+    private val STATE_ACTION_STEPS = "state_action_steps"
+    private val STATE_WORKFLOW_NAME = "state_workflow_name"
+
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -95,6 +99,17 @@ class WorkflowEditorActivity : BaseActivity() {
         const val EXTRA_WORKFLOW_ID = "WORKFLOW_ID"
     }
 
+    /**
+     * [新增] 保存 Activity 状态，防止数据丢失。
+     */
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // 保存当前正在编辑的步骤列表和工作流名称
+        outState.putParcelableArrayList(STATE_ACTION_STEPS, ArrayList(actionSteps))
+        outState.putString(STATE_WORKFLOW_NAME, nameEditText.text.toString())
+    }
+
+
     /** Activity 创建时的初始化。 */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,7 +124,30 @@ class WorkflowEditorActivity : BaseActivity() {
         toolbar.setNavigationOnClickListener { finish() }
 
         setupRecyclerView()
-        loadWorkflowData()
+
+        // [修改] 检查是否有已保存的状态，如果有则恢复，否则才从数据库加载
+        if (savedInstanceState != null) {
+            val savedSteps = savedInstanceState.getParcelableArrayList<ActionStep>(STATE_ACTION_STEPS)
+            if (savedSteps != null) {
+                actionSteps.clear()
+                actionSteps.addAll(savedSteps)
+            }
+            nameEditText.setText(savedInstanceState.getString(STATE_WORKFLOW_NAME))
+
+            // 恢复 currentWorkflow 对象以正确显示执行按钮状态
+            val workflowId = intent.getStringExtra(EXTRA_WORKFLOW_ID)
+            if (workflowId != null) {
+                currentWorkflow = workflowManager.getWorkflow(workflowId)
+                currentWorkflow?.let {
+                    updateExecuteButton(WorkflowExecutor.isRunning(it.id))
+                }
+            }
+            recalculateAndNotify() // 通知适配器数据已恢复
+        } else {
+            // 首次创建时，从数据库加载数据
+            loadWorkflowData()
+        }
+
         setupDragAndDrop()
 
         // [修改] “添加动作”按钮现在只负责添加普通动作，不再处理触发器

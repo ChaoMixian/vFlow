@@ -10,6 +10,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.services.ShizukuManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class WifiModule : BaseModule() {
@@ -57,12 +58,10 @@ class WifiModule : BaseModule() {
         val state = context.variables["state"] as? String ?: "切换"
         onProgress(ProgressUpdate("正在尝试 $state Wi-Fi..."))
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            onProgress(ProgressUpdate("您的安卓版本需要手动操作, 正在打开设置面板..."))
-            val intent = Intent(Settings.Panel.ACTION_WIFI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            appContext.startActivity(intent)
-            return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
-        } else {
+        // 智能判断执行方式
+        if (ShizukuManager.isShizukuActive(appContext)) {
+            // 1. Shizuku 可用，使用 Shell 命令
+            onProgress(ProgressUpdate("正在通过 Shizuku 执行..."))
             val wifiManager = appContext.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val targetState = when (state) {
                 "开启" -> true
@@ -70,8 +69,34 @@ class WifiModule : BaseModule() {
                 "切换" -> !wifiManager.isWifiEnabled
                 else -> return ExecutionResult.Failure("参数错误", "无效的状态: $state")
             }
-            val success = wifiManager.setWifiEnabled(targetState)
-            return ExecutionResult.Success(mapOf("success" to BooleanVariable(success)))
+            val command = if (targetState) "svc wifi enable" else "svc wifi disable"
+            val result = ShizukuManager.execShellCommand(appContext, command)
+
+            return if (result.startsWith("Error:")) {
+                ExecutionResult.Failure("Shizuku 执行失败", result)
+            } else {
+                ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            }
+        } else {
+            // 2. Shizuku 不可用，回退到原有逻辑
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10 及以上版本，打开设置面板
+                onProgress(ProgressUpdate("您的安卓版本需要手动操作, 正在打开设置面板..."))
+                val intent = Intent(Settings.Panel.ACTION_WIFI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                appContext.startActivity(intent)
+                return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            } else {
+                // Android 10 以下版本，使用旧 API
+                val wifiManager = appContext.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                val targetState = when (state) {
+                    "开启" -> true
+                    "关闭" -> false
+                    "切换" -> !wifiManager.isWifiEnabled
+                    else -> return ExecutionResult.Failure("参数错误", "无效的状态: $state")
+                }
+                val success = wifiManager.setWifiEnabled(targetState)
+                return ExecutionResult.Success(mapOf("success" to BooleanVariable(success)))
+            }
         }
     }
 }
