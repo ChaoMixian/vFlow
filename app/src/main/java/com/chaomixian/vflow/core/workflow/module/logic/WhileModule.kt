@@ -167,7 +167,6 @@ class WhileModule : BaseBlockModule() {
             }
         }
         return ExecutionResult.Failure("执行错误", "找不到配对的结束循环块")
-        return ExecutionResult.Failure("执行错误", "找不到配对的结束循环块")
     }
 
     private fun evaluateCondition(input1: Any?, operator: String, value1: Any?, value2: Any?): Boolean {
@@ -309,8 +308,40 @@ class EndWhileModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         onProgress(ProgressUpdate("循环体执行完毕，返回到循环起点。"))
-        // 移除跳转逻辑。EndWhile模块的职责只是一个标记，实际跳转由执行器负责。
-        // 执行器会看到下一个步骤是While，然后重新评估条件，或者在While条件为假时跳过EndWhile。
-        return ExecutionResult.Success()
+
+        // 查找对应的 While 模块的索引
+        val whilePc = findBlockStartPosition(context.allSteps, context.currentStepIndex, WHILE_START_ID)
+
+        return if (whilePc != -1) {
+            // 发出信号，跳转到 While 模块以重新评估条件
+            ExecutionResult.Signal(ExecutionSignal.Jump(whilePc))
+        } else {
+            // 理论上不应发生，但作为保护
+            ExecutionResult.Failure("执行错误", "找不到配对的 '循环直到' 模块")
+        }
+    }
+
+    /**
+     * 辅助函数：向前查找指定ID的积木块的起始位置。
+     */
+    private fun findBlockStartPosition(steps: List<ActionStep>, endPosition: Int, targetId: String): Int {
+        val endModule = ModuleRegistry.getModule(steps.getOrNull(endPosition)?.moduleId ?: return -1)
+        val pairingId = endModule?.blockBehavior?.pairingId ?: return -1
+        var openBlocks = 1 // 从结束块开始，计数器为1
+
+        for (i in (endPosition - 1) downTo 0) {
+            val currentModule = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
+            if (currentModule.blockBehavior.pairingId == pairingId) {
+                when (currentModule.blockBehavior.type) {
+                    BlockType.BLOCK_END -> openBlocks++
+                    BlockType.BLOCK_START -> {
+                        openBlocks--
+                        if (openBlocks == 0 && currentModule.id == targetId) return i
+                    }
+                    else -> {}
+                }
+            }
+        }
+        return -1
     }
 }

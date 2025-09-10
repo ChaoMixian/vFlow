@@ -66,6 +66,9 @@ object ModuleRegistry {
         register(WhileModule())
         register(EndWhileModule())
         register(BreakLoopModule())
+        register(ContinueLoopModule())
+        register(StopWorkflowModule())
+
 
         // 数据
         register(CalculationModule())

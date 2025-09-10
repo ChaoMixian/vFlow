@@ -178,6 +178,10 @@ sealed class ExecutionSignal {
     data class Loop(val action: LoopAction) : ExecutionSignal()
     /** 表示需要跳出当前积木块。 */
     object Break : ExecutionSignal()
+    /** 表示需要跳过当前循环的剩余步骤，直接进入下一次迭代。 */
+    object Continue : ExecutionSignal()
+    /** 表示需要正常地、无条件地终止工作流。 */
+    object Stop : ExecutionSignal()
 }
 
 /**
