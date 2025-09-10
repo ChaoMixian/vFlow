@@ -112,9 +112,6 @@ class ToastModule : BaseModule() {
             Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
         }
 
-        // 此处的短暂延迟可能是为了确保Toast有足够时间显示，或用于调试，可以根据实际需求评估是否必要
-        delay(100) // 短暂延迟，例如100毫秒
-
         // 返回成功结果
         return ExecutionResult.Success(
             outputs = mapOf("success" to BooleanVariable(true))

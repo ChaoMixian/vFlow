@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // 新增：启用 Parcelize 功能，用于在组件间传递我们新的数据模型（如 Workflow）
+    // 启用 Parcelize 功能，用于在组件间传递我们新的数据模型（如 Workflow）
     id("org.jetbrains.kotlin.plugin.parcelize")
 }
 

@@ -64,7 +64,7 @@ class DictionaryKVAdapter(
             pillView.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
             holder.valueContainer.addView(pillView)
         } else {
-            // [UI修正] 使用和XML中一致的 TextInputEditText，并设置好布局参数
+            // 使用和XML中一致的 TextInputEditText，并设置好布局参数
             val textInputLayout = TextInputLayout(holder.itemView.context).apply {
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,

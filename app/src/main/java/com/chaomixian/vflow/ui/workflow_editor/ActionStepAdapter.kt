@@ -68,7 +68,7 @@ class ActionStepAdapter(
     private val onEditClick: (position: Int, inputId: String?) -> Unit, // 编辑回调
     private val onDeleteClick: (position: Int) -> Unit, // 删除回调
     private val onParameterPillClick: (position: Int, parameterId: String) -> Unit, // 参数药丸点击回调
-    // [新增] 回调，允许列表项请求启动一个Activity并获取结果
+    // 回调，允许列表项请求启动一个Activity并获取结果
     private val onStartActivityForResult: (position: Int, Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit
 ) : RecyclerView.Adapter<ActionStepAdapter.ActionStepViewHolder>() {
 
@@ -117,7 +117,7 @@ class ActionStepAdapter(
 
             contentContainer.removeAllViews()
 
-            // [修改] 优先使用模块自定义预览UI，并传递onStartActivityForResult回调
+            // 优先使用模块自定义预览UI，并传递onStartActivityForResult回调
             val customPreview = module.uiProvider?.createPreview(
                 context,
                 contentContainer,

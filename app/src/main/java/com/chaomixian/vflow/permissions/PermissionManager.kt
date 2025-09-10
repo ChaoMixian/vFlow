@@ -73,7 +73,7 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
-    // [新增] 定义电池优化白名单权限
+    // 定义电池优化白名单权限
     val IGNORE_BATTERY_OPTIMIZATIONS = Permission(
         id = "vflow.permission.IGNORE_BATTERY_OPTIMIZATIONS",
         name = "后台运行权限",
@@ -99,7 +99,7 @@ object PermissionManager {
             } else {
                 true // 6.0以下版本默认授予
             }
-            // [新增] 检查电池优化
+            // 检查电池优化
             IGNORE_BATTERY_OPTIMIZATIONS.id -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -156,7 +156,7 @@ object PermissionManager {
      * 获取应用中所有模块定义的所有权限。
      */
     fun getAllRegisteredPermissions(): List<Permission> {
-        // [新增] 将电池优化权限也加入到权限管理器中
+        // 将电池优化权限也加入到权限管理器中
         return (ModuleRegistry.getAllModules()
             .map { it.requiredPermissions }
             .flatten() + IGNORE_BATTERY_OPTIMIZATIONS)

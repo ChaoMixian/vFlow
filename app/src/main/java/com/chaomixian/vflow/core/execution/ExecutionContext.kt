@@ -35,6 +35,6 @@ data class ExecutionContext(
     val allSteps: List<ActionStep>,
     val currentStepIndex: Int,
     val stepOutputs: Map<String, Map<String, Any?>>,
-    val loopStack: Stack<LoopState>, // 新增：将循环堆栈传递给上下文
-    val triggerData: Parcelable? = null // 新增：用于接收触发器数据
+    val loopStack: Stack<LoopState>, // 将循环堆栈传递给上下文
+    val triggerData: Parcelable? = null // 用于接收触发器数据
 )

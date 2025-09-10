@@ -2,7 +2,6 @@
 package com.chaomixian.vflow.services;
 
 /**
- * [移植自 vClick - 最终修正版]
  * 定义了 Shizuku Shell 服务的接口。
  * 使用与 vClick 完全一致的、带显式事务码的旧式定义，以确保最大兼容性。
  */

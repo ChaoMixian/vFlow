@@ -29,7 +29,7 @@ object ShizukuManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
-     * [新增优化] 主动预连接 Shizuku 服务。
+     * 主动预连接 Shizuku 服务。
      * 在应用启动时调用此方法，可以在后台异步建立连接，
      * 以便在用户首次执行相关模块时获得更快的响应速度。
      */

@@ -206,7 +206,7 @@ object WorkflowExecutor {
     }
 
     /**
-     * [修复] 辅助函数：向前查找指定ID的积木块的起始位置。
+     * 辅助函数：向前查找指定ID的积木块的起始位置。
      * 这个函数是为在处理 LoopAction.END 和 Jump 信号时使用的。
      * @param steps 步骤列表。
      * @param startPosition 当前步骤的索引。
@@ -235,7 +235,7 @@ object WorkflowExecutor {
     }
 
     /**
-     * [修复] 辅助函数：查找当前执行点所在的最近的循环块的配对ID。
+     * 辅助函数：查找当前执行点所在的最近的循环块的配对ID。
      * 这个函数专门为处理 Break 信号而设计，它从当前位置向前查找最近的循环块的起始点。
      */
     private fun findCurrentLoopPairingId(steps: List<ActionStep>, position: Int): String? {
@@ -260,7 +260,7 @@ object WorkflowExecutor {
     }
 
     /**
-     * [新增] 辅助函数：查找与给定起始块配对的结束块位置。
+     * 辅助函数：查找与给定起始块配对的结束块位置。
      * 这个函数是为处理 Break 信号时，从找到的起始块配对ID，继续向后查找其对应的结束块位置。
      */
     private fun findEndBlockPosition(steps: List<ActionStep>, startPosition: Int, pairingId: String?): Int {

@@ -70,7 +70,7 @@ object ExecutionNotificationManager {
         }
 
         // 使用 SDK 版本判断
-        // [修正] 官方文档指出 API 级别为 35 (Android 15)，但为了兼容预览版，使用 36 也是安全的。
+        // 官方文档指出 API 级别为 35 (Android 15)，但为了兼容预览版，使用 36 也是安全的。
         if (Build.VERSION.SDK_INT >= 36) {
             buildStatusChipNotification(workflow, state)
         } else {
@@ -79,7 +79,7 @@ object ExecutionNotificationManager {
     }
 
     /**
-     * [修正] 为 Android 16+ 构建 "Status Chip" 样式的通知。
+     * 为 Android 16+ 构建 "Status Chip" 样式的通知。
      * 根据官方文档，不再使用 ProgressStyle，而是直接在 Builder 上设置进度。
      */
     @RequiresApi(36)
@@ -97,17 +97,17 @@ object ExecutionNotificationManager {
                     // 请求提升为高优持续性通知 (Status Chip)
                     .setRequestPromotedOngoing(true)
                     // [新增API] 设置在 Status Chip 进度条旁边显示的图标
-                    // [修正] 直接在 Builder 上设置进度，系统会自动渲染为 Status Chip 进度条
+                    // 直接在 Builder 上设置进度，系统会自动渲染为 Status Chip 进度条
                     .setProgress(100, state.progress, false)
             }
             is ExecutionNotificationState.Completed -> {
                 builder
                     .setContentText(state.message)
-                    // [修正] 任务完成，不再是持续性通知
+                    // 任务完成，不再是持续性通知
                     .setOngoing(false)
                     .setRequestPromotedOngoing(false) // 取消提升请求
                     .setAutoCancel(true)
-                    // [修正] 通过 setProgress(0, 0, false) 来移除进度条
+                    // 通过 setProgress(0, 0, false) 来移除进度条
                     .setProgress(0, 0, false)
                     // (可选) 可以临时将小图标变为完成状态，增强视觉反馈
                     .setSmallIcon(R.drawable.rounded_save_24)
@@ -115,11 +115,11 @@ object ExecutionNotificationManager {
             is ExecutionNotificationState.Cancelled -> {
                 builder
                     .setContentText(state.message)
-                    // [修正] 任务取消，不再是持续性通知
+                    // 任务取消，不再是持续性通知
                     .setOngoing(false)
                     .setRequestPromotedOngoing(false) // 取消提升请求
                     .setAutoCancel(true)
-                    // [修正] 移除进度条
+                    // 移除进度条
                     .setProgress(0, 0, false)
                     .setSmallIcon(R.drawable.rounded_close_small_24)
             }

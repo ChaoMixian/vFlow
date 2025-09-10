@@ -313,7 +313,7 @@ class TriggerService : Service() {
     }
 
     /**
-     * [新增] 处理多个工作流匹配同一触发器的情况。
+     * 处理多个工作流匹配同一触发器的情况。
      * @param workflows 匹配到的工作流列表。
      */
     private suspend fun handleMultipleMatches(workflows: List<Workflow>) {
@@ -335,7 +335,6 @@ class TriggerService : Service() {
         Log.d(TAG, "请求重新加载触发器，正在停止所有旧的监听脚本...")
 
         keyEventJob = serviceScope.launch {
-            // --- 新增的、更可靠的停止和清理逻辑 ---
             try {
                 // 1. 扫描所有可能的 PID 文件
                 val pidFiles = cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }
@@ -370,7 +369,6 @@ class TriggerService : Service() {
             }
             // 同样，保留 killall 作为备用方案
             ShizukuManager.execShellCommand(applicationContext, "killall getevent")
-            // --- 清理逻辑结束 ---
 
             // 在启动新脚本前稍作等待
             delay(200)

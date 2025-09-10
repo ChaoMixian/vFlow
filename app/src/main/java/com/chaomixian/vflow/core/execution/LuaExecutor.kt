@@ -51,7 +51,6 @@ class LuaExecutor(private val executionContext: ExecutionContext) {
             // 分割ID路径, e.g., "vflow.other.toast" -> ["vflow", "other", "toast"]
             val path = module.id.split('.')
 
-            // **修正逻辑**: 我们从路径的第二部分开始构建table，以避免创建 vflow.vflow
             if (path.isNotEmpty() && path.first() == "vflow") {
                 var currentTable = vflowTable
                 // 循环从第二个元素到倒数第二个元素

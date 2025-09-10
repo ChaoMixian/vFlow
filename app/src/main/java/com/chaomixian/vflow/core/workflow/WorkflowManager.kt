@@ -22,7 +22,7 @@ class WorkflowManager(private val context: Context) { // [修改] 将 context �
     private val prefs = context.getSharedPreferences("vflow_workflows", Context.MODE_PRIVATE)
     private val gson = Gson()
 
-    // [新增] 定义一个广播动作常量，用于通知服务数据已更新
+    // 定义一个广播动作常量，用于通知服务数据已更新
     companion object {
         const val ACTION_WORKFLOWS_UPDATED = "com.chaomixian.vflow.WORKFLOWS_UPDATED"
     }
@@ -110,12 +110,12 @@ class WorkflowManager(private val context: Context) { // [修改] 将 context �
     fun saveAllWorkflows(workflows: List<Workflow>) {
         val json = gson.toJson(workflows)
         prefs.edit().putString("workflow_list", json).apply()
-        // [新增] 在保存后，立即发送一个本地广播
+        // 在保存后，立即发送一个本地广播
         notifyWorkflowsUpdated()
     }
 
     /**
-     * [新增] 发送“工作流已更新”广播的辅助方法。
+     * 发送“工作流已更新”广播的辅助方法。
      */
     private fun notifyWorkflowsUpdated() {
         val intent = Intent(ACTION_WORKFLOWS_UPDATED)

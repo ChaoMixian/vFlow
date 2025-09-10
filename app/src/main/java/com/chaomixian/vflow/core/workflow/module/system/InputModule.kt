@@ -24,7 +24,7 @@ class InputModule : BaseModule() {
         category = "应用与系统" // 更新分类
     )
 
-    // 新增：声明此模块需要悬浮窗权限
+    // 声明此模块需要悬浮窗权限
     override val requiredPermissions = listOf(PermissionManager.OVERLAY)
 
     private val typeOptions = listOf("文本", "数字", "时间", "日期")

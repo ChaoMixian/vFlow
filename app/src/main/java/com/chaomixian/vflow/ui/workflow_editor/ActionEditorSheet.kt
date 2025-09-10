@@ -31,7 +31,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     // 回调
     var onSave: ((ActionStep) -> Unit)? = null // 保存回调
     var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // 请求魔法变量选择器回调
-    // [新增] 回调，用于从编辑器内部请求启动一个新的Activity并获取结果
+    // 回调，用于从编辑器内部请求启动一个新的Activity并获取结果
     var onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
 
     // UI及状态
@@ -154,7 +154,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
     /**
-     * [新增] 当一个参数值在UI上发生变化时调用此方法。
+     * 当一个参数值在UI上发生变化时调用此方法。
      * @param updatedId 被更新的参数的ID。
      * @param updatedValue 新的参数值。
      */

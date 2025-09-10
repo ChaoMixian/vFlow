@@ -46,7 +46,7 @@ interface ModuleUIProvider {
      * @param context Android 上下文。
      * @param parent 父视图组。
      * @param step 当前的动作步骤数据。
-     * @param onStartActivityForResult [新增] 一个回调函数，允许预览视图请求启动一个新的Activity并接收其结果。
+     * @param onStartActivityForResult 一个回调函数，允许预览视图请求启动一个新的Activity并接收其结果。
      * @return 自定义预览视图，或 null。
      */
     fun createPreview(
@@ -63,7 +63,7 @@ interface ModuleUIProvider {
      * @param currentParameters 当前步骤已保存的参数值。
      * @param onParametersChanged 当参数发生变化时需要调用的回调函数。
      * @param onMagicVariableRequested 当自定义UI需要请求魔法变量选择器时调用的回调。
-     * @param onStartActivityForResult [新增] 一个回调函数，允许编辑器视图请求启动一个新的Activity并接收其结果。
+     * @param onStartActivityForResult 一个回调函数，允许编辑器视图请求启动一个新的Activity并接收其结果。
      * @return 持有自定义编辑器视图的 CustomEditorViewHolder 实例。
      */
     fun createEditor(

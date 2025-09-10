@@ -162,7 +162,7 @@ class WhileModule : BaseBlockModule() {
                 setOf(WHILE_END_ID)
             )
             if (jumpTo != -1) {
-                // [修复] 跳转到结束循环模块的下一个位置，以跳出整个循环
+                // 跳转到结束循环模块的下一个位置，以跳出整个循环
                 return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo + 1))
             }
         }
@@ -309,7 +309,7 @@ class EndWhileModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         onProgress(ProgressUpdate("循环体执行完毕，返回到循环起点。"))
-        // [修复] 移除跳转逻辑。EndWhile模块的职责只是一个标记，实际跳转由执行器负责。
+        // 移除跳转逻辑。EndWhile模块的职责只是一个标记，实际跳转由执行器负责。
         // 执行器会看到下一个步骤是While，然后重新评估条件，或者在While条件为假时跳过EndWhile。
         return ExecutionResult.Success()
     }

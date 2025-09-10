@@ -40,7 +40,7 @@ class OverlayUIActivity : AppCompatActivity() {
         finish()
     }
 
-    // [新增] 用于JSON反序列化
+    // 用于JSON反序列化
     private val gson = Gson()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -185,7 +185,7 @@ class OverlayUIActivity : AppCompatActivity() {
     }
 
     /**
-     * 新增：将图片URI复制到剪贴板的逻辑
+     * 将图片URI复制到剪贴板的逻辑
      */
     private fun copyImageToClipboard(imageUriString: String) {
         try {

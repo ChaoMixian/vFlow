@@ -152,7 +152,7 @@ class AdjustImageModule : BaseModule() {
         }
     }
 
-    // [新增] 应用所有基于像素颜色调整的效果
+    // 应用所有基于像素颜色调整的效果
     private fun applyColorAdjustments(pixels: IntArray, width: Int, height: Int, params: Map<String, Float>) {
         val hsv = FloatArray(3)
         // 预计算参数，将 -100..100 或 0..100 的范围转换为算法需要的因子
@@ -232,7 +232,7 @@ class AdjustImageModule : BaseModule() {
         }
     }
 
-    // [新增] 应用卷积效果
+    // 应用卷积效果
     private fun applyConvolution(src: Bitmap, kernel: FloatArray): Bitmap {
         val width = src.width
         val height = src.height
@@ -268,7 +268,7 @@ class AdjustImageModule : BaseModule() {
         return newBitmap
     }
 
-    // [新增] 创建锐化核
+    // 创建锐化核
     private fun createSharpenKernel(amount: Float): FloatArray {
         val strength = amount / 100f * 4f // 将 0-100 映射到 0-4
         return floatArrayOf(
@@ -278,7 +278,7 @@ class AdjustImageModule : BaseModule() {
         )
     }
 
-    // [新增] 应用清晰度效果 (Unsharp Masking)
+    // 应用清晰度效果 (Unsharp Masking)
     private fun applyClarity(src: Bitmap, amount: Float): Bitmap {
         val blurred = applyGaussianBlur(src, 5) // 创建一个轻微模糊的版本
         val strength = amount / 100f
@@ -307,7 +307,7 @@ class AdjustImageModule : BaseModule() {
         return newBitmap
     }
 
-    // [新增] 简单的中值滤波用于降噪
+    // 简单的中值滤波用于降噪
     private fun applyDenoise(src: Bitmap, strength: Int): Bitmap {
         if (strength <= 0) return src.copy(src.config ?: Bitmap.Config.ARGB_8888, true)
         val radius = 1 // 固定半径为1，strength控制迭代次数
@@ -356,7 +356,7 @@ class AdjustImageModule : BaseModule() {
     }
 
 
-    // [新增] 应用暗角效果
+    // 应用暗角效果
     private fun applyVignette(src: Bitmap, amount: Float): Bitmap {
         val strength = amount / 100f
         val width = src.width.toFloat()
@@ -380,7 +380,7 @@ class AdjustImageModule : BaseModule() {
         return src
     }
 
-    // [新增] 高斯模糊辅助函数 (用于清晰度)
+    // 高斯模糊辅助函数 (用于清晰度)
     private fun applyGaussianBlur(src: Bitmap, radius: Int): Bitmap {
         // A simple and fast box blur approximation of Gaussian blur
         val blurred = src.copy(src.config ?: Bitmap.Config.ARGB_8888, true)

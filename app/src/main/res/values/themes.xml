@@ -23,7 +23,7 @@
         <item name="android:backgroundDimEnabled">false</item>
     </style>
 
-    <!-- 新增：非动态取色的透明主题 -->
+    <!-- 非动态取色的透明主题 -->
     <style name="Theme.vFlow.Transparent.Default" parent="Theme.vFlow">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>

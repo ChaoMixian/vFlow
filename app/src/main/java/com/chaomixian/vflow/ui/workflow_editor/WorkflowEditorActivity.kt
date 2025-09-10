@@ -69,7 +69,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private var dragGlowAnimator: Animator? = null
     private var dragBreathAnimator: Animator? = null
 
-    // [新增] 用于保存和恢复状态的常量
+    // 用于保存和恢复状态的常量
     private val STATE_ACTION_STEPS = "state_action_steps"
     private val STATE_WORKFLOW_NAME = "state_workflow_name"
 
@@ -100,7 +100,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     /**
-     * [新增] 保存 Activity 状态，防止数据丢失。
+     * 保存 Activity 状态，防止数据丢失。
      */
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -125,7 +125,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         setupRecyclerView()
 
-        // [修改] 检查是否有已保存的状态，如果有则恢复，否则才从数据库加载
+        // 检查是否有已保存的状态，如果有则恢复，否则才从数据库加载
         if (savedInstanceState != null) {
             val savedSteps = savedInstanceState.getParcelableArrayList<ActionStep>(STATE_ACTION_STEPS)
             if (savedSteps != null) {
@@ -150,7 +150,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         setupDragAndDrop()
 
-        // [修改] “添加动作”按钮现在只负责添加普通动作，不再处理触发器
+        // “添加动作”按钮现在只负责添加普通动作，不再处理触发器
         findViewById<Button>(R.id.button_add_action).setOnClickListener {
             showActionPicker(isTriggerPicker = false)
         }
@@ -609,7 +609,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     /**
-     * [新增] 一个专门用于显示触发器选择器的便捷方法。
+     *  一个专门用于显示触发器选择器的便捷方法。
      */
     private fun showTriggerPicker() {
         showActionPicker(isTriggerPicker = true)

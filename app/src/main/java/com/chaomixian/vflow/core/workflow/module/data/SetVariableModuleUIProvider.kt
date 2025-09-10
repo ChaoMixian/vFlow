@@ -55,7 +55,7 @@ class VariableModuleUIProvider(
 
     /**
      * 创建模块在工作流编辑器中的预览视图。
-     * [修复] 更新方法签名以匹配 ModuleUIProvider 接口。
+     * 更新方法签名以匹配 ModuleUIProvider 接口。
      */
     override fun createPreview(
         context: Context,
@@ -68,7 +68,7 @@ class VariableModuleUIProvider(
 
     /**
      * 创建用于在模块详情页编辑参数的自定义视图。
-     * [修复] 更新方法签名以匹配 ModuleUIProvider 接口。
+     * 更新方法签名以匹配 ModuleUIProvider 接口。
      */
     override fun createEditor(
         context: Context,

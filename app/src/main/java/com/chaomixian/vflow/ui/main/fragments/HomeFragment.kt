@@ -42,7 +42,7 @@ class HomeFragment : Fragment() {
     private lateinit var totalWorkflowsText: TextView
     private lateinit var autoWorkflowsText: TextView
 
-    // [修改] 权限健康检查卡片视图
+    // 权限健康检查卡片视图
     private lateinit var permissionHealthTitle: TextView
     private lateinit var permissionHealthDesc: TextView
     private lateinit var permissionHealthCard: MaterialCardView
@@ -53,7 +53,7 @@ class HomeFragment : Fragment() {
     private val quickExecuteViews = mutableMapOf<String, View>()
     private var pendingWorkflow: Workflow? = null
 
-    // [新增] 最近日志卡片视图
+    // 最近日志卡片视图
     private lateinit var recentLogsCard: MaterialCardView
     private lateinit var recentLogsContainer: LinearLayout
 
@@ -87,7 +87,7 @@ class HomeFragment : Fragment() {
         lifecycleScope.launch {
             ExecutionStateBus.stateFlow.collectLatest { state ->
                 updateQuickExecuteButtonsState()
-                updateRecentLogs() // [新增] 当有新日志时也刷新
+                updateRecentLogs() // 当有新日志时也刷新
             }
         }
         return view
@@ -114,7 +114,7 @@ class HomeFragment : Fragment() {
     }
 
     /**
-     * [修改] 实现权限健康检查的逻辑
+     * 实现权限健康检查的逻辑
      */
     private fun updatePermissionHealthCheck() {
         val allWorkflows = workflowManager.getAllWorkflows()
@@ -146,7 +146,7 @@ class HomeFragment : Fragment() {
     }
 
     /**
-     * [新增] 更新最近日志卡片的逻辑
+     * 更新最近日志卡片的逻辑
      */
     private fun updateRecentLogs() {
         val logs = LogManager.getRecentLogs(5) // 获取最近5条日志

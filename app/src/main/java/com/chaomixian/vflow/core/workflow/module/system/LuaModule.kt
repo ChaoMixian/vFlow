@@ -37,7 +37,7 @@ class LuaModule : BaseModule() {
         InputDefinition(
             id = "inputs",
             name = "脚本输入",
-            staticType = ParameterType.ANY, // <-- 修正：从 DICTIONARY 改为 ANY
+            staticType = ParameterType.ANY,
             defaultValue = emptyMap<String, Any>(),
             acceptsMagicVariable = true // 这里的接受其实是其value接受魔法变量
         )

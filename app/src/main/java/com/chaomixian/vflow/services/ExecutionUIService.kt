@@ -122,7 +122,7 @@ class ExecutionUIService(private val context: Context) {
             for (key in extras.keySet()) {
                 val value = extras.get(key)
 
-                // [新增] 特殊处理 workflow_list，将其序列化为JSON字符串
+                // 特殊处理 workflow_list，将其序列化为JSON字符串
                 if (key == "workflow_list" && value is Serializable) {
                     val jsonValue = gson.toJson(value)
                     val escapedJson = "'${jsonValue.replace("'", "'\\''")}'"
@@ -180,7 +180,7 @@ class ExecutionUIService(private val context: Context) {
     }
 
     /**
-     * 新增：挂起函数，用于显示快速查看窗口。
+     * 挂起函数，用于显示快速查看窗口。
      * @param title 窗口标题。
      * @param content 要显示的文本内容。
      */
@@ -194,7 +194,7 @@ class ExecutionUIService(private val context: Context) {
     }
 
     /**
-     * 新增：挂起函数，用于显示快速查看图片窗口。
+     * 挂起函数，用于显示快速查看图片窗口。
      * @param title 窗口标题。
      * @param imageUri 要显示的图片的URI字符串。
      */
@@ -209,7 +209,7 @@ class ExecutionUIService(private val context: Context) {
 
 
     /**
-     * 新增：挂起函数，用于请求用户选择一张图片。
+     * 挂起函数，用于请求用户选择一张图片。
      * @return 用户选择的图片的URI字符串，如果用户取消则返回null。
      */
     suspend fun requestImage(): String? {
@@ -220,7 +220,7 @@ class ExecutionUIService(private val context: Context) {
     }
 
     /**
-     * 新增：挂起函数，用于显示工作流选择器对话框。
+     * 挂起函数，用于显示工作流选择器对话框。
      * @param workflows 可供选择的工作流列表。
      * @return 用户选择的工作流的ID，如果用户取消则返回null。
      */
@@ -234,7 +234,7 @@ class ExecutionUIService(private val context: Context) {
     }
 
     /**
-     * 新增：挂起函数，用于请求系统分享。
+     * 挂起函数，用于请求系统分享。
      * @param content 要分享的内容（文本或图片变量）。
      * @return 分享是否成功启动。
      */
