@@ -218,12 +218,10 @@ enum class BlockType {
  * @param type 积木块的类型。
  * @param pairingId 如果模块是积木块的一部分，此ID用于将相关的积木块模块（如Start和End）配对。
  * @param isIndividuallyDeletable 标记积木块的某个部分（通常是Middle或End）是否可以被独立删除。
- * @param breakTargetId 用于指定当Break信号发出时应该跳转到的目标模块ID
  * 例如，If 的 End 块通常不能独立删除，必须与 Start 一起。
  */
 data class BlockBehavior(
     val type: BlockType,
     val pairingId: String? = null,
-    val isIndividuallyDeletable: Boolean = false,
-    val breakTargetId: String? = null
+    val isIndividuallyDeletable: Boolean = false
 )

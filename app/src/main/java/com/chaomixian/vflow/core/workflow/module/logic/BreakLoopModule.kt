@@ -45,6 +45,37 @@ class BreakLoopModule : BaseModule() {
         // 为了安全和简单，我们假设它只跳出最内层循环。
         // 这需要执行器来处理，我们只需发出信号即可。
 
+        // 增加检查：在发出信号之前，确保当前步骤确实位于一个循环块内
+        val currentLoopPairingId = findCurrentLoopPairingId(context.allSteps, context.currentStepIndex)
+        if (currentLoopPairingId == null) {
+            onProgress(ProgressUpdate("无法跳出：当前不在循环中。"))
+            return ExecutionResult.Failure("无效操作", "‘跳出循环’模块必须放置在循环块内。")
+        }
+
         return ExecutionResult.Signal(ExecutionSignal.Break)
+    }
+
+    /**
+     * 辅助函数，用于查找当前执行点所在的最近的循环块的配对ID。
+     */
+    private fun findCurrentLoopPairingId(steps: List<ActionStep>, position: Int): String? {
+        var openCount = 0
+        for (i in position downTo 0) {
+            val module = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
+            val behavior = module.blockBehavior
+            val isLoopBlock = behavior.pairingId == LOOP_PAIRING_ID || behavior.pairingId == WHILE_PAIRING_ID
+
+            if (isLoopBlock) {
+                if (behavior.type == BlockType.BLOCK_END) {
+                    openCount++
+                } else if (behavior.type == BlockType.BLOCK_START) {
+                    if (openCount == 0) {
+                        return behavior.pairingId
+                    }
+                    openCount--
+                }
+            }
+        }
+        return null
     }
 }

@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.RecyclerView
@@ -107,6 +108,8 @@ class DictionaryKVAdapter(
                 val currentKey = holder.keyEditText.text.toString()
                 if (currentKey.isNotBlank()) {
                     onMagicClick?.invoke(currentKey)
+                } else {
+                    Toast.makeText(holder.itemView.context, "请先填写键的名称", Toast.LENGTH_SHORT).show()
                 }
             }
         }
