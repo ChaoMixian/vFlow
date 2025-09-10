@@ -9,6 +9,9 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.logic.LOOP_START_ID
+import com.chaomixian.vflow.core.workflow.module.logic.WHILE_START_ID
+import com.chaomixian.vflow.core.workflow.module.logic.WHILE_PAIRING_ID
+import com.chaomixian.vflow.core.workflow.module.logic.LOOP_PAIRING_ID
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ExecutionNotificationState
 import com.chaomixian.vflow.services.ExecutionUIService
@@ -145,12 +148,24 @@ object WorkflowExecutor {
                                         LoopAction.END -> {
                                             val loopState = loopStack.peek()
                                             if (loopState.currentIteration < loopState.totalIterations) {
-                                                pc = findBlockStartPosition(workflow.steps, pc, LOOP_START_ID) + 1
+                                                val loopStartPos = findBlockStartPosition(workflow.steps, pc, LOOP_START_ID)
+                                                pc = loopStartPos + 1
                                             } else {
                                                 loopStack.pop()
                                                 pc++
                                             }
                                         }
+                                    }
+                                }
+                                is ExecutionSignal.Break -> {
+                                    val currentLoopPairingId = findCurrentLoopPairingId(workflow.steps, pc)
+                                    val endBlockPosition = findEndBlockPosition(workflow.steps, pc, currentLoopPairingId)
+                                    if(endBlockPosition != -1) {
+                                        pc = endBlockPosition + 1
+                                        Log.d("WorkflowExecutor", "接收到Break信号，跳出循环 '$currentLoopPairingId' 到步骤 $pc")
+                                    } else {
+                                        Log.w("WorkflowExecutor", "接收到Break信号，但找不到匹配的结束循环块。")
+                                        pc++ // 找不到就继续执行，避免卡住
                                     }
                                 }
                             }
@@ -190,13 +205,79 @@ object WorkflowExecutor {
         runningWorkflows[workflow.id] = job
     }
 
-    private fun findBlockStartPosition(steps: List<ActionStep>, startPosition: Int, targetId: String): Int {
-        val pairingId = steps[startPosition].moduleId.let { ModuleRegistry.getModule(it)?.blockBehavior?.pairingId } ?: return -1
-        for (i in (startPosition - 1) downTo 0) {
-            val currentStep = steps[i]
-            val currentModule = ModuleRegistry.getModule(currentStep.moduleId) ?: continue
-            if (currentModule.blockBehavior.pairingId == pairingId && currentModule.id == targetId) {
-                return i
+    /**
+     * [修复] 辅助函数：向前查找指定ID的积木块的起始位置。
+     * 这个函数是为在处理 LoopAction.END 和 Jump 信号时使用的。
+     * @param steps 步骤列表。
+     * @param startPosition 当前步骤的索引。
+     * @param targetId 目标模块ID的集合。
+     * @return 找到的步骤索引，未找到则返回 -1。
+     */
+    private fun findBlockStartPosition(steps: List<ActionStep>, endPosition: Int, targetId: String): Int {
+        val endModule = ModuleRegistry.getModule(steps.getOrNull(endPosition)?.moduleId ?: return -1)
+        val pairingId = endModule?.blockBehavior?.pairingId ?: return -1
+        var openBlocks = 1 // 从结束块开始，计数器为1
+
+        for (i in (endPosition - 1) downTo 0) {
+            val currentModule = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
+            if (currentModule.blockBehavior.pairingId == pairingId) {
+                when (currentModule.blockBehavior.type) {
+                    BlockType.BLOCK_END -> openBlocks++
+                    BlockType.BLOCK_START -> {
+                        openBlocks--
+                        if (openBlocks == 0 && currentModule.id == targetId) return i
+                    }
+                    else -> {}
+                }
+            }
+        }
+        return -1
+    }
+
+    /**
+     * [修复] 辅助函数：查找当前执行点所在的最近的循环块的配对ID。
+     * 这个函数专门为处理 Break 信号而设计，它从当前位置向前查找最近的循环块的起始点。
+     */
+    private fun findCurrentLoopPairingId(steps: List<ActionStep>, position: Int): String? {
+        var openCount = 0
+        for (i in position downTo 0) {
+            val module = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
+            val behavior = module.blockBehavior
+            val isLoopBlock = behavior.pairingId == LOOP_PAIRING_ID || behavior.pairingId == WHILE_PAIRING_ID
+
+            if (isLoopBlock) {
+                if (behavior.type == BlockType.BLOCK_END) {
+                    openCount++
+                } else if (behavior.type == BlockType.BLOCK_START) {
+                    if (openCount == 0) {
+                        return behavior.pairingId // 找到最内层循环
+                    }
+                    openCount--
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * [新增] 辅助函数：查找与给定起始块配对的结束块位置。
+     * 这个函数是为处理 Break 信号时，从找到的起始块配对ID，继续向后查找其对应的结束块位置。
+     */
+    private fun findEndBlockPosition(steps: List<ActionStep>, startPosition: Int, pairingId: String?): Int {
+        if (pairingId == null) return -1
+        var openBlocks = 1
+        for (i in (startPosition + 1) until steps.size) {
+            val module = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
+            val behavior = module.blockBehavior
+            if (behavior.pairingId == pairingId) {
+                when (behavior.type) {
+                    BlockType.BLOCK_START -> openBlocks++
+                    BlockType.BLOCK_END -> {
+                        openBlocks--
+                        if (openBlocks == 0) return i
+                    }
+                    else -> {}
+                }
             }
         }
         return -1

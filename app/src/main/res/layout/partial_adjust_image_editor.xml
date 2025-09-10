@@ -49,7 +49,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_marginStart="8dp"
-            android:src="@drawable/ic_magic" />
+            android:src="@drawable/rounded_dataset_24" />
     </LinearLayout>
 
     <androidx.core.widget.NestedScrollView

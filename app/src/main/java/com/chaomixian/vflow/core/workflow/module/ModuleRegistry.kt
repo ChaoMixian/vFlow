@@ -60,6 +60,10 @@ object ModuleRegistry {
         register(EndIfModule())
         register(LoopModule())
         register(EndLoopModule())
+        register(JumpModule())
+        register(WhileModule())
+        register(EndWhileModule())
+        register(BreakLoopModule())
 
         // 数据
         register(CalculationModule())

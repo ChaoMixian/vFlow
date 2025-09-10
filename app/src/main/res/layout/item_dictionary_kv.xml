@@ -34,7 +34,8 @@
         android:layout_height="48dp"
         android:src="@drawable/rounded_dataset_24"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="选择魔法变量"/>
+        android:contentDescription="选择魔法变量"
+        app:tint="?attr/colorPrimary"/>
 
     <ImageButton
         android:id="@+id/button_delete_kv"
