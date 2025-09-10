@@ -576,13 +576,17 @@ class WorkflowEditorActivity : BaseActivity() {
      */
     private fun showActionPicker(isTriggerPicker: Boolean) {
         val picker = ActionPickerSheet()
-        // 传递一个参数告诉选择器我们想要哪种类型的模块
         picker.arguments = Bundle().apply {
             putBoolean("is_trigger_picker", isTriggerPicker)
         }
 
         picker.onActionSelected = { module ->
-            if (isTriggerPicker) {
+            // 如果是模板，直接创建多步并添加到工作流
+            if (module.metadata.category == "模板") {
+                val newSteps = module.createSteps()
+                actionSteps.addAll(newSteps)
+                recalculateAndNotify()
+            } else if (isTriggerPicker) {
                 // 如果是选择触发器，则替换掉第一个步骤
                 val newTriggerSteps = module.createSteps()
                 if (actionSteps.isNotEmpty()) {

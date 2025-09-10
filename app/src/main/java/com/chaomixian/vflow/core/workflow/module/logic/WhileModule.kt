@@ -112,7 +112,7 @@ class WhileModule : BaseBlockModule() {
             isModuleOption = true
         )
 
-        val parts = mutableListOf<Any>("循环直到 ", input1Pill, " ", operatorPill)
+        val parts = mutableListOf<Any>("循环直到 ", input1Pill, " ", operatorPill, " 不成立")
 
         if (inputsForStep.any { it.id == "value1" }) {
             val value1Pill = PillUtil.createPillFromParam(
@@ -162,9 +162,11 @@ class WhileModule : BaseBlockModule() {
                 setOf(WHILE_END_ID)
             )
             if (jumpTo != -1) {
-                return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
+                // [修复] 跳转到结束循环模块的下一个位置，以跳出整个循环
+                return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo + 1))
             }
         }
+        return ExecutionResult.Failure("执行错误", "找不到配对的结束循环块")
         return ExecutionResult.Failure("执行错误", "找不到配对的结束循环块")
     }
 
@@ -307,32 +309,8 @@ class EndWhileModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         onProgress(ProgressUpdate("循环体执行完毕，返回到循环起点。"))
-        // 查找与当前 EndWhile 模块配对的 While 模块的位置
-        val jumpTo = findBlockStartPosition(context.allSteps, context.currentStepIndex, WHILE_START_ID)
-        // 如果找到了，则发出跳转信号回到 While 模块，否则继续执行下一个步骤（即结束循环）
-        return if (jumpTo != -1) {
-            ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
-        } else {
-            ExecutionResult.Success()
-        }
-    }
-
-    /**
-     * 在同一个积木块中向前查找特定ID的步骤。
-     */
-    private fun findBlockStartPosition(steps: List<ActionStep>, startPosition: Int, targetId: String): Int {
-        val pairingId = steps.getOrNull(startPosition)?.moduleId?.let { it ->
-            com.chaomixian.vflow.core.module.ModuleRegistry.getModule(it)?.blockBehavior?.pairingId
-        } ?: return -1
-
-        for (i in (startPosition - 1) downTo 0) {
-            val currentStep = steps[i]
-            val currentModule = com.chaomixian.vflow.core.module.ModuleRegistry.getModule(currentStep.moduleId) ?: continue
-            if (currentModule.blockBehavior.pairingId == pairingId && currentModule.id == targetId) {
-                return i
-            }
-            if (currentModule.blockBehavior.type == BlockType.BLOCK_END && currentModule.blockBehavior.pairingId != pairingId) break
-        }
-        return -1
+        // [修复] 移除跳转逻辑。EndWhile模块的职责只是一个标记，实际跳转由执行器负责。
+        // 执行器会看到下一个步骤是While，然后重新评估条件，或者在While条件为假时跳过EndWhile。
+        return ExecutionResult.Success()
     }
 }

@@ -1,3 +1,4 @@
+// 文件: ActionPickerSheet.kt
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.os.Bundle
@@ -22,6 +23,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.*
 
 class ActionPickerSheet : BottomSheetDialogFragment() {
+    // 统一的回调，返回被选中的模块。由调用者（如WorkflowEditorActivity）处理后续逻辑。
     var onActionSelected: ((ActionModule) -> Unit)? = null
 
     private lateinit var recyclerView: RecyclerView
@@ -56,6 +58,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
     private fun setupRecyclerView() {
         recyclerView.layoutManager = GridLayoutManager(context, 4) // 使用网格布局，每行4个
         recyclerView.adapter = ActionPickerAdapter(filteredPickerItems) { module ->
+            // 无论选中什么，都通过一个统一的回调返回模块本身
             onActionSelected?.invoke(module)
             dismiss()
         }

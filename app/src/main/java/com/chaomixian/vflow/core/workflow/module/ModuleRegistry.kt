@@ -7,6 +7,7 @@ import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.core.workflow.module.shizuku.*
 import com.chaomixian.vflow.core.workflow.module.system.*
 import com.chaomixian.vflow.core.workflow.module.triggers.*
+import com.chaomixian.vflow.core.workflow.module.snippet.*
 
 object ModuleRegistry {
     private val modules = mutableMapOf<String, ActionModule>()
@@ -35,6 +36,7 @@ object ModuleRegistry {
                     "文件" -> 4
                     "应用与系统" -> 5
                     "Shizuku" -> 6
+                    "模板" -> 7
                     else -> 99
                 }
             })
@@ -98,5 +100,8 @@ object ModuleRegistry {
         register(WeChatShortcutsModule())
         register(ColorOSShortcutsModule())
         register(GeminiAssistantModule())
+
+        // Snippet 模板
+        register(FindTextUntilModule())
     }
 }
