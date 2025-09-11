@@ -7,6 +7,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.DisplayMetrics
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -18,6 +20,7 @@ import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionState
@@ -208,6 +211,42 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
     }
+
+    /**
+     * 使用 LinearSmoothScroller 实现更平滑的滚动，并在滚动结束后应用动画。
+     * @param stepIndex 目标步骤的索引。
+     * @param animatorRes 要应用的动画资源ID。
+     * @param isError 是否为错误高亮。
+     */
+    private fun smoothScrollToPositionAndHighlight(stepIndex: Int, animatorRes: Int, isError: Boolean = false) {
+        val smoothScroller = object : LinearSmoothScroller(this) {
+            // 重写此方法以调整滚动速度
+            override fun calculateSpeedPerPixel(displayMetrics: DisplayMetrics): Float {
+                // 值越小滚动越快，返回一个较慢的速度
+                return 150f / displayMetrics.densityDpi
+            }
+
+            // 当滚动完成且目标视图可见时调用
+            override fun onTargetFound(targetView: View, state: RecyclerView.State, action: Action) {
+                super.onTargetFound(targetView, state, action)
+                val viewHolder = recyclerView.getChildViewHolder(targetView)
+                if (viewHolder != null) {
+                    currentlyExecutingViewHolder = viewHolder
+                    // 动画的目标始终是卡片视图
+                    val cardView = viewHolder.itemView.findViewById<MaterialCardView>(R.id.step_card_view)
+                    executionAnimator = AnimatorInflater.loadAnimator(this@WorkflowEditorActivity, animatorRes).apply {
+                        setTarget(cardView)
+                        start()
+                    }
+                }
+            }
+        }
+
+        smoothScroller.targetPosition = stepIndex
+        recyclerView.layoutManager?.startSmoothScroll(smoothScroller)
+    }
+
+
     /**
      * 高亮当前正在执行的步骤。
      * @param stepIndex 要高亮的步骤的索引。
@@ -215,17 +254,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private fun highlightStep(stepIndex: Int) {
         if (stepIndex < 0 || stepIndex >= actionSteps.size) return
         clearHighlight() // 先清除上一个高亮
-
-        recyclerView.smoothScrollToPosition(stepIndex)
-        val viewHolder = recyclerView.findViewHolderForAdapterPosition(stepIndex)
-        if (viewHolder != null) {
-            currentlyExecutingViewHolder = viewHolder
-            val cardView = viewHolder.itemView.findViewById<MaterialCardView>(R.id.step_card_view)
-            executionAnimator = AnimatorInflater.loadAnimator(this, R.animator.execution_highlight).apply {
-                setTarget(cardView) // 动画目标是卡片视图
-                start()
-            }
-        }
+        smoothScrollToPositionAndHighlight(stepIndex, R.animator.execution_highlight)
     }
 
     /**
@@ -235,17 +264,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private fun highlightStepAsFailed(stepIndex: Int) {
         if (stepIndex < 0 || stepIndex >= actionSteps.size) return
         clearHighlight() // 清除任何可能存在的正常高亮
-
-        recyclerView.smoothScrollToPosition(stepIndex)
-        val viewHolder = recyclerView.findViewHolderForAdapterPosition(stepIndex)
-        if (viewHolder != null) {
-            currentlyExecutingViewHolder = viewHolder
-            val cardView = viewHolder.itemView.findViewById<MaterialCardView>(R.id.step_card_view)
-            executionAnimator = AnimatorInflater.loadAnimator(this, R.animator.execution_error).apply {
-                setTarget(cardView) // 将动画目标设置为 MaterialCardView
-                start()
-            }
-        }
+        smoothScrollToPositionAndHighlight(stepIndex, R.animator.execution_error, isError = true)
     }
 
 
@@ -256,9 +275,10 @@ class WorkflowEditorActivity : BaseActivity() {
         executionAnimator?.cancel()
         executionAnimator = null
         currentlyExecutingViewHolder?.itemView?.let {
-            it.alpha = 1.0f // 恢复透明度
-            it.scaleX = 1.0f // 恢复缩放
-            it.scaleY = 1.0f // 恢复缩放
+            // 恢复所有可能被动画修改的属性
+            it.alpha = 1.0f
+            it.scaleX = 1.0f
+            it.scaleY = 1.0f
             val cardView = it.findViewById<MaterialCardView>(R.id.step_card_view)
             cardView?.setCardBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, 0))
         }
@@ -587,7 +607,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
                 val tempList = originalList.toMutableList()
 
-                // 使用按索引范围删除的方式，避免类型推断错误
+                // [FIX] 使用按索引范围删除的方式，避免类型推断错误
                 for (i in blockEnd downTo blockStart) {
                     tempList.removeAt(i)
                 }
