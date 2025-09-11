@@ -35,6 +35,8 @@ import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.*
@@ -52,6 +54,8 @@ class WorkflowEditorActivity : BaseActivity() {
     private lateinit var itemTouchHelper: ItemTouchHelper
     private var currentEditorSheet: ActionEditorSheet? = null
     private lateinit var executeButton: MaterialButton
+    private lateinit var recyclerView: RecyclerView
+
 
     private var pendingExecutionWorkflow: Workflow? = null
 
@@ -64,6 +68,9 @@ class WorkflowEditorActivity : BaseActivity() {
     // 存储动画 Animator 实例
     private var dragGlowAnimator: Animator? = null
     private var dragBreathAnimator: Animator? = null
+    private var executionAnimator: Animator? = null
+    private var currentlyExecutingViewHolder: RecyclerView.ViewHolder? = null
+
 
     // 用于保存和恢复状态的常量
     private val STATE_ACTION_STEPS = "state_action_steps"
@@ -118,6 +125,8 @@ class WorkflowEditorActivity : BaseActivity() {
         workflowManager = WorkflowManager(this)
         nameEditText = findViewById(R.id.edit_text_workflow_name)
         executeButton = findViewById(R.id.button_execute_workflow)
+        recyclerView = findViewById(R.id.recycler_view_action_steps)
+
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar_editor)
         toolbar.setNavigationOnClickListener { finish() }
@@ -180,17 +189,82 @@ class WorkflowEditorActivity : BaseActivity() {
         lifecycleScope.launch {
             ExecutionStateBus.stateFlow.collectLatest { state ->
                 val workflowId = currentWorkflow?.id ?: return@collectLatest
-                val relevantState = when(state) {
-                    is ExecutionState.Running -> if (state.workflowId == workflowId) "running" else null
-                    is ExecutionState.Finished -> if (state.workflowId == workflowId) "finished" else null
-                    is ExecutionState.Cancelled -> if (state.workflowId == workflowId) "finished" else null
-                }
-                if (relevantState != null) {
-                    updateExecuteButton(relevantState == "running")
+                if (state.workflowId != workflowId) return@collectLatest
+
+                when (state) {
+                    is ExecutionState.Running -> {
+                        updateExecuteButton(true)
+                        highlightStep(state.stepIndex)
+                    }
+                    is ExecutionState.Finished, is ExecutionState.Cancelled -> {
+                        updateExecuteButton(false)
+                        clearHighlight()
+                    }
+                    is ExecutionState.Failure -> {
+                        updateExecuteButton(false)
+                        highlightStepAsFailed(state.stepIndex)
+                    }
                 }
             }
         }
     }
+    /**
+     * 高亮当前正在执行的步骤。
+     * @param stepIndex 要高亮的步骤的索引。
+     */
+    private fun highlightStep(stepIndex: Int) {
+        if (stepIndex < 0 || stepIndex >= actionSteps.size) return
+        clearHighlight() // 先清除上一个高亮
+
+        recyclerView.smoothScrollToPosition(stepIndex)
+        val viewHolder = recyclerView.findViewHolderForAdapterPosition(stepIndex)
+        if (viewHolder != null) {
+            currentlyExecutingViewHolder = viewHolder
+            val cardView = viewHolder.itemView.findViewById<MaterialCardView>(R.id.step_card_view)
+            executionAnimator = AnimatorInflater.loadAnimator(this, R.animator.execution_highlight).apply {
+                setTarget(cardView) // 动画目标是卡片视图
+                start()
+            }
+        }
+    }
+
+    /**
+     * 高亮执行失败的步骤。
+     * @param stepIndex 失败的步骤的索引。
+     */
+    private fun highlightStepAsFailed(stepIndex: Int) {
+        if (stepIndex < 0 || stepIndex >= actionSteps.size) return
+        clearHighlight() // 清除任何可能存在的正常高亮
+
+        recyclerView.smoothScrollToPosition(stepIndex)
+        val viewHolder = recyclerView.findViewHolderForAdapterPosition(stepIndex)
+        if (viewHolder != null) {
+            currentlyExecutingViewHolder = viewHolder
+            val cardView = viewHolder.itemView.findViewById<MaterialCardView>(R.id.step_card_view)
+            executionAnimator = AnimatorInflater.loadAnimator(this, R.animator.execution_error).apply {
+                setTarget(cardView) // 将动画目标设置为 MaterialCardView
+                start()
+            }
+        }
+    }
+
+
+    /**
+     * 清除所有高亮和动画效果。
+     */
+    private fun clearHighlight() {
+        executionAnimator?.cancel()
+        executionAnimator = null
+        currentlyExecutingViewHolder?.itemView?.let {
+            it.alpha = 1.0f // 恢复透明度
+            it.scaleX = 1.0f // 恢复缩放
+            it.scaleY = 1.0f // 恢复缩放
+            val cardView = it.findViewById<MaterialCardView>(R.id.step_card_view)
+            cardView?.setCardBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, 0))
+        }
+        currentlyExecutingViewHolder = null
+    }
+
 
     private fun executeWorkflow(workflow: Workflow) {
         val missingPermissions = PermissionManager.getMissingPermissions(this, workflow)
@@ -510,21 +584,22 @@ class WorkflowEditorActivity : BaseActivity() {
 
                 val (blockStart, blockEnd) = findBlockRangeInList(originalList, fromPos)
                 val blockToMove = originalList.subList(blockStart, blockEnd + 1)
-                val tempList = originalList.toMutableList()
-                tempList.removeAll(blockToMove.toSet())
-                val targetIndex = if (toPos > fromPos) toPos - blockToMove.size + 1 else toPos
 
-                var isValidMove = false
-                if (targetIndex >= 0 && targetIndex <= tempList.size) {
-                    tempList.addAll(targetIndex.coerceAtMost(tempList.size), blockToMove)
-                    if (isBlockStructureValid(tempList)) {
-                        actionSteps.clear()
-                        actionSteps.addAll(tempList)
-                        isValidMove = true
-                    }
+                val tempList = originalList.toMutableList()
+
+                // 使用按索引范围删除的方式，避免类型推断错误
+                for (i in blockEnd downTo blockStart) {
+                    tempList.removeAt(i)
                 }
 
-                if (!isValidMove) {
+                val insertionPoint = if (toPos < blockStart) toPos else toPos - blockToMove.size
+                tempList.addAll(insertionPoint.coerceIn(0, tempList.size), blockToMove)
+
+
+                if (isBlockStructureValid(tempList)) {
+                    actionSteps.clear()
+                    actionSteps.addAll(tempList)
+                } else {
                     Toast.makeText(this@WorkflowEditorActivity, "无效的移动", Toast.LENGTH_SHORT).show()
                     actionSteps.clear()
                     actionSteps.addAll(originalList)

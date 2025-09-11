@@ -63,8 +63,8 @@ object WorkflowExecutor {
         stoppedWorkflows.remove(workflow.id)
 
         val job = executorScope.launch {
-            // 广播开始执行的状态
-            ExecutionStateBus.postState(ExecutionState.Running(workflow.id))
+            // 广播开始执行的状态，初始索引为-1表示准备阶段
+            ExecutionStateBus.postState(ExecutionState.Running(workflow.id, -1))
             Log.d("WorkflowExecutor", "开始执行工作流: ${workflow.name} (ID: ${workflow.id})")
             ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
 
@@ -88,6 +88,9 @@ object WorkflowExecutor {
                         continue
                     }
 
+                    // 广播当前正在执行的步骤索引
+                    ExecutionStateBus.postState(ExecutionState.Running(workflow.id, pc))
+
                     // 更新进度通知
                     val progress = (pc * 100) / workflow.steps.size
                     val progressMessage = "步骤 ${pc + 1}/${workflow.steps.size}: ${module.metadata.name}"
@@ -106,7 +109,7 @@ object WorkflowExecutor {
                         namedVariables = namedVariables
                     )
 
-                    // [核心重构] 统一解析所有变量引用
+                    // 统一解析所有变量引用
                     step.parameters.forEach { (key, value) ->
                         if (value is String) {
                             when {
@@ -150,6 +153,8 @@ object WorkflowExecutor {
                         is ExecutionResult.Failure -> {
                             Log.e("WorkflowExecutor", "模块执行失败: ${result.errorTitle} - ${result.errorMessage}")
                             ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("失败: ${result.errorMessage}"))
+                            // 广播失败状态和索引
+                            ExecutionStateBus.postState(ExecutionState.Failure(workflow.id, pc))
                             break // 终止工作流
                         }
                         is ExecutionResult.Signal -> {

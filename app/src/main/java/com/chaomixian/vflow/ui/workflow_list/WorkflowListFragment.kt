@@ -151,6 +151,7 @@ class WorkflowListFragment : Fragment() {
                         is ExecutionState.Running -> it.id == state.workflowId
                         is ExecutionState.Finished -> it.id == state.workflowId
                         is ExecutionState.Cancelled -> it.id == state.workflowId
+                        is ExecutionState.Failure -> it.id == state.workflowId
                     }
                 }
                 if (index != null && index != -1) {
