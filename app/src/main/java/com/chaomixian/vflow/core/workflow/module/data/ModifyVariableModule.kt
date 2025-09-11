@@ -17,44 +17,14 @@ class ModifyVariableModule : BaseModule() {
         category = "数据"
     )
 
-    // 重写 getDynamicInputs 方法
-    override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
-        val staticInputs = getInputs()
-        if (allSteps == null || step == null) return staticInputs
-
-        // 1. 扫描当前步骤之前的所有步骤，找出所有已定义的命名变量
-        val currentStepIndex = allSteps.indexOf(step).let { if (it == -1) allSteps.size else it }
-        val availableNamedVariables = allSteps.subList(0, currentStepIndex)
-            .filter { it.moduleId == CreateVariableModule().id }
-            .mapNotNull { it.parameters["variableName"] as? String }
-            .filter { it.isNotBlank() }
-            .distinct()
-
-        // 2. 如果找到了命名变量，就将"变量名称"输入框变为一个下拉菜单
-        if (availableNamedVariables.isNotEmpty()) {
-            val dynamicInputs = staticInputs.toMutableList()
-            val nameInputIndex = dynamicInputs.indexOfFirst { it.id == "variableName" }
-            if (nameInputIndex != -1) {
-                dynamicInputs[nameInputIndex] = dynamicInputs[nameInputIndex].copy(
-                    staticType = ParameterType.ENUM,
-                    options = availableNamedVariables
-                )
-            }
-            return dynamicInputs
-        }
-
-        // 3. 如果没找到，则保持原来的文本输入框
-        return staticInputs
-    }
-
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
-            id = "variableName",
-            name = "变量名称",
+            id = "variable", // ID 从 "variableName" 改为 "variable"
+            name = "变量",     // 名称从 "变量名称" 改为 "变量"
             staticType = ParameterType.STRING,
             defaultValue = "",
-            acceptsMagicVariable = false,
-            acceptsNamedVariable = false // 名称本身不能是变量
+            acceptsMagicVariable = false, // 不接受步骤输出作为变量名
+            acceptsNamedVariable = true  // 只接受命名变量作为输入
         ),
         InputDefinition(
             id = "newValue",
@@ -70,8 +40,8 @@ class ModifyVariableModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val namePill = PillUtil.createPillFromParam(
-            step.parameters["variableName"],
-            getInputs().find { it.id == "variableName" }
+            step.parameters["variable"], // 使用新的 ID "variable"
+            getInputs().find { it.id == "variable" }
         )
         val valuePill = PillUtil.createPillFromParam(
             step.parameters["newValue"],
@@ -84,16 +54,20 @@ class ModifyVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val variableName = context.variables["variableName"] as? String
-        if (variableName.isNullOrBlank()) {
-            return ExecutionResult.Failure("参数错误", "变量名称不能为空。")
+        // 执行逻辑现在需要解析命名变量的引用格式 "[[...]]"
+        val variableRef = context.variables["variable"] as? String
+        if (variableRef.isNullOrBlank() || !variableRef.isNamedVariable()) {
+            return ExecutionResult.Failure("参数错误", "请选择一个有效的命名变量。")
         }
+
+        // 从 "[[...]]" 中提取变量名
+        val variableName = variableRef.removeSurrounding("[[", "]]")
 
         if (!context.namedVariables.containsKey(variableName)) {
             return ExecutionResult.Failure("执行错误", "找不到名为 '$variableName' 的变量。请先使用“创建变量”模块创建它。")
         }
 
-        // 新值现在统一从 magicVariables 中获取
+        // 新值统一从 magicVariables 中获取
         val newValue = context.magicVariables["newValue"] ?: context.variables["newValue"]
         context.namedVariables[variableName] = newValue
         onProgress(ProgressUpdate("已修改变量 '$variableName' 的值"))

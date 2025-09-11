@@ -77,7 +77,7 @@ class ToastModule : BaseModule() {
      * 验证模块参数的有效性。
      * 确保消息内容在不使用魔法变量时不能为空。
      */
-    override fun validate(step: ActionStep): ValidationResult {
+    override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
         val message = step.parameters["message"]?.toString()
         // 如果消息为空白，并且它不是一个魔法变量引用，则验证失败
         if (message.isNullOrBlank() && (message == null || !(message.isMagicVariable()))) {

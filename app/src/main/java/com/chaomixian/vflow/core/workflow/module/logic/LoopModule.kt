@@ -49,7 +49,7 @@ class LoopModule : BaseBlockModule() {
     }
 
     /** 验证参数：循环次数必须为正数。 */
-    override fun validate(step: ActionStep): ValidationResult {
+    override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
         val count = step.parameters["count"]
         if (count is String && !count.isMagicVariable()) { // 非魔法变量字符串
             val countAsLong = count.toLongOrNull()

@@ -76,9 +76,10 @@ interface ActionModule {
     /**
      * 验证指定动作步骤的参数是否有效。
      * @param step 要验证的动作步骤。
+     * @param allSteps 整个工作流的所有步骤，用于需要上下文的验证（如重名检查）。
      * @return ValidationResult 对象，包含验证状态和错误消息（如果无效）。
      */
-    fun validate(step: ActionStep): ValidationResult
+    fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult
 
     /**
      * 创建此模块的一个或多个默认动作步骤实例。

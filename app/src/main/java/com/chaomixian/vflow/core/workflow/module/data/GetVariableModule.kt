@@ -24,7 +24,7 @@ class GetVariableModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptsNamedVariable = true // [修改] 明确表示接受命名变量
+            acceptsNamedVariable = true // 明确表示接受命名变量
         )
     )
 
@@ -44,7 +44,7 @@ class GetVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // [核心修改] 现在的逻辑变得非常简单，因为所有变量解析都由执行器完成了
+        // 现在的逻辑变得非常简单，因为所有变量解析都由执行器完成了
         val variableValue = context.magicVariables["source"]
 
         if (variableValue == null) {

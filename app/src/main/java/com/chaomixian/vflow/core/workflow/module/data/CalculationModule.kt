@@ -119,7 +119,7 @@ class CalculationModule : BaseModule() {
     /**
      * 验证模块参数的有效性。
      */
-    override fun validate(step: ActionStep): ValidationResult {
+    override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
         return ValidationResult(true)
     }
 

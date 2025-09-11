@@ -48,7 +48,7 @@ class JumpModule : BaseModule() {
         return PillUtil.buildSpannable(context, "跳转到步骤 ", targetStepPill)
     }
 
-    override fun validate(step: ActionStep): ValidationResult {
+    override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
         val targetIndex = step.parameters["target_step_index"]
         val index = (targetIndex as? Number)?.toInt()
 

@@ -217,7 +217,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 val varType = step.parameters["type"] as? String ?: "未知"
                 if (!varName.isNullOrBlank()) {
                     availableNamedVariables[varName] = MagicVariableItem(
-                        variableReference = "[[$varName]]", // [核心修改] 使用新的引用格式
+                        variableReference = "[[$varName]]", // 使用新的引用格式
                         variableName = varName,
                         originDescription = "命名变量 ($varType)"
                     )
@@ -331,7 +331,13 @@ class WorkflowEditorActivity : BaseActivity() {
 
 
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
-        val targetInputDef = editingModule.getDynamicInputs(actionSteps.getOrNull(editingStepPosition), actionSteps).find { it.id == targetInputId } ?: return
+        // 查找当前输入框的定义
+        val targetInputDef = editingModule.getDynamicInputs(actionSteps.getOrNull(editingStepPosition), actionSteps).find { it.id == targetInputId }
+        if (targetInputDef == null) {
+            Toast.makeText(this, "无法找到输入定义: $targetInputId", Toast.LENGTH_SHORT).show()
+            return
+        }
+
 
         val availableStepOutputs = mutableListOf<MagicVariableItem>()
 
@@ -354,18 +360,18 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
 
-        // [修改] 获取命名变量
-        val availableNamedVariables = if (targetInputDef.acceptsNamedVariable) {
-            getAvailableNamedVariables(editingStepPosition)
-        } else {
-            emptyList()
-        }
+        val availableNamedVariables = getAvailableNamedVariables(editingStepPosition)
 
-
-        // 合并列表，命名变量在前
+        // 合并所有可用变量
         val finalAvailableVariables = availableNamedVariables + availableStepOutputs
 
-        val picker = MagicVariablePickerSheet.newInstance(finalAvailableVariables)
+        // 创建选择器时传入过滤条件
+        val picker = MagicVariablePickerSheet.newInstance(
+            finalAvailableVariables,
+            acceptsMagicVariable = targetInputDef.acceptsMagicVariable,
+            acceptsNamedVariable = targetInputDef.acceptsNamedVariable
+        )
+
         picker.onSelection = { selectedItem ->
             if (selectedItem != null) {
                 currentEditorSheet?.updateInputWithVariable(targetInputId, selectedItem.variableReference)
@@ -375,6 +381,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
         picker.show(supportFragmentManager, "MagicVariablePicker")
     }
+
 
     private fun handleParameterPillClick(position: Int, parameterId: String) {
         val step = actionSteps[position]
@@ -717,10 +724,10 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun saveWorkflow() {
-        // [新增] 变量名重复性检查
+        // 变量名重复性检查
         for (step in actionSteps) {
-            if (step.moduleId == CreateVariableModule().id) {
-                val module = ModuleRegistry.getModule(step.moduleId) as CreateVariableModule
+            val module = ModuleRegistry.getModule(step.moduleId)
+            if (module != null) {
                 val validationResult = module.validate(step, actionSteps)
                 if (!validationResult.isValid) {
                     Toast.makeText(this, validationResult.errorMessage, Toast.LENGTH_LONG).show()

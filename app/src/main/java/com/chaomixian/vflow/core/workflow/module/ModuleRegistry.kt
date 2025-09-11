@@ -71,12 +71,12 @@ object ModuleRegistry {
 
 
         // 数据
+        register(CreateVariableModule())
+        register(ModifyVariableModule())
+        register(GetVariableModule())
         register(CalculationModule())
-        register(SetVariableModule())
         register(TextProcessingModule())
-        register(CreateVariableModule())  // [新增] 注册新模块
-        register(ModifyVariableModule())  // [新增] 注册新模块
-        register(GetVariableModule())     // [新增] 注册新模块
+        register(SetVariableModule()) // 即将移除
 
         // 文件
         register(ImportImageModule())

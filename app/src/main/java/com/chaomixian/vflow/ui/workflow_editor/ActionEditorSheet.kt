@@ -95,8 +95,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             readParametersFromUi()
             val finalParams = existingStep?.parameters?.toMutableMap() ?: mutableMapOf()
             finalParams.putAll(currentParameters)
-            val stepForValidation = ActionStep(moduleId = module.id, parameters = finalParams)
-            val validationResult = module.validate(stepForValidation)
+            val stepForValidation = ActionStep(moduleId = module.id, parameters = finalParams, id = existingStep?.id ?: "")
+            // 调用新的 validate 方法，并传入 allSteps
+            val validationResult = module.validate(stepForValidation, allSteps ?: emptyList())
             if (validationResult.isValid) {
                 onSave?.invoke(ActionStep(module.id, currentParameters))
                 dismiss()
@@ -151,7 +152,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
         val currentValue = currentParameters[inputDef.id]
 
-        // [修改] 同时检查是否接受魔法变量和命名变量
+        // 同时检查是否接受魔法变量和命名变量
         magicButton.isVisible = inputDef.acceptsMagicVariable || inputDef.acceptsNamedVariable
         magicButton.setOnClickListener {
             readParametersFromUi()

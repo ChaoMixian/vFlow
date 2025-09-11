@@ -92,7 +92,7 @@ class CreateVariableModule : BaseModule() {
      * @param allSteps 工作流中的所有步骤，用于上下文检查。
      * @return 验证结果。
      */
-    fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
+    override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
         val variableName = step.parameters["variableName"] as? String
         if (!variableName.isNullOrBlank()) {
             // 查找所有具有相同非空变量名的“创建变量”模块实例

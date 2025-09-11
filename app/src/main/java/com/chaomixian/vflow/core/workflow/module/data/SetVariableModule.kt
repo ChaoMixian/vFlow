@@ -26,7 +26,7 @@ class SetVariableModule : BaseModule() {
     // 模块的唯一ID
     override val id = "vflow.variable.set"
     // 模块的元数据，用于在UI中展示
-    override val metadata = ActionMetadata("设置变量", "创建文本、数字、布尔、图像等变量", R.drawable.rounded_data_object_24, "数据")
+    override val metadata = ActionMetadata("设置变量\n(废弃)", "创建文本、数字、布尔、图像等变量", R.drawable.rounded_data_object_24, "数据")
 
     // 定义变量类型下拉框的选项
     private val typeOptions = listOf("文本", "数字", "布尔", "字典", "图像")

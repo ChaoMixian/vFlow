@@ -73,7 +73,7 @@ class DelayModule : BaseModule() {
      * 验证模块参数的有效性。
      * 确保延迟时间不为负数。
      */
-    override fun validate(step: ActionStep): ValidationResult {
+    override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
         val duration = step.parameters["duration"]
         // 检查参数是否为字符串（可能是魔法变量或直接输入的数字字符串）
         if (duration is String) {

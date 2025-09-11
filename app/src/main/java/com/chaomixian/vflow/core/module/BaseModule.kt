@@ -94,9 +94,10 @@ abstract class BaseModule : ActionModule {
      * 默认实现认为所有参数都是有效的。
      * 具体模块应根据其参数要求重写此方法以提供实际的验证逻辑。
      * @param step 要验证的动作步骤。
+     * @param allSteps 整个工作流的所有步骤，用于需要上下文的验证。
      * @return ValidationResult 对象，包含验证状态和错误消息（如果无效）。
      */
-    override fun validate(step: ActionStep): ValidationResult {
+    override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
         return ValidationResult(isValid = true) // 默认所有参数均有效
     }
 

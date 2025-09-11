@@ -9,6 +9,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.module.isMagicVariable
+import com.chaomixian.vflow.core.module.isNamedVariable
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.parcelize.Parcelize
 
@@ -47,11 +49,22 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
     var onSelection: ((MagicVariableItem?) -> Unit)? = null
 
     companion object {
-        /** 创建 MagicVariablePickerSheet 实例。 */
-        fun newInstance(availableVariables: List<MagicVariableItem>): MagicVariablePickerSheet {
+        /**
+         * 创建 MagicVariablePickerSheet 实例，并接收过滤条件。
+         * @param availableVariables 所有可用的变量列表。
+         * @param acceptsMagicVariable 是否显示来自步骤输出的魔法变量。
+         * @param acceptsNamedVariable 是否显示用户创建的命名变量。
+         */
+        fun newInstance(
+            availableVariables: List<MagicVariableItem>,
+            acceptsMagicVariable: Boolean,
+            acceptsNamedVariable: Boolean
+        ): MagicVariablePickerSheet {
             return MagicVariablePickerSheet().apply {
                 arguments = Bundle().apply {
                     putParcelableArrayList("variables", ArrayList(availableVariables))
+                    putBoolean("acceptsMagic", acceptsMagicVariable)
+                    putBoolean("acceptsNamed", acceptsNamedVariable)
                 }
             }
         }
@@ -62,12 +75,20 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         val view = inflater.inflate(R.layout.sheet_magic_variable_picker, container, false)
         val recyclerView = view.findViewById<RecyclerView>(R.id.recycler_view_magic_variables)
 
-        val variables = arguments?.getParcelableArrayList<MagicVariableItem>("variables") ?: emptyList()
+        val allVariables = arguments?.getParcelableArrayList<MagicVariableItem>("variables") ?: emptyList()
+        val acceptsMagic = arguments?.getBoolean("acceptsMagic", true) ?: true
+        val acceptsNamed = arguments?.getBoolean("acceptsNamed", true) ?: true
 
-        // 构建列表项：首项为“清除选择”，其余为可用变量
+        // 根据传入的标志过滤变量列表
+        val filteredVariables = allVariables.filter {
+            (acceptsMagic && it.variableReference.isMagicVariable()) ||
+                    (acceptsNamed && it.variableReference.isNamedVariable())
+        }
+
+        // 构建列表项：首项为“清除选择”，其余为过滤后的可用变量
         val items = mutableListOf<PickerListItem>().apply {
             add(PickerListItem.ClearSelection) // 添加清除操作项
-            addAll(variables.map { PickerListItem.Variable(it) }) // 添加所有可用变量
+            addAll(filteredVariables.map { PickerListItem.Variable(it) }) // 添加所有可用变量
         }
 
         recyclerView.adapter = MagicVariableAdapter(items) { selectedItem ->
