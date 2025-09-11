@@ -36,8 +36,8 @@ class ModifyVariableModule : BaseModule() {
             val nameInputIndex = dynamicInputs.indexOfFirst { it.id == "variableName" }
             if (nameInputIndex != -1) {
                 dynamicInputs[nameInputIndex] = dynamicInputs[nameInputIndex].copy(
-                    staticType = ParameterType.ENUM, // 类型变为枚举
-                    options = availableNamedVariables // 选项为找到的变量名
+                    staticType = ParameterType.ENUM,
+                    options = availableNamedVariables
                 )
             }
             return dynamicInputs
@@ -47,25 +47,27 @@ class ModifyVariableModule : BaseModule() {
         return staticInputs
     }
 
-
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "variableName",
             name = "变量名称",
-            staticType = ParameterType.STRING, // 默认是文本输入
+            staticType = ParameterType.STRING,
             defaultValue = "",
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            acceptsNamedVariable = false // 名称本身不能是变量
         ),
         InputDefinition(
             id = "newValue",
             name = "新值",
             staticType = ParameterType.ANY,
             defaultValue = "",
-            acceptsMagicVariable = true
+            acceptsMagicVariable = true,
+            acceptsNamedVariable = true // 新值可以接受两种变量
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
+
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val namePill = PillUtil.createPillFromParam(
             step.parameters["variableName"],
@@ -77,6 +79,7 @@ class ModifyVariableModule : BaseModule() {
         )
         return PillUtil.buildSpannable(context, "修改变量 ", namePill, " 的值为 ", valuePill)
     }
+
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
@@ -90,6 +93,7 @@ class ModifyVariableModule : BaseModule() {
             return ExecutionResult.Failure("执行错误", "找不到名为 '$variableName' 的变量。请先使用“创建变量”模块创建它。")
         }
 
+        // 新值现在统一从 magicVariables 中获取
         val newValue = context.magicVariables["newValue"] ?: context.variables["newValue"]
         context.namedVariables[variableName] = newValue
         onProgress(ProgressUpdate("已修改变量 '$variableName' 的值"))

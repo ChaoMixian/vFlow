@@ -1,3 +1,4 @@
+// 文件: main/java/com/chaomixian/vflow/core/module/VariableTypes.kt
 package com.chaomixian.vflow.core.module // 包名已更新
 
 import android.os.Parcelable
@@ -104,7 +105,13 @@ data class DateVariable(val value: String) : Parcelable {
 }
 
 /**
- * 检查字符串是否为魔法变量引用的通用函数。
+ * 检查字符串是否为魔法变量引用 (来自步骤输出)。
  * e.g., "{{stepId.outputId}}"
  */
 fun String?.isMagicVariable(): Boolean = this?.startsWith("{{") == true && this.endsWith("}}")
+
+/**
+ * 检查字符串是否为命名变量引用。
+ * e.g., "[[myCounter]]"
+ */
+fun String?.isNamedVariable(): Boolean = this?.startsWith("[[") == true && this.endsWith("]]")

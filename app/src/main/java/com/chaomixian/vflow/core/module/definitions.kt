@@ -1,7 +1,4 @@
-// 文件：definitions.kt
-// 描述：定义了模块系统中使用的核心数据类、枚举和接口。
-//      包括模块元数据、参数定义、执行结果、UI提供者接口等。
-
+// 文件: main/java/com/chaomixian/vflow/core/module/definitions.kt
 package com.chaomixian.vflow.core.module
 
 import android.content.Context
@@ -110,6 +107,7 @@ enum class ParameterType {
  * @param defaultValue 参数的默认值。
  * @param options 如果 staticType 是 ENUM，则这些是可选项列表。
  * @param acceptsMagicVariable 此参数是否接受魔法变量作为输入。
+ * @param acceptsNamedVariable 此参数是否接受命名变量作为输入。
  * @param acceptedMagicVariableTypes 如果接受魔法变量，这里定义了可接受的魔法变量的类型名称集合。
  * @param isHidden 此参数是否在UI中隐藏 (例如，内部使用的参数)。
  */
@@ -120,6 +118,7 @@ data class InputDefinition(
     val defaultValue: Any? = null,
     val options: List<String> = emptyList(),
     val acceptsMagicVariable: Boolean = true,
+    val acceptsNamedVariable: Boolean = true,
     val acceptedMagicVariableTypes: Set<String> = emptySet(),
     val isHidden: Boolean = false
 )

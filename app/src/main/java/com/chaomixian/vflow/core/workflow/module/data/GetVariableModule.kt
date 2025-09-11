@@ -23,7 +23,8 @@ class GetVariableModule : BaseModule() {
             name = "来源变量",
             staticType = ParameterType.STRING,
             defaultValue = "",
-            acceptsMagicVariable = true // 允许选择魔法变量
+            acceptsMagicVariable = true,
+            acceptsNamedVariable = true // [修改] 明确表示接受命名变量
         )
     )
 
@@ -43,26 +44,15 @@ class GetVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val source = context.variables["source"] as? String
-        if (source.isNullOrBlank()) {
-            return ExecutionResult.Failure("参数错误", "来源变量不能为空。")
+        // [核心修改] 现在的逻辑变得非常简单，因为所有变量解析都由执行器完成了
+        val variableValue = context.magicVariables["source"]
+
+        if (variableValue == null) {
+            val sourceRef = context.variables["source"] as? String ?: "未知"
+            return ExecutionResult.Failure("执行错误", "找不到变量 '$sourceRef' 的值。")
         }
 
-        val variableValue: Any?
-
-        if (source.isMagicVariable()) {
-            // 1. 如果输入是魔法变量，则“取值”
-            variableValue = context.magicVariables["source"]
-            onProgress(ProgressUpdate("已读取魔法变量的值"))
-        } else {
-            // 2. 如果输入是普通文本，则视为命名变量，进行“引用存储”
-            variableValue = context.namedVariables[source]
-            if (variableValue == null) {
-                return ExecutionResult.Failure("执行错误", "找不到名为 '$source' 的变量。")
-            }
-            onProgress(ProgressUpdate("已读取命名变量 '$source'"))
-        }
-
+        onProgress(ProgressUpdate("已读取变量的值"))
         return ExecutionResult.Success(mapOf("value" to variableValue))
     }
 }

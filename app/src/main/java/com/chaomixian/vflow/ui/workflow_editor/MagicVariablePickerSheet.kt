@@ -1,6 +1,4 @@
 // 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/MagicVariablePickerSheet.kt
-// (已修改)
-
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.os.Bundle
@@ -15,18 +13,18 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.parcelize.Parcelize
 
 /**
- * 代表一个可供选择的变量的数据模型 (已更新)。
+ * 代表一个可供选择的变量的数据模型。
  * @param variableReference 变量的引用字符串。
  * 对于魔法变量, 格式为 "{{stepId.outputId}}";
- * 对于命名变量, 就是其名称, 如 "myCounter"。
+ * 对于命名变量, 格式为 "[[variableName]]"。
  * @param variableName 变量的可读名称。
- * @param originDescription [修改] 描述变量来源的文本, 如 "来自: 查找文本" 或 "命名变量 (数字)"。
+ * @param originDescription 描述变量来源的文本, 如 "来自: 查找文本" 或 "命名变量 (数字)"。
  */
 @Parcelize
 data class MagicVariableItem(
     val variableReference: String,
     val variableName: String,
-    val originDescription: String // [修改] 字段名和用途已更新
+    val originDescription: String
 ) : Parcelable
 
 /**
@@ -136,7 +134,7 @@ class MagicVariableAdapter(
     override fun getItemCount() = items.size
 
     /**
-     * [修改] ViewHolder 更新，以显示新的 originDescription。
+     * ViewHolder 更新，以显示新的 originDescription。
      */
     class VariableViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val nameTextView: TextView = view.findViewById(R.id.variable_name)

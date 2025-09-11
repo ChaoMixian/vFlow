@@ -1,9 +1,4 @@
 // 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/WorkflowEditorActivity.kt
-// 描述: 工作流编辑器 Activity，用于创建和修改工作流的步骤和参数。
-//      核心功能包括：显示步骤列表、添加/编辑/删除步骤、拖拽排序、
-//      处理模块参数（通过 ActionEditorSheet 和 MagicVariablePickerSheet）、
-//      保存工作流、执行工作流（包括权限检查）。
-
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.animation.Animator
@@ -209,11 +204,32 @@ class WorkflowEditorActivity : BaseActivity() {
         }
     }
 
-    /**
-     * 显示模块参数编辑器 (ActionEditorSheet)。
-     */
+    /** [修改] 提取一个辅助函数来获取所有可用的命名变量 */
+    private fun getAvailableNamedVariables(upToPosition: Int): List<MagicVariableItem> {
+        val availableNamedVariables = mutableMapOf<String, MagicVariableItem>()
+        actionSteps.subList(0, upToPosition)
+            .filter { it.moduleId == CreateVariableModule().id }
+            .forEach { step ->
+                val varName = step.parameters["variableName"] as? String
+                val varType = step.parameters["type"] as? String ?: "未知"
+                if (!varName.isNullOrBlank()) {
+                    availableNamedVariables[varName] = MagicVariableItem(
+                        variableReference = "[[$varName]]", // [核心修改] 使用新的引用格式
+                        variableName = varName,
+                        originDescription = "命名变量 ($varType)"
+                    )
+                }
+            }
+        return availableNamedVariables.values.toList()
+    }
+
     private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
-        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, actionSteps.toList())
+        val contextPosition = if (position != -1) position else actionSteps.size
+        // [修改] 直接获取 MagicVariableItem 列表
+        val namedVariables = getAvailableNamedVariables(contextPosition).map { it.variableName }
+
+
+        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, actionSteps.toList(), namedVariables)
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -251,18 +267,14 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
-        val targetInputDef = editingModule.getInputs().find { it.id == targetInputId } ?: return
+        val targetInputDef = editingModule.getDynamicInputs(actionSteps.getOrNull(editingStepPosition), actionSteps).find { it.id == targetInputId } ?: return
 
-        // [修改] 将 availableVariables 拆分为两部分
         val availableStepOutputs = mutableListOf<MagicVariableItem>()
-        val availableNamedVariables = mutableMapOf<String, MagicVariableItem>() // 使用Map去重
 
-        // 遍历当前步骤之前的所有步骤
+        // 遍历当前步骤之前的所有步骤来收集步骤输出
         for (i in 0 until editingStepPosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId) ?: continue
-
-            // 1. 收集步骤输出 (魔法变量)
             module.getOutputs(step).forEach { outputDef ->
                 val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
                         targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
@@ -271,29 +283,23 @@ class WorkflowEditorActivity : BaseActivity() {
                         MagicVariableItem(
                             variableReference = "{{${step.id}.${outputDef.id}}}",
                             variableName = outputDef.name,
-                            originDescription = "来自: ${module.metadata.name}" // [修改] 使用新的字段
+                            originDescription = "来自: ${module.metadata.name}"
                         )
-                    )
-                }
-            }
-
-            // 2. 收集命名变量
-            if (module.id == CreateVariableModule().id) {
-                val varName = step.parameters["variableName"] as? String
-                val varType = step.parameters["type"] as? String ?: "未知"
-                if (!varName.isNullOrBlank()) {
-                    // 后定义的同名变量会覆盖先定义的
-                    availableNamedVariables[varName] = MagicVariableItem(
-                        variableReference = varName, // 引用就是其名称
-                        variableName = varName,      // 显示名称也是其名称
-                        originDescription = "命名变量 ($varType)" // [修改] 使用新的来源描述
                     )
                 }
             }
         }
 
+        // [修改] 获取命名变量
+        val availableNamedVariables = if (targetInputDef.acceptsNamedVariable) {
+            getAvailableNamedVariables(editingStepPosition)
+        } else {
+            emptyList()
+        }
+
+
         // 合并列表，命名变量在前
-        val finalAvailableVariables = availableNamedVariables.values.toList() + availableStepOutputs
+        val finalAvailableVariables = availableNamedVariables + availableStepOutputs
 
         val picker = MagicVariablePickerSheet.newInstance(finalAvailableVariables)
         picker.onSelection = { selectedItem ->
@@ -312,7 +318,6 @@ class WorkflowEditorActivity : BaseActivity() {
         showActionEditor(module, step, position, parameterId)
     }
 
-    /** 初始化 RecyclerView 及其 Adapter 和 ItemDecoration。 */
     private fun setupRecyclerView() {
         val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
         val hideConnections = prefs.getBoolean("hideConnections", false)
@@ -325,7 +330,6 @@ class WorkflowEditorActivity : BaseActivity() {
                 val module = ModuleRegistry.getModule(step.moduleId)
                 if (module == null) return@ActionStepAdapter
 
-                // [修复] 核心逻辑变更：点击第一项（触发器）时，弹出触发器选择器
                 if (position == 0) {
                     showTriggerPicker()
                 } else {
@@ -357,9 +361,6 @@ class WorkflowEditorActivity : BaseActivity() {
         }
     }
 
-    /**
-     * 处理从AppPickerActivity或ActivityPickerActivity返回的结果。
-     */
     private fun handleAppPickerResult(resultCode: Int, data: Intent?, position: Int) {
         if (resultCode == Activity.RESULT_OK && data != null && position != -1) {
             val packageName = data.getStringExtra(AppPickerActivity.EXTRA_SELECTED_PACKAGE_NAME)
@@ -367,22 +368,16 @@ class WorkflowEditorActivity : BaseActivity() {
 
             if (packageName != null && activityName != null) {
                 val step = actionSteps.getOrNull(position) ?: return
-                // 更新步骤的参数
                 val updatedParams = step.parameters.toMutableMap()
                 updatedParams["packageName"] = packageName
                 updatedParams["activityName"] = activityName
                 actionSteps[position] = step.copy(parameters = updatedParams)
-
-                // 刷新列表以显示新的摘要
                 recalculateAndNotify()
-
-                // 刷新打开的编辑器
                 currentEditorSheet?.updateParametersAndRebuildUi(updatedParams)
             }
         }
     }
 
-    /** 设置 RecyclerView 的拖拽排序功能 (ItemTouchHelper)。 */
     private fun setupDragAndDrop() {
         val callback = object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
@@ -403,16 +398,12 @@ class WorkflowEditorActivity : BaseActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
 
-            /**
-             * 在 onSelectedChanged 中启动拖拽动画。
-             */
             override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
                 super.onSelectedChanged(viewHolder, actionState)
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
                     viewHolder?.let {
                         dragStartPosition = it.adapterPosition
                         listBeforeDrag = actionSteps.toList()
-                        // 启动动画
                         dragGlowAnimator = AnimatorInflater.loadAnimator(this@WorkflowEditorActivity, R.animator.drag_glow).apply {
                             setTarget(it.itemView)
                             start()
@@ -426,12 +417,8 @@ class WorkflowEditorActivity : BaseActivity() {
             }
 
 
-            /**
-             * 在 clearView 中停止并清理动画。
-             */
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
-                // 停止并清理动画
                 dragGlowAnimator?.cancel()
                 dragBreathAnimator?.cancel()
                 viewHolder.itemView.alpha = 1.0f
@@ -593,10 +580,6 @@ class WorkflowEditorActivity : BaseActivity() {
         }
     }
 
-    /**
-     * [修改] 显示动作或触发器选择器。
-     * @param isTriggerPicker 如果为 true，则只显示“触发器”分类的模块。
-     */
     private fun showActionPicker(isTriggerPicker: Boolean) {
         val picker = ActionPickerSheet()
         picker.arguments = Bundle().apply {
@@ -604,36 +587,29 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         picker.onActionSelected = { module ->
-            // 如果是模板，直接创建多步并添加到工作流
             if (module.metadata.category == "模板") {
                 val newSteps = module.createSteps()
                 actionSteps.addAll(newSteps)
                 recalculateAndNotify()
             } else if (isTriggerPicker) {
-                // 如果是选择触发器，则替换掉第一个步骤
                 val newTriggerSteps = module.createSteps()
                 if (actionSteps.isNotEmpty()) {
-                    actionSteps[0] = newTriggerSteps.first() // 直接替换
+                    actionSteps[0] = newTriggerSteps.first()
                 } else {
-                    actionSteps.add(newTriggerSteps.first()) // 如果列表为空则添加
+                    actionSteps.add(newTriggerSteps.first())
                 }
-                // 如果新触发器需要配置（即有输入参数），则立即打开编辑器
                 if (module.getInputs().isNotEmpty()) {
                     showActionEditor(module, actionSteps.first(), 0, null)
                 } else {
-                    recalculateAndNotify() // 否则直接刷新列表
+                    recalculateAndNotify()
                 }
             } else {
-                // 否则，正常添加新动作到末尾并打开编辑器
                 showActionEditor(module, null, -1, null)
             }
         }
         picker.show(supportFragmentManager, "ActionPicker")
     }
 
-    /**
-     *  一个专门用于显示触发器选择器的便捷方法。
-     */
     private fun showTriggerPicker() {
         showActionPicker(isTriggerPicker = true)
     }
