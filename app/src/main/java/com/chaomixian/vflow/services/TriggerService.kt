@@ -13,11 +13,14 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
+import com.chaomixian.vflow.permissions.PermissionManager
 import kotlinx.coroutines.*
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -43,6 +46,7 @@ class TriggerService : Service() {
     private lateinit var workflowManager: WorkflowManager
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var keyEventJob: Job? = null
+    private var permissionCheckJob: Job? = null // 用于权限检查的Job
 
     private val resolvedTriggers = CopyOnWriteArrayList<ResolvedKeyEventTrigger>()
 
@@ -69,20 +73,53 @@ class TriggerService : Service() {
         const val EXTRA_RINGER_MODE = "ringer_mode" // 改为ringer_mode
     }
 
-    private val workflowUpdateReceiver = object : BroadcastReceiver() {
+    // 拆分为两个独立的接收器
+    /**
+     * 内部接收器，仅处理来自 LocalBroadcastManager 的应用内部通知。
+     */
+    private val internalReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == WorkflowManager.ACTION_WORKFLOWS_UPDATED) {
-                Log.d(TAG, "接收到工作流更新通知，重新加载按键触发器。")
-                reloadKeyEventTriggers()
+                Log.d(TAG, "接收到工作流更新通知(内部)，重新加载触发器。")
+                reloadTriggers()
             }
         }
     }
 
+    /**
+     * 外部接收器，处理来自系统的广播，如包变化。
+     */
+    private val externalReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_PACKAGE_CHANGED, Intent.ACTION_PACKAGE_ADDED, Intent.ACTION_PACKAGE_REMOVED -> {
+                    Log.d(TAG, "接收到包变更通知(外部)，重新加载触发器。")
+                    reloadTriggers()
+                }
+            }
+        }
+    }
+
+
     override fun onCreate() {
         super.onCreate()
         workflowManager = WorkflowManager(applicationContext)
-        val filter = IntentFilter(WorkflowManager.ACTION_WORKFLOWS_UPDATED)
-        LocalBroadcastManager.getInstance(this).registerReceiver(workflowUpdateReceiver, filter)
+
+        // 分别注册两个接收器
+        // 1. 注册内部接收器
+        val internalFilter = IntentFilter(WorkflowManager.ACTION_WORKFLOWS_UPDATED)
+        LocalBroadcastManager.getInstance(this).registerReceiver(internalReceiver, internalFilter)
+
+        // 2. 注册外部接收器
+        val externalFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addDataScheme("package")
+        }
+        ContextCompat.registerReceiver(this, externalReceiver, externalFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
+
+
         Log.d(TAG, "TriggerService 已创建。")
     }
 
@@ -99,12 +136,84 @@ class TriggerService : Service() {
                 }
             }
             else -> {
+                // 任何其他启动命令（包括开机自启、手动启动）都应重新加载触发器
                 if (intent?.action == ACTION_RELOAD_TRIGGERS) Log.d(TAG, "通过 Intent 请求重新加载触发器。")
-                reloadKeyEventTriggers()
+                reloadTriggers()
             }
         }
         return START_STICKY
     }
+
+    /**
+     * 总的触发器重载入口，现在包含权限检查。
+     */
+    private fun reloadTriggers() {
+        permissionCheckJob?.cancel()
+        permissionCheckJob = serviceScope.launch {
+            checkPermissionsAndToggleWorkflows()
+            // 权限检查完成后，再加载按键事件的监听
+            reloadKeyEventTriggers()
+        }
+    }
+
+
+    /**
+     * 检查所有自动工作流的权限，并根据结果更新其启用状态。
+     */
+    private suspend fun checkPermissionsAndToggleWorkflows() {
+        Log.d(TAG, "正在检查所有自动工作流的权限...")
+        val allWorkflows = workflowManager.getAllWorkflows()
+        val workflowsToUpdate = mutableListOf<Workflow>()
+
+        val autoWorkflows = allWorkflows.filter {
+            it.steps.firstOrNull()?.moduleId != ManualTriggerModule().id
+        }
+
+        for (workflow in autoWorkflows) {
+            val missingPermissions = PermissionManager.getMissingPermissions(applicationContext, workflow)
+            var workflowModified = false
+
+            if (missingPermissions.isNotEmpty()) {
+                // 权限缺失
+                if (workflow.isEnabled) {
+                    // 如果当前是启用状态，则禁用它，并记录下它之前的状态
+                    Log.w(TAG, "工作流 '${workflow.name}' 缺少权限，将被自动禁用。")
+                    workflow.wasEnabledBeforePermissionsLost = true
+                    workflow.isEnabled = false
+                    workflowModified = true
+                }
+            } else {
+                // 权限满足
+                if (workflow.wasEnabledBeforePermissionsLost) {
+                    // 如果它是因为权限问题被禁用的，现在恢复它
+                    Log.i(TAG, "工作流 '${workflow.name}' 的权限已满足，将自动重新启用。")
+                    workflow.isEnabled = true
+                    workflow.wasEnabledBeforePermissionsLost = false
+                    workflowModified = true
+                }
+            }
+
+            if (workflowModified) {
+                workflowsToUpdate.add(workflow)
+            }
+        }
+
+        if (workflowsToUpdate.isNotEmpty()) {
+            Log.d(TAG, "发现 ${workflowsToUpdate.size} 个工作流状态因权限变化而更新。")
+            val currentFullList = allWorkflows.toMutableList()
+            workflowsToUpdate.forEach { updated ->
+                val index = currentFullList.indexOfFirst { it.id == updated.id }
+                if (index != -1) {
+                    currentFullList[index] = updated
+                }
+            }
+            // 一次性保存所有更改，这将触发一次广播，通知UI和其他部分刷新
+            workflowManager.saveAllWorkflows(currentFullList)
+        } else {
+            Log.d(TAG, "所有工作流权限状态均未改变。")
+        }
+    }
+
 
     /**
      * 重新设计的按键事件处理逻辑，使用清晰的状态机模式
@@ -590,7 +699,10 @@ class TriggerService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(workflowUpdateReceiver)
+        // 注销两个接收器
+        unregisterReceiver(externalReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(internalReceiver)
+
 
         // 清理所有状态
         keyStates.clear()

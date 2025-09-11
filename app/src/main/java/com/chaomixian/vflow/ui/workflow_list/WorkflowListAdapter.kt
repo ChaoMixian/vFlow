@@ -1,9 +1,9 @@
-// 文件：WorkflowListAdapter.kt
-// 描述：用于在 RecyclerView 中显示工作流列表的适配器。
+// 文件: ui/workflow_list/WorkflowListAdapter.kt
 
 package com.chaomixian.vflow.ui.workflow_list
 
 import android.annotation.SuppressLint
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,11 +20,14 @@ import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
+import com.chaomixian.vflow.permissions.PermissionManager
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import java.util.Collections
+import androidx.core.content.ContextCompat
+import com.google.android.material.color.MaterialColors
 
 /**
  * 工作流列表的 RecyclerView.Adapter。
@@ -37,8 +40,8 @@ import java.util.Collections
  * @param itemTouchHelper 用于启动拖拽的 ItemTouchHelper 实例。
  */
 class WorkflowListAdapter(
-    private var workflows: MutableList<Workflow>, // 改为 MutableList
-    private val workflowManager: WorkflowManager, // 增加 WorkflowManager 依赖
+    private var workflows: MutableList<Workflow>,
+    private val workflowManager: WorkflowManager,
     private val onEdit: (Workflow) -> Unit,
     private val onDelete: (Workflow) -> Unit,
     private val onDuplicate: (Workflow) -> Unit,
@@ -88,9 +91,11 @@ class WorkflowListAdapter(
     @SuppressLint("ClickableViewAccessibility")
     override fun onBindViewHolder(holder: WorkflowViewHolder, position: Int) {
         val workflow = workflows[position]
-        holder.bind(workflow)
+        val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
+        val missingPermissions = if (isManualTrigger) emptyList() else PermissionManager.getMissingPermissions(holder.itemView.context, workflow)
 
-        // 整个卡片点击时触发编辑回调
+        holder.bind(workflow, missingPermissions.isNotEmpty())
+
         holder.clickableWrapper.setOnClickListener { onEdit(workflow) }
 
         // 长按卡片以启动拖动
@@ -126,26 +131,30 @@ class WorkflowListAdapter(
             popup.show()
         }
 
-        // UI切换逻辑
-        val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
         holder.executeButton.isVisible = isManualTrigger
         holder.enabledSwitch.isVisible = !isManualTrigger
 
-        if(isManualTrigger) {
+        if (isManualTrigger) {
             // 更新执行按钮的状态
             if (WorkflowExecutor.isRunning(workflow.id)) {
-                holder.executeButton.setImageResource(R.drawable.rounded_pause_24) // 设为停止图标
+                holder.executeButton.setImageResource(R.drawable.rounded_pause_24)
             } else {
-                holder.executeButton.setImageResource(R.drawable.ic_play_arrow) // 设为播放图标
+                holder.executeButton.setImageResource(R.drawable.ic_play_arrow)
             }
             // onExecute 回调现在会处理启动或停止
             holder.executeButton.setOnClickListener { onExecute(workflow) }
         } else {
-            // 设置开关状态并处理变化
-            holder.enabledSwitch.setOnCheckedChangeListener(null) // 先移除监听器防止重复触发
+            holder.enabledSwitch.setOnCheckedChangeListener(null)
             holder.enabledSwitch.isChecked = workflow.isEnabled
+            // 如果权限缺失，则禁用开关
+            holder.enabledSwitch.isEnabled = missingPermissions.isEmpty()
+
             holder.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
-                val updatedWorkflow = workflow.copy(isEnabled = isChecked)
+                val updatedWorkflow = workflow.copy(
+                    isEnabled = isChecked,
+                    // 用户手动操作开关时，应重置“因权限丢失而禁用”的标记
+                    wasEnabledBeforePermissionsLost = false
+                )
                 workflowManager.saveWorkflow(updatedWorkflow)
                 // 更新列表中的数据，以便UI保持同步
                 workflows[position] = updatedWorkflow
@@ -161,23 +170,36 @@ class WorkflowListAdapter(
      */
     class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val name: TextView = itemView.findViewById(R.id.text_view_workflow_name)
-        val infoChipGroup: ChipGroup = itemView.findViewById(R.id.chip_group_info) // 更新引用
+        val infoChipGroup: ChipGroup = itemView.findViewById(R.id.chip_group_info)
         val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
         val executeButton: FloatingActionButton = itemView.findViewById(R.id.button_execute_workflow)
         val clickableWrapper: ConstraintLayout = itemView.findViewById(R.id.clickable_wrapper)
         val enabledSwitch: MaterialSwitch = itemView.findViewById(R.id.switch_workflow_enabled)
         val favoriteButton: ImageButton = itemView.findViewById(R.id.button_favorite)
-        /** 将工作流数据显示到视图上。 */
-        fun bind(workflow: Workflow) {
+
+        fun bind(workflow: Workflow, hasMissingPermissions: Boolean) {
             val context = itemView.context
             name.text = workflow.name
-
-            // --- 动态添加所有信息Chip ---
-            infoChipGroup.removeAllViews() // 先清空
+            infoChipGroup.removeAllViews()
             val inflater = LayoutInflater.from(context)
 
-            // 1. 添加步骤数Chip
-            val stepCount = workflow.steps.size - 1 // 减去触发器步骤
+            // 如果权限缺失，显示一个醒目的提示Chip
+            if (hasMissingPermissions) {
+                val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
+                permissionChip.text = "缺少权限"
+                permissionChip.setChipIconResource(R.drawable.ic_shield)
+                // 设置为警告色 (使用主题属性)
+                permissionChip.chipBackgroundColor = ColorStateList.valueOf(
+                    MaterialColors.getColor(context, com.google.android.material.R.attr.colorErrorContainer, 0)
+                )
+                val onColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnErrorContainer, 0)
+                permissionChip.chipIconTint = ColorStateList.valueOf(onColor)
+                permissionChip.setTextColor(onColor)
+                infoChipGroup.addView(permissionChip)
+            }
+
+
+            val stepCount = workflow.steps.size - 1
             if (stepCount >= 0) {
                 val stepChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
                 stepChip.text = "${stepCount.coerceAtLeast(0)} 个步骤"

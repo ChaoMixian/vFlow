@@ -1,3 +1,5 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/model/Workflow.kt
+
 package com.chaomixian.vflow.core.workflow.model
 
 import android.os.Parcelable
@@ -14,5 +16,7 @@ data class Workflow(
     // 用于存储触发器的特定配置，例如分享别名
     val triggerConfig: @RawValue Map<String, Any?>? = null,
     // 工作流是否被收藏
-    var isFavorite: Boolean = false
+    var isFavorite: Boolean = false,
+    // 新增字段：用于记录在权限丢失前，此工作流是否由用户设置为启用
+    var wasEnabledBeforePermissionsLost: Boolean = false
 ) : Parcelable
