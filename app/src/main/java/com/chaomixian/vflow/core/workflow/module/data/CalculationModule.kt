@@ -1,3 +1,4 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/data/CalculationModule.kt
 package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
@@ -14,7 +15,7 @@ import com.chaomixian.vflow.core.module.NumberVariable
 class CalculationModule : BaseModule() {
 
     // 模块的唯一标识符
-    override val id: String = "data.calculation"
+    override val id = "vflow.data.calculation"
 
     // 模块的元数据，定义其在编辑器中的显示名称、描述、图标和分类
     override val metadata: ActionMetadata = ActionMetadata(
@@ -31,10 +32,11 @@ class CalculationModule : BaseModule() {
         InputDefinition(
             id = "operand1",
             name = "数字1",
-            staticType = ParameterType.NUMBER,
+            // 将类型从 NUMBER 改为 STRING，以同时接受数字字面量和变量引用字符串
+            staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
-            defaultValue = 0.0
+            defaultValue = "0" // 默认值也改为字符串
         ),
         InputDefinition(
             id = "operator",
@@ -47,10 +49,11 @@ class CalculationModule : BaseModule() {
         InputDefinition(
             id = "operand2",
             name = "数字2",
-            staticType = ParameterType.NUMBER,
+            // 为了支持命名变量，将类型从 NUMBER 改为 STRING
+            staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
-            defaultValue = 0.0
+            defaultValue = "0" // 默认值也改为字符串
         )
     )
 
@@ -85,7 +88,7 @@ class CalculationModule : BaseModule() {
         if (num2 == null) {
             return ExecutionResult.Failure("输入错误", "数字2无法解析: '${operand2Value?.toString() ?: "null"}'")
         }
-        
+
         val resultValue: Double = when (operator) {
             "+" -> num1 + num2
             "-" -> num1 - num2
@@ -119,12 +122,12 @@ class CalculationModule : BaseModule() {
     override fun validate(step: ActionStep): ValidationResult {
         return ValidationResult(true)
     }
-    
+
     /**
      * 创建此模块对应的默认动作步骤列表。
      */
     override fun createSteps(): List<ActionStep> = listOf(ActionStep(moduleId = this.id, parameters = emptyMap()))
-    
+
     /**
      * 生成在工作流编辑器中显示模块摘要的文本。
      */

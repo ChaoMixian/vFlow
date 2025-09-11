@@ -74,6 +74,9 @@ object ModuleRegistry {
         register(CalculationModule())
         register(SetVariableModule())
         register(TextProcessingModule())
+        register(CreateVariableModule())  // [新增] 注册新模块
+        register(ModifyVariableModule())  // [新增] 注册新模块
+        register(GetVariableModule())     // [新增] 注册新模块
 
         // 文件
         register(ImportImageModule())

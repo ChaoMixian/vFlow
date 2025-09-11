@@ -69,7 +69,6 @@ object WorkflowExecutor {
             Log.d("WorkflowExecutor", "开始执行工作流: ${workflow.name} (ID: ${workflow.id})")
             ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
 
-
             try {
                 // 创建并注册执行期间所需的服务
                 val services = ExecutionServices()
@@ -77,6 +76,8 @@ object WorkflowExecutor {
                 services.add(ExecutionUIService(context.applicationContext))
 
                 val stepOutputs = mutableMapOf<String, Map<String, Any?>>()
+                // [新增] 为本次执行创建一个独立的命名变量容器
+                val namedVariables = ConcurrentHashMap<String, Any?>()
                 val loopStack = Stack<LoopState>()
                 var pc = 0 // 程序计数器
 
@@ -94,7 +95,6 @@ object WorkflowExecutor {
                     val progressMessage = "步骤 ${pc + 1}/${workflow.steps.size}: ${module.metadata.name}"
                     ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(progress, progressMessage))
 
-
                     val executionContext = ExecutionContext(
                         applicationContext = context.applicationContext,
                         variables = step.parameters.toMutableMap(),
@@ -104,8 +104,38 @@ object WorkflowExecutor {
                         currentStepIndex = pc,
                         stepOutputs = stepOutputs,
                         loopStack = loopStack,
-                        triggerData = triggerData // 将 triggerData 传递给上下文
+                        triggerData = triggerData,
+                        namedVariables = namedVariables // [新增] 将容器传递给上下文
                     )
+
+                    // 1. 解析魔法变量 ({{...}})
+                    step.parameters.forEach { (key, value) ->
+                        if (value is String && value.isMagicVariable()) {
+                            val parts = value.removeSurrounding("{{", "}}").split('.')
+                            val sourceStepId = parts.getOrNull(0)
+                            val sourceOutputId = parts.getOrNull(1)
+                            if (sourceStepId != null && sourceOutputId != null) {
+                                val sourceOutputValue = stepOutputs[sourceStepId]?.get(sourceOutputId)
+                                if (sourceOutputValue != null) {
+                                    // 放入 magicVariables 供模块内部使用
+                                    executionContext.magicVariables[key] = sourceOutputValue
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. [新增] 解析命名变量引用
+                    // 遍历模块的静态参数，如果值是一个字符串且在命名变量表里，就替换它
+                    executionContext.variables.forEach { (key, value) ->
+                        if (value is String && !value.isMagicVariable()) {
+                            if (namedVariables.containsKey(value)) {
+                                // 如果一个静态参数的值恰好是一个已定义的命名变量的名称
+                                // 就将这个命名变量的真实值放入 magicVariables 中
+                                // 这样对模块来说，它就像一个魔法变量一样是透明的
+                                executionContext.magicVariables[key] = namedVariables[value]
+                            }
+                        }
+                    }
 
                     step.parameters.forEach { (key, value) ->
                         if (value is String && value.isMagicVariable()) {

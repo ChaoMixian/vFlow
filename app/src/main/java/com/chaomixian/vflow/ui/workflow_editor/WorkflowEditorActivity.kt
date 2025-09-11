@@ -32,6 +32,7 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.app_picker.AppPickerActivity
@@ -251,28 +252,50 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
         val targetInputDef = editingModule.getInputs().find { it.id == targetInputId } ?: return
-        val availableVariables = mutableListOf<MagicVariableItem>()
 
+        // [修改] 将 availableVariables 拆分为两部分
+        val availableStepOutputs = mutableListOf<MagicVariableItem>()
+        val availableNamedVariables = mutableMapOf<String, MagicVariableItem>() // 使用Map去重
+
+        // 遍历当前步骤之前的所有步骤
         for (i in 0 until editingStepPosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId) ?: continue
 
+            // 1. 收集步骤输出 (魔法变量)
             module.getOutputs(step).forEach { outputDef ->
                 val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
                         targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
                 if (isCompatible) {
-                    availableVariables.add(
+                    availableStepOutputs.add(
                         MagicVariableItem(
                             variableReference = "{{${step.id}.${outputDef.id}}}",
                             variableName = outputDef.name,
-                            originModuleName = module.metadata.name
+                            originDescription = "来自: ${module.metadata.name}" // [修改] 使用新的字段
                         )
+                    )
+                }
+            }
+
+            // 2. 收集命名变量
+            if (module.id == CreateVariableModule().id) {
+                val varName = step.parameters["variableName"] as? String
+                val varType = step.parameters["type"] as? String ?: "未知"
+                if (!varName.isNullOrBlank()) {
+                    // 后定义的同名变量会覆盖先定义的
+                    availableNamedVariables[varName] = MagicVariableItem(
+                        variableReference = varName, // 引用就是其名称
+                        variableName = varName,      // 显示名称也是其名称
+                        originDescription = "命名变量 ($varType)" // [修改] 使用新的来源描述
                     )
                 }
             }
         }
 
-        val picker = MagicVariablePickerSheet.newInstance(availableVariables)
+        // 合并列表，命名变量在前
+        val finalAvailableVariables = availableNamedVariables.values.toList() + availableStepOutputs
+
+        val picker = MagicVariablePickerSheet.newInstance(finalAvailableVariables)
         picker.onSelection = { selectedItem ->
             if (selectedItem != null) {
                 currentEditorSheet?.updateInputWithVariable(targetInputId, selectedItem.variableReference)

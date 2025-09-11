@@ -1,4 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/core/execution/ExecutionContext.kt
+// (已修改)
 
 package com.chaomixian.vflow.core.execution
 
@@ -26,6 +27,7 @@ data class LoopState(
  * @param stepOutputs 存储所有已执行步骤的输出结果。
  * @param loopStack 一个用于管理嵌套循环状态的堆栈。
  * @param triggerData 触发器传入的外部数据（例如分享的内容）。
+ * @param namedVariables 存储在整个工作流执行期间有效的命名变量。
  */
 data class ExecutionContext(
     val applicationContext: Context,
@@ -36,5 +38,6 @@ data class ExecutionContext(
     val currentStepIndex: Int,
     val stepOutputs: Map<String, Map<String, Any?>>,
     val loopStack: Stack<LoopState>, // 将循环堆栈传递给上下文
-    val triggerData: Parcelable? = null // 用于接收触发器数据
+    val triggerData: Parcelable? = null, // 用于接收触发器数据
+    val namedVariables: MutableMap<String, Any?>
 )

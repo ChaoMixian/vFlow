@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
 class ToastModule : BaseModule() {
 
     // 模块的唯一ID
-    override val id = "vflow.other.toast"
+    override val id = "vflow.device.toast"
     // 模块的元数据，用于在UI中展示
     override val metadata = ActionMetadata(
         name = "显示Toast",

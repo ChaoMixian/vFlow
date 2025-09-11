@@ -1,6 +1,5 @@
-// 文件: MagicVariablePickerSheet.kt
-// 描述: 用于选择魔法变量的底部动作表单。
-//      允许用户从前面步骤的输出中选择一个变量，或选择清除当前连接。
+// 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/MagicVariablePickerSheet.kt
+// (已修改)
 
 package com.chaomixian.vflow.ui.workflow_editor
 
@@ -16,16 +15,18 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.parcelize.Parcelize
 
 /**
- * 代表一个可供选择的魔法变量的数据模型。
- * @param variableReference 魔法变量的引用字符串，如 "{{stepId.outputId}}"。
+ * 代表一个可供选择的变量的数据模型 (已更新)。
+ * @param variableReference 变量的引用字符串。
+ * 对于魔法变量, 格式为 "{{stepId.outputId}}";
+ * 对于命名变量, 就是其名称, 如 "myCounter"。
  * @param variableName 变量的可读名称。
- * @param originModuleName 产生此变量的模块的名称。
+ * @param originDescription [修改] 描述变量来源的文本, 如 "来自: 查找文本" 或 "命名变量 (数字)"。
  */
 @Parcelize
 data class MagicVariableItem(
     val variableReference: String,
     val variableName: String,
-    val originModuleName: String
+    val originDescription: String // [修改] 字段名和用途已更新
 ) : Parcelable
 
 /**
@@ -95,8 +96,6 @@ class MagicVariableAdapter(
         private const val TYPE_ACTION = 0    // 视图类型：操作项 (如清除)
         private const val TYPE_VARIABLE = 1  // 视图类型：变量项
     }
-
-    /** 根据位置返回列表项的视图类型。 */
     override fun getItemViewType(position: Int): Int {
         return when (items[position]) {
             is PickerListItem.ClearSelection -> TYPE_ACTION
@@ -118,8 +117,6 @@ class MagicVariableAdapter(
             }
         }
     }
-
-    /** 将数据绑定到 ViewHolder。 */
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = items[position]
         when (holder) {
@@ -138,13 +135,16 @@ class MagicVariableAdapter(
     /** 返回列表项总数。 */
     override fun getItemCount() = items.size
 
-    /** 魔法变量项的 ViewHolder。 */
+    /**
+     * [修改] ViewHolder 更新，以显示新的 originDescription。
+     */
     class VariableViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val nameTextView: TextView = view.findViewById(R.id.variable_name)
         private val originTextView: TextView = view.findViewById(R.id.variable_origin)
         fun bind(item: MagicVariableItem) {
             nameTextView.text = item.variableName
-            originTextView.text = "来自: ${item.originModuleName}"
+            // 直接显示 originDescription，内容已在 Activity 中准备好
+            originTextView.text = item.originDescription
         }
     }
 
