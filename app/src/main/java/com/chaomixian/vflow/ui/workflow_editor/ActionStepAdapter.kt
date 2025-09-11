@@ -36,6 +36,7 @@ import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.module.isMagicVariable
+import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.color.MaterialColors
 import java.util.*
@@ -50,7 +51,8 @@ import kotlin.math.roundToInt
 private class ParameterPillSpan(
     val parameterId: String,
     val isVariable: Boolean,
-    val isModuleOption: Boolean
+    val isModuleOption: Boolean,
+    val isNamedVariable: Boolean // 新增：标记是否为命名变量
 ) : ClickableSpan() {
     override fun onClick(widget: View) { /* 点击事件由外部的OnTouchListener统一处理 */ }
     override fun updateDrawState(ds: TextPaint) { /* 外观由下面的RoundedBackgroundSpan处理，这里不需要额外操作 */ }
@@ -218,7 +220,7 @@ object PillUtil {
      *
      * @param paramValue 步骤中存储的原始参数值。
      * @param inputDef 该参数的输入定义，用于获取默认值和ID。
-     * @param isModuleOption 是否为模块的内置选项（如操作符）。
+     * @param isModuleOption 是否为模块的内置选项（例如If模块的条件操作符）。
      * @return 一个配置好的 Pill 对象。
      */
     fun createPillFromParam(
@@ -226,10 +228,12 @@ object PillUtil {
         inputDef: InputDefinition?,
         isModuleOption: Boolean = false
     ): Pill {
-        val isVariable = (paramValue as? String)?.isMagicVariable() == true
+        val paramStr = paramValue as? String
+        val isVariable = paramStr?.isMagicVariable() == true
+        val isNamed = paramStr?.isNamedVariable() == true
         val text: String
 
-        if (isVariable) {
+        if (isVariable || isNamed) {
             text = paramValue.toString()
         } else {
             val valueToFormat = paramValue ?: inputDef?.defaultValue
@@ -244,7 +248,7 @@ object PillUtil {
                 else -> valueToFormat?.toString() ?: "..."
             }
         }
-        return Pill(text, isVariable, inputDef?.id ?: "", isModuleOption)
+        return Pill(text, isVariable, inputDef?.id ?: "", isModuleOption, isNamed)
     }
 
     /** 构建包含药丸的 Spannable 文本。 */
@@ -258,7 +262,7 @@ object PillUtil {
                     builder.append(" ${part.text} ") // 药丸文本前后加空格
                     val end = builder.length
                     // 附加 ParameterPillSpan 以便后续处理和点击
-                    val span = ParameterPillSpan(part.parameterId, part.isVariable, part.isModuleOption)
+                    val span = ParameterPillSpan(part.parameterId, part.isVariable, part.isModuleOption, part.isNamedVariable)
                     builder.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
@@ -271,7 +275,8 @@ object PillUtil {
         val text: String, // 显示文本
         val isVariable: Boolean, // 是否为魔法变量
         val parameterId: String, // 对应 InputDefinition 的 ID
-        val isModuleOption: Boolean = false // 是否为模块自身配置项 (如If模块的操作符)
+        val isModuleOption: Boolean = false, // 是否为模块自身配置项 (如If模块的操作符)
+        val isNamedVariable: Boolean = false // 新增：是否为命名变量
     )
 
     /** 根据模块分类获取颜色资源ID。 */
@@ -317,20 +322,34 @@ object PillUtil {
             val color: Int
             val pillText: CharSequence
 
-            if (span.isVariable) { // 魔法变量药丸
-                val reference = spannable.substring(start, end).trim()
-                val sourceInfo = findSourceInfo(context, reference, allSteps)
-                pillText = " ${sourceInfo?.outputName ?: "变量"} " // 显示来源输出名称或通用"变量"
-                color = sourceInfo?.color ?: ContextCompat.getColor(context, R.color.variable_pill_color)
-            } else if (span.isModuleOption) { // 模块配置选项药丸 (如If的操作符)
-                pillText = spannable.subSequence(start, end)
-                val currentModule = ModuleRegistry.getModule(currentStep.moduleId)
-                color = currentModule?.let { ContextCompat.getColor(context, getCategoryColor(it.metadata.category)) }
-                    ?: ContextCompat.getColor(context, R.color.static_pill_color) // 模块不存在则用静态颜色
-            } else { // 普通静态值药丸
-                pillText = spannable.subSequence(start, end)
-                color = ContextCompat.getColor(context, R.color.static_pill_color)
+            val reference = spannable.substring(start, end).trim()
+
+            when {
+                // 1. 命名变量
+                span.isNamedVariable -> {
+                    pillText = " ${reference.removeSurrounding("[[", "]]")} "
+                    color = ContextCompat.getColor(context, getCategoryColor("数据"))
+                }
+                // 2. 魔法变量
+                span.isVariable -> {
+                    val sourceInfo = findSourceInfo(context, reference, allSteps)
+                    pillText = " ${sourceInfo?.outputName ?: "变量"} "
+                    color = sourceInfo?.color ?: ContextCompat.getColor(context, R.color.variable_pill_color)
+                }
+                // 3. 模块选项
+                span.isModuleOption -> {
+                    pillText = spannable.subSequence(start, end)
+                    val currentModule = ModuleRegistry.getModule(currentStep.moduleId)
+                    color = currentModule?.let { ContextCompat.getColor(context, getCategoryColor(it.metadata.category)) }
+                        ?: ContextCompat.getColor(context, R.color.static_pill_color)
+                }
+                // 4. 普通静态值
+                else -> {
+                    pillText = spannable.subSequence(start, end)
+                    color = ContextCompat.getColor(context, R.color.static_pill_color)
+                }
             }
+
 
             spannable.replace(start, end, pillText) // 替换原始文本为药丸文本
             val newEnd = start + pillText.length
@@ -338,7 +357,7 @@ object PillUtil {
             // 应用圆角背景和新的可点击Span
             val backgroundSpan = RoundedBackgroundSpan(context, color)
             spannable.setSpan(backgroundSpan, start, newEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            val newClickableSpan = ParameterPillSpan(span.parameterId, span.isVariable, span.isModuleOption)
+            val newClickableSpan = ParameterPillSpan(span.parameterId, span.isVariable, span.isModuleOption, span.isNamedVariable)
             spannable.setSpan(newClickableSpan, start, newEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         return spannable

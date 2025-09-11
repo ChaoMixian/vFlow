@@ -69,6 +69,9 @@ class WorkflowEditorActivity : BaseActivity() {
     private val STATE_ACTION_STEPS = "state_action_steps"
     private val STATE_WORKFLOW_NAME = "state_workflow_name"
 
+    // 用于变量重命名
+    private var oldVariableName: String? = null
+
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -204,7 +207,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
     }
 
-    /** [修改] 提取一个辅助函数来获取所有可用的命名变量 */
+    /** 提取一个辅助函数来获取所有可用的命名变量 */
     private fun getAvailableNamedVariables(upToPosition: Int): List<MagicVariableItem> {
         val availableNamedVariables = mutableMapOf<String, MagicVariableItem>()
         actionSteps.subList(0, upToPosition)
@@ -225,8 +228,15 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
         val contextPosition = if (position != -1) position else actionSteps.size
-        // [修改] 直接获取 MagicVariableItem 列表
+        // 直接获取 MagicVariableItem 列表
         val namedVariables = getAvailableNamedVariables(contextPosition).map { it.variableName }
+
+        // 在打开编辑器前，保存旧的变量名
+        if (existingStep != null && module.id == CreateVariableModule().id) {
+            oldVariableName = existingStep.parameters["variableName"] as? String
+        } else {
+            oldVariableName = null
+        }
 
 
         val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, actionSteps.toList(), namedVariables)
@@ -241,6 +251,8 @@ class WorkflowEditorActivity : BaseActivity() {
                 } else {
                     actionSteps[position] = actionSteps[position].copy(parameters = newStepData.parameters)
                 }
+                // 在保存后，检查并处理变量重命名
+                handleVariableNameChange(position)
             } else {
                 val stepsToAdd = module.createSteps()
                 val configuredFirstStep = stepsToAdd.first().copy(parameters = newStepData.parameters)
@@ -265,6 +277,58 @@ class WorkflowEditorActivity : BaseActivity() {
 
         editor.show(supportFragmentManager, "ActionEditor")
     }
+
+    /**
+     * 检查并处理变量重命名逻辑
+     */
+    private fun handleVariableNameChange(editedPosition: Int) {
+        val editedStep = actionSteps.getOrNull(editedPosition) ?: return
+        if (editedStep.moduleId != CreateVariableModule().id) return
+
+        val newVariableName = editedStep.parameters["variableName"] as? String
+
+        if (!oldVariableName.isNullOrBlank() && oldVariableName != newVariableName) {
+            // 变量名被修改了
+            val oldRef = "[[$oldVariableName]]"
+            val newRef = if (!newVariableName.isNullOrBlank()) "[[${newVariableName}]]" else ""
+
+            // 遍历被修改步骤之后的所有步骤
+            for (i in (editedPosition + 1) until actionSteps.size) {
+                val currentStep = actionSteps[i]
+                val updatedParameters = currentStep.parameters.toMutableMap()
+                var hasChanged = false
+
+                currentStep.parameters.forEach { (key, value) ->
+                    if (value is String && value == oldRef) {
+                        updatedParameters[key] = newRef
+                        hasChanged = true
+                    }
+                    // (可选) 如果参数是Map，可以进一步检查Map内部的值
+                    if (value is Map<*, *>) {
+                        val updatedMap = value.mapValues { (_, v) ->
+                            if (v is String && v == oldRef) {
+                                hasChanged = true
+                                newRef
+                            } else {
+                                v
+                            }
+                        }
+                        if(hasChanged) {
+                            updatedParameters[key] = updatedMap
+                        }
+                    }
+                }
+
+                if (hasChanged) {
+                    actionSteps[i] = currentStep.copy(parameters = updatedParameters)
+                }
+            }
+            Toast.makeText(this, "已自动更新对变量 '${oldVariableName}' 的引用", Toast.LENGTH_LONG).show()
+        }
+
+        oldVariableName = null // 重置
+    }
+
 
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
         val targetInputDef = editingModule.getDynamicInputs(actionSteps.getOrNull(editingStepPosition), actionSteps).find { it.id == targetInputId } ?: return
@@ -653,6 +717,18 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun saveWorkflow() {
+        // [新增] 变量名重复性检查
+        for (step in actionSteps) {
+            if (step.moduleId == CreateVariableModule().id) {
+                val module = ModuleRegistry.getModule(step.moduleId) as CreateVariableModule
+                val validationResult = module.validate(step, actionSteps)
+                if (!validationResult.isValid) {
+                    Toast.makeText(this, validationResult.errorMessage, Toast.LENGTH_LONG).show()
+                    return // 验证失败，停止保存
+                }
+            }
+        }
+
         val name = nameEditText.text.toString().trim()
         if (name.isBlank()) {
             Toast.makeText(this, "工作流名称不能为空", Toast.LENGTH_SHORT).show()

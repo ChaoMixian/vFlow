@@ -1,5 +1,4 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/data/CreateVariableModule.kt
-// (完整代码)
 package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
@@ -76,9 +75,37 @@ class CreateVariableModule : BaseModule() {
         return if (name.isNullOrBlank()) {
             PillUtil.buildSpannable(context, "创建匿名变量 (", type, ") 为 ", valuePill)
         } else {
-            val namePill = PillUtil.Pill(name, false, "variableName")
+            // 在这里创建一个代表命名变量的Pill
+            val namePill = PillUtil.Pill(
+                text = "[[${name}]]", // 保持内部引用格式
+                isVariable = false, // 它不是一个步骤输出
+                isNamedVariable = true, // 标记为命名变量
+                parameterId = "variableName"
+            )
             PillUtil.buildSpannable(context, "创建变量 ", namePill, " (", type, ") 为 ", valuePill)
         }
+    }
+
+    /**
+     * 重写验证逻辑以检查重复的变量名。
+     * @param step 要验证的步骤。
+     * @param allSteps 工作流中的所有步骤，用于上下文检查。
+     * @return 验证结果。
+     */
+    fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
+        val variableName = step.parameters["variableName"] as? String
+        if (!variableName.isNullOrBlank()) {
+            // 查找所有具有相同非空变量名的“创建变量”模块实例
+            val count = allSteps.count {
+                it.id != step.id && // 排除当前正在验证的步骤本身
+                        it.moduleId == this.id &&
+                        (it.parameters["variableName"] as? String) == variableName
+            }
+            if (count > 0) {
+                return ValidationResult(false, "变量名 '$variableName' 已存在，请使用其他名称。")
+            }
+        }
+        return ValidationResult(true) // 默认有效
     }
 
 
@@ -115,6 +142,10 @@ class CreateVariableModule : BaseModule() {
 
         // 如果用户提供了变量名，则将其存入命名变量上下文中
         if (!variableName.isNullOrBlank()) {
+            // 在执行时再次检查重复，以防万一
+            if (context.namedVariables.containsKey(variableName)) {
+                return ExecutionResult.Failure("命名冲突", "变量 '$variableName' 已存在。")
+            }
             context.namedVariables[variableName] = variable
             onProgress(ProgressUpdate("已创建命名变量 '$variableName'"))
         }
