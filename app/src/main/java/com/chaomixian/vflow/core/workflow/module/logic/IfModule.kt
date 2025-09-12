@@ -1,3 +1,4 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/logic/IfModule.kt
 package com.chaomixian.vflow.core.workflow.module.logic
 
 import android.content.Context
@@ -5,27 +6,24 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement // This seems to be a local type, not from VariableTypes
-import com.chaomixian.vflow.core.module.TextVariable // 更新导入
-import com.chaomixian.vflow.core.module.NumberVariable // 更新导入
-import com.chaomixian.vflow.core.module.BooleanVariable // 更新导入
-import com.chaomixian.vflow.core.module.ListVariable // 更新导入
-import com.chaomixian.vflow.core.module.DictionaryVariable // 更新导入
+import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
+import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.module.NumberVariable
+import com.chaomixian.vflow.core.module.BooleanVariable
+import com.chaomixian.vflow.core.module.ListVariable
+import com.chaomixian.vflow.core.module.DictionaryVariable
+import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.min
 
-// 文件：IfModule.kt
-// 描述：定义条件判断 (If/Else/EndIf) 模块，实现逻辑分支控制。
+// --- 常量定义保持不变 ---
+const val IF_PAIRING_ID = "if"
+const val IF_START_ID = "vflow.logic.if.start"
+const val ELSE_ID = "vflow.logic.if.middle"
+const val IF_END_ID = "vflow.logic.if.end"
 
-// --- 条件模块常量定义 ---
-const val IF_PAIRING_ID = "if" // If块的配对ID
-const val IF_START_ID = "vflow.logic.if.start" // If模块ID
-const val ELSE_ID = "vflow.logic.if.middle"  // Else模块ID
-const val IF_END_ID = "vflow.logic.if.end"    // EndIf模块ID
-
-// --- 操作符常量定义 ---
 const val OP_EXISTS = "存在"
 const val OP_NOT_EXISTS = "不存在"
 const val OP_IS_EMPTY = "为空"
@@ -87,8 +85,8 @@ class IfModule : BaseBlockModule() {
             return listOf(staticInputs.first { it.id == "input1" })
         }
 
-        // 解析主输入的魔法变量类型，以确定可用的操作符
-        val input1TypeName = resolveMagicVariableType(input1Value, allSteps)
+        // 调用新的 resolveVariableType 方法
+        val input1TypeName = resolveVariableType(input1Value, allSteps, step)
         val availableOperators = getOperatorsForVariableType(input1TypeName)
 
         val dynamicInputs = mutableListOf<InputDefinition>()
@@ -125,39 +123,82 @@ class IfModule : BaseBlockModule() {
         }.distinct()
     }
 
-    /** 解析魔法变量引用的类型。 */
-    private fun resolveMagicVariableType(variableReference: String?, allSteps: List<ActionStep>?): String? {
-        if (variableReference == null || !variableReference.isMagicVariable() || allSteps == null) {
+    /**
+     * 将 resolveMagicVariableType 重构为此方法，以同时处理两种变量类型。
+     * @param variableReference 变量引用字符串, 如 `{{...}}` 或 `[[...]]`。
+     * @param allSteps 工作流中的所有步骤。
+     * @param currentStep 当前步骤，用于确定查找命名变量时的范围。
+     * @return 变量的内部类型名称，如 "vflow.type.text"。
+     */
+    private fun resolveVariableType(variableReference: String?, allSteps: List<ActionStep>?, currentStep: ActionStep?): String? {
+        if (variableReference == null || allSteps == null || currentStep == null) {
             return null
         }
-        val parts = variableReference.removeSurrounding("{{", "}}").split('.')
-        val sourceStepId = parts.getOrNull(0) ?: return null
-        val sourceOutputId = parts.getOrNull(1) ?: return null
 
-        val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
-        val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
+        // 1. 检查是否为命名变量
+        if (variableReference.isNamedVariable()) {
+            val varName = variableReference.removeSurrounding("[[", "]]")
+            // 从当前步骤向上查找定义
+            val currentIndex = allSteps.indexOf(currentStep)
+            val stepsToCheck = if (currentIndex != -1) allSteps.subList(0, currentIndex) else allSteps
 
-        // 从源模块的输出定义中查找类型
-        return sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId }?.typeName
+            // 反向查找，找到最近的定义
+            val creationStep = stepsToCheck.findLast {
+                it.moduleId == CreateVariableModule().id && it.parameters["variableName"] == varName
+            }
+
+            // 从定义步骤中获取类型
+            val userType = creationStep?.parameters?.get("type") as? String
+            return userTypeToInternalName(userType)
+        }
+
+        // 2. 如果不是命名变量，执行原有的魔法变量检查
+        if (variableReference.isMagicVariable()) {
+            val parts = variableReference.removeSurrounding("{{", "}}").split('.')
+            val sourceStepId = parts.getOrNull(0) ?: return null
+            val sourceOutputId = parts.getOrNull(1) ?: return null
+
+            val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
+            val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
+            return sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId }?.typeName
+        }
+
+        return null
     }
 
-    /** 获取静态输入参数定义。 */
+    /**
+     * 辅助函数，将用户在UI上选择的类型字符串映射到内部类型名称。
+     */
+    private fun userTypeToInternalName(userType: String?): String? {
+        return when (userType) {
+            "文本" -> TextVariable.TYPE_NAME
+            "数字" -> NumberVariable.TYPE_NAME
+            "布尔" -> BooleanVariable.TYPE_NAME
+            "字典" -> DictionaryVariable.TYPE_NAME
+            "图像" -> ImageVariable.TYPE_NAME
+            // 如果未来有更多类型，在这里添加映射
+            else -> null
+        }
+    }
+
+
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(BooleanVariable.TYPE_NAME, NumberVariable.TYPE_NAME, TextVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME, ListVariable.TYPE_NAME, ScreenElement.TYPE_NAME)),
+        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(BooleanVariable.TYPE_NAME, NumberVariable.TYPE_NAME, TextVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME, ListVariable.TYPE_NAME, ScreenElement.TYPE_NAME)),
         InputDefinition(id = "operator", name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
-        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, NumberVariable.TYPE_NAME, BooleanVariable.TYPE_NAME)),
-        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
+        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, NumberVariable.TYPE_NAME, BooleanVariable.TYPE_NAME)),
+        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
     )
 
     /** 获取输出参数定义。 */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "条件结果", BooleanVariable.TYPE_NAME) // 输出布尔类型的条件判断结果
+        OutputDefinition("result", "条件结果", BooleanVariable.TYPE_NAME)
     )
 
     /** 生成模块摘要。 */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val allInputs = getInputs() // 获取静态输入定义作为参考
-        val inputsForStep = getDynamicInputs(step, null) // 获取当前步骤的动态输入
+        val allInputs = getInputs()
+        // 传入 allSteps 以便正确解析命名变量
+        val inputsForStep = getDynamicInputs(step, actionSteps) // 假设 actionSteps 可访问
 
         val input1Pill = PillUtil.createPillFromParam(
             step.parameters["input1"],
@@ -198,7 +239,8 @@ class IfModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val input1 = context.magicVariables["input1"]
+        // 优先从 magicVariables 中获取已解析的值
+        val input1 = context.magicVariables["input1"] ?: context.variables["input1"]
         val operator = context.variables["operator"] as? String ?: OP_EXISTS
         val value1 = context.magicVariables["value1"] ?: context.variables["value1"]
         val value2 = context.magicVariables["value2"] ?: context.variables["value2"]
@@ -435,3 +477,6 @@ fun findNextBlockPosition(steps: List<ActionStep>, startPosition: Int, targetIds
     }
     return -1 // 未找到目标
 }
+
+private val BaseBlockModule.actionSteps: List<ActionStep>
+    get() = emptyList()

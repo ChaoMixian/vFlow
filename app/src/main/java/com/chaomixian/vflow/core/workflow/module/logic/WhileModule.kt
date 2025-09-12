@@ -1,3 +1,4 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/logic/WhileModule.kt
 package com.chaomixian.vflow.core.workflow.module.logic
 
 import android.content.Context
@@ -6,40 +7,34 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.module.BooleanVariable
+import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
 import java.util.regex.Pattern
 import kotlin.math.*
 
-// 文件: WhileModule.kt
-// 描述: 定义条件循环 (While/EndWhile) 模块，实现根据条件重复执行逻辑。
+const val WHILE_PAIRING_ID = "while"
+const val WHILE_START_ID = "vflow.logic.while.start"
+const val WHILE_END_ID = "vflow.logic.while.end"
 
-// --- 循环模块常量定义 ---
-const val WHILE_PAIRING_ID = "while" // While块的配对ID
-const val WHILE_START_ID = "vflow.logic.while.start" // While模块ID
-const val WHILE_END_ID = "vflow.logic.while.end"    // EndWhile模块ID
-
-/**
- * "当条件为真时循环" (While) 模块，逻辑块的起点。
- * 根据条件判断结果，决定是否继续执行块内操作。
- */
 class WhileModule : BaseBlockModule() {
     override val id = WHILE_START_ID
     override val metadata = ActionMetadata("循环直到", "当条件为真时重复执行直到条件不满足", R.drawable.rounded_repeat_24, "逻辑控制")
     override val pairingId = WHILE_PAIRING_ID
-    override val stepIdsInBlock = listOf(WHILE_START_ID, WHILE_END_ID) // 定义While块包含的模块ID
+    override val stepIdsInBlock = listOf(WHILE_START_ID, WHILE_END_ID)
 
     /** 获取动态输入参数，与 IfModule 类似。 */
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val staticInputs = getInputs()
         val currentParameters = step?.parameters ?: emptyMap()
-        val input1Value = currentParameters["input1"] as? String // 主输入值
+        val input1Value = currentParameters["input1"] as? String
 
         if (input1Value == null) {
             return listOf(staticInputs.first { it.id == "input1" })
         }
 
-        val input1TypeName = resolveMagicVariableType(input1Value, allSteps)
+        // **核心修改点**：调用新的 resolveVariableType 方法
+        val input1TypeName = resolveVariableType(input1Value, allSteps, step)
         val availableOperators = getOperatorsForVariableType(input1TypeName)
 
         val dynamicInputs = mutableListOf<InputDefinition>()
@@ -73,25 +68,57 @@ class WhileModule : BaseBlockModule() {
         }.distinct()
     }
 
-    private fun resolveMagicVariableType(variableReference: String?, allSteps: List<ActionStep>?): String? {
-        if (variableReference == null || !variableReference.isMagicVariable() || allSteps == null) {
+    /**
+     * 统一处理魔法变量和命名变量的类型解析。
+     */
+    private fun resolveVariableType(variableReference: String?, allSteps: List<ActionStep>?, currentStep: ActionStep?): String? {
+        if (variableReference == null || allSteps == null || currentStep == null) {
             return null
         }
-        val parts = variableReference.removeSurrounding("{{", "}}").split('.')
-        val sourceStepId = parts.getOrNull(0) ?: return null
-        val sourceOutputId = parts.getOrNull(1) ?: return null
 
-        val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
-        val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
+        if (variableReference.isNamedVariable()) {
+            val varName = variableReference.removeSurrounding("[[", "]]")
+            val currentIndex = allSteps.indexOf(currentStep)
+            val stepsToCheck = if (currentIndex != -1) allSteps.subList(0, currentIndex) else allSteps
+            val creationStep = stepsToCheck.findLast {
+                it.moduleId == CreateVariableModule().id && it.parameters["variableName"] == varName
+            }
+            val userType = creationStep?.parameters?.get("type") as? String
+            return userTypeToInternalName(userType)
+        }
 
-        return sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId }?.typeName
+        if (variableReference.isMagicVariable()) {
+            val parts = variableReference.removeSurrounding("{{", "}}").split('.')
+            val sourceStepId = parts.getOrNull(0) ?: return null
+            val sourceOutputId = parts.getOrNull(1) ?: return null
+            val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
+            val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
+            return sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId }?.typeName
+        }
+
+        return null
     }
 
+    /**
+     * 辅助函数，映射UI类型到内部类型。
+     */
+    private fun userTypeToInternalName(userType: String?): String? {
+        return when (userType) {
+            "文本" -> TextVariable.TYPE_NAME
+            "数字" -> NumberVariable.TYPE_NAME
+            "布尔" -> BooleanVariable.TYPE_NAME
+            "字典" -> DictionaryVariable.TYPE_NAME
+            "图像" -> ImageVariable.TYPE_NAME
+            else -> null
+        }
+    }
+
+
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(BooleanVariable.TYPE_NAME, NumberVariable.TYPE_NAME, TextVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME, ListVariable.TYPE_NAME, ScreenElement.TYPE_NAME)),
+        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(BooleanVariable.TYPE_NAME, NumberVariable.TYPE_NAME, TextVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME, ListVariable.TYPE_NAME, ScreenElement.TYPE_NAME)),
         InputDefinition(id = "operator", name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
-        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, NumberVariable.TYPE_NAME, BooleanVariable.TYPE_NAME)),
-        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
+        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, NumberVariable.TYPE_NAME, BooleanVariable.TYPE_NAME)),
+        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -143,7 +170,8 @@ class WhileModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val input1 = context.magicVariables["input1"]
+        // 优先从 magicVariables 中获取已解析的值
+        val input1 = context.magicVariables["input1"] ?: context.variables["input1"]
         val operator = context.variables["operator"] as? String ?: OP_EXISTS
         val value1 = context.magicVariables["value1"] ?: context.variables["value1"]
         val value2 = context.magicVariables["value2"] ?: context.variables["value2"]
