@@ -80,7 +80,7 @@ object ShizukuManager {
         } catch (e: CancellationException) {
             // 捕获协程取消异常。
             // 这是一个正常的操作流程（例如在重新加载触发器时），不应被记录为错误。
-            // 我们将异常重新抛出，让协程框架正常处理取消逻辑。
+            // 将异常重新抛出，让协程框架正常处理取消逻辑。
             Log.d(TAG, "Shizuku command execution was cancelled as expected.")
             throw e
         } catch (e: Exception) {
