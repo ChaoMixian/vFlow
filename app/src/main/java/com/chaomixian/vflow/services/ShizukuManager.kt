@@ -1,4 +1,4 @@
-// 文件路径: src/main/java/com/chaomixian/vflow/services/ShizukuManager.kt
+// 文件路径: main/java/com/chaomixian/vflow/services/ShizukuManager.kt
 package com.chaomixian.vflow.services
 
 import android.content.ComponentName
@@ -77,7 +77,14 @@ object ShizukuManager {
             withContext(Dispatchers.IO) {
                 service.exec(command)
             }
+        } catch (e: CancellationException) {
+            // 捕获协程取消异常。
+            // 这是一个正常的操作流程（例如在重新加载触发器时），不应被记录为错误。
+            // 我们将异常重新抛出，让协程框架正常处理取消逻辑。
+            Log.d(TAG, "Shizuku command execution was cancelled as expected.")
+            throw e
         } catch (e: Exception) {
+            // 其他所有类型的异常仍然被视为执行失败。
             Log.e(TAG, "执行命令失败，连接可能已丢失。", e)
             shellService = null
             "Error: ${e.message}"

@@ -1,31 +1,22 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/WorkflowManager.kt
+// 描述: 管理工作流的持久化，并通过 TriggerServiceProxy 直接通知服务层。
+
 package com.chaomixian.vflow.core.workflow
 
 import android.content.Context
-import android.content.Intent
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerModule
+import com.chaomixian.vflow.services.TriggerServiceProxy
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import java.util.UUID
+import java.util.*
 
-// 文件：WorkflowManager.kt
-// 描述：管理工作流的持久化存储和检索。
-
-/**
- * 工作流管理器。
- */
-class WorkflowManager(private val context: Context) { // [修改] 将 context 设为私有属性
+class WorkflowManager(private val context: Context) {
     private val prefs = context.getSharedPreferences("vflow_workflows", Context.MODE_PRIVATE)
     private val gson = Gson()
-
-    // 定义一个广播动作常量，用于通知服务数据已更新
-    companion object {
-        const val ACTION_WORKFLOWS_UPDATED = "com.chaomixian.vflow.WORKFLOWS_UPDATED"
-    }
 
     /**
      * 保存单个工作流。
@@ -33,7 +24,9 @@ class WorkflowManager(private val context: Context) { // [修改] 将 context �
     fun saveWorkflow(workflow: Workflow) {
         val workflows = getAllWorkflows().toMutableList()
         val index = workflows.indexOfFirst { it.id == workflow.id }
+        val oldWorkflow = if (index != -1) workflows[index] else null
 
+        // 重新计算 triggerConfig
         val firstStep = workflow.steps.firstOrNull()
         var config: Map<String, Any?>? = null
         if (firstStep != null && firstStep.moduleId != ManualTriggerModule().id) {
@@ -46,7 +39,13 @@ class WorkflowManager(private val context: Context) { // [修改] 将 context �
         } else {
             workflows.add(workflowToSave)
         }
-        saveAllWorkflows(workflows)
+
+        // 保存到磁盘
+        val json = gson.toJson(workflows)
+        prefs.edit().putString("workflow_list", json).apply()
+
+        // 直接通过代理精确通知 TriggerService
+        TriggerServiceProxy.notifyWorkflowChanged(context, workflowToSave, oldWorkflow)
     }
 
     fun findShareableWorkflows(): List<Workflow> {
@@ -71,8 +70,16 @@ class WorkflowManager(private val context: Context) { // [修改] 将 context �
      * 根据ID删除一个工作流。
      */
     fun deleteWorkflow(id: String) {
-        val workflows = getAllWorkflows().filter { it.id != id }
-        saveAllWorkflows(workflows)
+        val workflows = getAllWorkflows().toMutableList()
+        val workflowToRemove = workflows.find { it.id == id }
+        if (workflowToRemove != null) {
+            workflows.remove(workflowToRemove)
+            val json = gson.toJson(workflows)
+            prefs.edit().putString("workflow_list", json).apply()
+
+            // 通知服务工作流已被删除
+            TriggerServiceProxy.notifyWorkflowRemoved(context, workflowToRemove)
+        }
     }
 
     fun getWorkflow(id: String): Workflow? {
@@ -99,26 +106,18 @@ class WorkflowManager(private val context: Context) { // [修改] 将 context �
         val newName = "${original.name} (副本)"
         val newWorkflow = original.copy(
             id = UUID.randomUUID().toString(),
-            name = newName
+            name = newName,
+            isEnabled = false // 复制的工作流默认为禁用状态
         )
         saveWorkflow(newWorkflow)
     }
 
     /**
-     * 将所有工作流保存到 SharedPreferences，并发送通知。
+     * 将所有工作流保存到 SharedPreferences (主要用于拖拽排序后)。
      */
     fun saveAllWorkflows(workflows: List<Workflow>) {
         val json = gson.toJson(workflows)
         prefs.edit().putString("workflow_list", json).apply()
-        // 在保存后，立即发送一个本地广播
-        notifyWorkflowsUpdated()
-    }
-
-    /**
-     * 发送“工作流已更新”广播的辅助方法。
-     */
-    private fun notifyWorkflowsUpdated() {
-        val intent = Intent(ACTION_WORKFLOWS_UPDATED)
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+        // 排序操作不应触发重新加载，所以这里不通知服务
     }
 }

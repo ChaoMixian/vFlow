@@ -1,689 +1,167 @@
 // 文件: main/java/com/chaomixian/vflow/services/TriggerService.kt
+// 描述: 统一的后台服务，实现了持久化处理器和精细化任务分发。
+
 package com.chaomixian.vflow.services
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.ExecutionLogger
+import com.chaomixian.vflow.core.logging.LogManager
+import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
-import com.chaomixian.vflow.permissions.PermissionManager
-import kotlinx.coroutines.*
-import java.io.File
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
+import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
+import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
+import com.chaomixian.vflow.core.workflow.module.triggers.handlers.AppStartTriggerHandler
+import com.chaomixian.vflow.core.workflow.module.triggers.handlers.ITriggerHandler
+import com.chaomixian.vflow.core.workflow.module.triggers.handlers.KeyEventTriggerHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 class TriggerService : Service() {
 
-    private data class ResolvedKeyEventTrigger(
-        val workflowId: String,
-        val devicePath: String,
-        val keyCode: String,
-        val actionType: String,
-        val isSlider: Boolean = false
-    )
-
-    // 按键状态枚举
-    private enum class KeyState {
-        IDLE,           // 空闲状态
-        WAIT_FOR_DOUBLE, // 等待双击状态
-        PROCESSING      // 处理中状态
-    }
-
     private lateinit var workflowManager: WorkflowManager
+    // 处理器现在是服务的持久成员，在 onCreate 时创建
+    private val triggerHandlers = mutableMapOf<String, ITriggerHandler>()
+    // 为服务创建一个独立的协程作用域
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var keyEventJob: Job? = null
-    private var permissionCheckJob: Job? = null // 用于权限检查的Job
 
-    private val resolvedTriggers = CopyOnWriteArrayList<ResolvedKeyEventTrigger>()
-
-    // --- 重新设计的按键状态管理 ---
-    private val keyStates = ConcurrentHashMap<String, KeyState>()
-    private val pendingClickJobs = ConcurrentHashMap<String, Job>()
-    private val firstClickTimestamps = ConcurrentHashMap<String, Long>()
-    private val doubleClickThreshold = 400L // 毫秒
-    private val longPressThreshold = 500L  // 毫秒
-
-    // --- 三段式滑块状态管理 ---
-    private val lastSliderModeMap = ConcurrentHashMap<String, Int>() // 改为存储Int类型的ringer_mode值
-    private val sliderDebounceJobs = ConcurrentHashMap<String, Job>()
-    private val sliderDebounceTime = 200L // 防抖时间
 
     companion object {
-        private const val TAG = "TriggerService"
+        private const val TAG = "TriggerServiceManager"
         private const val NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "trigger_service_channel"
-        const val ACTION_RELOAD_TRIGGERS = "com.chaomixian.vflow.RELOAD_TRIGGERS"
-        const val ACTION_KEY_EVENT_RECEIVED = "com.chaomixian.vflow.KEY_EVENT_RECEIVED"
-        const val EXTRA_EVENT_TYPE = "event_type"
-        const val EXTRA_ACTION_TYPE = "action_type"
-        const val EXTRA_RINGER_MODE = "ringer_mode" // 改为ringer_mode
+        // 新增的精确指令 Actions
+        const val ACTION_WORKFLOW_CHANGED = "com.chaomixian.vflow.ACTION_WORKFLOW_CHANGED"
+        const val ACTION_WORKFLOW_REMOVED = "com.chaomixian.vflow.ACTION_WORKFLOW_REMOVED"
+        const val EXTRA_WORKFLOW = "extra_workflow"
+        const val EXTRA_OLD_WORKFLOW = "extra_old_workflow"
     }
-
-    // 拆分为两个独立的接收器
-    /**
-     * 内部接收器，仅处理来自 LocalBroadcastManager 的应用内部通知。
-     */
-    private val internalReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == WorkflowManager.ACTION_WORKFLOWS_UPDATED) {
-                Log.d(TAG, "接收到工作流更新通知(内部)，重新加载触发器。")
-                reloadTriggers()
-            }
-        }
-    }
-
-    /**
-     * 外部接收器，处理来自系统的广播，如包变化。
-     */
-    private val externalReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                Intent.ACTION_PACKAGE_CHANGED, Intent.ACTION_PACKAGE_ADDED, Intent.ACTION_PACKAGE_REMOVED -> {
-                    Log.d(TAG, "接收到包变更通知(外部)，重新加载触发器。")
-                    reloadTriggers()
-                }
-            }
-        }
-    }
-
 
     override fun onCreate() {
         super.onCreate()
         workflowManager = WorkflowManager(applicationContext)
 
-        // 分别注册两个接收器
-        // 1. 注册内部接收器
-        val internalFilter = IntentFilter(WorkflowManager.ACTION_WORKFLOWS_UPDATED)
-        LocalBroadcastManager.getInstance(this).registerReceiver(internalReceiver, internalFilter)
+        // 让服务变得自给自足，无论应用进程是否存活，都能正确初始化所有依赖项。
+        // 这可以修复在后台被杀后触发工作流导致的 UninitializedPropertyAccessException 崩溃。
+        ModuleRegistry.initialize()
+        ExecutionNotificationManager.initialize(this)
+        LogManager.initialize(applicationContext)
+        ExecutionLogger.initialize(applicationContext, serviceScope) // 使用服务的协程作用域
 
-        // 2. 注册外部接收器
-        val externalFilter = IntentFilter().apply {
-            addAction(Intent.ACTION_PACKAGE_CHANGED)
-            addAction(Intent.ACTION_PACKAGE_ADDED)
-            addAction(Intent.ACTION_PACKAGE_REMOVED)
-            addDataScheme("package")
-        }
-        ContextCompat.registerReceiver(this, externalReceiver, externalFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        // 在服务创建时就注册并启动所有处理器
+        registerAndStartHandlers()
+        Log.d(TAG, "TriggerService 已创建并启动了 ${triggerHandlers.size} 个触发器处理器。")
 
-
-        Log.d(TAG, "TriggerService 已创建。")
+        // 首次启动时，加载所有活动的触发器
+        loadAllActiveTriggers()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, createNotification())
-        Log.d(TAG, "TriggerService 已启动。")
 
+        // 处理来自 TriggerServiceProxy 的精确指令
         when (intent?.action) {
-            ACTION_KEY_EVENT_RECEIVED -> {
-                if (intent.hasExtra(EXTRA_RINGER_MODE)) {
-                    handleSliderEvent(intent)
-                } else {
-                    handleKeyEvent(intent)
+            ACTION_WORKFLOW_CHANGED -> {
+                val newWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_WORKFLOW)
+                val oldWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_OLD_WORKFLOW)
+                if (newWorkflow != null) {
+                    handleWorkflowChanged(newWorkflow, oldWorkflow)
                 }
             }
-            else -> {
-                // 任何其他启动命令（包括开机自启、手动启动）都应重新加载触发器
-                if (intent?.action == ACTION_RELOAD_TRIGGERS) Log.d(TAG, "通过 Intent 请求重新加载触发器。")
-                reloadTriggers()
+            ACTION_WORKFLOW_REMOVED -> {
+                val removedWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_WORKFLOW)
+                if (removedWorkflow != null) {
+                    handleWorkflowRemoved(removedWorkflow)
+                }
+            }
+            // 按键事件直接分发
+            KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED -> {
+                (triggerHandlers[KeyEventTriggerModule().id] as? KeyEventTriggerHandler)?.handleKeyEventIntent(this, intent)
             }
         }
+
         return START_STICKY
     }
 
+    private fun registerAndStartHandlers() {
+        triggerHandlers[KeyEventTriggerModule().id] = KeyEventTriggerHandler()
+        triggerHandlers[AppStartTriggerModule().id] = AppStartTriggerHandler()
+        // 启动所有处理器
+        triggerHandlers.values.forEach { it.start(this) }
+    }
+
     /**
-     * 总的触发器重载入口，现在包含权限检查。
+     * 在服务首次启动时，加载所有已启用的工作流。
      */
-    private fun reloadTriggers() {
-        permissionCheckJob?.cancel()
-        permissionCheckJob = serviceScope.launch {
-            checkPermissionsAndToggleWorkflows()
-            // 权限检查完成后，再加载按键事件的监听
-            reloadKeyEventTriggers()
+    private fun loadAllActiveTriggers() {
+        val activeWorkflows = workflowManager.getAllWorkflows().filter { it.isEnabled }
+        Log.d(TAG, "TriggerService 首次启动，加载 ${activeWorkflows.size} 个活动的触发器。")
+        activeWorkflows.forEach { workflow ->
+            getHandlerForWorkflow(workflow)?.addWorkflow(this, workflow)
+        }
+    }
+
+    /**
+     * 处理单个工作流的变更。
+     * 无论何种变更（修改、禁用、启用），都先尝试移除旧的工作流实例，
+     * 然后再根据新实例的状态决定是否要添加。
+     */
+    private fun handleWorkflowChanged(newWorkflow: Workflow, oldWorkflow: Workflow?) {
+        val newHandler = getHandlerForWorkflow(newWorkflow)
+        val oldHandler = oldWorkflow?.let { getHandlerForWorkflow(it) }
+
+        // 场景1: 如果存在旧的工作流版本，总是先从对应的处理器中移除它。
+        // 这确保了对现有工作流的修改能被正确处理。
+        if (oldWorkflow != null && oldHandler != null) {
+            Log.d(TAG, "正在为更新准备，从处理器移除旧版本: ${oldWorkflow.name}")
+            oldHandler.removeWorkflow(this, oldWorkflow.id)
+        }
+
+        // 场景2: 如果新的工作流是启用状态，则将其添加到对应的处理器中。
+        // 这会处理“新增”、“启用”以及“修改后依然启用”的情况。
+        if (newWorkflow.isEnabled && newHandler != null) {
+            Log.d(TAG, "向处理器添加/更新: ${newWorkflow.name}")
+            newHandler.addWorkflow(this, newWorkflow)
         }
     }
 
 
     /**
-     * 检查所有自动工作流的权限，并根据结果更新其启用状态。
+     * 处理被删除的工作流。
      */
-    private suspend fun checkPermissionsAndToggleWorkflows() {
-        Log.d(TAG, "正在检查所有自动工作流的权限...")
-        val allWorkflows = workflowManager.getAllWorkflows()
-        val workflowsToUpdate = mutableListOf<Workflow>()
-
-        val autoWorkflows = allWorkflows.filter {
-            it.steps.firstOrNull()?.moduleId != ManualTriggerModule().id
-        }
-
-        for (workflow in autoWorkflows) {
-            val missingPermissions = PermissionManager.getMissingPermissions(applicationContext, workflow)
-            var workflowModified = false
-
-            if (missingPermissions.isNotEmpty()) {
-                // 权限缺失
-                if (workflow.isEnabled) {
-                    // 如果当前是启用状态，则禁用它，并记录下它之前的状态
-                    Log.w(TAG, "工作流 '${workflow.name}' 缺少权限，将被自动禁用。")
-                    workflow.wasEnabledBeforePermissionsLost = true
-                    workflow.isEnabled = false
-                    workflowModified = true
-                }
-            } else {
-                // 权限满足
-                if (workflow.wasEnabledBeforePermissionsLost) {
-                    // 如果它是因为权限问题被禁用的，现在恢复它
-                    Log.i(TAG, "工作流 '${workflow.name}' 的权限已满足，将自动重新启用。")
-                    workflow.isEnabled = true
-                    workflow.wasEnabledBeforePermissionsLost = false
-                    workflowModified = true
-                }
-            }
-
-            if (workflowModified) {
-                workflowsToUpdate.add(workflow)
-            }
-        }
-
-        if (workflowsToUpdate.isNotEmpty()) {
-            Log.d(TAG, "发现 ${workflowsToUpdate.size} 个工作流状态因权限变化而更新。")
-            val currentFullList = allWorkflows.toMutableList()
-            workflowsToUpdate.forEach { updated ->
-                val index = currentFullList.indexOfFirst { it.id == updated.id }
-                if (index != -1) {
-                    currentFullList[index] = updated
-                }
-            }
-            // 一次性保存所有更改，这将触发一次广播，通知UI和其他部分刷新
-            workflowManager.saveAllWorkflows(currentFullList)
-        } else {
-            Log.d(TAG, "所有工作流权限状态均未改变。")
-        }
-    }
-
-
-    /**
-     * 重新设计的按键事件处理逻辑，使用清晰的状态机模式
-     */
-    private fun handleKeyEvent(intent: Intent) {
-        val device = intent.getStringExtra("device") ?: return
-        val keyCode = intent.getStringExtra("key_code") ?: return
-        val eventType = intent.getStringExtra(EXTRA_EVENT_TYPE) ?: return
-        val pressDuration = intent.getLongExtra("duration", 0)
-
-        val uniqueKey = "$device-$keyCode"
-
-        if (eventType == "UP") {
-            // 1. 首先检查是否为长按事件
-            if (pressDuration >= longPressThreshold) {
-                Log.d(TAG, "长按事件 for $uniqueKey (${pressDuration}ms)")
-                resetKeyState(uniqueKey)
-                executeMatchingWorkflows(device, keyCode, "长按")
-                return
-            }
-
-            // 2. 处理短按事件的状态机逻辑
-            val currentState = keyStates[uniqueKey] ?: KeyState.IDLE
-            val now = System.currentTimeMillis()
-
-            when (currentState) {
-                KeyState.IDLE -> {
-                    // 第一次点击
-                    Log.d(TAG, "第一次点击 for $uniqueKey")
-                    keyStates[uniqueKey] = KeyState.WAIT_FOR_DOUBLE
-                    firstClickTimestamps[uniqueKey] = now
-
-                    // 检查是否需要立即触发短按
-                    if (hasActionType(device, keyCode, "短按 (立即触发)")) {
-                        executeMatchingWorkflows(device, keyCode, "短按 (立即触发)")
-                    }
-
-                    // 启动延迟任务，等待可能的第二次点击
-                    pendingClickJobs[uniqueKey] = serviceScope.launch {
-                        delay(doubleClickThreshold)
-                        if (isActive && keyStates[uniqueKey] == KeyState.WAIT_FOR_DOUBLE) {
-                            Log.d(TAG, "确认单击事件 for $uniqueKey")
-                            executeMatchingWorkflows(device, keyCode, "单击")
-                            resetKeyState(uniqueKey)
-                        }
-                    }
-                }
-
-                KeyState.WAIT_FOR_DOUBLE -> {
-                    // 第二次点击，检查是否在双击时间窗口内
-                    val firstClickTime = firstClickTimestamps[uniqueKey] ?: 0
-                    if (now - firstClickTime <= doubleClickThreshold) {
-                        Log.d(TAG, "确认双击事件 for $uniqueKey")
-                        keyStates[uniqueKey] = KeyState.PROCESSING
-
-                        // 取消单击任务
-                        pendingClickJobs[uniqueKey]?.cancel()
-
-                        // 执行双击工作流
-                        executeMatchingWorkflows(device, keyCode, "双击")
-
-                        // 重置状态
-                        resetKeyState(uniqueKey)
-                    } else {
-                        // 超出双击时间窗口，当作新的第一次点击处理
-                        Log.d(TAG, "双击超时，当作新的第一次点击 for $uniqueKey")
-                        pendingClickJobs[uniqueKey]?.cancel()
-                        keyStates[uniqueKey] = KeyState.WAIT_FOR_DOUBLE
-                        firstClickTimestamps[uniqueKey] = now
-
-                        if (hasActionType(device, keyCode, "短按 (立即触发)")) {
-                            executeMatchingWorkflows(device, keyCode, "短按 (立即触发)")
-                        }
-
-                        pendingClickJobs[uniqueKey] = serviceScope.launch {
-                            delay(doubleClickThreshold)
-                            if (isActive && keyStates[uniqueKey] == KeyState.WAIT_FOR_DOUBLE) {
-                                Log.d(TAG, "确认单击事件 for $uniqueKey")
-                                executeMatchingWorkflows(device, keyCode, "单击")
-                                resetKeyState(uniqueKey)
-                            }
-                        }
-                    }
-                }
-
-                KeyState.PROCESSING -> {
-                    // 正在处理中，忽略额外的点击
-                    Log.d(TAG, "正在处理中，忽略点击 for $uniqueKey")
-                }
-            }
-        }
+    private fun handleWorkflowRemoved(removedWorkflow: Workflow) {
+        Log.d(TAG, "处理器正在移除已删除的工作流: ${removedWorkflow.name}")
+        getHandlerForWorkflow(removedWorkflow)?.removeWorkflow(this, removedWorkflow.id)
     }
 
     /**
-     * 检查是否有指定动作类型的触发器
+     * 根据工作流的触发器类型查找对应的处理器。
      */
-    private fun hasActionType(devicePath: String, keyCode: String, actionType: String): Boolean {
-        return resolvedTriggers.any {
-            it.devicePath == devicePath && it.keyCode == keyCode && it.actionType == actionType
-        }
+    private fun getHandlerForWorkflow(workflow: Workflow): ITriggerHandler? {
+        val triggerType = workflow.triggerConfig?.get("type") as? String
+        return triggerHandlers[triggerType]
     }
 
-    /**
-     * 重置按键状态
-     */
-    private fun resetKeyState(uniqueKey: String) {
-        keyStates.remove(uniqueKey)
-        firstClickTimestamps.remove(uniqueKey)
-        pendingClickJobs[uniqueKey]?.cancel()
-        pendingClickJobs.remove(uniqueKey)
+    override fun onDestroy() {
+        super.onDestroy()
+        triggerHandlers.values.forEach { it.stop(this) }
+        // [核心修改] 服务销毁时，取消协程作用域
+        serviceScope.cancel()
+        Log.d(TAG, "TriggerService 已销毁。")
     }
 
-    /**
-     * 处理三段式滑块事件
-     * 使用ringer_mode值：0=静音，1=震动，2=响铃
-     */
-    private fun handleSliderEvent(intent: Intent) {
-        val device = intent.getStringExtra("device") ?: return
-        val ringerModeStr = intent.getStringExtra(EXTRA_RINGER_MODE) ?: return
-
-        // 将ringer_mode字符串转换为整数
-        val newRingerMode = ringerModeStr.toIntOrNull() ?: return
-
-        // 使用防抖机制，避免快速切换时的重复触发
-        sliderDebounceJobs[device]?.cancel()
-        sliderDebounceJobs[device] = serviceScope.launch {
-            delay(sliderDebounceTime)
-
-            val lastRingerMode = lastSliderModeMap[device]
-
-            if (lastRingerMode != null && lastRingerMode != newRingerMode) {
-                Log.d(TAG, "三段式滑块事件: ${getRingerModeDescription(lastRingerMode)} -> ${getRingerModeDescription(newRingerMode)}")
-
-                // 判断滑动方向：根据ringer_mode的数值大小来判断
-                when {
-                    newRingerMode > lastRingerMode -> {
-                        // 数值增大，表示向上滑动（静音 -> 震动 -> 响铃）
-                        Log.d(TAG, "检测到向上滑动: $lastRingerMode -> $newRingerMode")
-                        executeMatchingWorkflows(device, "KEY_F3", "向上滑动")
-                    }
-                    newRingerMode < lastRingerMode -> {
-                        // 数值减小，表示向下滑动（响铃 -> 震动 -> 静音）
-                        Log.d(TAG, "检测到向下滑动: $lastRingerMode -> $newRingerMode")
-                        executeMatchingWorkflows(device, "KEY_F3", "向下滑动")
-                    }
-                    else -> {
-                        Log.d(TAG, "ringer_mode未发生变化，忽略此次事件")
-                    }
-                }
-            } else if (lastRingerMode == null) {
-                // 首次获取到ringer_mode值，只是记录下来，不触发任何动作
-                Log.d(TAG, "首次记录三段式滑块状态: ${getRingerModeDescription(newRingerMode)}")
-            }
-
-            // 更新最后记录的ringer_mode值
-            lastSliderModeMap[device] = newRingerMode
-        }
-    }
-
-    /**
-     * 获取ringer_mode的描述文字
-     * @param ringerMode ringer_mode值（0=静音，1=震动，2=响铃）
-     * @return 对应的中文描述
-     */
-    private fun getRingerModeDescription(ringerMode: Int): String {
-        return when (ringerMode) {
-            0 -> "静音"
-            1 -> "震动"
-            2 -> "响铃"
-            else -> "未知($ringerMode)"
-        }
-    }
-
-    /**
-     * [核心修改] 查找并执行匹配的工作流。
-     * 如果有多个匹配，则弹出选择器。
-     */
-    private fun executeMatchingWorkflows(devicePath: String, keyCode: String, actionType: String) {
-        val matchingWorkflowIds = resolvedTriggers.filter {
-            it.devicePath == devicePath && it.keyCode == keyCode && it.actionType == actionType
-        }.map { it.workflowId }.toSet()
-
-        if (matchingWorkflowIds.isNotEmpty()) {
-            serviceScope.launch {
-                Log.i(TAG, "找到 ${matchingWorkflowIds.size} 个匹配 '$actionType' on '$devicePath' 的工作流")
-                val workflowsToExecute = workflowManager.findKeyEventTriggerWorkflows().filter {
-                    it.id in matchingWorkflowIds
-                }
-
-                when {
-                    workflowsToExecute.isEmpty() -> {
-                        // 理论上不应发生，因为我们是从 resolvedTriggers 反查的
-                        Log.w(TAG, "警告：找到了匹配的触发器ID，但无法在数据库中找到对应的工作流。")
-                    }
-                    workflowsToExecute.size == 1 -> {
-                        // 只有一个匹配，直接执行
-                        WorkflowExecutor.execute(workflowsToExecute.first(), applicationContext)
-                    }
-                    else -> {
-                        // 有多个匹配，调用UI服务显示选择器
-                        handleMultipleMatches(workflowsToExecute)
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * 处理多个工作流匹配同一触发器的情况。
-     * @param workflows 匹配到的工作流列表。
-     */
-    private suspend fun handleMultipleMatches(workflows: List<Workflow>) {
-        val uiService = ExecutionUIService(applicationContext)
-        // 显示一个悬浮窗让用户选择要执行哪个工作流
-        val selectedWorkflowId = uiService.showWorkflowChooser(workflows)
-        if (selectedWorkflowId != null) {
-            // 如果用户选择了，就执行对应的工作流
-            val selectedWorkflow = workflowManager.getWorkflow(selectedWorkflowId)
-            if (selectedWorkflow != null) {
-                WorkflowExecutor.execute(selectedWorkflow, applicationContext)
-            }
-        }
-    }
-
-
-    private fun reloadKeyEventTriggers() {
-        keyEventJob?.cancel()
-        Log.d(TAG, "请求重新加载触发器，正在停止所有旧的监听脚本...")
-
-        keyEventJob = serviceScope.launch {
-            try {
-                // 1. 扫描所有可能的 PID 文件
-                val pidFiles = cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }
-
-                if (pidFiles != null && pidFiles.isNotEmpty()) {
-                    Log.d(TAG, "找到 ${pidFiles.size} 个旧的 PID 文件，正在停止相关脚本进程...")
-                    pidFiles.forEach { pidFile ->
-                        try {
-                            val pid = pidFile.readText().trim()
-                            if (pid.isNotEmpty()) {
-                                Log.d(TAG, "正在停止 PID: $pid (来自 ${pidFile.name})")
-                                // 2. 使用 kill 命令终止脚本进程，这将触发脚本内的 trap 来删除 pid 文件
-                                ShizukuManager.execShellCommand(applicationContext, "kill $pid")
-                            }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "处理 PID 文件 ${pidFile.name} 时出错: ", e)
-                        }
-                    }
-                    // 3. 等待一小段时间让 trap 命令执行清理
-                    delay(500)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "扫描或停止旧监听进程时出错: ", e)
-            }
-
-            // 4. 作为最终保险措施，强制清理所有残留的 PID 文件
-            try {
-                cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }?.forEach { it.delete() }
-                Log.d(TAG, "已强制清理所有残留的 PID 文件。")
-            } catch (e: Exception) {
-                Log.e(TAG, "强制清理 PID 文件时出错: ", e)
-            }
-            // 同样，保留 killall 作为备用方案
-            ShizukuManager.execShellCommand(applicationContext, "killall getevent")
-
-            // 在启动新脚本前稍作等待
-            delay(200)
-
-            val keyEventWorkflows = workflowManager.findKeyEventTriggerWorkflows()
-            resolvedTriggers.clear()
-
-            for (workflow in keyEventWorkflows) {
-                val config = workflow.triggerConfig ?: continue
-                val preset = config["device_preset"] as? String
-                val actionType = config["action_type"] as? String ?: continue
-
-                var devicePath: String? = null
-                var keyCode: String? = null
-                var isSlider = false
-
-                when (preset) {
-                    "一加 13T (侧键)" -> {
-                        devicePath = "/dev/input/event0"
-                        keyCode = (config["_internal_key_code"] as? String) ?: "BTN_TRIGGER_HAPPY32"
-                        Log.d(TAG, "解析到 '一加 13T' 预设, 使用设备路径: $devicePath")
-                    }
-                    "一加 13 (三段式)" -> {
-                        devicePath = "/dev/input/event6"
-                        keyCode = (config["_internal_key_code"] as? String) ?: "KEY_F3"
-                        isSlider = true
-                        Log.d(TAG, "解析到 '一加 13' 预设, 查找到设备路径: $devicePath")
-                    }
-                    else -> { // 手动/自定义
-                        devicePath = config["device"] as? String
-                        keyCode = config["key_code"] as? String
-                    }
-                }
-
-                if (!devicePath.isNullOrBlank() && !keyCode.isNullOrBlank()) {
-                    resolvedTriggers.add(
-                        ResolvedKeyEventTrigger(workflow.id, devicePath, keyCode, actionType, isSlider)
-                    )
-                } else {
-                    Log.w(TAG, "工作流 ${workflow.id} ($preset) 无法解析出有效的设备或按键码，已跳过。")
-                }
-            }
-
-            if (resolvedTriggers.isEmpty()) {
-                Log.d(TAG, "没有已启用的按键触发器，停止监听。")
-                return@launch
-            }
-
-            val triggersByDevice = resolvedTriggers.groupBy { it.devicePath }
-            Log.d(TAG, "找到 ${triggersByDevice.size} 个需要监听的输入设备。")
-
-            val cacheDirPath = cacheDir.absolutePath
-
-            triggersByDevice.forEach { (path, triggers) ->
-                val isSlider = triggers.any { it.isSlider }
-                val script = if (isSlider) {
-                    createSliderScriptForDevice(path, cacheDirPath)
-                } else {
-                    val keyCodes = triggers.map { it.keyCode }.distinct()
-                    createShellScriptForDevice(path, keyCodes, cacheDirPath)
-                }
-
-                if (script.isNotBlank()) {
-                    launch {
-                        try {
-                            val scriptFile = File(cacheDir, "key_listener_${path.replace('/', '_')}.sh")
-                            scriptFile.writeText(script)
-                            scriptFile.setExecutable(true)
-                            Log.d(TAG, "为设备 $path 创建并启动新脚本: ${scriptFile.absolutePath}")
-                            ShizukuManager.execShellCommand(applicationContext, "sh ${scriptFile.absolutePath}")
-                        } catch (e: Exception) {
-                            if (e !is CancellationException) {
-                                Log.e(TAG, "执行设备 $path 的监听脚本时出错。", e)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun findDeviceByName(name: String): String? {
-        val command = "getevent -il | grep -B 1 -i '$name' | head -n 1 | awk '{print \$4}'"
-        val result = ShizukuManager.execShellCommand(applicationContext, command)
-        return if (result.startsWith("/dev/input/event")) result.trim() else null
-    }
-
-    /**
-     * 为三段式滑块设备创建监听脚本
-     * 使用 settings get system ringer_mode 命令获取当前状态
-     */
-    private fun createSliderScriptForDevice(device: String, cacheDir: String): String {
-        val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
-        val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
-        val pidFilePath = "$cacheDir/$pidFileName"
-
-        return """
-            #!/system/bin/sh
-            DEVICE="$device"
-            SERVICE_COMPONENT="$serviceComponent"
-            PID_FILE="$pidFilePath"
-
-            # --- PID 机制开始 ---
-            # 检查是否已有监听器在运行，避免重复启动
-            if [ -f "${'$'}PID_FILE" ]; then
-                EXISTING_PID=`cat "${'$'}PID_FILE"`
-                if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
-                    echo "监听器 (${'$'}DEVICE) 已在运行 (PID: ${'$'}EXISTING_PID)，新脚本退出。"
-                    exit 0
-                else
-                    echo "发现无效的 PID 文件，已删除。"
-                    rm -f "${'$'}PID_FILE"
-                fi
-            fi
-
-            # 记录当前进程PID并设置退出时的清理动作
-            echo "$$" > "${'$'}PID_FILE"
-            trap 'rm -f "${'$'}PID_FILE"; exit' INT TERM EXIT
-            # --- PID 机制结束 ---
-            
-            # 获取当前ringer_mode状态并发送初始状态给Service
-            CURRENT_RINGER_MODE=`settings get system ringer_mode`
-            echo "初始ringer_mode状态: ${'$'}CURRENT_RINGER_MODE"
-            am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es ringer_mode "${'$'}CURRENT_RINGER_MODE"
-
-            # 监听设备事件，当检测到KEY_F3的UP事件时检查ringer_mode变化
-            getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
-              if echo "${'$'}line" | grep -q "KEY_F3.*UP"; then
-                  # 稍等片刻让系统更新ringer_mode设置
-                  sleep 0.1
-                  # 获取新的ringer_mode状态
-                  NEW_RINGER_MODE=`settings get system ringer_mode`
-                  echo "检测到KEY_F3 UP事件，新ringer_mode状态: ${'$'}NEW_RINGER_MODE"
-                  # 将新状态发送给Service进行处理
-                  am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es ringer_mode "${'$'}NEW_RINGER_MODE"
-              fi
-            done
-        """.trimIndent()
-    }
-
-    /**
-     * 为普通按键设备创建监听脚本
-     */
-    private fun createShellScriptForDevice(device: String, keyCodes: List<String>, cacheDir: String): String {
-        if (keyCodes.isEmpty()) return ""
-        val grepPattern = keyCodes.joinToString("|")
-        val serviceComponent = "${applicationContext.packageName}/.services.TriggerService"
-        val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
-        val pidFilePath = "$cacheDir/$pidFileName"
-
-        return """
-            #!/system/bin/sh
-            DEVICE="$device"
-            GREP_PATTERN="$grepPattern"
-            SERVICE_COMPONENT="$serviceComponent"
-            PID_FILE="$pidFilePath"
-
-            # --- PID 机制开始 ---
-            # 检查是否已有监听器在运行，避免重复启动
-            if [ -f "${'$'}PID_FILE" ]; then
-                EXISTING_PID=`cat "${'$'}PID_FILE"`
-                if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
-                    echo "监听器 (${'$'}DEVICE) 已在运行 (PID: ${'$'}EXISTING_PID)，新脚本退出。"
-                    exit 0
-                else
-                    echo "发现无效的 PID 文件，已删除。"
-                    rm -f "${'$'}PID_FILE"
-                fi
-            fi
-
-            # 记录当前进程PID并设置退出时的清理动作
-            echo "$$" > "${'$'}PID_FILE"
-            trap 'rm -f "${'$'}PID_FILE"; exit' INT TERM EXIT
-            # --- PID 机制结束 ---
-
-            # 持续监听按键事件
-            while true; do
-              getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
-                # 检查是否匹配目标按键码
-                if echo "${'$'}line" | grep -E -q "(${'$'}GREP_PATTERN)"; then
-                    TIMESTAMP=`date +%s%3N`  # 获取毫秒级时间戳
-                    EVENT_TYPE=`echo ${'$'}line | awk '{print ${'$'}NF}'`  # 获取事件类型(DOWN/UP)
-                    KEY_CODE=`echo ${'$'}line | awk '{print ${'$'}2}'`     # 获取按键码
-
-                    if [ "${'$'}EVENT_TYPE" = "DOWN" ]; then
-                        # 记录按下时的时间戳
-                        DOWN_TIMESTAMP=${'$'}TIMESTAMP
-                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}KEY_CODE" --es event_type "DOWN"
-                    elif [ "${'$'}EVENT_TYPE" = "UP" ]; then
-                        # 计算按压持续时间
-                        if [ -z "${'$'}DOWN_TIMESTAMP" ]; then continue; fi
-                        PRESS_DURATION=$((TIMESTAMP - DOWN_TIMESTAMP))
-                        DOWN_TIMESTAMP=""
-                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${TriggerService.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}KEY_CODE" --es event_type "UP" --el duration ${'$'}PRESS_DURATION
-                    fi
-                fi
-              done
-              # 如果getevent意外退出，等待1秒后重新启动
-              sleep 1
-            done
-        """.trimIndent()
-    }
-
-    /**
-     * 创建前台服务通知
-     */
     private fun createNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(CHANNEL_ID, "后台触发器服务", NotificationManager.IMPORTANCE_LOW)
@@ -694,25 +172,6 @@ class TriggerService : Service() {
             .setContentText("正在监听自动化触发器...")
             .setSmallIcon(R.drawable.ic_workflows)
             .build()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        serviceScope.cancel()
-        // 注销两个接收器
-        unregisterReceiver(externalReceiver)
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(internalReceiver)
-
-
-        // 清理所有状态
-        keyStates.clear()
-        firstClickTimestamps.clear()
-        pendingClickJobs.values.forEach { it.cancel() }
-        pendingClickJobs.clear()
-        sliderDebounceJobs.values.forEach { it.cancel() }
-        sliderDebounceJobs.clear()
-
-        Log.d(TAG, "TriggerService 已销毁。")
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

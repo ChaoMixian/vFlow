@@ -1,20 +1,27 @@
+// 文件: main/java/com/chaomixian/vflow/services/ServiceStateBus.kt
 package com.chaomixian.vflow.services
 
 import android.content.Context
 import android.content.Intent
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.lang.ref.WeakReference
 
 /**
- * 一个全局的服务状态总线，用于可靠地追踪和提供服务实例。
- * 它取代了不稳定的静态实例方案，解决了服务连接延迟导致的时序问题。
+ * 一个全局的服务状态总线，现在也负责分发无障碍事件。
  */
 object ServiceStateBus {
 
     // 使用弱引用来持有服务实例，防止内存泄漏
     private var accessibilityServiceRef: WeakReference<AccessibilityService>? = null
 
-    // 定义广播动作
+    // 创建一个 SharedFlow 用于广播窗口变化事件 (包名, 类名)
+    private val _windowChangeEventFlow = MutableSharedFlow<Pair<String, String>>()
+    val windowChangeEventFlow = _windowChangeEventFlow.asSharedFlow()
+
+
+    // 定义广播动作 (保留，以防未来有其他用途)
     const val ACTION_ACCESSIBILITY_SERVICE_STATE_CHANGED = "vflow.action.ACCESSIBILITY_SERVICE_STATE_CHANGED"
     const val EXTRA_IS_CONNECTED = "is_connected"
 
@@ -31,6 +38,14 @@ object ServiceStateBus {
         accessibilityServiceRef = null
         sendBroadcast(context, false)
     }
+
+    /**
+     * 由 AccessibilityService 调用，用于发出窗口变化事件。
+     */
+    suspend fun postWindowChangeEvent(packageName: String, className: String) {
+        _windowChangeEventFlow.emit(packageName to className)
+    }
+
 
     /**
      * 获取当前可用的无障碍服务实例。

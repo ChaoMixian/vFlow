@@ -837,7 +837,9 @@ class WorkflowEditorActivity : BaseActivity() {
         } else {
             val workflowToSave = currentWorkflow?.copy(
                 name = name,
-                steps = actionSteps.toList()
+                steps = actionSteps.toList(),
+                // 继承旧的 isEnabled 状态，如果没有则默认为 true
+                isEnabled = currentWorkflow?.isEnabled ?: true
             ) ?: Workflow(
                 id = UUID.randomUUID().toString(),
                 name = name,

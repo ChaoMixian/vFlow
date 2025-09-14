@@ -8,6 +8,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class AppStartTriggerModule : BaseModule() {
@@ -19,6 +20,8 @@ class AppStartTriggerModule : BaseModule() {
         iconRes = R.drawable.rounded_activity_zone_24,
         category = "触发器"
     )
+
+    override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
     // 为该模块提供自定义的UI交互逻辑
     override val uiProvider: ModuleUIProvider = AppStartTriggerUIProvider()
