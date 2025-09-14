@@ -1,6 +1,4 @@
 // 文件: main/java/com/chaomixian/vflow/core/execution/ExecutionContext.kt
-// (已修改)
-
 package com.chaomixian.vflow.core.execution
 
 import android.content.Context
@@ -9,12 +7,22 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import java.util.*
 
 /**
- * 循环控制流状态的内部数据类。
+ * [修改] 循环控制流状态的密封类，以支持不同类型的循环。
  */
-data class LoopState(
-    val totalIterations: Long,
-    var currentIteration: Long = 0
-)
+sealed class LoopState {
+    /** 用于固定次数循环的状态 */
+    data class CountLoopState(
+        val totalIterations: Long,
+        var currentIteration: Long = 0
+    ) : LoopState()
+
+    /** 用于 "For Each" 列表循环的状态 */
+    data class ForEachLoopState(
+        val itemList: List<Any?>,
+        var currentIndex: Int = 0
+    ) : LoopState()
+}
+
 
 /**
  * 执行时传递的上下文 (重构)。
@@ -37,7 +45,7 @@ data class ExecutionContext(
     val allSteps: List<ActionStep>,
     val currentStepIndex: Int,
     val stepOutputs: Map<String, Map<String, Any?>>,
-    val loopStack: Stack<LoopState>, // 将循环堆栈传递给上下文
-    val triggerData: Parcelable? = null, // 用于接收触发器数据
+    val loopStack: Stack<LoopState>, // 堆栈现在可以存储不同类型的循环状态
+    val triggerData: Parcelable? = null,
     val namedVariables: MutableMap<String, Any?>
 )

@@ -1,4 +1,4 @@
-// 文件: SetVariableModuleUIProvider.kt
+// 文件: VariableModuleUIProvider.kt
 // 描述: 为变量设置模块提供自定义UI。
 package com.chaomixian.vflow.core.workflow.module.data
 
@@ -21,6 +21,7 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
+import com.chaomixian.vflow.ui.workflow_editor.ListItemAdapter
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -28,13 +29,14 @@ import com.google.android.material.textfield.TextInputLayout
  * 为设置变量模块提供的自定义编辑器 ViewHolder。
  * 持有对类型选择 Spinner 和值输入区域容器的引用。
  */
-class SetVariableEditorViewHolder(
+class VariableEditorViewHolder(
     view: View, // ViewHolder 的根视图
     val typeSpinner: Spinner, // 用于选择变量类型的 Spinner
     val valueContainer: LinearLayout // 用于动态添加值输入视图的容器
 ) : CustomEditorViewHolder(view) {
     var valueInputView: View? = null // 当前值输入视图的引用
     var dictionaryAdapter: DictionaryKVAdapter? = null // 如果类型是字典，则为该字典的适配器
+    var listAdapter: ListItemAdapter? = null // [新增] 如果类型是列表，则为该列表的适配器
     var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // 用于存储魔法变量请求的回调
 }
 
@@ -96,7 +98,7 @@ class VariableModuleUIProvider(
             setPadding(0, (16 * context.resources.displayMetrics.density).toInt(), 0, 0)
         }
 
-        val holder = SetVariableEditorViewHolder(view, typeSpinner, valueContainer)
+        val holder = VariableEditorViewHolder(view, typeSpinner, valueContainer)
         holder.onMagicVariableRequested = onMagicVariableRequested // 存储回调
 
         // 设置 Spinner 的适配器和选项
@@ -139,11 +141,12 @@ class VariableModuleUIProvider(
      * 从编辑器视图中读取用户输入的参数值。
      */
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
-        val h = holder as SetVariableEditorViewHolder
+        val h = holder as VariableEditorViewHolder
         val selectedType = h.typeSpinner.selectedItem.toString()
         // 根据选中的类型，从对应的输入视图中获取值
         val value: Any? = when(selectedType) {
             "字典" -> h.dictionaryAdapter?.getItemsAsMap() // 从字典适配器获取键值对 Map
+            "列表" -> h.listAdapter?.getItems() // [修改] 从列表适配器获取项目列表
             "布尔" -> (h.valueInputView as? SwitchCompat)?.isChecked ?: false // 获取 Switch 的选中状态
             else -> { // 其他类型（文本、数字等）从 EditText 获取
                 val textInputLayout = h.valueInputView as? TextInputLayout
@@ -156,9 +159,10 @@ class VariableModuleUIProvider(
     /**
      * 根据选择的变量类型动态更新值输入区域的视图。
      */
-    private fun updateValueInputView(context: Context, holder: SetVariableEditorViewHolder, type: String, currentValue: Any?) {
+    private fun updateValueInputView(context: Context, holder: VariableEditorViewHolder, type: String, currentValue: Any?) {
         holder.valueContainer.removeAllViews() // 清空旧的值输入视图
         holder.dictionaryAdapter = null // 重置字典适配器（如果之前是字典类型）
+        holder.listAdapter = null // [新增] 重置列表适配器
 
         // 根据类型创建不同的输入视图
         val valueView: View = when (type) {
@@ -192,6 +196,25 @@ class VariableModuleUIProvider(
                 recyclerView.adapter = dictAdapter
                 recyclerView.layoutManager = LinearLayoutManager(context)
                 addButton.setOnClickListener { dictAdapter.addItem() } // 添加按钮点击事件
+                editorView
+            }
+            "列表" -> { // [新增] 为“列表”类型创建UI
+                val editorView = LayoutInflater.from(context).inflate(R.layout.partial_list_editor, holder.valueContainer, false)
+                val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_list)
+                val addButton = editorView.findViewById<Button>(R.id.button_add_list_item)
+
+                val currentList = (currentValue as? List<*>)
+                    ?.map { it?.toString() ?: "" }
+                    ?.toMutableList()
+                    ?: mutableListOf()
+
+                val listAdapter = ListItemAdapter(currentList) { position ->
+                    holder.onMagicVariableRequested?.invoke("value.$position")
+                }
+                holder.listAdapter = listAdapter // 保存适配器引用
+                recyclerView.adapter = listAdapter
+                recyclerView.layoutManager = LinearLayoutManager(context)
+                addButton.setOnClickListener { listAdapter.addItem() }
                 editorView
             }
             "布尔" -> SwitchCompat(context).apply {

@@ -1,3 +1,4 @@
+// 文件路径: main/java/com/chaomixian/vflow/core/workflow/module/logic/LoopModule.kt
 package com.chaomixian.vflow.core.workflow.module.logic
 
 import android.content.Context
@@ -39,6 +40,18 @@ class LoopModule : BaseBlockModule() {
         )
     )
 
+    /**
+     * `loop_index`：当前循环的次数（从1开始）。
+     * `loop_total`：循环的总次数。
+     * 这两个值由 WorkflowExecutor 在每次循环时动态注入，
+     * 使得循环体内的模块可以通过魔法变量引用它们。
+     */
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
+        OutputDefinition("loop_index", "循环索引", NumberVariable.TYPE_NAME),
+        OutputDefinition("loop_total", "循环总数", NumberVariable.TYPE_NAME)
+    )
+
+
     /** 生成模块摘要。 */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val countPill = PillUtil.createPillFromParam(
@@ -76,7 +89,8 @@ class LoopModule : BaseBlockModule() {
 
         if (actualCount <= 0) { // 次数为0或负数，则跳过整个循环块
             onProgress(ProgressUpdate("循环次数为 $actualCount，跳过循环块。"))
-            val endPc = findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(LOOP_END_ID))
+            // 使用 BlockNavigator
+            val endPc = BlockNavigator.findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(LOOP_END_ID))
             return if (endPc != -1) {
                 ExecutionResult.Signal(ExecutionSignal.Jump(endPc))
             } else {
@@ -85,8 +99,9 @@ class LoopModule : BaseBlockModule() {
         }
 
         onProgress(ProgressUpdate("循环开始，总次数: $actualCount"))
-        context.loopStack.push(LoopState(actualCount)) // 推入新的循环状态
-        return ExecutionResult.Signal(ExecutionSignal.Loop(LoopAction.START)) // 发出循环开始信号
+        // 使用新的 CountLoopState 来创建循环状态
+        context.loopStack.push(LoopState.CountLoopState(actualCount))
+        return ExecutionResult.Signal(ExecutionSignal.Loop(LoopAction.START))
     }
 }
 
@@ -105,11 +120,17 @@ class EndLoopModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val loopState = context.loopStack.peek() ?: return ExecutionResult.Success() // 栈顶无循环状态则直接成功
+        // 检查循环状态是否为正确的 CountLoopState 类型
+        val loopState = context.loopStack.peek()
+        if (loopState !is LoopState.CountLoopState) {
+            // 如果栈顶不是固定次数循环状态（可能是空的，或是一个ForEach循环），则直接成功返回或报错
+            return if (loopState == null) ExecutionResult.Success() else ExecutionResult.Failure("执行错误", "结束循环模块不在一个'循环'块内。")
+        }
+
         onProgress(ProgressUpdate("循环迭代结束，当前是第 ${loopState.currentIteration + 1} 次"))
 
         loopState.currentIteration++ // 迭代次数增加
         // LoopAction.END 信号将由执行引擎处理，判断是继续循环还是跳出
-        return ExecutionResult.Signal(ExecutionSignal.Loop(LoopAction.END)) // 发出循环结束信号
+        return ExecutionResult.Signal(ExecutionSignal.Loop(LoopAction.END))
     }
 }

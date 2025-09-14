@@ -28,7 +28,7 @@ class LuaModuleUIProvider : ModuleUIProvider {
     override fun getHandledInputIds(): Set<String> = setOf("script", "inputs")
 
     /**
-     * [修复] 更新方法签名以匹配 ModuleUIProvider 接口。
+     * 更新方法签名以匹配 ModuleUIProvider 接口。
      */
     override fun createPreview(
         context: Context,
@@ -38,7 +38,7 @@ class LuaModuleUIProvider : ModuleUIProvider {
     ): View? = null
 
     /**
-     * [修复] 更新方法签名以匹配 ModuleUIProvider 接口。
+     * 更新方法签名以匹配 ModuleUIProvider 接口。
      */
     override fun createEditor(
         context: Context,

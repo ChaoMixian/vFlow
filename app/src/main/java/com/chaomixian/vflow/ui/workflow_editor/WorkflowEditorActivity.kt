@@ -31,6 +31,10 @@ import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
+import com.chaomixian.vflow.core.workflow.module.logic.FOREACH_PAIRING_ID
+import com.chaomixian.vflow.core.workflow.module.logic.FOREACH_START_ID
+import com.chaomixian.vflow.core.workflow.module.logic.LOOP_PAIRING_ID
+import com.chaomixian.vflow.core.workflow.module.logic.LOOP_START_ID
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.app_picker.AppPickerActivity
@@ -397,7 +401,7 @@ class WorkflowEditorActivity : BaseActivity() {
                         updatedParameters[key] = newRef
                         hasChanged = true
                     }
-                    // (可选) 如果参数是Map，可以进一步检查Map内部的值
+                    // 如果参数是Map，可以进一步检查Map内部的值
                     if (value is Map<*, *>) {
                         val updatedMap = value.mapValues { (_, v) ->
                             if (v is String && v == oldRef) {
@@ -423,6 +427,35 @@ class WorkflowEditorActivity : BaseActivity() {
         oldVariableName = null // 重置
     }
 
+    /**
+     * 通用辅助函数，用于查找当前步骤所在的指定类型循环块的起始步骤。
+     * @param position 当前步骤在 `actionSteps` 列表中的索引。
+     * @param pairingId 要查找的循环块的配对ID (e.g., LOOP_PAIRING_ID, FOREACH_PAIRING_ID).
+     * @return 如果在循环内，则返回循环的起始 `ActionStep`，否则返回 `null`。
+     */
+    private fun findEnclosingLoopStartStep(position: Int, pairingId: String): ActionStep? {
+        var openCount = 0
+        for (i in (position - 1) downTo 0) {
+            val step = actionSteps[i]
+            val module = ModuleRegistry.getModule(step.moduleId) ?: continue
+            val behavior = module.blockBehavior
+
+            if (behavior.pairingId != pairingId) continue
+
+            when (behavior.type) {
+                BlockType.BLOCK_END -> openCount++
+                BlockType.BLOCK_START -> {
+                    if (openCount == 0) {
+                        return step
+                    }
+                    openCount--
+                }
+                else -> {}
+            }
+        }
+        return null
+    }
+
 
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
         // 查找当前输入框的定义
@@ -439,6 +472,10 @@ class WorkflowEditorActivity : BaseActivity() {
         for (i in 0 until editingStepPosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId) ?: continue
+
+            // 在通用遍历中，跳过所有循环模块的起始块，因为它们的变量是上下文相关的
+            if (module.id == LOOP_START_ID || module.id == FOREACH_START_ID) continue
+
             module.getOutputs(step).forEach { outputDef ->
                 val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
                         targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
@@ -453,6 +490,50 @@ class WorkflowEditorActivity : BaseActivity() {
                 }
             }
         }
+
+        // 动态添加固定次数循环变量
+        val enclosingLoopStep = findEnclosingLoopStartStep(editingStepPosition, LOOP_PAIRING_ID)
+        if (enclosingLoopStep != null) {
+            val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId)
+            if (loopModule != null && loopModule.id == LOOP_START_ID) {
+                loopModule.getOutputs(enclosingLoopStep).forEach { outputDef ->
+                    val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
+                            targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
+                    if (isCompatible) {
+                        availableStepOutputs.add(
+                            MagicVariableItem(
+                                variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
+                                variableName = outputDef.name,
+                                originDescription = "来自: ${loopModule.metadata.name}"
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // 动态添加 ForEach 循环变量
+        val enclosingForEachStep = findEnclosingLoopStartStep(editingStepPosition, FOREACH_PAIRING_ID)
+        if (enclosingForEachStep != null) {
+            val forEachModule = ModuleRegistry.getModule(enclosingForEachStep.moduleId)
+            if (forEachModule != null && forEachModule.id == FOREACH_START_ID) {
+                forEachModule.getOutputs(enclosingForEachStep).forEach { outputDef ->
+                    val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
+                            targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName) ||
+                            outputDef.typeName == "vflow.type.any"
+                    if (isCompatible) {
+                        availableStepOutputs.add(
+                            MagicVariableItem(
+                                variableReference = "{{${enclosingForEachStep.id}.${outputDef.id}}}",
+                                variableName = outputDef.name,
+                                originDescription = "来自: ${forEachModule.metadata.name}"
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
 
         val availableNamedVariables = getAvailableNamedVariables(editingStepPosition)
 
@@ -582,43 +663,41 @@ class WorkflowEditorActivity : BaseActivity() {
             }
 
 
+            /**
+             * [核心修改] 重写 clearView 方法以正确处理积木块的拖拽。
+             */
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
-                super.clearView(recyclerView, viewHolder)
+                super.clearView(this@WorkflowEditorActivity.recyclerView, viewHolder)
+
+                // 清理动画效果
                 dragGlowAnimator?.cancel()
                 dragBreathAnimator?.cancel()
-                viewHolder.itemView.alpha = 1.0f
-                viewHolder.itemView.scaleX = 1.0f
-                viewHolder.itemView.scaleY = 1.0f
+                viewHolder.itemView.apply {
+                    alpha = 1.0f
+                    scaleX = 1.0f
+                    scaleY = 1.0f
+                }
 
-
-                val originalList = listBeforeDrag
+                val originalList = listBeforeDrag ?: return
                 val fromPos = dragStartPosition
                 val toPos = viewHolder.adapterPosition
+
+                // 重置状态
                 listBeforeDrag = null
                 dragStartPosition = -1
 
-                if (originalList == null || fromPos == -1 || toPos == -1 || fromPos == toPos) {
+                // 无效移动检查
+                if (fromPos <= 0 || toPos < 0 || fromPos == toPos) {
                     recalculateAndNotify()
                     return
                 }
 
-                val (blockStart, blockEnd) = findBlockRangeInList(originalList, fromPos)
-                val blockToMove = originalList.subList(blockStart, blockEnd + 1)
+                // 执行积木块移动
+                val newList = moveBlockInList(originalList, fromPos, toPos)
 
-                val tempList = originalList.toMutableList()
-
-                // [FIX] 使用按索引范围删除的方式，避免类型推断错误
-                for (i in blockEnd downTo blockStart) {
-                    tempList.removeAt(i)
-                }
-
-                val insertionPoint = if (toPos < blockStart) toPos else toPos - blockToMove.size
-                tempList.addAll(insertionPoint.coerceIn(0, tempList.size), blockToMove)
-
-
-                if (isBlockStructureValid(tempList)) {
+                if (isBlockStructureValid(newList)) {
                     actionSteps.clear()
-                    actionSteps.addAll(tempList)
+                    actionSteps.addAll(newList)
                 } else {
                     Toast.makeText(this@WorkflowEditorActivity, "无效的移动", Toast.LENGTH_SHORT).show()
                     actionSteps.clear()
@@ -626,6 +705,89 @@ class WorkflowEditorActivity : BaseActivity() {
                 }
                 recalculateAndNotify()
             }
+
+            /**
+             * 在列表中移动整个积木块
+             * 更安全的积木块移动实现
+             */
+            private fun moveBlockInList(originalList: List<ActionStep>, fromPos: Int, toPos: Int): List<ActionStep> {
+                // 输入验证
+                if (fromPos !in originalList.indices || toPos !in originalList.indices) {
+                    return originalList
+                }
+
+                try {
+                    // 1. 找到要移动的完整积木块范围
+                    val (blockStart, blockEnd) = findBlockRangeInList(originalList, fromPos)
+
+                    // 验证范围有效性
+                    if (blockStart < 0 || blockEnd >= originalList.size || blockStart > blockEnd) {
+                        return originalList
+                    }
+
+                    // 2. 如果目标在块内部，返回原列表
+                    if (toPos in blockStart..blockEnd) {
+                        return originalList
+                    }
+
+                    // 3. 使用索引范围而不是对象引用来移除块（避免重复对象问题）
+                    val tempList = originalList.toMutableList()
+                    val blockToMove = tempList.subList(blockStart, blockEnd + 1).toList() // 创建副本
+
+                    // 从后往前删除，避免索引变化
+                    for (i in blockEnd downTo blockStart) {
+                        tempList.removeAt(i)
+                    }
+
+                    // 4. 重新计算目标位置（因为删除操作可能改变了索引）
+                    val adjustedTargetPos = when {
+                        toPos > blockEnd -> toPos - (blockEnd - blockStart + 1) // 向下移动，减去删除的块大小
+                        toPos < blockStart -> toPos // 向上移动，位置不变
+                        else -> return originalList // 理论上不会到达这里
+                    }
+
+                    // 5. 计算最终插入位置
+                    val insertPos = if (toPos > blockEnd) {
+                        // 向下移动：插入到调整后目标位置的后面
+                        (adjustedTargetPos + 1).coerceIn(1, tempList.size)
+                    } else {
+                        // 向上移动：插入到目标位置
+                        adjustedTargetPos.coerceIn(1, tempList.size)
+                    }
+
+                    // 6. 插入积木块
+                    tempList.addAll(insertPos, blockToMove)
+
+                    return tempList
+
+                } catch (e: Exception) {
+                    // 任何异常都返回原列表，确保不会崩溃
+                    return originalList
+                }
+            }
+
+
+            /**
+             * 计算正确的插入位置
+             */
+            private fun calculateInsertionPosition(
+                originalList: List<ActionStep>,
+                tempList: List<ActionStep>,
+                toPos: Int,
+                blockStart: Int,
+                blockEnd: Int
+            ): Int {
+                val targetItem = originalList[toPos]
+                val targetIndexInTempList = tempList.indexOf(targetItem)
+
+                return if (targetIndexInTempList == -1) {
+                    tempList.size // 找不到目标项，插入到末尾
+                } else {
+                    // 向下移动：插入到目标项后面；向上移动：插入到目标项前面
+                    if (toPos > blockEnd) targetIndexInTempList + 1 else targetIndexInTempList
+                }
+            }
+
 
             override fun getDragDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
                 if (viewHolder.adapterPosition == 0) return 0
@@ -636,49 +798,73 @@ class WorkflowEditorActivity : BaseActivity() {
         itemTouchHelper.attachToRecyclerView(findViewById(R.id.recycler_view_action_steps))
     }
 
+    /**
+     * 更健壮的积木块范围查找
+     */
     private fun findBlockRangeInList(list: List<ActionStep>, position: Int): Pair<Int, Int> {
-        val initialModule = ModuleRegistry.getModule(list.getOrNull(position)?.moduleId ?: return position to position)
-        val behavior = initialModule?.blockBehavior
-        if (behavior == null || behavior.type == BlockType.NONE || behavior.pairingId == null) {
+        if (position !in list.indices) return position to position
+
+        val initialModule = ModuleRegistry.getModule(list[position].moduleId)
+            ?: return position to position
+
+        val behavior = initialModule.blockBehavior
+        if (behavior?.type == BlockType.NONE || behavior?.pairingId == null) {
             return position to position
         }
-        var start = position
-        var end = position
-        var openCount = 0
-        for (i in position downTo 0) {
-            val currentModule = ModuleRegistry.getModule(list[i].moduleId)
-            if (currentModule?.blockBehavior?.pairingId == behavior.pairingId) {
-                when (currentModule.blockBehavior.type) {
+
+        try {
+            // 向上查找块的开始
+            var blockStart = position
+            var openCount = 0
+
+            for (i in position downTo 0) {
+                val module = ModuleRegistry.getModule(list[i].moduleId) ?: continue
+                val currentBehavior = module.blockBehavior
+
+                if (currentBehavior?.pairingId != behavior.pairingId) continue
+
+                when (currentBehavior.type) {
                     BlockType.BLOCK_END -> openCount++
                     BlockType.BLOCK_START -> {
-                        openCount--
-                        if (openCount <= 0) {
-                            start = i
+                        if (openCount == 0) {
+                            blockStart = i
                             break
                         }
+                        openCount--
                     }
                     else -> {}
                 }
             }
-        }
-        openCount = 0
-        for (i in start until list.size) {
-            val currentModule = ModuleRegistry.getModule(list[i].moduleId)
-            if (currentModule?.blockBehavior?.pairingId == behavior.pairingId) {
-                when (currentModule.blockBehavior.type) {
+
+            // 向下查找块的结束
+            var blockEnd = blockStart
+            openCount = 0
+
+            for (i in blockStart until list.size) {
+                val module = ModuleRegistry.getModule(list[i].moduleId) ?: continue
+                val currentBehavior = module.blockBehavior
+
+                if (currentBehavior?.pairingId != behavior.pairingId) continue
+
+                when (currentBehavior.type) {
                     BlockType.BLOCK_START -> openCount++
                     BlockType.BLOCK_END -> {
                         openCount--
                         if (openCount == 0) {
-                            end = i
+                            blockEnd = i
                             break
                         }
                     }
                     else -> {}
                 }
             }
+
+            return blockStart to blockEnd
+
+        } catch (e: Exception) {
+            // 异常情况返回单个位置
+            return position to position
         }
-        return start to end
     }
 
     private fun isBlockStructureValid(list: List<ActionStep>): Boolean {
@@ -728,6 +914,22 @@ class WorkflowEditorActivity : BaseActivity() {
                 updateExecuteButton(WorkflowExecutor.isRunning(it.id))
             }
         }
+
+        // 检查是否存在需要清理的未知模块
+        if (actionSteps.any { ModuleRegistry.getModule(it.moduleId) == null }) {
+            val originalSize = actionSteps.size
+            // 过滤列表，只保留 moduleId 存在于 ModuleRegistry 中的步骤
+            val cleanedSteps = actionSteps.filter { ModuleRegistry.getModule(it.moduleId) != null }
+            val removedCount = originalSize - cleanedSteps.size
+
+            if (removedCount > 0) {
+                actionSteps.clear()
+                actionSteps.addAll(cleanedSteps)
+                // 通过 Toast 通知用户
+                Toast.makeText(this, "已自动移除 $removedCount 个未知或已过时的模块。", Toast.LENGTH_LONG).show()
+            }
+        }
+
         if (actionSteps.isEmpty()) {
             ModuleRegistry.getModule("vflow.trigger.manual")?.let {
                 actionSteps.addAll(it.createSteps())

@@ -10,8 +10,6 @@ import com.chaomixian.vflow.core.module.BooleanVariable
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
-import java.util.regex.Pattern
-import kotlin.math.*
 
 const val WHILE_PAIRING_ID = "while"
 const val WHILE_START_ID = "vflow.logic.while.start"
@@ -176,7 +174,8 @@ class WhileModule : BaseBlockModule() {
         val value1 = context.magicVariables["value1"] ?: context.variables["value1"]
         val value2 = context.magicVariables["value2"] ?: context.variables["value2"]
 
-        val result = evaluateCondition(input1, operator, value1, value2)
+        // 使用 ConditionEvaluator
+        val result = ConditionEvaluator.evaluateCondition(input1, operator, value1, value2)
         onProgress(ProgressUpdate("条件判断: $result (操作: $operator)"))
 
         if (result) {
@@ -184,7 +183,8 @@ class WhileModule : BaseBlockModule() {
             return ExecutionResult.Success(mapOf("result" to BooleanVariable(true)))
         } else {
             onProgress(ProgressUpdate("条件为假，跳出循环。"))
-            val jumpTo = findNextBlockPosition(
+            // 使用 BlockNavigator
+            val jumpTo = BlockNavigator.findNextBlockPosition(
                 context.allSteps,
                 context.currentStepIndex,
                 setOf(WHILE_END_ID)
@@ -195,125 +195,6 @@ class WhileModule : BaseBlockModule() {
             }
         }
         return ExecutionResult.Failure("执行错误", "找不到配对的结束循环块")
-    }
-
-    private fun evaluateCondition(input1: Any?, operator: String, value1: Any?, value2: Any?): Boolean {
-        when (operator) {
-            OP_EXISTS -> return input1 != null
-            OP_NOT_EXISTS -> return input1 == null
-        }
-        if (input1 == null) return false
-
-        return when (input1) {
-            is TextVariable, is String -> evaluateTextCondition(input1.toStringValue(), operator, value1)
-            is BooleanVariable, is Boolean -> evaluateBooleanCondition(input1.toBooleanValue(), operator)
-            is ListVariable, is Collection<*> -> evaluateCollectionCondition(input1, operator)
-            is DictionaryVariable, is Map<*, *> -> evaluateMapCondition(input1, operator)
-            is NumberVariable, is Number -> {
-                val value = input1.toDoubleValue() ?: return false
-                evaluateNumberCondition(value, operator, value1, value2)
-            }
-            is ScreenElement -> {
-                val text = input1.text ?: return false
-                evaluateTextCondition(text, operator, value1)
-            }
-            else -> false
-        }
-    }
-
-    private fun evaluateTextCondition(text1: String, operator: String, value1: Any?): Boolean {
-        val text2 = value1.toStringValue()
-        return when (operator) {
-            OP_IS_EMPTY -> text1.isEmpty()
-            OP_IS_NOT_EMPTY -> text1.isNotEmpty()
-            OP_TEXT_EQUALS -> text1.equals(text2, ignoreCase = true)
-            OP_TEXT_NOT_EQUALS -> !text1.equals(text2, ignoreCase = true)
-            OP_CONTAINS -> text1.contains(text2, ignoreCase = true)
-            OP_NOT_CONTAINS -> !text1.contains(text2, ignoreCase = true)
-            OP_STARTS_WITH -> text1.startsWith(text2, ignoreCase = true)
-            OP_ENDS_WITH -> text1.endsWith(text2, ignoreCase = true)
-            OP_MATCHES_REGEX -> try { Pattern.compile(text2).matcher(text1).find() } catch (e: Exception) { false }
-            else -> false
-        }
-    }
-
-    private fun evaluateNumberCondition(num1: Double, operator: String, value1: Any?, value2: Any?): Boolean {
-        val num2 = value1.toDoubleValue()
-        if (operator == OP_NUM_BETWEEN) {
-            val num3 = value2.toDoubleValue()
-            if (num2 == null || num3 == null) return false
-            val minVal = min(num2, num3)
-            val maxVal = max(num2, num3)
-            return num1 >= minVal && num1 <= maxVal
-        }
-        if (num2 == null) return false
-        return when (operator) {
-            OP_NUM_EQ -> num1 == num2
-            OP_NUM_NEQ -> num1 != num2
-            OP_NUM_GT -> num1 > num2
-            OP_NUM_GTE -> num1 >= num2
-            OP_NUM_LT -> num1 < num2
-            OP_NUM_LTE -> num1 <= num2
-            else -> false
-        }
-    }
-
-    private fun evaluateBooleanCondition(bool1: Boolean, operator: String): Boolean {
-        return when (operator) {
-            OP_IS_TRUE -> bool1
-            OP_IS_FALSE -> !bool1
-            else -> false
-        }
-    }
-
-    private fun evaluateCollectionCondition(col1: Any, operator: String): Boolean {
-        val size = when(col1) {
-            is ListVariable -> col1.value.size
-            is Collection<*> -> col1.size
-            else -> -1
-        }
-        return when (operator) {
-            OP_IS_EMPTY -> size == 0
-            OP_IS_NOT_EMPTY -> size > 0
-            else -> false
-        }
-    }
-
-    private fun evaluateMapCondition(map1: Any, operator: String): Boolean {
-        val size = when(map1) {
-            is DictionaryVariable -> map1.value.size
-            is Map<*,*> -> map1.size
-            else -> -1
-        }
-        return when (operator) {
-            OP_IS_EMPTY -> size == 0
-            OP_IS_NOT_EMPTY -> size > 0
-            else -> false
-        }
-    }
-
-    private fun Any?.toStringValue(): String {
-        return when(this) {
-            is TextVariable -> this.value
-            else -> this?.toString() ?: ""
-        }
-    }
-
-    private fun Any?.toDoubleValue(): Double? {
-        return when(this) {
-            is NumberVariable -> this.value
-            is Number -> this.toDouble()
-            is String -> this.toDoubleOrNull()
-            else -> null
-        }
-    }
-
-    private fun Any?.toBooleanValue(): Boolean {
-        return when(this) {
-            is BooleanVariable -> this.value
-            is Boolean -> this
-            else -> false
-        }
     }
 }
 
@@ -337,8 +218,8 @@ class EndWhileModule : BaseModule() {
     ): ExecutionResult {
         onProgress(ProgressUpdate("循环体执行完毕，返回到循环起点。"))
 
-        // 查找对应的 While 模块的索引
-        val whilePc = findBlockStartPosition(context.allSteps, context.currentStepIndex, WHILE_START_ID)
+        // 使用 BlockNavigator
+        val whilePc = BlockNavigator.findBlockStartPosition(context.allSteps, context.currentStepIndex, WHILE_START_ID)
 
         return if (whilePc != -1) {
             // 发出信号，跳转到 While 模块以重新评估条件
@@ -347,29 +228,5 @@ class EndWhileModule : BaseModule() {
             // 理论上不应发生，但作为保护
             ExecutionResult.Failure("执行错误", "找不到配对的 '循环直到' 模块")
         }
-    }
-
-    /**
-     * 辅助函数：向前查找指定ID的积木块的起始位置。
-     */
-    private fun findBlockStartPosition(steps: List<ActionStep>, endPosition: Int, targetId: String): Int {
-        val endModule = ModuleRegistry.getModule(steps.getOrNull(endPosition)?.moduleId ?: return -1)
-        val pairingId = endModule?.blockBehavior?.pairingId ?: return -1
-        var openBlocks = 1 // 从结束块开始，计数器为1
-
-        for (i in (endPosition - 1) downTo 0) {
-            val currentModule = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
-            if (currentModule.blockBehavior.pairingId == pairingId) {
-                when (currentModule.blockBehavior.type) {
-                    BlockType.BLOCK_END -> openBlocks++
-                    BlockType.BLOCK_START -> {
-                        openBlocks--
-                        if (openBlocks == 0 && currentModule.id == targetId) return i
-                    }
-                    else -> {}
-                }
-            }
-        }
-        return -1
     }
 }

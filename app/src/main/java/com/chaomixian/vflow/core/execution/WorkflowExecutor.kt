@@ -7,10 +7,7 @@ import android.util.Log
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.module.logic.LOOP_PAIRING_ID
-import com.chaomixian.vflow.core.workflow.module.logic.LOOP_START_ID
-import com.chaomixian.vflow.core.workflow.module.logic.WHILE_PAIRING_ID
-import com.chaomixian.vflow.core.workflow.module.logic.WHILE_START_ID
+import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ExecutionNotificationState
 import com.chaomixian.vflow.services.ExecutionUIService
@@ -88,7 +85,35 @@ object WorkflowExecutor {
                         continue
                     }
 
-                    // 广播当前正在执行的步骤索引
+                    if (loopStack.isNotEmpty()) {
+                        val loopState = loopStack.peek()
+                        // [修改] 使用 BlockNavigator
+                        val loopStartPos = BlockNavigator.findCurrentLoopStartPosition(workflow.steps, pc)
+                        if (loopStartPos != -1) {
+                            val loopStartStep = workflow.steps[loopStartPos]
+
+                            val loopOutputs = when {
+                                loopStartStep.moduleId == LOOP_START_ID && loopState is LoopState.CountLoopState -> {
+                                    mapOf(
+                                        "loop_index" to NumberVariable((loopState.currentIteration + 1).toDouble()),
+                                        "loop_total" to NumberVariable(loopState.totalIterations.toDouble())
+                                    )
+                                }
+                                loopStartStep.moduleId == FOREACH_START_ID && loopState is LoopState.ForEachLoopState -> {
+                                    mapOf(
+                                        "index" to NumberVariable((loopState.currentIndex + 1).toDouble()),
+                                        "item" to loopState.itemList.getOrNull(loopState.currentIndex)
+                                    )
+                                }
+                                else -> null
+                            }
+
+                            if (loopOutputs != null) {
+                                stepOutputs[loopStartStep.id] = loopOutputs
+                            }
+                        }
+                    }
+
                     ExecutionStateBus.postState(ExecutionState.Running(workflow.id, pc))
 
                     // 更新进度通知
@@ -135,7 +160,6 @@ object WorkflowExecutor {
                         }
                     }
 
-
                     Log.d("WorkflowExecutor", "[$pc] -> 执行: ${module.metadata.name}")
                     val result = module.execute(executionContext) { progressUpdate ->
                         Log.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progressUpdate.message}")
@@ -166,10 +190,10 @@ object WorkflowExecutor {
                                     when (signal.action) {
                                         LoopAction.START -> pc++ // 循环开始，进入循环体第一个模块
                                         LoopAction.END -> {
-                                            // 此逻辑仅用于固定次数循环 (LoopModule)
-                                            val loopState = loopStack.peek()
-                                            if (loopState.currentIteration < loopState.totalIterations) {
-                                                val loopStartPos = findBlockStartPosition(workflow.steps, pc, setOf(LOOP_START_ID))
+                                            val loopState = loopStack.peek() as? LoopState.CountLoopState
+                                            if (loopState != null && loopState.currentIteration < loopState.totalIterations) {
+                                                // [修改] 使用 BlockNavigator
+                                                val loopStartPos = BlockNavigator.findBlockStartPosition(workflow.steps, pc, LOOP_START_ID)
                                                 if (loopStartPos != -1) {
                                                     // 跳转到循环体内的第一个步骤，而不是循环模块本身
                                                     pc = loopStartPos + 1
@@ -185,9 +209,10 @@ object WorkflowExecutor {
                                     }
                                 }
                                 is ExecutionSignal.Break -> {
-                                    val currentLoopPairingId = findCurrentLoopPairingId(workflow.steps, pc)
-                                    val endBlockPosition = findEndBlockPosition(workflow.steps, pc, currentLoopPairingId)
-                                    if(endBlockPosition != -1) {
+                                    // [修改] 使用 BlockNavigator
+                                    val currentLoopPairingId = BlockNavigator.findCurrentLoopPairingId(workflow.steps, pc)
+                                    val endBlockPosition = BlockNavigator.findEndBlockPosition(workflow.steps, pc, currentLoopPairingId)
+                                    if (endBlockPosition != -1) {
                                         pc = endBlockPosition + 1
                                         Log.d("WorkflowExecutor", "接收到Break信号，跳出循环 '$currentLoopPairingId' 到步骤 $pc")
                                     } else {
@@ -196,21 +221,15 @@ object WorkflowExecutor {
                                     }
                                 }
                                 is ExecutionSignal.Continue -> {
-                                    // 区分 While 和 Loop 的行为
-                                    val loopStartPos = findBlockStartPosition(workflow.steps, pc, setOf(LOOP_START_ID, WHILE_START_ID))
+                                    // 使用 BlockNavigator
+                                    val loopStartPos = BlockNavigator.findCurrentLoopStartPosition(workflow.steps, pc)
                                     if (loopStartPos != -1) {
-                                        val loopModuleId = workflow.steps[loopStartPos].moduleId
-                                        if (loopModuleId == WHILE_START_ID) {
-                                            // 对于 While 循环，跳回到自身以重新评估条件
-                                            pc = loopStartPos
+                                        val loopModule = ModuleRegistry.getModule(workflow.steps[loopStartPos].moduleId)
+                                        val endBlockPos = BlockNavigator.findEndBlockPosition(workflow.steps, loopStartPos, loopModule?.blockBehavior?.pairingId)
+                                        if (endBlockPos != -1) {
+                                            pc = endBlockPos
                                         } else {
-                                            // 对于固定次数循环，跳到其结束块以更新计数器并判断
-                                            val endLoopPos = findEndBlockPosition(workflow.steps, loopStartPos, LOOP_PAIRING_ID)
-                                            if (endLoopPos != -1) {
-                                                pc = endLoopPos
-                                            } else {
-                                                pc++ // 找不到则异常继续
-                                            }
+                                            pc++  // 找不到则异常继续
                                         }
                                         Log.d("WorkflowExecutor", "接收到Continue信号，跳转到步骤 $pc")
                                     } else {
@@ -247,7 +266,7 @@ object WorkflowExecutor {
                 if (runningWorkflows.containsKey(workflow.id)) {
                     runningWorkflows.remove(workflow.id)
                     stoppedWorkflows.remove(workflow.id)
-                    if(wasCancelled) {
+                    if (wasCancelled) {
                         ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id))
                     } else {
                         // 正常结束或Stop信号都视为Finished
@@ -262,83 +281,5 @@ object WorkflowExecutor {
         }
         // 将 Job 实例存入 map
         runningWorkflows[workflow.id] = job
-    }
-
-    /**
-     * 辅助函数：向前查找指定ID的积木块的起始位置。
-     * 这个函数是为在处理 LoopAction.END 和 Jump 信号时使用的。
-     * @param steps 步骤列表。
-     * @param startPosition 当前步骤的索引。
-     * @param targetIds 目标模块ID的集合。
-     * @return 找到的步骤索引，未找到则返回 -1。
-     */
-    private fun findBlockStartPosition(steps: List<ActionStep>, endPosition: Int, targetIds: Set<String>): Int {
-        val endModule = ModuleRegistry.getModule(steps.getOrNull(endPosition)?.moduleId ?: return -1)
-        val pairingId = endModule?.blockBehavior?.pairingId ?: return -1
-        var openBlocks = 1 // 从结束块开始，计数器为1
-
-        for (i in (endPosition - 1) downTo 0) {
-            val currentModule = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
-            if (currentModule.blockBehavior.pairingId == pairingId) {
-                when (currentModule.blockBehavior.type) {
-                    BlockType.BLOCK_END -> openBlocks++
-                    BlockType.BLOCK_START -> {
-                        openBlocks--
-                        if (openBlocks == 0 && targetIds.contains(currentModule.id)) return i
-                    }
-                    else -> {}
-                }
-            }
-        }
-        return -1
-    }
-
-    /**
-     * 辅助函数：查找当前执行点所在的最近的循环块的配对ID。
-     * 这个函数专门为处理 Break 信号而设计，它从当前位置向前查找最近的循环块的起始点。
-     */
-    private fun findCurrentLoopPairingId(steps: List<ActionStep>, position: Int): String? {
-        var openCount = 0
-        for (i in position downTo 0) {
-            val module = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
-            val behavior = module.blockBehavior
-            val isLoopBlock = behavior.pairingId == LOOP_PAIRING_ID || behavior.pairingId == WHILE_PAIRING_ID
-
-            if (isLoopBlock) {
-                if (behavior.type == BlockType.BLOCK_END) {
-                    openCount++
-                } else if (behavior.type == BlockType.BLOCK_START) {
-                    if (openCount == 0) {
-                        return behavior.pairingId // 找到最内层循环
-                    }
-                    openCount--
-                }
-            }
-        }
-        return null
-    }
-
-    /**
-     * 辅助函数：查找与给定起始块配对的结束块位置。
-     * 这个函数是为处理 Break 信号时，从找到的起始块配对ID，继续向后查找其对应的结束块位置。
-     */
-    private fun findEndBlockPosition(steps: List<ActionStep>, startPosition: Int, pairingId: String?): Int {
-        if (pairingId == null) return -1
-        var openBlocks = 1
-        for (i in (startPosition + 1) until steps.size) {
-            val module = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
-            val behavior = module.blockBehavior
-            if (behavior.pairingId == pairingId) {
-                when (behavior.type) {
-                    BlockType.BLOCK_START -> openBlocks++
-                    BlockType.BLOCK_END -> {
-                        openBlocks--
-                        if (openBlocks == 0) return i
-                    }
-                    else -> {}
-                }
-            }
-        }
-        return -1
     }
 }

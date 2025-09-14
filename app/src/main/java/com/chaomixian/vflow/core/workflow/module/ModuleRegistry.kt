@@ -62,6 +62,8 @@ object ModuleRegistry {
         register(EndIfModule())
         register(LoopModule())
         register(EndLoopModule())
+        register(ForEachModule())
+        register(EndForEachModule())
         register(JumpModule())
         register(WhileModule())
         register(EndWhileModule())
@@ -76,7 +78,6 @@ object ModuleRegistry {
         register(GetVariableModule())
         register(CalculationModule())
         register(TextProcessingModule())
-        register(SetVariableModule()) // 即将移除
 
         // 文件
         register(ImportImageModule())

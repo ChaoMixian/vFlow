@@ -14,9 +14,6 @@ import com.chaomixian.vflow.core.module.ListVariable
 import com.chaomixian.vflow.core.module.DictionaryVariable
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import java.util.regex.Pattern
-import kotlin.math.max
-import kotlin.math.min
 
 // --- 常量定义保持不变 ---
 const val IF_PAIRING_ID = "if"
@@ -52,7 +49,7 @@ val OPERATORS_REQUIRING_ONE_INPUT = setOf(
     OP_STARTS_WITH, OP_ENDS_WITH, OP_MATCHES_REGEX,
     OP_NUM_EQ, OP_NUM_NEQ, OP_NUM_GT, OP_NUM_GTE, OP_NUM_LT, OP_NUM_LTE
 )
-// 需要两个额外输入值的操作符 (例如 \"介于\")
+// 需要两个额外输入值的操作符 (例如 "介于")
 val OPERATORS_REQUIRING_TWO_INPUTS = setOf(OP_NUM_BETWEEN)
 
 // 不同数据类型支持的操作符列表
@@ -65,7 +62,7 @@ val OPERATORS_FOR_COLLECTION = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY)
 val ALL_OPERATORS = (OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT + OPERATORS_FOR_NUMBER + OPERATORS_FOR_BOOLEAN + OPERATORS_FOR_COLLECTION).distinct()
 
 /**
- * \"如果\" (If) 模块，逻辑块的起点。
+ * "如果" (If) 模块，逻辑块的起点。
  * 根据条件判断结果，决定执行流程。
  */
 class IfModule : BaseBlockModule() {
@@ -100,7 +97,7 @@ class IfModule : BaseBlockModule() {
             dynamicInputs.add(staticInputs.first { it.id == "value1" })
         } else if (OPERATORS_REQUIRING_TWO_INPUTS.contains(selectedOperator)) {
             val originalValue1Def = staticInputs.first { it.id == "value1" }
-            // \"介于\" 操作需要两个数字输入，调整第一个比较值的类型
+            // "介于" 操作需要两个数字输入，调整第一个比较值的类型
             val newNumberValue1Def = originalValue1Def.copy(
                 staticType = ParameterType.NUMBER,
                 acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
@@ -245,12 +242,14 @@ class IfModule : BaseBlockModule() {
         val value1 = context.magicVariables["value1"] ?: context.variables["value1"]
         val value2 = context.magicVariables["value2"] ?: context.variables["value2"]
 
-        val result = evaluateCondition(input1, operator, value1, value2)
+        // [修改] 使用 ConditionEvaluator
+        val result = ConditionEvaluator.evaluateCondition(input1, operator, value1, value2)
         onProgress(ProgressUpdate("条件判断: $result (操作: $operator)"))
 
         // 如果条件不为真，则跳转到 Else 或 EndIf
         if (!result) {
-            val jumpTo = findNextBlockPosition(
+            // 使用 BlockNavigator
+            val jumpTo = BlockNavigator.findNextBlockPosition(
                 context.allSteps,
                 context.currentStepIndex,
                 setOf(ELSE_ID, IF_END_ID) // 可能的跳转目标
@@ -262,137 +261,12 @@ class IfModule : BaseBlockModule() {
         return ExecutionResult.Success(mapOf("result" to BooleanVariable(result)))
     }
 
-    /** 根据输入、操作符和比较值评估条件。 */
-    private fun evaluateCondition(input1: Any?, operator: String, value1: Any?, value2: Any?): Boolean {
-        when (operator) {
-            OP_EXISTS -> return input1 != null
-            OP_NOT_EXISTS -> return input1 == null
-        }
-        if (input1 == null) return false // 对于其他操作符，主输入为null则条件不成立
-
-        // 根据主输入的数据类型，调用相应的评估函数
-        return when (input1) {
-            is TextVariable, is String -> evaluateTextCondition(input1.toStringValue(), operator, value1)
-            is BooleanVariable, is Boolean -> evaluateBooleanCondition(input1.toBooleanValue(), operator)
-            is ListVariable, is Collection<*> -> evaluateCollectionCondition(input1, operator)
-            is DictionaryVariable, is Map<*, *> -> evaluateMapCondition(input1, operator)
-            is NumberVariable, is Number -> {
-                val value = input1.toDoubleValue() ?: return false // 数字转换失败则条件不成立
-                evaluateNumberCondition(value, operator, value1, value2)
-            }
-            is ScreenElement -> {
-                val text = input1.text ?: return false // 屏幕元素无文本则条件不成立 (除非是EXISTS/NOT_EXISTS)
-                evaluateTextCondition(text, operator, value1)
-            }
-            else -> false
-        }
-    }
-
-    /** 评估文本相关条件。 */
-    private fun evaluateTextCondition(text1: String, operator: String, value1: Any?): Boolean {
-        val text2 = value1.toStringValue() // 获取比较值文本
-        return when (operator) {
-            OP_IS_EMPTY -> text1.isEmpty()
-            OP_IS_NOT_EMPTY -> text1.isNotEmpty()
-            OP_TEXT_EQUALS -> text1.equals(text2, ignoreCase = true)
-            OP_TEXT_NOT_EQUALS -> !text1.equals(text2, ignoreCase = true)
-            OP_CONTAINS -> text1.contains(text2, ignoreCase = true)
-            OP_NOT_CONTAINS -> !text1.contains(text2, ignoreCase = true)
-            OP_STARTS_WITH -> text1.startsWith(text2, ignoreCase = true)
-            OP_ENDS_WITH -> text1.endsWith(text2, ignoreCase = true)
-            OP_MATCHES_REGEX -> try { Pattern.compile(text2).matcher(text1).find() } catch (e: Exception) { false }
-            else -> false
-        }
-    }
-
-    /** 评估数字相关条件。 */
-    private fun evaluateNumberCondition(num1: Double, operator: String, value1: Any?, value2: Any?): Boolean {
-        val num2 = value1.toDoubleValue() // 获取第一个比较值
-        if (operator == OP_NUM_BETWEEN) { // \"介于\" 操作
-            val num3 = value2.toDoubleValue() // 获取第二个比较值
-            if (num2 == null || num3 == null) return false // 比较值无效则条件不成立
-            val minVal = min(num2, num3)
-            val maxVal = max(num2, num3)
-            return num1 >= minVal && num1 <= maxVal
-        }
-        if (num2 == null) return false // 其他数字操作，第一个比较值无效则不成立
-        return when (operator) {
-            OP_NUM_EQ -> num1 == num2
-            OP_NUM_NEQ -> num1 != num2
-            OP_NUM_GT -> num1 > num2
-            OP_NUM_GTE -> num1 >= num2
-            OP_NUM_LT -> num1 < num2
-            OP_NUM_LTE -> num1 <= num2
-            else -> false
-        }
-    }
-
-    /** 评估布尔相关条件。 */
-    private fun evaluateBooleanCondition(bool1: Boolean, operator: String): Boolean {
-        return when (operator) {
-            OP_IS_TRUE -> bool1
-            OP_IS_FALSE -> !bool1
-            else -> false
-        }
-    }
-
-    /** 评估集合（列表、字典）相关条件。 */
-    private fun evaluateCollectionCondition(col1: Any, operator: String): Boolean {
-        val size = when(col1) {
-            is ListVariable -> col1.value.size
-            is Collection<*> -> col1.size
-            else -> -1 //无法获取大小
-        }
-        return when (operator) {
-            OP_IS_EMPTY -> size == 0
-            OP_IS_NOT_EMPTY -> size > 0
-            else -> false
-        }
-    }
-
-    /** 评估字典（Map）相关条件。 */
-    private fun evaluateMapCondition(map1: Any, operator: String): Boolean {
-        val size = when(map1) {
-            is DictionaryVariable -> map1.value.size
-            is Map<*,*> -> map1.size
-            else -> -1 //无法获取大小
-        }
-        return when (operator) {
-            OP_IS_EMPTY -> size == 0
-            OP_IS_NOT_EMPTY -> size > 0
-            else -> false
-        }
-    }
-
-    // --- 类型转换辅助函数 ---
-    /** 将任意类型安全转换为字符串。 */
-    private fun Any?.toStringValue(): String {
-        return when(this) {
-            is TextVariable -> this.value
-            else -> this?.toString() ?: ""
-        }
-    }
-    /** 将任意类型安全转换为 Double?。 */
-    private fun Any?.toDoubleValue(): Double? {
-        return when(this) {
-            is NumberVariable -> this.value
-            is Number -> this.toDouble()
-            is String -> this.toDoubleOrNull()
-            else -> null
-        }
-    }
-    /** 将任意类型安全转换为布尔值。 */
-    private fun Any?.toBooleanValue(): Boolean {
-        return when(this) {
-            is BooleanVariable -> this.value
-            is Boolean -> this
-            else -> false // 默认转换为 false
-        }
-    }
+    private val BaseBlockModule.actionSteps: List<ActionStep>
+        get() = emptyList()
 }
 
 /**
- * \"否则\" (Else) 模块，If 逻辑块的中间部分。
+ * "否则" (Else) 模块，If 逻辑块的中间部分。
  */
 class ElseModule : BaseModule() {
     override val id = ELSE_ID
@@ -408,7 +282,8 @@ class ElseModule : BaseModule() {
 
         if (ifOutput == true) { // 如果 If 条件为真，跳过 Else 块
             onProgress(ProgressUpdate("如果条件为真，跳过否则块。"))
-            val jumpTo = findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(IF_END_ID))
+            // 使用 BlockNavigator
+            val jumpTo = BlockNavigator.findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(IF_END_ID))
             if (jumpTo != -1) {
                 return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
             }
@@ -435,7 +310,7 @@ class ElseModule : BaseModule() {
 }
 
 /**
- * \"结束如果\" (EndIf) 模块，If 逻辑块的结束点。
+ * "结束如果" (EndIf) 模块，If 逻辑块的结束点。
  */
 class EndIfModule : BaseModule() {
     override val id = IF_END_ID
@@ -444,39 +319,3 @@ class EndIfModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束如果"
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit) = ExecutionResult.Success() // EndIf 模块本身不执行特殊逻辑
 }
-
-/**
- * 辅助函数：查找下一个积木块中特定类型的步骤位置（例如 Else 或 EndIf）。
- * @param steps 步骤列表。
- * @param startPosition 当前步骤的索引。
- * @param targetIds 目标模块ID的集合。
- * @return 找到的步骤索引，未找到则返回 -1。
- */
-fun findNextBlockPosition(steps: List<ActionStep>, startPosition: Int, targetIds: Set<String>): Int {
-    val startModule = ModuleRegistry.getModule(steps.getOrNull(startPosition)?.moduleId ?: return -1)
-    val pairingId = startModule?.blockBehavior?.pairingId ?: return -1 // 获取当前块的配对ID
-    var openBlocks = 1 // 嵌套块计数器，从当前块开始
-
-    for (i in (startPosition + 1) until steps.size) {
-        val currentModule = ModuleRegistry.getModule(steps[i].moduleId)
-        if (currentModule?.blockBehavior?.pairingId == pairingId) { // 只关心同一配对ID的模块
-            when (currentModule.blockBehavior.type) {
-                BlockType.BLOCK_START -> openBlocks++ // 遇到嵌套的开始块，增加计数
-                BlockType.BLOCK_END -> {
-                    openBlocks-- // 遇到结束块，减少计数
-                    // 如果计数归零且是目标ID之一，则找到
-                    if (openBlocks == 0 && targetIds.contains(currentModule.id)) return i 
-                }
-                BlockType.BLOCK_MIDDLE -> {
-                    // 如果是中间块（如Else），且当前嵌套层级为1（即当前块的直接子块），且是目标ID之一，则找到
-                    if (openBlocks == 1 && targetIds.contains(currentModule.id)) return i
-                }
-                else -> {} // 其他类型（NONE）不影响计数
-            }
-        }
-    }
-    return -1 // 未找到目标
-}
-
-private val BaseBlockModule.actionSteps: List<ActionStep>
-    get() = emptyList()

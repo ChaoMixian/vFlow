@@ -22,7 +22,7 @@ class CreateVariableModule : BaseModule() {
         iconRes = R.drawable.rounded_add_24,
         category = "数据"
     )
-    private val typeOptions = listOf("文本", "数字", "布尔", "字典", "图像")
+    private val typeOptions = listOf("文本", "数字", "布尔", "字典", "列表", "图像")
     override val uiProvider: ModuleUIProvider? = VariableModuleUIProvider(typeOptions)
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -58,6 +58,7 @@ class CreateVariableModule : BaseModule() {
             "数字" -> NumberVariable.TYPE_NAME
             "布尔" -> BooleanVariable.TYPE_NAME
             "字典" -> DictionaryVariable.TYPE_NAME
+            "列表" -> ListVariable.TYPE_NAME
             "图像" -> ImageVariable.TYPE_NAME
             else -> TextVariable.TYPE_NAME
         }
@@ -70,7 +71,18 @@ class CreateVariableModule : BaseModule() {
         val value = step.parameters["value"]
         val inputs = getInputs()
 
-        val valuePill = PillUtil.createPillFromParam(value, inputs.find { it.id == "value" })
+        // 为列表类型提供特殊的摘要显示，同时处理 List 和 String 两种情况
+        val valuePill = if (type == "列表") {
+            val listSize = when (value) {
+                is List<*> -> value.size
+                is String -> value.lines().count { it.isNotEmpty() }
+                else -> 0
+            }
+            PillUtil.Pill("[$listSize 项]", isVariable = false, parameterId = "value")
+        } else {
+            PillUtil.createPillFromParam(value, inputs.find { it.id == "value" })
+        }
+
 
         return if (name.isNullOrBlank()) {
             PillUtil.buildSpannable(context, "创建匿名变量 (", type, ") 为 ", valuePill)
@@ -117,7 +129,7 @@ class CreateVariableModule : BaseModule() {
         val rawValue = context.magicVariables["value"] ?: context.variables["value"]
         val variableName = context.variables["variableName"] as? String
 
-        // 根据类型和输入值创建对应的变量对象
+        // 增加列表变量的创建逻辑
         val variable: Parcelable = when (type) {
             "数字" -> {
                 val numValue = when (rawValue) {
@@ -136,6 +148,14 @@ class CreateVariableModule : BaseModule() {
                 }
             )
             "字典" -> DictionaryVariable((rawValue as? Map<*, *>)?.mapKeys { it.key.toString() } ?: emptyMap())
+            "列表" -> {
+                val list = when (rawValue) {
+                    is List<*> -> rawValue
+                    is String -> rawValue.lines().filter { it.isNotEmpty() } // 从多行文本解析
+                    else -> emptyList()
+                }
+                ListVariable(list)
+            }
             "图像" -> ImageVariable(rawValue?.toString() ?: "")
             else -> TextVariable(rawValue?.toString() ?: "")
         }
