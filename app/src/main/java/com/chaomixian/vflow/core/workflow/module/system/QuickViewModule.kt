@@ -42,8 +42,12 @@ class QuickViewModule : BaseModule() {
         )
     )
 
-    // 此模块不产生任何输出
-    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
+    /**
+     * 增加 success 输出以保持统一。
+     */
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
+        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+    )
 
     /**
      * 生成模块摘要。
@@ -58,6 +62,7 @@ class QuickViewModule : BaseModule() {
 
     /**
      * 执行模块逻辑。
+     * 现在会输出一个布尔值表示操作是否成功完成。
      */
     override suspend fun execute(
         context: ExecutionContext,
@@ -71,7 +76,7 @@ class QuickViewModule : BaseModule() {
 
         onProgress(ProgressUpdate("正在显示内容..."))
 
-        // **核心修改**：检查内容是否为图片变量
+        // 检查内容是否为图片变量
         if (content is ImageVariable) {
             // 如果是图片，调用专门显示图片的服务
             uiService.showQuickViewImage("快速查看", content.uri)
@@ -91,6 +96,7 @@ class QuickViewModule : BaseModule() {
         }
 
         onProgress(ProgressUpdate("用户已关闭查看窗口"))
-        return ExecutionResult.Success()
+        // 返回成功结果
+        return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
     }
 }

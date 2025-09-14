@@ -36,8 +36,13 @@ class ShareModule : BaseModule() {
         )
     )
 
-    // 此模块不直接产生输出
-    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
+    /**
+     * 增加 success 输出以保持统一。
+     */
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
+        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+    )
+
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val contentPill = PillUtil.createPillFromParam(
@@ -49,6 +54,7 @@ class ShareModule : BaseModule() {
 
     /**
      * 执行分享操作。
+     * 现在会输出一个布尔值表示操作是否成功启动。
      */
     override suspend fun execute(
         context: ExecutionContext,
@@ -72,9 +78,11 @@ class ShareModule : BaseModule() {
 
         if (success == true) {
             onProgress(ProgressUpdate("分享窗口已弹出"))
-            return ExecutionResult.Success()
         } else {
-            return ExecutionResult.Failure("分享失败", "无法启动分享操作。")
+            onProgress(ProgressUpdate("分享操作未能成功启动或被取消"))
         }
+
+        // 无论成功与否，都通过 success 输出返回结果
+        return ExecutionResult.Success(mapOf("success" to BooleanVariable(success ?: false)))
     }
 }

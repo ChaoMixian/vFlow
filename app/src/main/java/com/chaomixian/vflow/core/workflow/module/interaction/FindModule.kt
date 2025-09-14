@@ -98,6 +98,7 @@ class FindTextModule : BaseModule() {
 
     /**
      * 根据选择的输出格式，动态定义模块的输出参数。
+     * 新增“数量”和“所有结果”输出，并将原始结果重命名为“第一个结果”。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val format = step?.parameters?.get("outputFormat") as? String ?: "元素"
@@ -106,13 +107,22 @@ class FindTextModule : BaseModule() {
             ConditionalOption("存在", "存在"),
             ConditionalOption("不存在", "不存在")
         )
-        // 根据输出格式确定输出参数的类型和名称
-        return when (format) {
-            "坐标" -> listOf(OutputDefinition("result", "坐标", Coordinate.TYPE_NAME, conditions))
-            "视图ID" -> listOf(OutputDefinition("result", "视图ID", TextVariable.TYPE_NAME, conditions))
-            else -> listOf(OutputDefinition("result", "找到的元素", ScreenElement.TYPE_NAME, conditions)) // 默认为元素
+
+        // 根据输出格式确定主结果的类型
+        val resultTypeName = when (format) {
+            "坐标" -> Coordinate.TYPE_NAME
+            "视图ID" -> TextVariable.TYPE_NAME
+            else -> ScreenElement.TYPE_NAME
         }
+
+        // 定义所有输出
+        return listOf(
+            OutputDefinition("first_result", "第一个结果", resultTypeName, conditions),
+            OutputDefinition("all_results", "所有结果", ListVariable.TYPE_NAME, conditions),
+            OutputDefinition("count", "结果数量", NumberVariable.TYPE_NAME, conditions)
+        )
     }
+
 
     /**
      * 生成在工作流编辑器中显示模块摘要的文本。
@@ -148,6 +158,7 @@ class FindTextModule : BaseModule() {
 
     /**
      * 执行查找文本的核心逻辑。
+     * 现在会同时输出第一个结果、所有结果的列表以及结果数量。
      */
     override suspend fun execute(
         context: ExecutionContext,
@@ -172,34 +183,41 @@ class FindTextModule : BaseModule() {
         try {
             val matchModeStr = context.variables["matchMode"] as? String ?: "完全匹配"
             onProgress(ProgressUpdate("正在以 [${matchModeStr}] 模式查找文本: '$targetText'"))
-            // 查找匹配文本的节点列表
+
             val nodes = findNodesByText(rootNode, targetText, matchModeStr)
+            val count = nodes.size
+            val outputFormat = context.variables["outputFormat"] as? String ?: "元素"
+            val outputs = mutableMapOf<String, Any?>()
+
+            outputs["count"] = NumberVariable(count.toDouble())
 
             if (nodes.isEmpty()) {
                 onProgress(ProgressUpdate("未在屏幕上找到匹配的文本。"))
-                return ExecutionResult.Success() // 未找到则成功返回，但不包含 result 输出
+                outputs["all_results"] = ListVariable(emptyList())
+                return ExecutionResult.Success(outputs)
             }
 
-            // 如果找到多个节点，默认使用第一个
-            val foundNode = nodes.first()
-            val bounds = Rect() // 用于存储找到节点的边界
-            foundNode.getBoundsInScreen(bounds)
-
-            // 根据选择的输出格式，构造输出结果
-            val outputFormat = context.variables["outputFormat"] as? String ?: "元素"
-            val output: Parcelable = when (outputFormat) {
-                "坐标" -> Coordinate(bounds.centerX(), bounds.centerY()) // 输出中心坐标
-                "视图ID" -> TextVariable(foundNode.viewIdResourceName ?: "") // 输出视图ID，如果不存在则为空字符串
-                else -> ScreenElement( // 默认输出屏幕元素对象
-                    bounds = bounds,
-                    text = foundNode.text?.toString() ?: foundNode.contentDescription?.toString()
-                )
+            // 转换所有节点为所需的输出格式
+            val allResultsList = nodes.map { node ->
+                val bounds = Rect()
+                node.getBoundsInScreen(bounds)
+                when (outputFormat) {
+                    "坐标" -> Coordinate(bounds.centerX(), bounds.centerY())
+                    "视图ID" -> TextVariable(node.viewIdResourceName ?: "")
+                    else -> ScreenElement(
+                        bounds = bounds,
+                        text = node.text?.toString() ?: node.contentDescription?.toString()
+                    )
+                }
             }
+
+            outputs["all_results"] = ListVariable(allResultsList)
+            outputs["first_result"] = allResultsList.first()
 
             // 回收所有在 findNodesByText 中获取的节点副本
             nodes.forEach { it.recycle() }
 
-            return ExecutionResult.Success(outputs = mapOf("result" to output))
+            return ExecutionResult.Success(outputs)
         } catch (e: Exception) {
             return ExecutionResult.Failure("执行异常", e.localizedMessage ?: "发生了未知错误")
         } finally {
@@ -207,6 +225,7 @@ class FindTextModule : BaseModule() {
             rootNode.recycle()
         }
     }
+
 
     /**
      * 根据文本内容和匹配模式在给定的根节点下查找 AccessibilityNodeInfo 节点列表。
