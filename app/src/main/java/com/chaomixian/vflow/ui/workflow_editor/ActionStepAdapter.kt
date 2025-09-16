@@ -207,7 +207,6 @@ class ActionStepAdapter(
         }
     }
 }
-// ... (PillUtil 和 RoundedBackgroundSpan 的代码不变，这里省略以保持清晰)
 
 /**
  * 参数药丸 (Pill) UI 工具类。
@@ -286,6 +285,7 @@ object PillUtil {
         "逻辑控制" -> R.color.category_logic
         "数据" -> R.color.category_data
         "文件" -> R.color.category_file
+        "网络" -> R.color.category_network
         "应用与系统" -> R.color.category_system
         "Shizuku" -> R.color.category_shizuku
         else -> com.google.android.material.R.color.material_dynamic_neutral30

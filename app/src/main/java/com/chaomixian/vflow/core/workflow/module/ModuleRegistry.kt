@@ -4,6 +4,7 @@ import com.chaomixian.vflow.core.workflow.module.data.*
 import com.chaomixian.vflow.core.workflow.module.file.*
 import com.chaomixian.vflow.core.workflow.module.interaction.*
 import com.chaomixian.vflow.core.workflow.module.logic.*
+import com.chaomixian.vflow.core.workflow.module.network.*
 import com.chaomixian.vflow.core.workflow.module.shizuku.*
 import com.chaomixian.vflow.core.workflow.module.system.*
 import com.chaomixian.vflow.core.workflow.module.triggers.*
@@ -34,9 +35,10 @@ object ModuleRegistry {
                     "逻辑控制" -> 2
                     "数据" -> 3
                     "文件" -> 4
-                    "应用与系统" -> 5
-                    "Shizuku" -> 6
-                    "模板" -> 7
+                    "网络" -> 5
+                    "应用与系统" -> 6
+                    "Shizuku" -> 7
+                    "模板" -> 8
                     else -> 99
                 }
             })
@@ -85,6 +87,10 @@ object ModuleRegistry {
         register(AdjustImageModule())
         register(RotateImageModule())
         register(ApplyMaskModule())
+
+        // 网络
+        register(GetIpAddressModule())
+        register(HttpRequestModule())
 
         // 应用与系统
         register(DelayModule())
