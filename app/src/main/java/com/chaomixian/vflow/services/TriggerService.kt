@@ -24,6 +24,8 @@ import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.AppStartTriggerHandler
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.ITriggerHandler
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.KeyEventTriggerHandler
+// [新增] 导入 TriggerHandlerRegistry
+import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -56,6 +58,7 @@ class TriggerService : Service() {
         // 让服务变得自给自足，无论应用进程是否存活，都能正确初始化所有依赖项。
         // 这可以修复在后台被杀后触发工作流导致的 UninitializedPropertyAccessException 崩溃。
         ModuleRegistry.initialize()
+        TriggerHandlerRegistry.initialize() // [新增] 确保服务独立运行时也能初始化注册表
         ExecutionNotificationManager.initialize(this)
         LogManager.initialize(applicationContext)
         ExecutionLogger.initialize(applicationContext, serviceScope) // 使用服务的协程作用域
@@ -95,12 +98,22 @@ class TriggerService : Service() {
         return START_STICKY
     }
 
+    /**
+     * 此方法现在从 TriggerHandlerRegistry 动态加载处理器，而不是硬编码。
+     */
     private fun registerAndStartHandlers() {
-        triggerHandlers[KeyEventTriggerModule().id] = KeyEventTriggerHandler()
-        triggerHandlers[AppStartTriggerModule().id] = AppStartTriggerHandler()
+        triggerHandlers.clear()
+        // 从注册表获取所有已注册的处理器工厂
+        val factories = TriggerHandlerRegistry.getAllHandlerFactories()
+        factories.forEach { (triggerId, factory) ->
+            // 通过工厂函数创建处理器实例
+            val handler = factory()
+            triggerHandlers[triggerId] = handler
+        }
         // 启动所有处理器
         triggerHandlers.values.forEach { it.start(this) }
     }
+
 
     /**
      * 在服务首次启动时，加载所有已启用的工作流。
@@ -157,7 +170,7 @@ class TriggerService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         triggerHandlers.values.forEach { it.stop(this) }
-        // [核心修改] 服务销毁时，取消协程作用域
+        // 服务销毁时，取消协程作用域
         serviceScope.cancel()
         Log.d(TAG, "TriggerService 已销毁。")
     }

@@ -18,6 +18,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.ExecutionLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ShizukuManager
 import com.chaomixian.vflow.services.TriggerService
@@ -44,6 +45,7 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ModuleRegistry.initialize() // 初始化模块注册表
+        TriggerHandlerRegistry.initialize() // 初始化触发器处理器注册表
         ExecutionNotificationManager.initialize(this) // 初始化通知管理器
         // 初始化日志管理器和执行监听器
         LogManager.initialize(applicationContext)
@@ -73,7 +75,7 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * [修复] Activity 启动时，如果尚未应用边衬区，则应用它们。
+     * Activity 启动时，如果尚未应用边衬区，则应用它们。
      * 将逻辑放在 onStart 可以确保 Fragment 的 View 已经创建。
      */
     override fun onStart() {
@@ -88,7 +90,7 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * [修复] 应用窗口边衬区到 AppBar、底部导航和 Fragment 容器。
+     * 应用窗口边衬区到 AppBar、底部导航和 Fragment 容器。
      * @param appBar AppBarLayout 视图。
      * @param bottomNav BottomNavigationView 视图。
      * @param fragmentContainer Fragment 容器视图。
