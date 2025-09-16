@@ -1,6 +1,8 @@
+// 文件: main/java/com/chaomixian/vflow/permissions/PermissionManager.kt
 package com.chaomixian.vflow.permissions
 
 import android.Manifest
+import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -81,6 +83,14 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
+    // 定义精确闹钟权限
+    val EXACT_ALARM = Permission(
+        id = "vflow.permission.SCHEDULE_EXACT_ALARM",
+        name = "闹钟和提醒",
+        description = "用于“定时触发”功能，确保工作流可以在精确的时间被唤醒和执行。",
+        type = PermissionType.SPECIAL
+    )
+
 
     /**
      * 获取单个权限的当前状态。
@@ -106,6 +116,15 @@ object PermissionManager {
                     pm.isIgnoringBatteryOptimizations(context.packageName)
                 } else {
                     true // 6.0以下版本无此限制
+                }
+            }
+            // 检查精确闹钟权限
+            EXACT_ALARM.id -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                    alarmManager.canScheduleExactAlarms()
+                } else {
+                    true // Android 12 以下版本默认授予
                 }
             }
             NOTIFICATIONS.id -> {

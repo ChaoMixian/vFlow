@@ -52,6 +52,7 @@ object ModuleRegistry {
         register(ReceiveShareTriggerModule())
         register(AppStartTriggerModule())
         register(KeyEventTriggerModule())
+        register(TimeTriggerModule())
 
         // 界面交互
         register(FindTextModule())

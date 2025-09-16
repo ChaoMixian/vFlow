@@ -1,4 +1,4 @@
-// 文件: PermissionActivity.kt
+// 文件: main/java/com/chaomixian/vflow/permissions/PermissionActivity.kt
 // 描述: 权限请求 Activity，用于向用户请求工作流或应用所需的各项权限。
 
 package com.chaomixian.vflow.permissions
@@ -134,13 +134,16 @@ class PermissionActivity : BaseActivity() {
                     PermissionManager.OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
                     } else null
-                    // [修复] 添加对 WRITE_SETTINGS 权限的处理
                     PermissionManager.WRITE_SETTINGS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))
                     } else null
                     // 添加对电池优化权限的处理
                     PermissionManager.IGNORE_BATTERY_OPTIMIZATIONS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
+                    } else null
+                    // 添加对精确闹钟权限的处理
+                    PermissionManager.EXACT_ALARM.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
                     } else null
                     else -> null
                 }

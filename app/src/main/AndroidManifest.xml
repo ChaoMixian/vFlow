@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:shizuku="http://schemas.android.com/apk/res-auto">
 
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -122,6 +124,10 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".services.TimeTriggerReceiver"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

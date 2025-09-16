@@ -6,6 +6,7 @@ package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
+import com.chaomixian.vflow.core.workflow.module.triggers.TimeTriggerModule
 
 /**
  * 触发器处理器注册表。
@@ -28,6 +29,7 @@ object TriggerHandlerRegistry {
         // 在这里注册所有可用的触发器处理器
         register(KeyEventTriggerModule().id) { KeyEventTriggerHandler() }
         register(AppStartTriggerModule().id) { AppStartTriggerHandler() }
+        register(TimeTriggerModule().id) { TimeTriggerHandler() }
 
     }
 
