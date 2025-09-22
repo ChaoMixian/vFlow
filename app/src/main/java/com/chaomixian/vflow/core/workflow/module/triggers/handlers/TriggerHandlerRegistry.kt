@@ -4,9 +4,7 @@
 // 就不考虑在内。
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
-import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
-import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
-import com.chaomixian.vflow.core.workflow.module.triggers.TimeTriggerModule
+import com.chaomixian.vflow.core.workflow.module.triggers.*
 
 /**
  * 触发器处理器注册表。
@@ -30,6 +28,7 @@ object TriggerHandlerRegistry {
         register(KeyEventTriggerModule().id) { KeyEventTriggerHandler() }
         register(AppStartTriggerModule().id) { AppStartTriggerHandler() }
         register(TimeTriggerModule().id) { TimeTriggerHandler() }
+        register(BatteryTriggerModule().id) { BatteryTriggerHandler() }
 
     }
 

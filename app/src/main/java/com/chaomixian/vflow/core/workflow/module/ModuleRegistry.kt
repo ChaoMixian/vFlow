@@ -53,6 +53,7 @@ object ModuleRegistry {
         register(AppStartTriggerModule())
         register(KeyEventTriggerModule())
         register(TimeTriggerModule())
+        register(BatteryTriggerModule())
 
         // 界面交互
         register(FindTextModule())
