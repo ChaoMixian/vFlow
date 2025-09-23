@@ -38,6 +38,13 @@ class PermissionActivity : BaseActivity() {
             // 回调后不需要做特殊处理，onResume会统一刷新
         }
 
+    // 专门用于请求多个权限
+    private val requestMultiplePermissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            // 收到结果后，onResume 会刷新状态
+        }
+
+
     private val appSettingsLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             // 从设置页面返回后，不需要做特殊处理，onResume会统一刷新
@@ -110,23 +117,21 @@ class PermissionActivity : BaseActivity() {
         continueButton.isEnabled = allGranted
     }
 
+    /**
+     * 重写权限请求逻辑，正确处理所有运行时权限
+     */
     private fun requestPermission(permission: Permission) {
         when (permission.type) {
             PermissionType.RUNTIME -> {
-                // 智能判断需要请求的具体权限
-                var permissionToRequest = permission.id
-                // 如果是我们定义的“存储权限”，并且系统版本是 Android 13 或更高
-                if (permission.id == Manifest.permission.READ_EXTERNAL_STORAGE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    // 那么实际要请求的权限是 READ_MEDIA_IMAGES
-                    permissionToRequest = Manifest.permission.READ_MEDIA_IMAGES
-                }
-                // 使用最终确定的权限ID来发起请求
-                requestPermissionLauncher.launch(permissionToRequest)
+                // 将所有运行时权限都通过 Launcher 发起请求
+                // 这样可以统一处理，避免遗漏
+                requestPermissionLauncher.launch(permission.id)
             }
             PermissionType.SPECIAL -> {
+                // 特殊权限需要跳转到系统设置页面
                 if (permission.id == PermissionManager.SHIZUKU.id) {
                     Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
-                    return // 直接返回，等待回调
+                    return
                 }
 
                 val intent = when(permission.id) {
@@ -151,6 +156,7 @@ class PermissionActivity : BaseActivity() {
             }
         }
     }
+
 
     private fun applyWindowInsets() {
         val appBar = findViewById<AppBarLayout>(R.id.app_bar_layout_permission)

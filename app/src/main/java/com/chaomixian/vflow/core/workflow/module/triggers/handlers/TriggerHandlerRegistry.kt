@@ -29,6 +29,7 @@ object TriggerHandlerRegistry {
         register(AppStartTriggerModule().id) { AppStartTriggerHandler() }
         register(TimeTriggerModule().id) { TimeTriggerHandler() }
         register(BatteryTriggerModule().id) { BatteryTriggerHandler() }
+        register(WifiTriggerModule().id) { WifiTriggerHandler() }
 
     }
 

@@ -67,6 +67,14 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
+    // 定义精确定位权限
+    val LOCATION = Permission(
+        id = Manifest.permission.ACCESS_FINE_LOCATION,
+        name = "精确定位",
+        description = "在部分安卓版本上，获取已保存的Wi-Fi列表需要此权限。",
+        type = PermissionType.RUNTIME
+    )
+
     // 定义 Shizuku 权限
     val SHIZUKU = Permission(
         id = "vflow.permission.SHIZUKU",

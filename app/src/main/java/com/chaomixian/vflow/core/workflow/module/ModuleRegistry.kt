@@ -54,6 +54,7 @@ object ModuleRegistry {
         register(KeyEventTriggerModule())
         register(TimeTriggerModule())
         register(BatteryTriggerModule())
+        register(WifiTriggerModule())
 
         // 界面交互
         register(FindTextModule())
