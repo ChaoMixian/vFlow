@@ -13,7 +13,7 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class WifiTriggerModule : BaseModule() {
     override val id = "vflow.trigger.wifi"
     override val metadata = ActionMetadata(
-        name = "Wi-Fi（损坏）",
+        name = "Wi-Fi触发",
         description = "当设备连接或断开Wi-Fi时触发工作流。",
         iconRes = R.drawable.rounded_android_wifi_3_bar_24,
         category = "触发器"
