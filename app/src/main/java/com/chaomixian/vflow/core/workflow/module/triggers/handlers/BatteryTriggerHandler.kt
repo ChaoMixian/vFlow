@@ -1,80 +1,141 @@
 // 文件路径: main/java/com/chaomixian/vflow/core/workflow/module/triggers/handlers/BatteryTriggerHandler.kt
+// 描述: 使用动态注册的 BroadcastReceiver 替换静态接收器，确保在后台能可靠接收电量变化事件。
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
-import android.content.ComponentName
+import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.pm.PackageManager
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.util.Log
+import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.services.BatteryTriggerReceiver
+import kotlinx.coroutines.launch
+import java.util.concurrent.CopyOnWriteArrayList
 
 class BatteryTriggerHandler : BaseTriggerHandler() {
 
+    private val listeningWorkflows = CopyOnWriteArrayList<Workflow>()
+    private var batteryReceiver: BroadcastReceiver? = null
+    // 将 lastBatteryPercentage 作为 Handler 的实例变量，确保状态持久
+    private var lastBatteryPercentage: Int = -1
+
     companion object {
         private const val TAG = "BatteryTriggerHandler"
+    }
 
-        /**
-         * 启用或禁用 BatteryTriggerReceiver 组件。
-         * @param context 上下文。
-         * @param enabled 是否启用。
-         */
-        private fun setReceiverState(context: Context, enabled: Boolean) {
-            val componentName = ComponentName(context, BatteryTriggerReceiver::class.java)
-            val newState = if (enabled) {
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            } else {
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            }
-            // 设置组件的启用状态
-            context.packageManager.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
-            Log.d(TAG, "BatteryTriggerReceiver state set to: $enabled")
+    override fun start(context: Context) {
+        super.start(context)
+        // 只有当存在活动的电池工作流时，才开始监听
+        if (hasActiveBatteryWorkflows()) {
+            registerBatteryReceiver(context)
+        }
+        Log.d(TAG, "BatteryTriggerHandler 已启动。")
+    }
+
+    override fun stop(context: Context) {
+        super.stop(context)
+        unregisterBatteryReceiver(context)
+        Log.d(TAG, "BatteryTriggerHandler 已停止。")
+    }
+
+    override fun addWorkflow(context: Context, workflow: Workflow) {
+        listeningWorkflows.removeAll { it.id == workflow.id }
+        listeningWorkflows.add(workflow)
+        Log.d(TAG, "已添加 '${workflow.name}'。监听数量: ${listeningWorkflows.size}")
+        // 如果这是第一个工作流，则启动监听
+        if (batteryReceiver == null) {
+            registerBatteryReceiver(context)
         }
     }
 
-    /**
-     * 检查当前是否存在任何已启用的电池触发工作流。
-     */
-    private fun hasActiveBatteryWorkflows(context: Context): Boolean {
-        // 直接从 WorkflowManager 获取最新数据进行判断
+    override fun removeWorkflow(context: Context, workflowId: String) {
+        if (listeningWorkflows.removeAll { it.id == workflowId }) {
+            Log.d(TAG, "已移除 workflowId: $workflowId。监听数量: ${listeningWorkflows.size}")
+            // 如果没有工作流需要监听了，就停止
+            if (listeningWorkflows.isEmpty()) {
+                unregisterBatteryReceiver(context)
+            }
+        }
+    }
+
+    private fun hasActiveBatteryWorkflows(): Boolean {
         return workflowManager.getAllWorkflows().any {
             it.isEnabled && it.triggerConfig?.get("type") == "vflow.trigger.battery"
         }
     }
 
-    override fun start(context: Context) {
-        super.start(context)
-        // 启动时, 根据当前是否存在活动的电池工作流来决定接收器的初始状态
-        setReceiverState(context, hasActiveBatteryWorkflows(context))
-        Log.d(TAG, "BatteryTriggerHandler started.")
+    private fun registerBatteryReceiver(context: Context) {
+        if (batteryReceiver != null) return
+        Log.d(TAG, "正在注册 BatteryReceiver...")
+
+        batteryReceiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                handleBatteryChange(ctx, intent)
+            }
+        }
+        // 使用粘性广播获取当前电量并初始化 lastBatteryPercentage
+        val initialIntent = context.registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        if (initialIntent != null) {
+            val level = initialIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = initialIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            if (level != -1 && scale != -1) {
+                lastBatteryPercentage = (level * 100 / scale.toFloat()).toInt()
+                Log.d(TAG, "BatteryReceiver 初始化，当前电量: $lastBatteryPercentage%")
+            }
+        }
     }
 
-    /**
-     * 当添加或启用一个工作流时，我们知道至少有一个工作流是活动的，
-     * 因此可以直接、无条件地启用接收器。
-     * @param context 应用上下文。
-     * @param workflow 新增的或被启用的工作流。
-     */
-    override fun addWorkflow(context: Context, workflow: Workflow) {
-        // 因为我们正在添加一个活动的电池工作流，所以直接启用接收器。
-        setReceiverState(context, true)
-        Log.d(TAG, "Added workflow '${workflow.name}', ensuring receiver is enabled.")
+    private fun unregisterBatteryReceiver(context: Context) {
+        batteryReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+                Log.d(TAG, "BatteryReceiver 已注销。")
+            } catch (e: Exception) {
+                Log.w(TAG, "注销 BatteryReceiver 时出错: ${e.message}")
+            } finally {
+                batteryReceiver = null
+                lastBatteryPercentage = -1 // 重置状态
+            }
+        }
     }
 
-    /**
-     * 当一个工作流被移除或禁用后, 再次评估是否还有其他的活动工作流。
-     * @param context 应用上下文。
-     * @param workflowId 被移除或禁用的工作流的ID。
-     */
-    override fun removeWorkflow(context: Context, workflowId: String) {
-        // 检查除了将要被移除的这一个之外，是否还存在其他任何已启用的电池工作流。
-        val hasOtherActive = workflowManager.getAllWorkflows().any {
-            it.id != workflowId && it.isEnabled && it.triggerConfig?.get("type") == "vflow.trigger.battery"
+    private fun handleBatteryChange(context: Context, intent: Intent) {
+        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        if (level == -1 || scale == -1) return
+
+        val currentPercentage = (level * 100 / scale.toFloat()).toInt()
+
+        if (lastBatteryPercentage == -1) {
+            lastBatteryPercentage = currentPercentage
+            return
         }
 
-        // 如果没有其他活动的电池工作流了，就禁用接收器以节省资源。
-        if (!hasOtherActive) {
-            setReceiverState(context, false)
-            Log.d(TAG, "Removed last active battery workflow, disabling receiver.")
+        if (currentPercentage == lastBatteryPercentage) return
+
+        Log.d(TAG, "电量从 $lastBatteryPercentage% 变化到 $currentPercentage%")
+        val previousPercentage = lastBatteryPercentage
+        lastBatteryPercentage = currentPercentage
+
+        triggerScope.launch {
+            listeningWorkflows.forEach { workflow ->
+                val config = workflow.triggerConfig ?: return@forEach
+                val threshold = (config["level"] as? Number)?.toInt() ?: return@forEach
+                val condition = config["above_or_below"] as? String ?: return@forEach
+
+                // 检查是否跨越了阈值
+                val shouldTrigger = when (condition) {
+                    "below" -> previousPercentage >= threshold && currentPercentage < threshold
+                    "above" -> previousPercentage <= threshold && currentPercentage > threshold
+                    else -> false
+                }
+
+                if (shouldTrigger) {
+                    Log.i(TAG, "条件满足, 触发工作流: ${workflow.name} (电量 $currentPercentage% $condition $threshold%)")
+                    WorkflowExecutor.execute(workflow, context.applicationContext)
+                }
+            }
         }
     }
 }

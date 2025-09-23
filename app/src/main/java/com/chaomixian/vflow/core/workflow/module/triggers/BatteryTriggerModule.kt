@@ -11,7 +11,7 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class BatteryTriggerModule : BaseModule() {
     override val id = "vflow.trigger.battery"
     override val metadata = ActionMetadata(
-        name = "电量触发（损坏）",
+        name = "电量触发",
         description = "当电池电量满足特定条件时触发工作流。",
         iconRes = R.drawable.rounded_battery_android_frame_full_24,
         category = "触发器"
