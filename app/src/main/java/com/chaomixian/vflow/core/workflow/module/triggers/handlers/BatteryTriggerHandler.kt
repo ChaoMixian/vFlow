@@ -1,5 +1,5 @@
 // 文件路径: main/java/com/chaomixian/vflow/core/workflow/module/triggers/handlers/BatteryTriggerHandler.kt
-// 描述: 使用动态注册的 BroadcastReceiver 替换静态接收器，确保在后台能可靠接收电量变化事件。
+// 描述: 继承自 ListeningTriggerHandler，代码更简洁，职责更单一。
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.BroadcastReceiver
@@ -9,13 +9,10 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
-import com.chaomixian.vflow.core.workflow.model.Workflow
 import kotlinx.coroutines.launch
-import java.util.concurrent.CopyOnWriteArrayList
 
-class BatteryTriggerHandler : BaseTriggerHandler() {
+class BatteryTriggerHandler : ListeningTriggerHandler() {
 
-    private val listeningWorkflows = CopyOnWriteArrayList<Workflow>()
     private var batteryReceiver: BroadcastReceiver? = null
     // 将 lastBatteryPercentage 作为 Handler 的实例变量，确保状态持久
     private var lastBatteryPercentage: Int = -1
@@ -24,50 +21,11 @@ class BatteryTriggerHandler : BaseTriggerHandler() {
         private const val TAG = "BatteryTriggerHandler"
     }
 
-    override fun start(context: Context) {
-        super.start(context)
-        // 只有当存在活动的电池工作流时，才开始监听
-        if (hasActiveBatteryWorkflows()) {
-            registerBatteryReceiver(context)
-        }
-        Log.d(TAG, "BatteryTriggerHandler 已启动。")
-    }
+    override fun getTriggerModuleId(): String = "vflow.trigger.battery"
 
-    override fun stop(context: Context) {
-        super.stop(context)
-        unregisterBatteryReceiver(context)
-        Log.d(TAG, "BatteryTriggerHandler 已停止。")
-    }
-
-    override fun addWorkflow(context: Context, workflow: Workflow) {
-        listeningWorkflows.removeAll { it.id == workflow.id }
-        listeningWorkflows.add(workflow)
-        Log.d(TAG, "已添加 '${workflow.name}'。监听数量: ${listeningWorkflows.size}")
-        // 如果这是第一个工作流，则启动监听
-        if (batteryReceiver == null) {
-            registerBatteryReceiver(context)
-        }
-    }
-
-    override fun removeWorkflow(context: Context, workflowId: String) {
-        if (listeningWorkflows.removeAll { it.id == workflowId }) {
-            Log.d(TAG, "已移除 workflowId: $workflowId。监听数量: ${listeningWorkflows.size}")
-            // 如果没有工作流需要监听了，就停止
-            if (listeningWorkflows.isEmpty()) {
-                unregisterBatteryReceiver(context)
-            }
-        }
-    }
-
-    private fun hasActiveBatteryWorkflows(): Boolean {
-        return workflowManager.getAllWorkflows().any {
-            it.isEnabled && it.triggerConfig?.get("type") == "vflow.trigger.battery"
-        }
-    }
-
-    private fun registerBatteryReceiver(context: Context) {
+    override fun startListening(context: Context) {
         if (batteryReceiver != null) return
-        Log.d(TAG, "正在注册 BatteryReceiver...")
+        Log.d(TAG, "启动电量监听...")
 
         batteryReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
@@ -81,21 +39,21 @@ class BatteryTriggerHandler : BaseTriggerHandler() {
             val scale = initialIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
             if (level != -1 && scale != -1) {
                 lastBatteryPercentage = (level * 100 / scale.toFloat()).toInt()
-                Log.d(TAG, "BatteryReceiver 初始化，当前电量: $lastBatteryPercentage%")
+                Log.d(TAG, "电量监听初始化，当前电量: $lastBatteryPercentage%")
             }
         }
     }
 
-    private fun unregisterBatteryReceiver(context: Context) {
+    override fun stopListening(context: Context) {
         batteryReceiver?.let {
             try {
                 context.unregisterReceiver(it)
-                Log.d(TAG, "BatteryReceiver 已注销。")
+                Log.d(TAG, "电量监听已停止。")
             } catch (e: Exception) {
                 Log.w(TAG, "注销 BatteryReceiver 时出错: ${e.message}")
             } finally {
                 batteryReceiver = null
-                lastBatteryPercentage = -1 // 重置状态
+                lastBatteryPercentage = -1
             }
         }
     }
@@ -106,13 +64,10 @@ class BatteryTriggerHandler : BaseTriggerHandler() {
         if (level == -1 || scale == -1) return
 
         val currentPercentage = (level * 100 / scale.toFloat()).toInt()
-
-        if (lastBatteryPercentage == -1) {
+        if (lastBatteryPercentage == -1 || currentPercentage == lastBatteryPercentage) {
             lastBatteryPercentage = currentPercentage
             return
         }
-
-        if (currentPercentage == lastBatteryPercentage) return
 
         Log.d(TAG, "电量从 $lastBatteryPercentage% 变化到 $currentPercentage%")
         val previousPercentage = lastBatteryPercentage

@@ -1,5 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/handlers/WifiTriggerHandler.kt
-// 描述: 采用有状态的 NetworkCallback，可靠地跟踪连接和断开事件，并增加SSID获取的稳定性。
+// 描述: [重构] 继承自 ListeningTriggerHandler，代码更简洁，职责更单一。
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
@@ -11,15 +11,12 @@ import android.net.wifi.WifiManager
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.TextVariable
-import com.chaomixian.vflow.core.workflow.model.Workflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ConcurrentHashMap
 
-class WifiTriggerHandler : BaseTriggerHandler() {
+class WifiTriggerHandler : ListeningTriggerHandler() {
 
-    private val listeningWorkflows = CopyOnWriteArrayList<Workflow>()
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
@@ -31,48 +28,12 @@ class WifiTriggerHandler : BaseTriggerHandler() {
         const val ANY_WIFI_TARGET = "ANY_WIFI"
     }
 
-    override fun start(context: Context) {
-        super.start(context)
-        connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        if (hasActiveWifiWorkflows()) {
-            registerNetworkCallback(context)
-        }
-        Log.d(TAG, "WifiTriggerHandler 已启动。")
-    }
+    override fun getTriggerModuleId(): String = "vflow.trigger.wifi"
 
-    override fun stop(context: Context) {
-        super.stop(context)
-        unregisterNetworkCallback()
-        Log.d(TAG, "WifiTriggerHandler 已停止。")
-    }
-
-    override fun addWorkflow(context: Context, workflow: Workflow) {
-        listeningWorkflows.removeAll { it.id == workflow.id }
-        listeningWorkflows.add(workflow)
-        Log.d(TAG, "已添加 '${workflow.name}'。监听数量: ${listeningWorkflows.size}")
-        if (networkCallback == null && listeningWorkflows.isNotEmpty()) {
-            registerNetworkCallback(context)
-        }
-    }
-
-    override fun removeWorkflow(context: Context, workflowId: String) {
-        if (listeningWorkflows.removeAll { it.id == workflowId }) {
-            Log.d(TAG, "已移除 workflowId: $workflowId。监听数量: ${listeningWorkflows.size}")
-            if (listeningWorkflows.isEmpty()) {
-                unregisterNetworkCallback()
-            }
-        }
-    }
-
-    private fun hasActiveWifiWorkflows(): Boolean {
-        return workflowManager.getAllWorkflows().any {
-            it.isEnabled && it.triggerConfig?.get("type") == "vflow.trigger.wifi"
-        }
-    }
-
-    private fun registerNetworkCallback(context: Context) {
+    override fun startListening(context: Context) {
         if (networkCallback != null) return
-        Log.d(TAG, "正在注册 NetworkCallback...")
+        Log.d(TAG, "启动 Wi-Fi 状态监听...")
+        connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         val networkRequest = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
@@ -85,7 +46,7 @@ class WifiTriggerHandler : BaseTriggerHandler() {
                     val ssid = getWifiSsidWithRetry(context)
                     if (ssid != null) {
                         activeWifiConnections[network] = ssid
-                        Log.d(TAG, "Wi-Fi 已连接: $ssid (Network: ${network})")
+                        Log.d(TAG, "Wi-Fi 已连接: $ssid")
                         handleWifiChangeEvent(context, "连接到", ssid)
                     } else {
                         Log.w(TAG, "Wi-Fi 已连接，但无法获取 SSID。")
@@ -95,10 +56,8 @@ class WifiTriggerHandler : BaseTriggerHandler() {
 
             override fun onLost(network: Network) {
                 super.onLost(network)
-                // 从我们记录的连接中移除，并用记录的SSID触发事件
-                val lostSsid = activeWifiConnections.remove(network)
-                if (lostSsid != null) {
-                    Log.d(TAG, "Wi-Fi 已断开: $lostSsid (Network: ${network})")
+                activeWifiConnections.remove(network)?.let { lostSsid ->
+                    Log.d(TAG, "Wi-Fi 已断开: $lostSsid")
                     handleWifiChangeEvent(context, "断开连接", lostSsid)
                 }
             }
@@ -106,11 +65,12 @@ class WifiTriggerHandler : BaseTriggerHandler() {
         connectivityManager?.registerNetworkCallback(networkRequest, networkCallback!!)
     }
 
-    private fun unregisterNetworkCallback() {
+    override fun stopListening(context: Context) {
         networkCallback?.let {
             Log.d(TAG, "正在注销 NetworkCallback。")
             try {
                 connectivityManager?.unregisterNetworkCallback(it)
+                Log.d(TAG, "Wi-Fi 状态监听已停止。")
             } finally {
                 networkCallback = null
                 activeWifiConnections.clear()
