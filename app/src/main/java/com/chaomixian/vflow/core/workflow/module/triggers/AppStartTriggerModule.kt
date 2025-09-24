@@ -1,5 +1,5 @@
 // 文件: AppStartTriggerModule.kt
-// 描述: 定义了当指定应用或Activity启动时触发工作流的模块。
+// 描述: 定义了当指定应用或Activity启动或关闭时触发工作流的模块。
 package com.chaomixian.vflow.core.workflow.module.triggers
 
 import android.content.Context
@@ -15,8 +15,8 @@ class AppStartTriggerModule : BaseModule() {
 
     override val id = "vflow.trigger.app_start"
     override val metadata = ActionMetadata(
-        name = "应用/活动启动",
-        description = "当指定的应用程序或页面启动时，触发此工作流。",
+        name = "应用事件", // 名称更新
+        description = "当指定的应用程序打开或关闭时，触发此工作流。", // 描述更新
         iconRes = R.drawable.rounded_activity_zone_24,
         category = "触发器"
     )
@@ -27,6 +27,15 @@ class AppStartTriggerModule : BaseModule() {
     override val uiProvider: ModuleUIProvider = AppStartTriggerUIProvider()
 
     override fun getInputs(): List<InputDefinition> = listOf(
+        // 新增事件选择
+        InputDefinition(
+            id = "event",
+            name = "事件",
+            staticType = ParameterType.ENUM,
+            defaultValue = "打开时",
+            options = listOf("打开时", "关闭时"),
+            acceptsMagicVariable = false
+        ),
         InputDefinition(
             id = "packageName",
             name = "应用包名",
@@ -38,26 +47,25 @@ class AppStartTriggerModule : BaseModule() {
             id = "activityName",
             name = "Activity 名称",
             staticType = ParameterType.STRING,
-            defaultValue = "LAUNCH", // "LAUNCH" 是一个特殊值，代表仅启动应用
+            defaultValue = "LAUNCH", // "LAUNCH" 代表任意Activity或仅应用本身
             acceptsMagicVariable = false
         )
     )
 
-    // 这个触发器不产生任何有意义的输出
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val event = step.parameters["event"] as? String ?: "打开时"
         val packageName = step.parameters["packageName"] as? String
         val activityName = step.parameters["activityName"] as? String
 
         if (packageName.isNullOrEmpty()) {
-            return "选择一个应用或Activity"
+            return "选择一个应用"
         }
 
         val pm = context.packageManager
         val appName = try {
-            val appInfo = pm.getApplicationInfo(packageName, 0)
-            appInfo.loadLabel(pm).toString()
+            pm.getApplicationInfo(packageName, 0).loadLabel(pm).toString()
         } catch (e: PackageManager.NameNotFoundException) {
             packageName
         }
@@ -68,21 +76,17 @@ class AppStartTriggerModule : BaseModule() {
             activityName.substringAfterLast('.')
         }
 
-        // 这里的 Pill 只是为了样式和点击响应，其文本内容是动态拼接的
+        val eventPill = PillUtil.Pill(event, false, "event", isModuleOption = true)
         val appPill = PillUtil.Pill(displayText, false, "packageName")
 
-        // 前缀根据模块不同而变化
-        val prefix = if (this.id.contains("trigger")) "当启动 " else "启动 "
-
-        return PillUtil.buildSpannable(context, prefix, appPill)
+        return PillUtil.buildSpannable(context, "当 ", appPill, " ", eventPill)
     }
 
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 触发器模块的执行逻辑由系统服务处理，此处仅需成功返回即可
-        onProgress(ProgressUpdate("应用/Activity 启动事件已触发"))
+        onProgress(ProgressUpdate("应用事件已触发"))
         return ExecutionResult.Success()
     }
 }
