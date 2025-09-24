@@ -1,8 +1,11 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/handlers/WifiTriggerHandler.kt
-// 描述: [重构] 继承自 ListeningTriggerHandler，代码更简洁，职责更单一。
+// 描述: [重构] 增加了对 Wi-Fi 开关状态的监听，现在能同时处理两种类型的触发事件。
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -19,8 +22,7 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
 
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
-
-    // 用于存储当前连接的网络状态
+    private var wifiStateReceiver: BroadcastReceiver? = null
     private val activeWifiConnections = ConcurrentHashMap<Network, String>()
 
     companion object {
@@ -31,10 +33,24 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
     override fun getTriggerModuleId(): String = "vflow.trigger.wifi"
 
     override fun startListening(context: Context) {
-        if (networkCallback != null) return
-        Log.d(TAG, "启动 Wi-Fi 状态监听...")
-        connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        Log.d(TAG, "启动 Wi-Fi 监听...")
+        // 注册网络连接回调
+        registerNetworkCallback(context)
+        // 注册 Wi-Fi 开关状态广播
+        registerWifiStateReceiver(context)
+    }
 
+    override fun stopListening(context: Context) {
+        Log.d(TAG, "停止 Wi-Fi 监听...")
+        unregisterNetworkCallback()
+        unregisterWifiStateReceiver(context)
+    }
+
+    // --- Network Connection Logic ---
+
+    private fun registerNetworkCallback(context: Context) {
+        if (networkCallback != null) return
+        connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val networkRequest = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
             .build()
@@ -46,31 +62,26 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                     val ssid = getWifiSsidWithRetry(context)
                     if (ssid != null) {
                         activeWifiConnections[network] = ssid
-                        Log.d(TAG, "Wi-Fi 已连接: $ssid")
-                        handleWifiChangeEvent(context, "连接到", ssid)
-                    } else {
-                        Log.w(TAG, "Wi-Fi 已连接，但无法获取 SSID。")
+                        Log.d(TAG, "网络已连接: $ssid")
+                        findAndExecuteWorkflows(context, "网络连接", "连接到", ssid)
                     }
                 }
             }
-
             override fun onLost(network: Network) {
                 super.onLost(network)
                 activeWifiConnections.remove(network)?.let { lostSsid ->
-                    Log.d(TAG, "Wi-Fi 已断开: $lostSsid")
-                    handleWifiChangeEvent(context, "断开连接", lostSsid)
+                    Log.d(TAG, "网络已断开: $lostSsid")
+                    findAndExecuteWorkflows(context, "网络连接", "断开连接", lostSsid)
                 }
             }
         }
         connectivityManager?.registerNetworkCallback(networkRequest, networkCallback!!)
     }
 
-    override fun stopListening(context: Context) {
+    private fun unregisterNetworkCallback() {
         networkCallback?.let {
-            Log.d(TAG, "正在注销 NetworkCallback。")
             try {
                 connectivityManager?.unregisterNetworkCallback(it)
-                Log.d(TAG, "Wi-Fi 状态监听已停止。")
             } finally {
                 networkCallback = null
                 activeWifiConnections.clear()
@@ -78,9 +89,72 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
         }
     }
 
-    /**
-     * 带重试机制的SSID获取函数，提高稳定性
-     */
+    // --- Wifi State Logic ---
+
+    private fun registerWifiStateReceiver(context: Context) {
+        if (wifiStateReceiver != null) return
+        wifiStateReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == WifiManager.WIFI_STATE_CHANGED_ACTION) {
+                    val wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN)
+                    when (wifiState) {
+                        WifiManager.WIFI_STATE_ENABLED -> {
+                            Log.d(TAG, "Wi-Fi 已开启")
+                            findAndExecuteWorkflows(context, "Wi-Fi状态", "开启时", null)
+                        }
+                        WifiManager.WIFI_STATE_DISABLED -> {
+                            Log.d(TAG, "Wi-Fi 已关闭")
+                            findAndExecuteWorkflows(context, "Wi-Fi状态", "关闭时", null)
+                        }
+                    }
+                }
+            }
+        }
+        context.registerReceiver(wifiStateReceiver, IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION))
+    }
+
+    private fun unregisterWifiStateReceiver(context: Context) {
+        wifiStateReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+            } finally {
+                wifiStateReceiver = null
+            }
+        }
+    }
+
+    // --- Common Execution Logic ---
+
+    private fun findAndExecuteWorkflows(context: Context, triggerType: String, event: String, ssid: String?) {
+        triggerScope.launch {
+            listeningWorkflows.forEach { workflow ->
+                val config = workflow.triggerConfig ?: return@forEach
+                val configTriggerType = config["trigger_type"] as? String
+                if (configTriggerType != triggerType) return@forEach
+
+                if (triggerType == "网络连接") {
+                    val configEvent = config["connection_event"] as? String
+                    val configTarget = config["network_target"] as? String
+                    val targetMatches = (configTarget == ANY_WIFI_TARGET) || (configTarget.equals(ssid, ignoreCase = true))
+                    if (configEvent == event && targetMatches) {
+                        Log.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '$ssid'")
+                        val triggerData = TextVariable(ssid ?: "")
+                        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                        val bssid = if (event == "连接到") wifiManager.connectionInfo?.bssid else ""
+                        val variables = mapOf("bssid" to TextVariable(bssid ?: ""))
+                        WorkflowExecutor.execute(workflow, context.applicationContext, triggerData)
+                    }
+                } else { // Wi-Fi状态
+                    val configEvent = config["state_event"] as? String
+                    if (configEvent == event) {
+                        Log.i(TAG, "触发工作流 '${workflow.name}'，事件: Wi-Fi $event")
+                        WorkflowExecutor.execute(workflow, context.applicationContext)
+                    }
+                }
+            }
+        }
+    }
+
     private suspend fun getWifiSsidWithRetry(context: Context, retries: Int = 3, delayMs: Long = 200): String? {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         for (i in 1..retries) {
@@ -91,27 +165,5 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
             delay(delayMs)
         }
         return null
-    }
-
-    private fun handleWifiChangeEvent(context: Context, eventType: String, ssid: String) {
-        listeningWorkflows.forEach { workflow ->
-            val config = workflow.triggerConfig ?: return@forEach
-            val configEvent = config["event"] as? String
-            val configTarget = config["network_target"] as? String
-
-            if (configEvent == eventType) {
-                val targetMatches = (configTarget == ANY_WIFI_TARGET) || (configTarget.equals(ssid, ignoreCase = true))
-                if (targetMatches) {
-                    triggerScope.launch {
-                        Log.i(TAG, "触发工作流 '${workflow.name}'，事件: $eventType '$ssid'")
-                        val triggerData = TextVariable(ssid)
-                        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                        val bssid = if (eventType == "连接到") wifiManager.connectionInfo?.bssid else ""
-                        val variables = mapOf("bssid" to TextVariable(bssid ?: ""))
-                        WorkflowExecutor.execute(workflow, context.applicationContext, triggerData)
-                    }
-                }
-            }
-        }
     }
 }

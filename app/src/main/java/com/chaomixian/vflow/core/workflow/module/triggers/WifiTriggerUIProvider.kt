@@ -8,11 +8,8 @@ import android.net.wifi.WifiManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
+import android.widget.*
+import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
@@ -20,66 +17,87 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.WifiTriggerReceiver
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class WifiTriggerUIProvider : ModuleUIProvider {
 
     private class EditorViewHolder(view: View) : CustomEditorViewHolder(view) {
-        val eventChipGroup: ChipGroup = view.findViewById(R.id.chip_group_wifi_event)
+        val triggerTypeRg: RadioGroup = view.findViewById(R.id.rg_trigger_type)
+        val connectionRb: RadioButton = view.findViewById(R.id.rb_connection_change)
+        val stateRb: RadioButton = view.findViewById(R.id.rb_state_change)
+
+        val connectionOptionsContainer: View = view.findViewById(R.id.container_connection_options)
+        val connectionEventCg: ChipGroup = view.findViewById(R.id.cg_connection_event)
         val connectChip: Chip = view.findViewById(R.id.chip_connect)
         val disconnectChip: Chip = view.findViewById(R.id.chip_disconnect)
         val networkTextView: TextView = view.findViewById(R.id.text_selected_wifi_network)
         val selectNetworkButton: Button = view.findViewById(R.id.button_select_wifi_network)
+
+        val stateOptionsContainer: View = view.findViewById(R.id.container_state_options)
+        val stateEventCg: ChipGroup = view.findViewById(R.id.cg_state_event)
+        val stateOnChip: Chip = view.findViewById(R.id.chip_state_on)
+        val stateOffChip: Chip = view.findViewById(R.id.chip_state_off)
     }
 
     override fun createEditor(
-        context: Context,
-        parent: ViewGroup,
-        currentParameters: Map<String, Any?>,
-        onParametersChanged: () -> Unit,
-        onMagicVariableRequested: ((inputId: String) -> Unit)?,
+        context: Context, parent: ViewGroup, currentParameters: Map<String, Any?>,
+        onParametersChanged: () -> Unit, onMagicVariableRequested: ((inputId: String) -> Unit)?,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_wifi_trigger_editor, parent, false)
         val holder = EditorViewHolder(view)
 
-        // 恢复事件选择
-        val currentEvent = currentParameters["event"] as? String ?: "连接到"
-        if (currentEvent == "连接到") {
-            holder.connectChip.isChecked = true
-        } else {
-            holder.disconnectChip.isChecked = true
-        }
+        // Restore state
+        val triggerType = currentParameters["trigger_type"] as? String ?: "网络连接"
+        if (triggerType == "网络连接") holder.connectionRb.isChecked = true else holder.stateRb.isChecked = true
 
-        // 恢复网络选择
+        val connectionEvent = currentParameters["connection_event"] as? String ?: "连接到"
+        if (connectionEvent == "连接到") holder.connectChip.isChecked = true else holder.disconnectChip.isChecked = true
+
+        val stateEvent = currentParameters["state_event"] as? String ?: "开启时"
+        if (stateEvent == "开启时") holder.stateOnChip.isChecked = true else holder.stateOffChip.isChecked = true
+
         val currentTarget = currentParameters["network_target"] as? String ?: WifiTriggerReceiver.ANY_WIFI_TARGET
         holder.networkTextView.text = if (currentTarget == WifiTriggerReceiver.ANY_WIFI_TARGET) "任意 Wi-Fi" else currentTarget
 
-        // 设置监听器
-        holder.eventChipGroup.setOnCheckedStateChangeListener { _, _ -> onParametersChanged() }
-        val clickListener = View.OnClickListener { showNetworkSelectionDialog(context, holder, onParametersChanged) }
-        holder.selectNetworkButton.setOnClickListener(clickListener)
-        holder.networkTextView.setOnClickListener(clickListener) // 让文本本身也可以点击
+        updateVisibility(holder)
+
+        // Listeners
+        holder.triggerTypeRg.setOnCheckedChangeListener { _, _ ->
+            updateVisibility(holder)
+            onParametersChanged()
+        }
+        holder.connectionEventCg.setOnCheckedChangeListener { _, _ -> onParametersChanged() }
+        holder.stateEventCg.setOnCheckedChangeListener { _, _ -> onParametersChanged() }
+        val networkClickListener = View.OnClickListener { showNetworkSelectionDialog(context, holder, onParametersChanged) }
+        holder.selectNetworkButton.setOnClickListener(networkClickListener)
+        holder.networkTextView.setOnClickListener(networkClickListener)
 
         return holder
     }
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as EditorViewHolder
-        val event = if (h.connectChip.isChecked) "连接到" else "断开连接"
+        val triggerType = if (h.connectionRb.isChecked) "网络连接" else "Wi-Fi状态"
         val selectedNetworkText = h.networkTextView.text.toString()
-        val networkTarget = if (selectedNetworkText == "任意 Wi-Fi") WifiTriggerReceiver.ANY_WIFI_TARGET else selectedNetworkText
 
-        return mapOf("event" to event, "network_target" to networkTarget)
+        return mapOf(
+            "trigger_type" to triggerType,
+            "connection_event" to if (h.connectChip.isChecked) "连接到" else "断开连接",
+            "state_event" to if (h.stateOnChip.isChecked) "开启时" else "关闭时",
+            "network_target" to if (selectedNetworkText == "任意 Wi-Fi") WifiTriggerReceiver.ANY_WIFI_TARGET else selectedNetworkText
+        )
     }
 
-    /**
-     * 显示网络选择对话框。
-     */
+    private fun updateVisibility(holder: EditorViewHolder) {
+        val isConnectionChange = holder.connectionRb.isChecked
+        holder.connectionOptionsContainer.isVisible = isConnectionChange
+        holder.stateOptionsContainer.isVisible = !isConnectionChange
+    }
+
     @SuppressLint("MissingPermission")
     private fun showNetworkSelectionDialog(context: Context, holder: EditorViewHolder, onParametersChanged: () -> Unit) {
         val options = mutableListOf("任意 Wi-Fi")
-
-        // 尝试获取当前连接的Wi-Fi SSID
         try {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             if (wifiManager.isWifiEnabled) {
@@ -89,13 +107,10 @@ class WifiTriggerUIProvider : ModuleUIProvider {
                     options.add(ssid)
                 }
             }
-        } catch (e: Exception) {
-            // 忽略权限等错误
-        }
-
+        } catch (e: Exception) { /* ignore */ }
         options.add("手动输入...")
 
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setTitle("选择网络")
             .setItems(options.toTypedArray()) { _, which ->
                 when (val selected = options[which]) {
@@ -109,19 +124,14 @@ class WifiTriggerUIProvider : ModuleUIProvider {
             .show()
     }
 
-    /**
-     * 显示手动输入SSID的对话框。
-     */
     private fun showManualSsidInputDialog(context: Context, holder: EditorViewHolder, onParametersChanged: () -> Unit) {
-        val editText = EditText(context).apply {
-            hint = "输入Wi-Fi名称(SSID)"
-        }
+        val editText = EditText(context).apply { hint = "输入Wi-Fi名称(SSID)" }
         val container = FrameLayout(context).apply {
             setPadding(48, 16, 48, 16)
             addView(editText)
         }
-
-        AlertDialog.Builder(context)
+        // [关键] 使用 MaterialAlertDialogBuilder
+        MaterialAlertDialogBuilder(context)
             .setTitle("手动输入SSID")
             .setView(container)
             .setPositiveButton("确定") { _, _ ->
@@ -135,17 +145,12 @@ class WifiTriggerUIProvider : ModuleUIProvider {
             .show()
     }
 
-
-    override fun getHandledInputIds(): Set<String> {
-        return setOf("event", "network_target")
-    }
+    override fun getHandledInputIds(): Set<String> = setOf(
+        "trigger_type", "connection_event", "state_event", "network_target"
+    )
 
     override fun createPreview(
-        context: Context,
-        parent: ViewGroup,
-        step: ActionStep,
+        context: Context, parent: ViewGroup, step: ActionStep,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): View? {
-        return null
-    }
+    ): View? = null
 }

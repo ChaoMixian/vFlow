@@ -19,75 +19,16 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp">
         <RadioButton
-            android:id="@+id/rb_connection_change"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="网络连接状态变化" />
-        <RadioButton
             android:id="@+id/rb_state_change"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Wi-Fi状态变化" />
+            android:text="蓝牙状态变化" />
+        <RadioButton
+            android:id="@+id/rb_device_connection"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="设备连接状态变化" />
     </RadioGroup>
-
-    <LinearLayout
-        android:id="@+id/container_connection_options"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone"
-        tools:visibility="visible">
-        <com.google.android.material.divider.MaterialDivider
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginVertical="16dp"/>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="事件"
-            android:textAppearance="?attr/textAppearanceLabelLarge" />
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/cg_connection_event"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:singleSelection="true">
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_connect"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="连接到" />
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_disconnect"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="断开连接" />
-        </com.google.android.material.chip.ChipGroup>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="网络"
-            android:textAppearance="?attr/textAppearanceLabelLarge" />
-        <TextView
-            android:id="@+id/text_selected_wifi_network"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="?attr/selectableItemBackground"
-            android:paddingVertical="8dp"
-            android:textAppearance="?attr/textAppearanceBodyLarge"
-            tools:text="任意 Wi-Fi" />
-        <Button
-            android:id="@+id/button_select_wifi_network"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            app:icon="@drawable/rounded_android_wifi_3_bar_24"
-            android:text="选择网络" />
-    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/container_state_options"
@@ -95,7 +36,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:visibility="gone"
-        tools:visibility="gone">
+        tools:visibility="visible">
         <com.google.android.material.divider.MaterialDivider
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -123,5 +64,62 @@
                 android:layout_height="wrap_content"
                 android:text="关闭时" />
         </com.google.android.material.chip.ChipGroup>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/container_device_options"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        tools:visibility="visible">
+        <com.google.android.material.divider.MaterialDivider
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="16dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="事件"
+            android:textAppearance="?attr/textAppearanceLabelLarge" />
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/cg_device_event"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleSelection="true">
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_device_connect"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="连接时" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_device_disconnect"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="断开时" />
+        </com.google.android.material.chip.ChipGroup>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="目标设备"
+            android:textAppearance="?attr/textAppearanceLabelLarge"/>
+        <TextView
+            android:id="@+id/tv_selected_device"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textAppearance="?attr/textAppearanceBodyLarge"
+            tools:text="任何设备"/>
+        <Button
+            android:id="@+id/btn_select_device"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:icon="@drawable/rounded_bluetooth_24"
+            android:text="选择设备" />
     </LinearLayout>
 </LinearLayout>
