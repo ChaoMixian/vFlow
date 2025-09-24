@@ -65,6 +65,47 @@ object ShizukuManager {
     }
 
     /**
+     * 启动 Shizuku 守护任务
+     */
+    fun startWatcher(context: Context) {
+        scope.launch {
+            val service = getService(context)
+            if (service == null) {
+                Log.e(TAG, "无法启动守护任务：Shizuku 服务连接失败。")
+                return@launch
+            }
+            try {
+                withContext(Dispatchers.IO) {
+                    service.startWatcher(context.packageName, TriggerService::class.java.name)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "启动守护任务时出错。", e)
+            }
+        }
+    }
+
+    /**
+     * 停止 Shizuku 守护任务
+     */
+    fun stopWatcher(context: Context) {
+        scope.launch {
+            val service = getService(context)
+            if (service == null) {
+                // 如果服务未连接，也无需停止
+                return@launch
+            }
+            try {
+                withContext(Dispatchers.IO) {
+                    service.stopWatcher()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "停止守护任务时出错。", e)
+            }
+        }
+    }
+
+
+    /**
      * 执行一条 Shell 命令。
      */
     suspend fun execShellCommand(context: Context, command: String): String {

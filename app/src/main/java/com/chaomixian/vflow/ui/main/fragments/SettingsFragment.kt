@@ -8,10 +8,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.services.ShizukuManager
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.materialswitch.MaterialSwitch
 
@@ -48,6 +50,27 @@ class SettingsFragment : Fragment() {
         progressNotificationSwitch.isChecked = prefs.getBoolean("progressNotificationEnabled", true) // 默认开启
         progressNotificationSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("progressNotificationEnabled", isChecked).apply()
+        }
+
+        // 强制保活开关逻辑
+        val forceKeepAliveSwitch = view.findViewById<MaterialSwitch>(R.id.switch_force_keep_alive)
+        if (ShizukuManager.isShizukuActive(requireContext())) {
+            forceKeepAliveSwitch.isEnabled = true
+            forceKeepAliveSwitch.isChecked = prefs.getBoolean("forceKeepAliveEnabled", false)
+            forceKeepAliveSwitch.setOnCheckedChangeListener { _, isChecked ->
+                prefs.edit().putBoolean("forceKeepAliveEnabled", isChecked).apply()
+                if (isChecked) {
+                    ShizukuManager.startWatcher(requireContext())
+                    Toast.makeText(requireContext(), "Shizuku 守护已开启", Toast.LENGTH_SHORT).show()
+                } else {
+                    ShizukuManager.stopWatcher(requireContext())
+                    Toast.makeText(requireContext(), "Shizuku 守护已关闭", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            forceKeepAliveSwitch.isEnabled = false
+            forceKeepAliveSwitch.isChecked = false
+            forceKeepAliveSwitch.text = "${getString(R.string.settings_switch_force_keep_alive)} (Shizuku未激活)"
         }
 
 

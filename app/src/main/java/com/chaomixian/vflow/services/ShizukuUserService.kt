@@ -1,8 +1,9 @@
-// 文件: main/java/com/chaomixian/vflow/services/ShellService.kt
+// 文件: main/java/com/chaomixian/vflow/services/ShizukuUserService.kt
 package com.chaomixian.vflow.services
 
 import android.os.IBinder
 import android.util.Log
+import kotlinx.coroutines.*
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -12,6 +13,10 @@ import java.io.InputStreamReader
  * UserService 需要是一个普通的类，被 Shizuku 框架托管。
  */
 class ShizukuUserService : IShizukuUserService.Stub() {
+
+    // 为服务本身创建一个独立的协程作用域
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var watcherJob: Job? = null // 用于持有守护任务的引用
 
     companion object {
         private const val TAG = "vFlowShellService"
@@ -23,6 +28,7 @@ class ShizukuUserService : IShizukuUserService.Stub() {
 
     override fun destroy() {
         Log.d(TAG, "收到 destroy 请求 (Shizuku 标准方法)")
+        serviceScope.cancel() // [新增] 销毁时取消所有协程
         System.exit(0)
     }
 
@@ -73,6 +79,7 @@ class ShizukuUserService : IShizukuUserService.Stub() {
 
     override fun exit() {
         Log.d(TAG, "收到退出请求")
+        serviceScope.cancel() // 退出时取消所有协程
         try {
             // 给一点时间让响应返回
             Thread.sleep(100)
@@ -80,6 +87,49 @@ class ShizukuUserService : IShizukuUserService.Stub() {
             Thread.currentThread().interrupt()
         }
         System.exit(0)
+    }
+
+    /**
+     * 启动守护任务
+     */
+    override fun startWatcher(packageName: String?, serviceName: String?) {
+        if (packageName.isNullOrBlank() || serviceName.isNullOrBlank()) {
+            Log.w(TAG, "Watcher 启动失败：包名或服务名为空。")
+            return
+        }
+        // 先停止旧的守护任务，确保只有一个在运行
+        stopWatcher()
+        Log.i(TAG, "启动服务守护任务: $packageName/$serviceName")
+        watcherJob = serviceScope.launch {
+            while (isActive) {
+                try {
+                    // 每 5 分钟检查并尝试启动一次服务
+                    delay(5 * 60 * 1000)
+                    val command = "am start-service -n $packageName/$serviceName"
+                    Log.d(TAG, "[Watcher] 执行保活命令: $command")
+                    // 直接执行启动命令，如果服务已在运行，此命令无害
+                    exec(command)
+                } catch (e: CancellationException) {
+                    Log.d(TAG, "[Watcher] 守护任务被正常取消。")
+                    break
+                } catch (e: Exception) {
+                    Log.e(TAG, "[Watcher] 守护任务执行时发生异常。", e)
+                    // 发生异常后，等待一段时间再重试
+                    delay(60 * 1000)
+                }
+            }
+        }
+    }
+
+    /**
+     * 停止守护任务
+     */
+    override fun stopWatcher() {
+        if (watcherJob?.isActive == true) {
+            Log.i(TAG, "正在停止服务守护任务...")
+            watcherJob?.cancel()
+        }
+        watcherJob = null
     }
 
     /**

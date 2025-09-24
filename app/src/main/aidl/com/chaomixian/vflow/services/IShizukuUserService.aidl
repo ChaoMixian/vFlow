@@ -1,4 +1,4 @@
-// 文件路径: src/main/aidl/com/chaomixian/vflow/services/IShellService.aidl
+// 文件路径: src/main/aidl/com/chaomixian/vflow/services/IShizukuUserService.aidl
 package com.chaomixian.vflow.services;
 
 /**
@@ -21,4 +21,14 @@ interface IShizukuUserService {
      * 退出服务。
      */
     void exit() = 2;
+
+    /**
+     * 启动守护任务来监控并保活指定的服务。
+     */
+    void startWatcher(String packageName, String serviceName) = 3;
+
+    /**
+     * 停止守护任务。
+     */
+    void stopWatcher() = 4;
 }

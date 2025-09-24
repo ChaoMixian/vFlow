@@ -16,6 +16,8 @@
     <string name="settings_switch_progress_notification">显示执行进度通知</string>
     <string name="settings_switch_progress_notification_desc">当工作流在后台执行时，在状态栏显示一个进度通知。</string>
     <string name="settings_switch_hide_connections_desc">在工作流编辑器中，隐藏连接点和输出行，以获得更简洁的视图。</string>
+    <string name="settings_switch_force_keep_alive">强制保活 (Shizuku)</string>
+    <string name="settings_switch_force_keep_alive_desc">实验性功能。通过 Shizuku 守护进程，在服务被系统意外终止时自动重启。可能会增加耗电。</string>
 
     <string name="settings_section_permissions">权限管理器</string>
     <string name="settings_section_permissions_desc">查看和管理应用运行所需的所有权限。</string>
