@@ -6,6 +6,7 @@ package com.chaomixian.vflow.ui.workflow_list
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.CheckBox
 import android.widget.Toast
@@ -163,9 +164,12 @@ class WorkflowListFragment : Fragment() {
         return view
     }
 
-    /** Fragment 恢复时，重新加载工作流列表。 */
+    /**
+     * Fragment 恢复时，检查是否可以自动重新启用工作流，然后刷新列表。
+     */
     override fun onResume() {
         super.onResume()
+        checkAndReEnableWorkflows()
         loadWorkflows()
     }
 
@@ -191,6 +195,27 @@ class WorkflowListFragment : Fragment() {
             else -> super.onOptionsItemSelected(item)
         }
     }
+
+    /**
+     * 检查并自动重新启用那些因权限问题被禁用的工作流。
+     */
+    private fun checkAndReEnableWorkflows() {
+        val allWorkflows = workflowManager.getAllWorkflows()
+        allWorkflows.forEach { workflow ->
+            // 如果工作流之前因权限丢失而被禁用，并且现在是禁用状态...
+            if (workflow.wasEnabledBeforePermissionsLost && !workflow.isEnabled) {
+                // ...检查现在权限是否已授予。
+                val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
+                if (missingPermissions.isEmpty()) {
+                    Log.i("WorkflowListFragment", "工作流 '${workflow.name}' 的权限已授予，正在自动重新启用。")
+                    // 重新启用工作流并重置标志位
+                    val updatedWorkflow = workflow.copy(isEnabled = true, wasEnabledBeforePermissionsLost = false)
+                    workflowManager.saveWorkflow(updatedWorkflow)
+                }
+            }
+        }
+    }
+
 
     /** 加载工作流并设置到 RecyclerView 的 Adapter。 */
     private fun loadWorkflows() {

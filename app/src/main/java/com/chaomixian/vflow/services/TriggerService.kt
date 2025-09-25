@@ -19,13 +19,11 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
-import com.chaomixian.vflow.core.workflow.module.triggers.handlers.AppStartTriggerHandler
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.ITriggerHandler
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.KeyEventTriggerHandler
-// [新增] 导入 TriggerHandlerRegistry
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
+import com.chaomixian.vflow.permissions.PermissionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -122,31 +120,61 @@ class TriggerService : Service() {
         val activeWorkflows = workflowManager.getAllWorkflows().filter { it.isEnabled }
         Log.d(TAG, "TriggerService 首次启动，加载 ${activeWorkflows.size} 个活动的触发器。")
         activeWorkflows.forEach { workflow ->
-            getHandlerForWorkflow(workflow)?.addWorkflow(this, workflow)
+            // 复用变更逻辑，确保启动时也进行权限检查
+            handleWorkflowChanged(workflow, null)
         }
     }
 
     /**
-     * 处理单个工作流的变更。
-     * 无论何种变更（修改、禁用、启用），都先尝试移除旧的工作流实例，
-     * 然后再根据新实例的状态决定是否要添加。
+     * 处理工作流变更，增加权限守卫。
+     * @param newWorkflow 新的工作流状态。
+     * @param oldWorkflow 旧的工作流状态，可能为null（表示新增）。
      */
     private fun handleWorkflowChanged(newWorkflow: Workflow, oldWorkflow: Workflow?) {
         val newHandler = getHandlerForWorkflow(newWorkflow)
         val oldHandler = oldWorkflow?.let { getHandlerForWorkflow(it) }
 
-        // 场景1: 如果存在旧的工作流版本，总是先从对应的处理器中移除它。
-        // 这确保了对现有工作流的修改能被正确处理。
+        // 步骤1：如果存在旧版本，无论如何都先从其处理器中移除，确保状态更新的原子性。
         if (oldWorkflow != null && oldHandler != null) {
-            Log.d(TAG, "正在为更新准备，从处理器移除旧版本: ${oldWorkflow.name}")
+            Log.d(TAG, "准备更新，正在从处理器中移除旧版: ${oldWorkflow.name}")
             oldHandler.removeWorkflow(this, oldWorkflow.id)
         }
 
-        // 场景2: 如果新的工作流是启用状态，则将其添加到对应的处理器中。
-        // 这会处理“新增”、“启用”以及“修改后依然启用”的情况。
-        if (newWorkflow.isEnabled && newHandler != null) {
-            Log.d(TAG, "向处理器添加/更新: ${newWorkflow.name}")
-            newHandler.addWorkflow(this, newWorkflow)
+        // 步骤2：处理新版本的工作流。
+        if (newWorkflow.isEnabled) {
+            // 用户意图是启用此工作流，现在检查权限。
+            val missingPermissions = PermissionManager.getMissingPermissions(this, newWorkflow)
+
+            if (missingPermissions.isEmpty()) {
+                // 权限充足，可以安全地添加到处理器。
+                if (newHandler != null) {
+                    Log.d(TAG, "权限正常，正在向处理器添加/更新: ${newWorkflow.name}")
+                    newHandler.addWorkflow(this, newWorkflow)
+                }
+                // 如果这个工作流之前因为权限问题被禁用过，现在权限已恢复，
+                // 我们需要重置标记位并保存，以确保状态正确。
+                if (newWorkflow.wasEnabledBeforePermissionsLost) {
+                    val fixedWorkflow = newWorkflow.copy(wasEnabledBeforePermissionsLost = false)
+                    workflowManager.saveWorkflow(fixedWorkflow)
+                }
+            } else {
+                // 权限不足！这是关键的保护点。
+                Log.w(TAG, "工作流 '${newWorkflow.name}' 因缺少权限 (${missingPermissions.joinToString { it.name }}) 将被自动禁用。")
+                // 创建一个被禁用的副本，并设置标志位。
+                val disabledWorkflow = newWorkflow.copy(
+                    isEnabled = false,
+                    wasEnabledBeforePermissionsLost = true // 记录下用户原本是想启用它的
+                )
+                // 保存这个被禁用的版本。这会再次触发 handleWorkflowChanged，
+                // 但下一次调用时 isEnabled 为 false，流程会正确地将其从处理器中移除。
+                workflowManager.saveWorkflow(disabledWorkflow)
+            }
+        } else {
+            // 如果工作流本身就是禁用的，只需确保它已从处理器中移除即可。
+            if (newHandler != null) {
+                Log.d(TAG, "工作流 '${newWorkflow.name}' 已被禁用，正在从处理器中移除。")
+                newHandler.removeWorkflow(this, newWorkflow.id)
+            }
         }
     }
 
