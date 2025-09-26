@@ -7,8 +7,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.core.workflow.module.triggers.handlers.WifiTriggerHandler
 import com.chaomixian.vflow.permissions.PermissionManager
-import com.chaomixian.vflow.services.WifiTriggerReceiver
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class WifiTriggerModule : BaseModule() {
@@ -27,7 +27,7 @@ class WifiTriggerModule : BaseModule() {
         InputDefinition("trigger_type", "触发类型", ParameterType.ENUM, "网络连接", options = listOf("网络连接", "Wi-Fi状态")),
         // 网络连接
         InputDefinition("connection_event", "事件", ParameterType.ENUM, "连接到", options = listOf("连接到", "断开连接")),
-        InputDefinition("network_target", "网络", ParameterType.STRING, defaultValue = WifiTriggerReceiver.ANY_WIFI_TARGET, isHidden = true),
+        InputDefinition("network_target", "网络", ParameterType.STRING, defaultValue = WifiTriggerHandler.ANY_WIFI_TARGET, isHidden = true),
         // Wi-Fi状态
         InputDefinition("state_event", "事件", ParameterType.ENUM, "开启时", options = listOf("开启时", "关闭时"))
     )
@@ -57,9 +57,9 @@ class WifiTriggerModule : BaseModule() {
 
         return if (triggerType == "网络连接") {
             val event = step.parameters["connection_event"] as? String ?: "连接到"
-            val target = step.parameters["network_target"] as? String ?: WifiTriggerReceiver.ANY_WIFI_TARGET
+            val target = step.parameters["network_target"] as? String ?: WifiTriggerHandler.ANY_WIFI_TARGET
             val eventPill = PillUtil.Pill(event, false, "connection_event", isModuleOption = true)
-            val targetDescription = if (target == WifiTriggerReceiver.ANY_WIFI_TARGET) "任意 Wi-Fi" else target
+            val targetDescription = if (target == WifiTriggerHandler.ANY_WIFI_TARGET) "任意 Wi-Fi" else target
             val targetPill = PillUtil.Pill(targetDescription, false, "network_target")
             PillUtil.buildSpannable(context, "当 ", eventPill, " ", targetPill)
         } else {

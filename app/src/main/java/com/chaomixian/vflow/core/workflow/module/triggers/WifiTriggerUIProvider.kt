@@ -14,7 +14,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.services.WifiTriggerReceiver
+import com.chaomixian.vflow.core.workflow.module.triggers.handlers.WifiTriggerHandler
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -57,8 +57,8 @@ class WifiTriggerUIProvider : ModuleUIProvider {
         val stateEvent = currentParameters["state_event"] as? String ?: "开启时"
         if (stateEvent == "开启时") holder.stateOnChip.isChecked = true else holder.stateOffChip.isChecked = true
 
-        val currentTarget = currentParameters["network_target"] as? String ?: WifiTriggerReceiver.ANY_WIFI_TARGET
-        holder.networkTextView.text = if (currentTarget == WifiTriggerReceiver.ANY_WIFI_TARGET) "任意 Wi-Fi" else currentTarget
+        val currentTarget = currentParameters["network_target"] as? String ?: WifiTriggerHandler.ANY_WIFI_TARGET
+        holder.networkTextView.text = if (currentTarget == WifiTriggerHandler.ANY_WIFI_TARGET) "任意 Wi-Fi" else currentTarget
 
         updateVisibility(holder)
 
@@ -85,7 +85,7 @@ class WifiTriggerUIProvider : ModuleUIProvider {
             "trigger_type" to triggerType,
             "connection_event" to if (h.connectChip.isChecked) "连接到" else "断开连接",
             "state_event" to if (h.stateOnChip.isChecked) "开启时" else "关闭时",
-            "network_target" to if (selectedNetworkText == "任意 Wi-Fi") WifiTriggerReceiver.ANY_WIFI_TARGET else selectedNetworkText
+            "network_target" to if (selectedNetworkText == "任意 Wi-Fi") WifiTriggerHandler.ANY_WIFI_TARGET else selectedNetworkText
         )
     }
 
