@@ -1,4 +1,4 @@
-// 文件: SmsTriggerModule.kt
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/SmsTriggerModule.kt
 // 描述: 定义了当收到短信时触发工作流的模块。
 package com.chaomixian.vflow.core.workflow.module.triggers
 
@@ -24,13 +24,8 @@ class SmsTriggerModule : BaseModule() {
 
     // 定义所有过滤选项
     val senderFilterOptions = listOf("任意号码", "号码包含", "号码不包含", "正则匹配")
-    // [新增] 添加“识别验证码”预设
+    // 添加“识别验证码”预设
     val contentFilterOptions = listOf("任意内容", "识别验证码", "内容包含", "内容不包含", "正则匹配")
-
-    // [新增] 验证码识别的正则表达式
-    companion object {
-        const val VERIFICATION_CODE_REGEX = "(?i)(?:验证码|驗證碼|动态码|動態碼|校验码|校驗碼|OTP|PIN|code|verification\\s*code)[^\\d]{0,20}(\\d{4,8})"
-    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("sender_filter_type", "发件人条件", ParameterType.ENUM, defaultValue = senderFilterOptions.first(), options = senderFilterOptions),
@@ -40,7 +35,7 @@ class SmsTriggerModule : BaseModule() {
     )
 
     /**
-     * [修改] 当选择“识别验证码”时，自动填充正则表达式。
+     * 当选择“识别验证码”时，不再需要自动填充正则表达式。
      */
     override fun onParameterUpdated(
         step: ActionStep,
@@ -50,11 +45,10 @@ class SmsTriggerModule : BaseModule() {
         val newParameters = step.parameters.toMutableMap()
         newParameters[updatedParameterId] = updatedValue
 
+        // 识别验证码不再需要特殊处理 value，因为 UI 和 Handler 会直接处理这个选项
         if (updatedParameterId == "content_filter_type") {
-            if (updatedValue == "识别验证码") {
-                newParameters["content_filter_value"] = VERIFICATION_CODE_REGEX
-            } else if (newParameters["content_filter_value"] == VERIFICATION_CODE_REGEX) {
-                // 如果从验证码预设切换走，清空预设的正则
+            // 如果从一个需要 value 的选项切换到不需要的选项（如“识别验证码”），可以考虑清空 value
+            if (updatedValue == "识别验证码" || updatedValue == "任意内容") {
                 newParameters["content_filter_value"] = ""
             }
         }
@@ -62,7 +56,7 @@ class SmsTriggerModule : BaseModule() {
     }
 
     /**
-     * [修改] 动态隐藏/显示输入框。
+     * 动态隐藏/显示输入框。
      */
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val all = getInputs()
@@ -86,7 +80,7 @@ class SmsTriggerModule : BaseModule() {
 
 
     /**
-     * [修改] 当选择“识别验证码”时，增加一个新的输出。
+     * 当选择“识别验证码”时，增加一个新的输出。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val outputs = mutableListOf(
@@ -120,7 +114,7 @@ class SmsTriggerModule : BaseModule() {
     }
 
     /**
-     * [修改] 将提取到的验证码也作为输出。
+     * 将提取到的验证码也作为输出。
      */
     override suspend fun execute(
         context: ExecutionContext,

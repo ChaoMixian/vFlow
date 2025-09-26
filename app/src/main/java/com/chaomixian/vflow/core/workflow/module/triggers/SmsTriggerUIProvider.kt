@@ -1,4 +1,4 @@
-// 文件: SmsTriggerUIProvider.kt
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/SmsTriggerUIProvider.kt
 // 描述: 为短信触发器模块提供自定义编辑器UI。
 package com.chaomixian.vflow.core.workflow.module.triggers
 
@@ -8,7 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import com.chaomixian.vflow.R
@@ -55,7 +54,11 @@ class SmsTriggerUIProvider : ModuleUIProvider {
             updateValueLayoutVisibility(holder.contentValueLayout, selectedText, "识别验证码")
             onParametersChanged()
         }
-        holder.contentValueEdit.setText(currentParameters["content_filter_value"] as? String ?: "")
+        // 当类型不是“识别验证码”时，才设置文本
+        if (currentParameters["content_filter_type"] as? String != "识别验证码") {
+            holder.contentValueEdit.setText(currentParameters["content_filter_value"] as? String ?: "")
+        }
+
 
         // --- 添加监听器 ---
         holder.senderValueEdit.doAfterTextChanged { onParametersChanged() }
@@ -79,8 +82,9 @@ class SmsTriggerUIProvider : ModuleUIProvider {
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as EditorViewHolder
         val contentFilterType = getSelectedChipText(h.contentChipGroup)
+        // “识别验证码”模式下，value 字段为空字符串，不再需要硬编码正则表达式
         val contentFilterValue = if (contentFilterType == "识别验证码") {
-            SmsTriggerModule.VERIFICATION_CODE_REGEX
+            ""
         } else {
             h.contentValueEdit.text.toString()
         }
@@ -94,7 +98,7 @@ class SmsTriggerUIProvider : ModuleUIProvider {
     }
 
     /**
-     * [核心修复] 辅助函数：动态创建、设置并监听ChipGroup。
+     * 辅助函数：动态创建、设置并监听ChipGroup。
      */
     private fun setupChipGroup(
         context: Context,

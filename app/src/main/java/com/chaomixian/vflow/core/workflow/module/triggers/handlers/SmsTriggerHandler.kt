@@ -1,4 +1,4 @@
-// 文件: SmsTriggerHandler.kt
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/handlers/SmsTriggerHandler.kt
 // 描述: 监听系统短信广播，并根据规则触发工作流。
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
@@ -11,8 +11,8 @@ import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.DictionaryVariable
 import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.utils.CodeExtractor // 导入 CodeExtractor
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.module.triggers.SmsTriggerModule
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 
@@ -104,19 +104,12 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
 
         // 当内容过滤器是“识别验证码”时
         if (contentFilterType == "识别验证码") {
-            try {
-                // 使用模块中定义的标准正则表达式
-                val pattern = Pattern.compile(SmsTriggerModule.VERIFICATION_CODE_REGEX)
-                val matcher = pattern.matcher(content)
-                return if (matcher.find()) {
-                    // 成功匹配，提取第一个捕获组（即数字验证码）
-                    val code = matcher.group(1)
-                    FilterMatchResult(true, code)
-                } else {
-                    FilterMatchResult(false)
-                }
-            } catch (e: Exception) {
-                return FilterMatchResult(false)
+            // 使用 CodeExtractor 提取验证码
+            val code = CodeExtractor.getCode(content)
+            return if (code != null) {
+                FilterMatchResult(true, code)
+            } else {
+                FilterMatchResult(false)
             }
         }
 

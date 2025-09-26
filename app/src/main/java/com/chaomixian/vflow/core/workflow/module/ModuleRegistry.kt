@@ -111,6 +111,7 @@ object ModuleRegistry {
         register(WifiModule())
         register(BluetoothModule())
         register(BrightnessModule())
+        register(ReadSmsModule())
 
         // Shizuku 模块
         register(ShellCommandModule())
