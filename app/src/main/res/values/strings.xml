@@ -21,7 +21,7 @@
     <string name="settings_section_about_desc">查看应用版本、开源许可和开发者信息。</string>
     <string name="about_version_label">版本 %s</string>
     <string name="about_developer_label">开发者</string>
-    <string name="about_developer_name">chaomixian</string>
+    <string name="about_developer_name">ChaoMixian</string>
     <string name="about_github_button">在 GitHub 上查看</string>
 
     <string name="permission_activity_title">权限请求</string>

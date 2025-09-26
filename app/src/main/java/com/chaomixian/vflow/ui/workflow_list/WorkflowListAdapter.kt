@@ -26,8 +26,8 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import java.util.Collections
-import androidx.core.content.ContextCompat
 import com.google.android.material.color.MaterialColors
+import androidx.core.view.isNotEmpty
 
 /**
  * 工作流列表的 RecyclerView.Adapter。
@@ -224,7 +224,7 @@ class WorkflowListAdapter(
             }
 
             // 如果没有任何Chip，则隐藏ChipGroup
-            infoChipGroup.isVisible = infoChipGroup.childCount > 0
+            infoChipGroup.isVisible = infoChipGroup.isNotEmpty()
         }
     }
 }
