@@ -33,17 +33,11 @@ class PermissionActivity : BaseActivity() {
     private var workflowName: String? = null
     private val SHIZUKU_PERMISSION_REQUEST_CODE = 123
 
-    private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-            // 回调后不需要做特殊处理，onResume会统一刷新
-        }
-
-    // 专门用于请求多个权限
+    // 统一使用一个多权限请求启动器
     private val requestMultiplePermissionsLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-            // 收到结果后，onResume 会刷新状态
+            // 收到结果后，onResume 会刷新状态，这里无需额外操作
         }
-
 
     private val appSettingsLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -118,14 +112,19 @@ class PermissionActivity : BaseActivity() {
     }
 
     /**
-     * 重写权限请求逻辑，正确处理所有运行时权限
+     * 重构权限请求逻辑，以正确处理权限组。
      */
     private fun requestPermission(permission: Permission) {
         when (permission.type) {
             PermissionType.RUNTIME -> {
-                // 将所有运行时权限都通过 Launcher 发起请求
-                // 这样可以统一处理，避免遗漏
-                requestPermissionLauncher.launch(permission.id)
+                // 如果 runtimePermissions 列表不为空，说明是权限组，请求列表中的所有权限
+                val permissionsToRequest = if (permission.runtimePermissions.isNotEmpty()) {
+                    permission.runtimePermissions.toTypedArray()
+                } else {
+                    // 否则，是单个权限，只请求其 id
+                    arrayOf(permission.id)
+                }
+                requestMultiplePermissionsLauncher.launch(permissionsToRequest)
             }
             PermissionType.SPECIAL -> {
                 // 特殊权限需要跳转到系统设置页面

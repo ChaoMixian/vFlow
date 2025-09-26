@@ -65,8 +65,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                app:chipSpacingVertical="0dp"
-                app:chipSpacingHorizontal="4dp"
+                app:chipSpacingVertical="-14dp"
+                app:chipSpacingHorizontal="8dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/workflow_info_container" />

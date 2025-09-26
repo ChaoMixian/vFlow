@@ -51,6 +51,16 @@ object PermissionManager {
         type = PermissionType.RUNTIME
     )
 
+    // 明确短信权限是一个权限组
+    val SMS = Permission(
+        id = Manifest.permission.RECEIVE_SMS, // 使用一个核心权限作为ID，但在请求时会处理整个组
+        name = "短信权限",
+        description = "用于接收和读取短信，以触发相应的工作流。此权限组包含接收、读取短信。",
+        type = PermissionType.RUNTIME,
+        // 定义此权限对象实际包含的系统权限列表
+        runtimePermissions = listOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
+    )
+
     // 蓝牙权限 (Android 12+)
     val BLUETOOTH = Permission(
         id = Manifest.permission.BLUETOOTH_CONNECT,
@@ -150,6 +160,12 @@ object PermissionManager {
                 } else {
                     // 旧版本，检查旧的存储权限
                     ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+            }
+            // 检查短信权限组中的所有权限
+            SMS.id -> {
+                permission.runtimePermissions.all { perm ->
+                    ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
                 }
             }
             BLUETOOTH.id -> {
