@@ -13,6 +13,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -46,6 +47,8 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.*
@@ -64,7 +67,9 @@ class WorkflowEditorActivity : BaseActivity() {
     private var currentEditorSheet: ActionEditorSheet? = null
     private lateinit var executeButton: MaterialButton
     private lateinit var recyclerView: RecyclerView
+    private val gson = Gson()
 
+    private var initialWorkflowJson: String? = null
 
     private var pendingExecutionWorkflow: Workflow? = null
 
@@ -138,7 +143,12 @@ class WorkflowEditorActivity : BaseActivity() {
 
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar_editor)
-        toolbar.setNavigationOnClickListener { finish() }
+        toolbar.setNavigationOnClickListener { handleExitRequest() }
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                handleExitRequest()
+            }
+        })
 
         setupRecyclerView()
 
@@ -157,6 +167,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 currentWorkflow = workflowManager.getWorkflow(workflowId)
                 currentWorkflow?.let {
                     updateExecuteButton(WorkflowExecutor.isRunning(it.id))
+                    initialWorkflowJson = gson.toJson(getCurrentWorkflowState())
                 }
             }
             recalculateAndNotify() // 通知适配器数据已恢复
@@ -171,7 +182,7 @@ class WorkflowEditorActivity : BaseActivity() {
         findViewById<Button>(R.id.button_add_action).setOnClickListener {
             showActionPicker(isTriggerPicker = false)
         }
-        findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow() }
+        findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow(false) }
 
         executeButton.setOnClickListener {
             val name = nameEditText.text.toString().trim()
@@ -216,6 +227,44 @@ class WorkflowEditorActivity : BaseActivity() {
                 }
             }
         }
+    }
+
+    private fun hasUnsavedChanges(): Boolean {
+        val currentJson = gson.toJson(getCurrentWorkflowState())
+        return currentJson != initialWorkflowJson
+    }
+
+    private fun getCurrentWorkflowState(): Workflow {
+        return currentWorkflow?.copy(
+            name = nameEditText.text.toString(),
+            steps = actionSteps.toList()
+        ) ?: Workflow(
+            id = UUID.randomUUID().toString(),
+            name = nameEditText.text.toString(),
+            steps = actionSteps.toList()
+        )
+    }
+
+    private fun handleExitRequest() {
+        if (hasUnsavedChanges()) {
+            showUnsavedChangesDialog()
+        } else {
+            finish()
+        }
+    }
+
+    private fun showUnsavedChangesDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.dialog_unsaved_title)
+            .setMessage(R.string.dialog_unsaved_message)
+            .setPositiveButton(R.string.dialog_unsaved_save_exit) { _, _ ->
+                saveWorkflow(true)
+            }
+            .setNegativeButton(R.string.dialog_unsaved_discard) { _, _ ->
+                finish()
+            }
+            .setNeutralButton(R.string.common_cancel, null)
+            .show()
     }
 
     /**
@@ -562,12 +611,8 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun setupRecyclerView() {
-        val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-        val hideConnections = prefs.getBoolean("hideConnections", false)
-
         actionStepAdapter = ActionStepAdapter(
             actionSteps,
-            hideConnections,
             onEditClick = { position, inputId ->
                 val step = actionSteps[position]
                 val module = ModuleRegistry.getModule(step.moduleId)
@@ -661,7 +706,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
 
             /**
-             * [核心修改] 重写 clearView 方法以正确处理积木块的拖拽。
+             * 重写 clearView 方法以正确处理积木块的拖拽。
              */
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(this@WorkflowEditorActivity.recyclerView, viewHolder)
@@ -933,6 +978,7 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
         recalculateAndNotify()
+        initialWorkflowJson = gson.toJson(getCurrentWorkflowState())
     }
 
     private fun updateExecuteButton(isRunning: Boolean) {
@@ -1017,7 +1063,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
     }
 
-    private fun saveWorkflow() {
+    private fun saveWorkflow(shouldFinish: Boolean) {
         // 变量名重复性检查
         for (step in actionSteps) {
             val module = ModuleRegistry.getModule(step.moduleId)
@@ -1046,7 +1092,12 @@ class WorkflowEditorActivity : BaseActivity() {
             )
             workflowManager.saveWorkflow(workflowToSave)
             Toast.makeText(this, "工作流已保存", Toast.LENGTH_SHORT).show()
-            finish()
+
+            if (shouldFinish) {
+                finish()
+            } else {
+                initialWorkflowJson = gson.toJson(workflowToSave)
+            }
         }
     }
 }

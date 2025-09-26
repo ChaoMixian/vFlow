@@ -66,7 +66,6 @@ private data class SourceInfo(val outputName: String, val color: Int)
  */
 class ActionStepAdapter(
     private val actionSteps: MutableList<ActionStep>,
-    private val hideConnections: Boolean, // TODO: 连接线绘制暂未(不打算)实现
     private val onEditClick: (position: Int, inputId: String?) -> Unit, // 编辑回调
     private val onDeleteClick: (position: Int) -> Unit, // 删除回调
     private val onParameterPillClick: (position: Int, parameterId: String) -> Unit, // 参数药丸点击回调

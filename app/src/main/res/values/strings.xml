@@ -21,7 +21,7 @@
     <string name="settings_section_about_desc">查看应用版本、开源许可和开发者信息。</string>
     <string name="about_version_label">版本 %s</string>
     <string name="about_developer_label">开发者</string>
-    <string name="about_developer_name">ChaoMixian</string>
+    <string name="about_developer_name">chaomixian</string>
     <string name="about_github_button">在 GitHub 上查看</string>
 
     <string name="permission_activity_title">权限请求</string>
@@ -38,6 +38,11 @@
     <string name="workflow_item_menu_delete">删除</string>
     <string name="dialog_delete_title">确认删除</string>
     <string name="dialog_delete_message">您确定要删除工作流“%s”吗？此操作无法撤销。</string>
+    <string name="dialog_unsaved_title">有未保存的更改</string>
+    <string name="dialog_unsaved_message">您想保存更改后再退出吗？</string>
+    <string name="dialog_unsaved_save_exit">保存</string>
+    <string name="dialog_unsaved_discard">放弃</string>
+
     <string name="common_delete">删除</string>
     <string name="common_cancel">取消</string>
     <string name="workflow_editor_add_action">添加动作</string>

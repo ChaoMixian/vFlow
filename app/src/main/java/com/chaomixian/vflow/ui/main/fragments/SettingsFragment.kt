@@ -21,6 +21,8 @@ import com.chaomixian.vflow.services.ShizukuManager
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import androidx.core.content.edit
+import androidx.core.net.toUri
 
 /**
  * “设置” Fragment。
@@ -39,7 +41,7 @@ class SettingsFragment : Fragment() {
         val dynamicColorSwitch = view.findViewById<MaterialSwitch>(R.id.switch_dynamic_color)
         dynamicColorSwitch.isChecked = prefs.getBoolean("dynamicColorEnabled", false)
         dynamicColorSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("dynamicColorEnabled", isChecked).apply()
+            prefs.edit { putBoolean("dynamicColorEnabled", isChecked) }
             requireActivity().recreate() // 重新创建Activity以应用主题更改
         }
 
@@ -47,7 +49,7 @@ class SettingsFragment : Fragment() {
         val progressNotificationSwitch = view.findViewById<MaterialSwitch>(R.id.switch_progress_notification)
         progressNotificationSwitch.isChecked = prefs.getBoolean("progressNotificationEnabled", true) // 默认开启
         progressNotificationSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("progressNotificationEnabled", isChecked).apply()
+            prefs.edit { putBoolean("progressNotificationEnabled", isChecked) }
         }
 
         // 强制保活开关逻辑
@@ -56,7 +58,7 @@ class SettingsFragment : Fragment() {
             forceKeepAliveSwitch.isEnabled = true
             forceKeepAliveSwitch.isChecked = prefs.getBoolean("forceKeepAliveEnabled", false)
             forceKeepAliveSwitch.setOnCheckedChangeListener { _, isChecked ->
-                prefs.edit().putBoolean("forceKeepAliveEnabled", isChecked).apply()
+                prefs.edit { putBoolean("forceKeepAliveEnabled", isChecked) }
                 if (isChecked) {
                     ShizukuManager.startWatcher(requireContext())
                     Toast.makeText(requireContext(), "Shizuku 守护已开启", Toast.LENGTH_SHORT).show()
@@ -112,7 +114,8 @@ class SettingsFragment : Fragment() {
             .create()
 
         githubButton.setOnClickListener {
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ChaoMixian/vFlow"))
+            val browserIntent = Intent(Intent.ACTION_VIEW,
+                "https://github.com/ChaoMixian/vFlow".toUri())
             startActivity(browserIntent)
             dialog.dismiss() // 点击后关闭对话框
         }
