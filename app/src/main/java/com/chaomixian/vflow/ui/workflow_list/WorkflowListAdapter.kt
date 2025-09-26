@@ -92,7 +92,8 @@ class WorkflowListAdapter(
     override fun onBindViewHolder(holder: WorkflowViewHolder, position: Int) {
         val workflow = workflows[position]
         val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
-        val missingPermissions = if (isManualTrigger) emptyList() else PermissionManager.getMissingPermissions(holder.itemView.context, workflow)
+        // 移除对 isManualTrigger 的判断，对所有工作流都进行权限检查
+        val missingPermissions = PermissionManager.getMissingPermissions(holder.itemView.context, workflow)
 
         holder.bind(workflow, missingPermissions.isNotEmpty())
 

@@ -4,10 +4,14 @@ package com.chaomixian.vflow.ui.main.fragments
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.chaomixian.vflow.R
@@ -15,6 +19,7 @@ import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShizukuManager
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 
 /**
@@ -36,13 +41,6 @@ class SettingsFragment : Fragment() {
         dynamicColorSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("dynamicColorEnabled", isChecked).apply()
             requireActivity().recreate() // 重新创建Activity以应用主题更改
-        }
-
-        // 隐藏连接线开关逻辑
-        val hideConnectionsSwitch = view.findViewById<MaterialSwitch>(R.id.switch_hide_connections)
-        hideConnectionsSwitch.isChecked = prefs.getBoolean("hideConnections", false)
-        hideConnectionsSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("hideConnections", isChecked).apply()
         }
 
         // 进度通知开关逻辑
@@ -84,6 +82,41 @@ class SettingsFragment : Fragment() {
             startActivity(intent)
         }
 
+        // “关于”卡片的点击逻辑
+        view.findViewById<MaterialCardView>(R.id.card_about).setOnClickListener {
+            showAboutDialog()
+        }
+
         return view
+    }
+
+    /**
+     * 显示“关于”对话框的方法
+     */
+    private fun showAboutDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_about, null)
+        val versionTextView = dialogView.findViewById<TextView>(R.id.text_version)
+        val githubButton = dialogView.findViewById<Button>(R.id.button_github)
+
+        // 动态获取版本名
+        try {
+            val pInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
+            versionTextView.text = getString(R.string.about_version_label, pInfo.versionName)
+        } catch (e: PackageManager.NameNotFoundException) {
+            e.printStackTrace()
+            versionTextView.visibility = View.GONE
+        }
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setView(dialogView)
+            .create()
+
+        githubButton.setOnClickListener {
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ChaoMixian/vFlow"))
+            startActivity(browserIntent)
+            dialog.dismiss() // 点击后关闭对话框
+        }
+
+        dialog.show()
     }
 }

@@ -47,9 +47,8 @@ class MainActivity : BaseActivity() {
         ModuleRegistry.initialize() // 初始化模块注册表
         TriggerHandlerRegistry.initialize() // 初始化触发器处理器注册表
         ExecutionNotificationManager.initialize(this) // 初始化通知管理器
-        // 初始化日志管理器和执行监听器
+        // 移除此处对 ExecutionLogger 的初始化，因为它已在 TriggerService 中完成
         LogManager.initialize(applicationContext)
-        ExecutionLogger.initialize(applicationContext, lifecycleScope)
         // 应用启动时，立即发起 Shizuku 预连接
         ShizukuManager.proactiveConnect(applicationContext)
         // 启动后台触发器服务

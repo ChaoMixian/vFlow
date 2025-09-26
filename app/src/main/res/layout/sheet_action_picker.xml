@@ -38,11 +38,11 @@
             android:id="@+id/recycler_view_action_picker"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="8dp"
+            android:paddingTop="8dp"
             android:paddingBottom="16dp"
-            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-            app:spanCount="4"
-            tools:listitem="@layout/sheet_action_picker_grid_item" />
+            android:clipToPadding="false"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/item_action_picker_group_card" />
 
         <ProgressBar
             android:id="@+id/progress_bar"
