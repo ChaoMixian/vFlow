@@ -29,6 +29,22 @@
         app:iconifiedByDefault="false"
         app:queryHint="搜索模块..." />
 
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="8dp">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_permissions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleLine="true"
+            app:singleSelection="false"/>
+    </HorizontalScrollView>
+
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

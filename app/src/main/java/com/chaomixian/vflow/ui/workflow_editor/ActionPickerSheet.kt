@@ -21,6 +21,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.ActionModule
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.*
 
 class ActionPickerSheet : BottomSheetDialogFragment() {
@@ -28,6 +30,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchView: SearchView
+    private lateinit var permissionChipGroup: ChipGroup
     private lateinit var progressBar: ProgressBar
     private lateinit var noResultsView: TextView
     private lateinit var titleView: TextView
@@ -37,6 +40,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
 
     private val debounceHandler = Handler(Looper.getMainLooper())
     private var searchJob: Job? = null
+    private var selectedPermissions = mutableSetOf<String>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -45,6 +49,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
         val view = inflater.inflate(R.layout.sheet_action_picker, container, false)
         recyclerView = view.findViewById(R.id.recycler_view_action_picker)
         searchView = view.findViewById(R.id.search_view_actions)
+        permissionChipGroup = view.findViewById(R.id.chip_group_permissions)
         progressBar = view.findViewById(R.id.progress_bar)
         noResultsView = view.findViewById(R.id.text_view_no_results)
         titleView = view.findViewById(R.id.text_view_bottom_sheet_title)
@@ -69,7 +74,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
             override fun onQueryTextSubmit(query: String?): Boolean = false
             override fun onQueryTextChange(newText: String?): Boolean {
                 debounceHandler.removeCallbacksAndMessages(null)
-                debounceHandler.postDelayed({ filterModules(newText.orEmpty()) }, 100)
+                debounceHandler.postDelayed({ filterModules() }, 100)
                 return true
             }
         })
@@ -92,6 +97,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
 
             withContext(Dispatchers.Main) {
                 titleView.text = if (isTriggerPicker) "选择一个触发器" else "选择一个动作"
+                setupPermissionChips()
                 progressBar.visibility = View.GONE
                 recyclerView.visibility = View.VISIBLE
                 updateAdapterData()
@@ -99,27 +105,65 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun filterModules(query: String) {
+    private fun setupPermissionChips() {
+        permissionChipGroup.removeAllViews()
+        val allPermissions = allModuleGroups.values.flatten()
+            .flatMap { it.requiredPermissions }
+            .distinctBy { it.name }
+            .sortedBy { it.name }
+
+        val inflater = LayoutInflater.from(requireContext())
+
+        selectedPermissions.clear()
+        allPermissions.forEach { selectedPermissions.add(it.name) }
+
+        allPermissions.forEach { permission ->
+            val chip = inflater.inflate(R.layout.chip_filter, permissionChipGroup, false) as Chip
+            chip.text = permission.name
+            chip.isChecked = true // 默认选中
+
+            // 为每个Chip单独设置监听器，而不是给整个Group设置
+            chip.setOnCheckedChangeListener { buttonView, isChecked ->
+                val permissionName = buttonView.text.toString()
+                if (isChecked) {
+                    selectedPermissions.add(permissionName)
+                } else {
+                    selectedPermissions.remove(permissionName)
+                }
+                // 使用防抖来避免快速点击时频繁刷新
+                debounceHandler.removeCallbacksAndMessages(null)
+                debounceHandler.postDelayed({ filterModules() }, 50)
+            }
+            permissionChipGroup.addView(chip)
+        }
+    }
+
+
+    private fun filterModules() {
         searchJob?.cancel()
         searchJob = lifecycleScope.launch(Dispatchers.Default) {
-            val lowerCaseQuery = query.lowercase().trim()
+            val query = searchView.query.toString().lowercase().trim()
 
-            filteredModuleGroups = if (lowerCaseQuery.isEmpty()) {
-                allModuleGroups
-            } else {
-                allModuleGroups.mapValues { (_, modules) ->
-                    modules.filter {
-                        it.metadata.name.lowercase().contains(lowerCaseQuery) ||
-                                it.metadata.description.lowercase().contains(lowerCaseQuery)
+            filteredModuleGroups = allModuleGroups.mapValues { (_, modules) ->
+                modules.filter { module ->
+                    val textMatch = query.isEmpty() ||
+                            module.metadata.name.lowercase().contains(query) ||
+                            module.metadata.description.lowercase().contains(query)
+
+                    val permissionMatch = module.requiredPermissions.all { perm ->
+                        selectedPermissions.contains(perm.name)
                     }
-                }.filterValues { it.isNotEmpty() }
-            }
+
+                    textMatch && permissionMatch
+                }
+            }.filterValues { it.isNotEmpty() }
 
             withContext(Dispatchers.Main) {
                 updateAdapterData()
             }
         }
     }
+
 
     private fun updateAdapterData() {
         (recyclerView.adapter as? ActionPickerGroupAdapter)?.updateData(filteredModuleGroups)
