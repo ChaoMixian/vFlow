@@ -6,13 +6,14 @@ import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.module.isMagicVariable
-import com.chaomixian.vflow.core.module.isNamedVariable
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.parcelize.Parcelize
+import java.io.Serializable
 
 /**
  * 代表一个可供选择的变量的数据模型。
@@ -31,17 +32,17 @@ data class MagicVariableItem(
 
 /**
  * RecyclerView 列表项的密封类，支持两种类型：
- * 1. ClearSelection: 一个特殊操作项，用于清除当前输入框的魔法变量连接。
- * 2. Variable: 代表一个可选择的魔法变量。
+ * 1. ClearAction: 一个特殊操作项，用于清除当前输入框的魔法变量连接。
+ * 2. VariableGroup: 代表一个完整的变量分组，包含标题和变量列表，将渲染在一个卡片中。
  */
 sealed class PickerListItem {
-    object ClearSelection : PickerListItem() // 代表“清除选择/使用静态值”的操作项
-    data class Variable(val item: MagicVariableItem) : PickerListItem() // 代表一个可选择的魔法变量
+    object ClearAction : PickerListItem()
+    data class VariableGroup(val title: String, val variables: List<MagicVariableItem>) : PickerListItem()
 }
 
 /**
  * 魔法变量选择器底部表单 (BottomSheetDialogFragment)。
- * 显示可用魔法变量列表以及一个“清除”选项。
+ * 显示可用魔法变量的分组列表以及一个“清除”选项。
  */
 class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
@@ -50,19 +51,18 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
     companion object {
         /**
-         * 创建 MagicVariablePickerSheet 实例，并接收过滤条件。
-         * @param availableVariables 所有可用的变量列表。
-         * @param acceptsMagicVariable 是否显示来自步骤输出的魔法变量。
-         * @param acceptsNamedVariable 是否显示用户创建的命名变量。
+         * 创建 MagicVariablePickerSheet 实例，并接收分组后的变量数据和过滤条件。
          */
         fun newInstance(
-            availableVariables: List<MagicVariableItem>,
+            stepVariables: Map<String, List<MagicVariableItem>>,
+            namedVariables: Map<String, List<MagicVariableItem>>,
             acceptsMagicVariable: Boolean,
             acceptsNamedVariable: Boolean
         ): MagicVariablePickerSheet {
             return MagicVariablePickerSheet().apply {
                 arguments = Bundle().apply {
-                    putParcelableArrayList("variables", ArrayList(availableVariables))
+                    putSerializable("stepVariables", HashMap(stepVariables))
+                    putSerializable("namedVariables", HashMap(namedVariables))
                     putBoolean("acceptsMagic", acceptsMagicVariable)
                     putBoolean("acceptsNamed", acceptsNamedVariable)
                 }
@@ -75,28 +75,36 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         val view = inflater.inflate(R.layout.sheet_magic_variable_picker, container, false)
         val recyclerView = view.findViewById<RecyclerView>(R.id.recycler_view_magic_variables)
 
-        val allVariables = arguments?.getParcelableArrayList<MagicVariableItem>("variables") ?: emptyList()
         val acceptsMagic = arguments?.getBoolean("acceptsMagic", true) ?: true
         val acceptsNamed = arguments?.getBoolean("acceptsNamed", true) ?: true
 
-        // 根据传入的标志过滤变量列表
-        val filteredVariables = allVariables.filter {
-            (acceptsMagic && it.variableReference.isMagicVariable()) ||
-                    (acceptsNamed && it.variableReference.isNamedVariable())
-        }
-
-        // 构建列表项：首项为“清除选择”，其余为过滤后的可用变量
+        // 将分组数据转换为 RecyclerView 的列表项
         val items = mutableListOf<PickerListItem>().apply {
-            add(PickerListItem.ClearSelection) // 添加清除操作项
-            addAll(filteredVariables.map { PickerListItem.Variable(it) }) // 添加所有可用变量
+            add(PickerListItem.ClearAction) // 总是添加“清除”选项
+
+            // 添加命名变量分组
+            if (acceptsNamed) {
+                @Suppress("UNCHECKED_CAST")
+                val namedVariables = arguments?.getSerializable("namedVariables") as? Map<String, List<MagicVariableItem>>
+                namedVariables?.forEach { (groupName, variableList) ->
+                    add(PickerListItem.VariableGroup(groupName, variableList))
+                }
+            }
+
+            // 添加步骤输出变量分组
+            if (acceptsMagic) {
+                @Suppress("UNCHECKED_CAST")
+                val stepVariables = arguments?.getSerializable("stepVariables") as? Map<String, List<MagicVariableItem>>
+                stepVariables?.forEach { (groupName, variableList) ->
+                    add(PickerListItem.VariableGroup(groupName, variableList))
+                }
+            }
         }
 
+        recyclerView.layoutManager = LinearLayoutManager(context)
         recyclerView.adapter = MagicVariableAdapter(items) { selectedItem ->
-            when (selectedItem) {
-                is PickerListItem.ClearSelection -> onSelection?.invoke(null) // 清除选择
-                is PickerListItem.Variable -> onSelection?.invoke(selectedItem.item) // 选择变量
-            }
-            dismiss() // 关闭底部表单
+            onSelection?.invoke(selectedItem)
+            dismiss()
         }
         return view
     }
@@ -104,70 +112,74 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
 /**
  * MagicVariablePickerSheet 中 RecyclerView 的适配器。
- * 支持“清除操作”项和“魔法变量”项两种视图类型。
+ * 支持“清除操作”项和“变量分组卡片”项两种视图类型。
  */
 class MagicVariableAdapter(
     private val items: List<PickerListItem>,
-    private val onClick: (PickerListItem) -> Unit // 列表项点击回调
+    private val onVariableClick: (MagicVariableItem?) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
-        private const val TYPE_ACTION = 0    // 视图类型：操作项 (如清除)
-        private const val TYPE_VARIABLE = 1  // 视图类型：变量项
+        private const val TYPE_ACTION = 0
+        private const val TYPE_GROUP = 1
     }
+
     override fun getItemViewType(position: Int): Int {
         return when (items[position]) {
-            is PickerListItem.ClearSelection -> TYPE_ACTION
-            is PickerListItem.Variable -> TYPE_VARIABLE
+            is PickerListItem.ClearAction -> TYPE_ACTION
+            is PickerListItem.VariableGroup -> TYPE_GROUP
         }
     }
 
-    /** 创建 ViewHolder 实例。 */
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
-            TYPE_ACTION -> {
-                val view = inflater.inflate(R.layout.item_magic_variable_action, parent, false)
-                ActionViewHolder(view)
-            }
-            else -> { // TYPE_VARIABLE
-                val view = inflater.inflate(R.layout.item_magic_variable, parent, false)
-                VariableViewHolder(view)
-            }
+            TYPE_ACTION -> ActionViewHolder(inflater.inflate(R.layout.item_magic_variable_action, parent, false))
+            else -> GroupViewHolder(inflater.inflate(R.layout.item_magic_variable_group_card, parent, false), onVariableClick)
         }
     }
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val item = items[position]
-        when (holder) {
-            is ActionViewHolder -> {
-                holder.bind("清除 / 使用静态值") // 设置操作项文本
-                holder.itemView.setOnClickListener { onClick(item) }
+        when (val item = items[position]) {
+            is PickerListItem.ClearAction -> {
+                (holder as ActionViewHolder).bind("清除 / 使用静态值")
+                holder.itemView.setOnClickListener { onVariableClick(null) }
             }
-            is VariableViewHolder -> {
-                val variableItem = (item as PickerListItem.Variable).item
-                holder.bind(variableItem) // 绑定变量数据
-                holder.itemView.setOnClickListener { onClick(item) }
+            is PickerListItem.VariableGroup -> {
+                (holder as GroupViewHolder).bind(item)
             }
         }
     }
 
-    /** 返回列表项总数。 */
     override fun getItemCount() = items.size
 
-    /**
-     * ViewHolder 更新，以显示新的 originDescription。
-     */
-    class VariableViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val nameTextView: TextView = view.findViewById(R.id.variable_name)
-        private val originTextView: TextView = view.findViewById(R.id.variable_origin)
-        fun bind(item: MagicVariableItem) {
-            nameTextView.text = item.variableName
-            // 直接显示 originDescription，内容已在 Activity 中准备好
-            originTextView.text = item.originDescription
+    /** ViewHolder for the variable group card */
+    class GroupViewHolder(
+        view: View,
+        private val onVariableClick: (MagicVariableItem?) -> Unit
+    ) : RecyclerView.ViewHolder(view) {
+        private val titleTextView: TextView = view.findViewById(R.id.group_title)
+        private val variablesContainer: LinearLayout = view.findViewById(R.id.variables_container)
+
+        fun bind(group: PickerListItem.VariableGroup) {
+            titleTextView.text = group.title
+            variablesContainer.removeAllViews() // 清空旧视图
+
+            val inflater = LayoutInflater.from(itemView.context)
+            group.variables.forEach { variableItem ->
+                val itemView = inflater.inflate(R.layout.item_magic_variable, variablesContainer, false)
+                val nameTextView: TextView = itemView.findViewById(R.id.variable_name)
+                val originTextView: TextView = itemView.findViewById(R.id.variable_origin)
+
+                nameTextView.text = variableItem.variableName
+                originTextView.text = variableItem.originDescription
+                itemView.setOnClickListener { onVariableClick(variableItem) }
+                variablesContainer.addView(itemView)
+            }
         }
     }
 
-    /** 操作项 (如“清除选择”) 的 ViewHolder。 */
+    /** ViewHolder for the "Clear" action item */
     class ActionViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val actionTextView: TextView = view.findViewById(R.id.action_text)
         fun bind(text: String) {

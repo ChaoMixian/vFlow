@@ -33,8 +33,10 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.core.workflow.module.logic.FOREACH_PAIRING_ID
 import com.chaomixian.vflow.core.workflow.module.logic.FOREACH_START_ID
+import com.chaomixian.vflow.core.workflow.module.logic.ForEachModule
 import com.chaomixian.vflow.core.workflow.module.logic.LOOP_PAIRING_ID
 import com.chaomixian.vflow.core.workflow.module.logic.LOOP_START_ID
+import com.chaomixian.vflow.core.workflow.module.logic.LoopModule
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.app_picker.AppPickerActivity
@@ -305,8 +307,8 @@ class WorkflowEditorActivity : BaseActivity() {
         }
     }
 
-    /** 提取一个辅助函数来获取所有可用的命名变量 */
-    private fun getAvailableNamedVariables(upToPosition: Int): List<MagicVariableItem> {
+    /** 提取一个辅助函数以分组形式获取所有可用的命名变量 */
+    private fun getAvailableNamedVariables(upToPosition: Int): Map<String, List<MagicVariableItem>> {
         val availableNamedVariables = mutableMapOf<String, MagicVariableItem>()
         actionSteps.subList(0, upToPosition)
             .filter { it.moduleId == CreateVariableModule().id }
@@ -321,13 +323,21 @@ class WorkflowEditorActivity : BaseActivity() {
                     )
                 }
             }
-        return availableNamedVariables.values.toList()
+        // 将所有命名变量归入一个固定的组
+        return if (availableNamedVariables.isNotEmpty()) {
+            mapOf("命名变量" to availableNamedVariables.values.toList())
+        } else {
+            emptyMap()
+        }
     }
+
 
     private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
         val contextPosition = if (position != -1) position else actionSteps.size
-        // 直接获取 MagicVariableItem 列表
-        val namedVariables = getAvailableNamedVariables(contextPosition).map { it.variableName }
+        // 传递一个扁平的列表供 ActionEditorSheet 内部使用
+        val namedVariableNames = getAvailableNamedVariables(contextPosition)
+            .values.flatten().map { it.variableName }
+
 
         // 在打开编辑器前，保存旧的变量名
         if (existingStep != null && module.id == CreateVariableModule().id) {
@@ -337,7 +347,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
 
-        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, actionSteps.toList(), namedVariables)
+        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, actionSteps.toList(), namedVariableNames)
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -458,91 +468,78 @@ class WorkflowEditorActivity : BaseActivity() {
 
 
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
-        // 查找当前输入框的定义
         val targetInputDef = editingModule.getDynamicInputs(actionSteps.getOrNull(editingStepPosition), actionSteps).find { it.id == targetInputId }
         if (targetInputDef == null) {
             Toast.makeText(this, "无法找到输入定义: $targetInputId", Toast.LENGTH_SHORT).show()
             return
         }
 
+        // --- 按步骤分组收集魔法变量 ---
+        val groupedStepOutputs = mutableMapOf<String, MutableList<MagicVariableItem>>()
 
-        val availableStepOutputs = mutableListOf<MagicVariableItem>()
-
-        // 遍历当前步骤之前的所有步骤来收集步骤输出
         for (i in 0 until editingStepPosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId) ?: continue
-
-            // 在通用遍历中，跳过所有循环模块的起始块，因为它们的变量是上下文相关的
             if (module.id == LOOP_START_ID || module.id == FOREACH_START_ID) continue
 
-            module.getOutputs(step).forEach { outputDef ->
-                val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
+            val outputs = module.getOutputs(step).filter { outputDef ->
+                targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
                         targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
-                if (isCompatible) {
-                    availableStepOutputs.add(
-                        MagicVariableItem(
-                            variableReference = "{{${step.id}.${outputDef.id}}}",
-                            variableName = outputDef.name,
-                            originDescription = "来自: ${module.metadata.name}"
-                        )
+            }
+
+            if (outputs.isNotEmpty()) {
+                val groupName = "#$i ${module.metadata.name}"
+                val items = outputs.map { outputDef ->
+                    MagicVariableItem(
+                        variableReference = "{{${step.id}.${outputDef.id}}}",
+                        variableName = outputDef.name,
+                        originDescription = "(${outputDef.typeName.split('.').last()})" // 简化类型显示
                     )
                 }
+                groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
             }
         }
 
-        // 动态添加固定次数循环变量
+        // --- 动态添加循环变量 (如果适用) ---
         val enclosingLoopStep = findEnclosingLoopStartStep(editingStepPosition, LOOP_PAIRING_ID)
         if (enclosingLoopStep != null) {
-            val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId)
-            if (loopModule != null && loopModule.id == LOOP_START_ID) {
-                loopModule.getOutputs(enclosingLoopStep).forEach { outputDef ->
-                    val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
-                            targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
-                    if (isCompatible) {
-                        availableStepOutputs.add(
-                            MagicVariableItem(
-                                variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
-                                variableName = outputDef.name,
-                                originDescription = "来自: ${loopModule.metadata.name}"
-                            )
-                        )
-                    }
+            val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId) as? LoopModule
+            if (loopModule != null) {
+                val groupName = "#${actionSteps.indexOf(enclosingLoopStep)} ${loopModule.metadata.name}"
+                val items = loopModule.getOutputs(enclosingLoopStep).map { outputDef ->
+                    MagicVariableItem(
+                        variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
+                        variableName = outputDef.name,
+                        originDescription = "(${outputDef.typeName.split('.').last()})"
+                    )
                 }
+                groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
             }
         }
 
-        // 动态添加 ForEach 循环变量
         val enclosingForEachStep = findEnclosingLoopStartStep(editingStepPosition, FOREACH_PAIRING_ID)
         if (enclosingForEachStep != null) {
-            val forEachModule = ModuleRegistry.getModule(enclosingForEachStep.moduleId)
-            if (forEachModule != null && forEachModule.id == FOREACH_START_ID) {
-                forEachModule.getOutputs(enclosingForEachStep).forEach { outputDef ->
-                    val isCompatible = targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
-                            targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName) ||
-                            outputDef.typeName == "vflow.type.any"
-                    if (isCompatible) {
-                        availableStepOutputs.add(
-                            MagicVariableItem(
-                                variableReference = "{{${enclosingForEachStep.id}.${outputDef.id}}}",
-                                variableName = outputDef.name,
-                                originDescription = "来自: ${forEachModule.metadata.name}"
-                            )
-                        )
-                    }
+            val forEachModule = ModuleRegistry.getModule(enclosingForEachStep.moduleId) as? ForEachModule
+            if (forEachModule != null) {
+                val groupName = "#${actionSteps.indexOf(enclosingForEachStep)} ${forEachModule.metadata.name}"
+                val items = forEachModule.getOutputs(enclosingForEachStep).map { outputDef ->
+                    MagicVariableItem(
+                        variableReference = "{{${enclosingForEachStep.id}.${outputDef.id}}}",
+                        variableName = outputDef.name,
+                        originDescription = if (outputDef.typeName == "vflow.type.any") "" else "(${outputDef.typeName.split('.').last()})"
+                    )
                 }
+                groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
             }
         }
 
+        // --- 获取命名变量 ---
+        val namedVariables = getAvailableNamedVariables(editingStepPosition)
 
-        val availableNamedVariables = getAvailableNamedVariables(editingStepPosition)
-
-        // 合并所有可用变量
-        val finalAvailableVariables = availableNamedVariables + availableStepOutputs
-
-        // 创建选择器时传入过滤条件
+        // --- 启动选择器 ---
         val picker = MagicVariablePickerSheet.newInstance(
-            finalAvailableVariables,
+            groupedStepOutputs,
+            namedVariables,
             acceptsMagicVariable = targetInputDef.acceptsMagicVariable,
             acceptsNamedVariable = targetInputDef.acceptsNamedVariable
         )
