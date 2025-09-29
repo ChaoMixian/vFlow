@@ -14,6 +14,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.ExecutionLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
@@ -55,6 +56,7 @@ class TriggerService : Service() {
 
         // 让服务变得自给自足，无论应用进程是否存活，都能正确初始化所有依赖项。
         // 这可以修复在后台被杀后触发工作流导致的 UninitializedPropertyAccessException 崩溃。
+        DebugLogger.initialize(applicationContext) // 确保服务独立运行时也能初始化
         ModuleRegistry.initialize()
         TriggerHandlerRegistry.initialize() // [新增] 确保服务独立运行时也能初始化注册表
         ExecutionNotificationManager.initialize(this)
@@ -63,7 +65,7 @@ class TriggerService : Service() {
 
         // 在服务创建时就注册并启动所有处理器
         registerAndStartHandlers()
-        Log.d(TAG, "TriggerService 已创建并启动了 ${triggerHandlers.size} 个触发器处理器。")
+        DebugLogger.d(TAG, "TriggerService 已创建并启动了 ${triggerHandlers.size} 个触发器处理器。")
 
         // 首次启动时，加载所有活动的触发器
         loadAllActiveTriggers()
@@ -118,7 +120,7 @@ class TriggerService : Service() {
      */
     private fun loadAllActiveTriggers() {
         val activeWorkflows = workflowManager.getAllWorkflows().filter { it.isEnabled }
-        Log.d(TAG, "TriggerService 首次启动，加载 ${activeWorkflows.size} 个活动的触发器。")
+        DebugLogger.d(TAG, "TriggerService 首次启动，加载 ${activeWorkflows.size} 个活动的触发器。")
         activeWorkflows.forEach { workflow ->
             // 复用变更逻辑，确保启动时也进行权限检查
             handleWorkflowChanged(workflow, null)
@@ -136,7 +138,7 @@ class TriggerService : Service() {
 
         // 步骤1：如果存在旧版本，无论如何都先从其处理器中移除，确保状态更新的原子性。
         if (oldWorkflow != null && oldHandler != null) {
-            Log.d(TAG, "准备更新，正在从处理器中移除旧版: ${oldWorkflow.name}")
+            DebugLogger.d(TAG, "准备更新，正在从处理器中移除旧版: ${oldWorkflow.name}")
             oldHandler.removeWorkflow(this, oldWorkflow.id)
         }
 
@@ -148,7 +150,7 @@ class TriggerService : Service() {
             if (missingPermissions.isEmpty()) {
                 // 权限充足，可以安全地添加到处理器。
                 if (newHandler != null) {
-                    Log.d(TAG, "权限正常，正在向处理器添加/更新: ${newWorkflow.name}")
+                    DebugLogger.d(TAG, "权限正常，正在向处理器添加/更新: ${newWorkflow.name}")
                     newHandler.addWorkflow(this, newWorkflow)
                 }
                 // 如果这个工作流之前因为权限问题被禁用过，现在权限已恢复，
@@ -159,7 +161,7 @@ class TriggerService : Service() {
                 }
             } else {
                 // 权限不足！这是关键的保护点。
-                Log.w(TAG, "工作流 '${newWorkflow.name}' 因缺少权限 (${missingPermissions.joinToString { it.name }}) 将被自动禁用。")
+                DebugLogger.w(TAG, "工作流 '${newWorkflow.name}' 因缺少权限 (${missingPermissions.joinToString { it.name }}) 将被自动禁用。")
                 // 创建一个被禁用的副本，并设置标志位。
                 val disabledWorkflow = newWorkflow.copy(
                     isEnabled = false,
@@ -172,7 +174,7 @@ class TriggerService : Service() {
         } else {
             // 如果工作流本身就是禁用的，只需确保它已从处理器中移除即可。
             if (newHandler != null) {
-                Log.d(TAG, "工作流 '${newWorkflow.name}' 已被禁用，正在从处理器中移除。")
+                DebugLogger.d(TAG, "工作流 '${newWorkflow.name}' 已被禁用，正在从处理器中移除。")
                 newHandler.removeWorkflow(this, newWorkflow.id)
             }
         }
@@ -183,7 +185,7 @@ class TriggerService : Service() {
      * 处理被删除的工作流。
      */
     private fun handleWorkflowRemoved(removedWorkflow: Workflow) {
-        Log.d(TAG, "处理器正在移除已删除的工作流: ${removedWorkflow.name}")
+        DebugLogger.d(TAG, "处理器正在移除已删除的工作流: ${removedWorkflow.name}")
         getHandlerForWorkflow(removedWorkflow)?.removeWorkflow(this, removedWorkflow.id)
     }
 
@@ -200,7 +202,7 @@ class TriggerService : Service() {
         triggerHandlers.values.forEach { it.stop(this) }
         // 服务销毁时，取消协程作用域
         serviceScope.cancel()
-        Log.d(TAG, "TriggerService 已销毁。")
+        DebugLogger.d(TAG, "TriggerService 已销毁。")
     }
 
     private fun createNotification(): Notification {

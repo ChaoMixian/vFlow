@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ShizukuManager
@@ -56,7 +57,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
 
     override fun start(context: Context) {
         super.start(context)
-        Log.d(TAG, "KeyEventTriggerHandler 已启动。")
+        DebugLogger.d(TAG, "KeyEventTriggerHandler 已启动。")
     }
 
     override fun stop(context: Context) {
@@ -66,7 +67,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             ShizukuManager.execShellCommand(context, "killall getevent")
             context.cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }?.forEach { it.delete() }
         }
-        Log.d(TAG, "KeyEventTriggerHandler 已停止并清理了资源。")
+        DebugLogger.d(TAG, "KeyEventTriggerHandler 已停止并清理了资源。")
     }
 
     fun handleKeyEventIntent(context: Context, intent: Intent) {
@@ -82,14 +83,14 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
     override fun addWorkflow(context: Context, workflow: Workflow) {
         listeningWorkflows.removeAll { it.id == workflow.id }
         listeningWorkflows.add(workflow)
-        Log.d(TAG, "已添加/更新 '${workflow.name}'。准备重新加载按键监听。")
+        DebugLogger.d(TAG, "已添加/更新 '${workflow.name}'。准备重新加载按键监听。")
         reloadKeyEventTriggers(context)
     }
 
     override fun removeWorkflow(context: Context, workflowId: String) {
         val removed = listeningWorkflows.removeAll { it.id == workflowId }
         if (removed) {
-            Log.d(TAG, "已从监听列表移除 workflowId: $workflowId。准备重新加载按键监听。")
+            DebugLogger.d(TAG, "已从监听列表移除 workflowId: $workflowId。准备重新加载按键监听。")
             reloadKeyEventTriggers(context)
         }
     }
@@ -131,7 +132,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
 
     private fun reloadKeyEventTriggers(context: Context) {
         keyEventJob?.cancel()
-        Log.d(TAG, "请求重新加载触发器，正在停止所有旧的监听脚本...")
+        DebugLogger.d(TAG, "请求重新加载触发器，正在停止所有旧的监听脚本...")
 
         keyEventJob = triggerScope.launch {
             // 1. 清理旧的监听进程
@@ -144,12 +145,12 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
                         if (pid.isNotEmpty()) ShizukuManager.execShellCommand(context, "kill $pid")
                         pidFile.delete()
                     } catch (e: Exception) {
-                        Log.w(TAG, "清理 PID 文件 ${pidFile.name} 时出错: ", e)
+                        DebugLogger.w(TAG, "清理 PID 文件 ${pidFile.name} 时出错: ", e)
                     }
                 }
                 delay(500)
             } catch (e: Exception) {
-                Log.e(TAG, "停止旧监听进程时出错: ", e)
+                DebugLogger.e(TAG, "停止旧监听进程时出错: ", e)
             }
 
             // 2. [核心修复] 使用新的辅助函数来构建 activeTriggers 列表
@@ -158,7 +159,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             activeTriggers.addAll(resolvedTriggers)
 
             if (activeTriggers.isEmpty()) {
-                Log.d(TAG, "没有已启用的按键触发器，停止监听。")
+                DebugLogger.d(TAG, "没有已启用的按键触发器，停止监听。")
                 return@launch
             }
 
@@ -180,11 +181,11 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
                             val scriptFile = File(context.cacheDir, "key_listener_${path.replace('/', '_')}.sh")
                             scriptFile.writeText(script)
                             scriptFile.setExecutable(true)
-                            Log.d(TAG, "正在为设备 $path 启动新的监听脚本...")
+                            DebugLogger.d(TAG, "正在为设备 $path 启动新的监听脚本...")
                             ShizukuManager.execShellCommand(context, "sh ${scriptFile.absolutePath}")
                         } catch (e: Exception) {
                             if (e !is CancellationException) {
-                                Log.e(TAG, "执行设备 $path 的监听脚本时出错。", e)
+                                DebugLogger.e(TAG, "执行设备 $path 的监听脚本时出错。", e)
                             }
                         }
                     }

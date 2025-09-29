@@ -15,6 +15,13 @@
     <string name="settings_switch_force_keep_alive">强制保活 (Shizuku)</string>
     <string name="settings_switch_force_keep_alive_desc">实验性功能。通过 Shizuku 守护进程，在服务被系统意外终止时自动重启。可能会增加耗电。</string>
 
+    <string name="settings_section_debugging">调试</string>
+    <string name="settings_switch_enable_logging">记录调试日志</string>
+    <string name="settings_switch_enable_logging_desc">开启后，应用的所有日志将被记录在内存中，直到应用被强制终止。这会略微增加内存占用。</string>
+    <string name="settings_button_export_logs">导出日志</string>
+    <string name="settings_button_clear_logs">清空日志</string>
+
+
     <string name="settings_section_permissions">权限管理器</string>
     <string name="settings_section_permissions_desc">查看和管理应用运行所需的所有权限。</string>
     <string name="settings_section_about">关于</string>

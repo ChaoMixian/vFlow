@@ -4,9 +4,7 @@ package com.chaomixian.vflow.permissions
 import android.Manifest
 import android.app.AlarmManager
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
@@ -17,7 +15,6 @@ import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.AccessibilityService
 import com.chaomixian.vflow.services.ShizukuManager
-import rikka.shizuku.Shizuku
 
 object PermissionManager {
 
@@ -43,13 +40,22 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
-    // 定义存储权限
+    // 定义存储权限为一个权限组，根据系统版本动态决定请求内容
     val STORAGE = Permission(
-        id = Manifest.permission.READ_EXTERNAL_STORAGE, // 使用读取权限作为ID
+        id = "vflow.permission.STORAGE", // 使用一个自定义的、稳定的ID
         name = "存储权限",
         description = "用于读取和保存图片、文件等数据。",
-        type = PermissionType.RUNTIME
+        type = PermissionType.RUNTIME,
+        // 根据安卓版本动态提供正确的权限请求列表
+        runtimePermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13 (API 33) 及以上，请求细分的媒体权限
+            listOf(Manifest.permission.READ_MEDIA_IMAGES)
+        } else {
+            // 旧版本，请求传统的外部存储权限
+            listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
     )
+
 
     // 明确短信权限是一个权限组
     val SMS = Permission(
@@ -152,18 +158,8 @@ object PermissionManager {
                     true
                 }
             }
-            // 检查存储权限
-            STORAGE.id -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    // Android 13 (API 33) 及以上，检查新的图片权限
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                } else {
-                    // 旧版本，检查旧的存储权限
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                }
-            }
-            // 检查短信权限组中的所有权限
-            SMS.id -> {
+            // 统一处理存储和短信权限组
+            STORAGE.id, SMS.id -> {
                 permission.runtimePermissions.all { perm ->
                     ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
                 }

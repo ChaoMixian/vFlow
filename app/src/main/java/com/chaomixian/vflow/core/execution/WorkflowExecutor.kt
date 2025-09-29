@@ -4,6 +4,7 @@ package com.chaomixian.vflow.core.execution
 import android.content.Context
 import android.os.Parcelable
 import android.util.Log
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -40,7 +41,7 @@ object WorkflowExecutor {
     fun stopExecution(workflowId: String) {
         runningWorkflows[workflowId]?.let {
             it.cancel() // 取消 Coroutine Job
-            Log.d("WorkflowExecutor", "工作流 '$workflowId' 已被用户手动停止。")
+            DebugLogger.d("WorkflowExecutor", "工作流 '$workflowId' 已被用户手动停止。")
         }
     }
 
@@ -53,7 +54,7 @@ object WorkflowExecutor {
     fun execute(workflow: Workflow, context: Context, triggerData: Parcelable? = null) {
         // 如果工作流已在运行，则不允许重复执行
         if (isRunning(workflow.id)) {
-            Log.w("WorkflowExecutor", "工作流 '${workflow.name}' 已在运行，忽略新的执行请求。")
+            DebugLogger.w("WorkflowExecutor", "工作流 '${workflow.name}' 已在运行，忽略新的执行请求。")
             return
         }
         // 重置停止标记
@@ -62,7 +63,7 @@ object WorkflowExecutor {
         val job = executorScope.launch {
             // 广播开始执行的状态，初始索引为-1表示准备阶段
             ExecutionStateBus.postState(ExecutionState.Running(workflow.id, -1))
-            Log.d("WorkflowExecutor", "开始执行工作流: ${workflow.name} (ID: ${workflow.id})")
+            DebugLogger.d("WorkflowExecutor", "开始执行工作流: ${workflow.name} (ID: ${workflow.id})")
             ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
 
             try {
@@ -80,7 +81,7 @@ object WorkflowExecutor {
                     val step = workflow.steps[pc]
                     val module = ModuleRegistry.getModule(step.moduleId)
                     if (module == null) {
-                        Log.w("WorkflowExecutor", "模块未找到: ${step.moduleId}")
+                        DebugLogger.w("WorkflowExecutor", "模块未找到: ${step.moduleId}")
                         pc++
                         continue
                     }
@@ -160,9 +161,9 @@ object WorkflowExecutor {
                         }
                     }
 
-                    Log.d("WorkflowExecutor", "[$pc] -> 执行: ${module.metadata.name}")
+                    DebugLogger.d("WorkflowExecutor", "[$pc] -> 执行: ${module.metadata.name}")
                     val result = module.execute(executionContext) { progressUpdate ->
-                        Log.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progressUpdate.message}")
+                        DebugLogger.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progressUpdate.message}")
                         // 在模块内部进度更新时，也刷新通知
                         ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(progress, progressUpdate.message))
                     }
@@ -175,7 +176,7 @@ object WorkflowExecutor {
                             pc++
                         }
                         is ExecutionResult.Failure -> {
-                            Log.e("WorkflowExecutor", "模块执行失败: ${result.errorTitle} - ${result.errorMessage}")
+                            DebugLogger.e("WorkflowExecutor", "模块执行失败: ${result.errorTitle} - ${result.errorMessage}")
                             ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("失败: ${result.errorMessage}"))
                             // 广播失败状态和索引
                             ExecutionStateBus.postState(ExecutionState.Failure(workflow.id, pc))
@@ -198,7 +199,7 @@ object WorkflowExecutor {
                                                     // 跳转到循环体内的第一个步骤，而不是循环模块本身
                                                     pc = loopStartPos + 1
                                                 } else {
-                                                    Log.w("WorkflowExecutor", "找不到循环起点，异常退出循环。")
+                                                    DebugLogger.w("WorkflowExecutor", "找不到循环起点，异常退出循环。")
                                                     pc++ // 异常情况，避免死循环
                                                 }
                                             } else {
@@ -214,9 +215,9 @@ object WorkflowExecutor {
                                     val endBlockPosition = BlockNavigator.findEndBlockPosition(workflow.steps, pc, currentLoopPairingId)
                                     if (endBlockPosition != -1) {
                                         pc = endBlockPosition + 1
-                                        Log.d("WorkflowExecutor", "接收到Break信号，跳出循环 '$currentLoopPairingId' 到步骤 $pc")
+                                        DebugLogger.d("WorkflowExecutor", "接收到Break信号，跳出循环 '$currentLoopPairingId' 到步骤 $pc")
                                     } else {
-                                        Log.w("WorkflowExecutor", "接收到Break信号，但找不到匹配的结束循环块。")
+                                        DebugLogger.w("WorkflowExecutor", "接收到Break信号，但找不到匹配的结束循环块。")
                                         pc++ // 找不到就继续执行，避免卡住
                                     }
                                 }
@@ -231,14 +232,14 @@ object WorkflowExecutor {
                                         } else {
                                             pc++  // 找不到则异常继续
                                         }
-                                        Log.d("WorkflowExecutor", "接收到Continue信号，跳转到步骤 $pc")
+                                        DebugLogger.d("WorkflowExecutor", "接收到Continue信号，跳转到步骤 $pc")
                                     } else {
-                                        Log.w("WorkflowExecutor", "接收到Continue信号，但找不到循环起点。")
+                                        DebugLogger.w("WorkflowExecutor", "接收到Continue信号，但找不到循环起点。")
                                         pc++
                                     }
                                 }
                                 is ExecutionSignal.Stop -> {
-                                    Log.d("WorkflowExecutor", "接收到Stop信号，正常终止工作流。")
+                                    DebugLogger.d("WorkflowExecutor", "接收到Stop信号，正常终止工作流。")
                                     stoppedWorkflows[workflow.id] = true
                                     pc = workflow.steps.size // 设置pc越界以跳出主循环
                                 }
@@ -252,11 +253,11 @@ object WorkflowExecutor {
                 }
 
             } catch (e: CancellationException) {
-                Log.d("WorkflowExecutor", "工作流 '${workflow.name}' 已被取消。")
+                DebugLogger.d("WorkflowExecutor", "工作流 '${workflow.name}' 已被取消。")
                 ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("已停止"))
                 // 状态在 finally 块中发送
             } catch (e: Exception) {
-                Log.e("WorkflowExecutor", "工作流 '${workflow.name}' 执行时发生未捕获的异常。", e)
+                DebugLogger.e("WorkflowExecutor", "工作流 '${workflow.name}' 执行时发生未捕获的异常。", e)
                 ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("执行异常"))
             } finally {
                 // 广播最终状态
@@ -272,7 +273,7 @@ object WorkflowExecutor {
                         // 正常结束或Stop信号都视为Finished
                         ExecutionStateBus.postState(ExecutionState.Finished(workflow.id))
                     }
-                    Log.d("WorkflowExecutor", "工作流 '${workflow.name}' 执行完毕。")
+                    DebugLogger.d("WorkflowExecutor", "工作流 '${workflow.name}' 执行完毕。")
                 }
                 // 延迟后取消通知，给用户时间查看最终状态
                 delay(3000)

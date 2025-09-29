@@ -20,6 +20,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionState
 import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.permissions.PermissionActivity
@@ -207,7 +208,7 @@ class WorkflowListFragment : Fragment() {
                 // ...检查现在权限是否已授予。
                 val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
                 if (missingPermissions.isEmpty()) {
-                    Log.i("WorkflowListFragment", "工作流 '${workflow.name}' 的权限已授予，正在自动重新启用。")
+                    DebugLogger.i("WorkflowListFragment", "工作流 '${workflow.name}' 的权限已授予，正在自动重新启用。")
                     // 重新启用工作流并重置标志位
                     val updatedWorkflow = workflow.copy(isEnabled = true, wasEnabledBeforePermissionsLost = false)
                     workflowManager.saveWorkflow(updatedWorkflow)

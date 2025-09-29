@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.provider.Telephony
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.DictionaryVariable
 import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.core.utils.CodeExtractor // 导入 CodeExtractor
@@ -28,7 +29,7 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
 
     override fun startListening(context: Context) {
         if (smsReceiver != null) return
-        Log.d(TAG, "启动短信监听...")
+        DebugLogger.d(TAG, "启动短信监听...")
 
         smsReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
@@ -37,7 +38,7 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
                     if (messages.isNotEmpty()) {
                         val sender = messages[0].originatingAddress ?: ""
                         val content = messages.joinToString("") { it.messageBody }
-                        Log.d(TAG, "收到短信来自: $sender")
+                        DebugLogger.d(TAG, "收到短信来自: $sender")
                         findAndExecuteWorkflows(ctx, sender, content)
                     }
                 }
@@ -51,7 +52,7 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
         smsReceiver?.let {
             try {
                 context.unregisterReceiver(it)
-                Log.d(TAG, "短信监听已停止。")
+                DebugLogger.d(TAG, "短信监听已停止。")
             } finally {
                 smsReceiver = null
             }
@@ -65,7 +66,7 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
                 // [修改] 检查过滤器，并将匹配结果（包含验证码）返回
                 val matchResult = checkFilters(sender, content, config)
                 if (matchResult.isMatch) {
-                    Log.i(TAG, "短信满足条件，触发工作流 '${workflow.name}'")
+                    DebugLogger.i(TAG, "短信满足条件，触发工作流 '${workflow.name}'")
                     val triggerDataMap = mutableMapOf(
                         "sender" to TextVariable(sender),
                         "content" to TextVariable(content)

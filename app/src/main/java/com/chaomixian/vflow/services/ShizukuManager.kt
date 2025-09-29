@@ -7,6 +7,7 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
 import android.util.Log
+import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.*
 import rikka.shizuku.Shizuku
 import java.util.concurrent.atomic.AtomicBoolean
@@ -36,19 +37,19 @@ object ShizukuManager {
     fun proactiveConnect(context: Context) {
         // 如果服务已连接并且 binder 存活，则无需操作
         if (shellService?.asBinder()?.isBinderAlive == true) {
-            Log.d(TAG, "Shizuku 服务已连接，跳过预连接。")
+            DebugLogger.d(TAG, "Shizuku 服务已连接，跳过预连接。")
             return
         }
 
-        Log.d(TAG, "发起 Shizuku 服务预连接...")
+        DebugLogger.d(TAG, "发起 Shizuku 服务预连接...")
         // 启动一个后台协程来执行连接，不阻塞主线程
         scope.launch {
             if (isShizukuActive(context)) {
                 // 调用 getService 来触发带重试的连接逻辑
                 getService(context)
-                Log.d(TAG, "Shizuku 预连接尝试完成。")
+                DebugLogger.d(TAG, "Shizuku 预连接尝试完成。")
             } else {
-                Log.d(TAG, "Shizuku 未激活，跳过预连接。")
+                DebugLogger.d(TAG, "Shizuku 未激活，跳过预连接。")
             }
         }
     }
@@ -71,7 +72,7 @@ object ShizukuManager {
         scope.launch {
             val service = getService(context)
             if (service == null) {
-                Log.e(TAG, "无法启动守护任务：Shizuku 服务连接失败。")
+                DebugLogger.e(TAG, "无法启动守护任务：Shizuku 服务连接失败。")
                 return@launch
             }
             try {
@@ -79,7 +80,7 @@ object ShizukuManager {
                     service.startWatcher(context.packageName, TriggerService::class.java.name)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "启动守护任务时出错。", e)
+                DebugLogger.e(TAG, "启动守护任务时出错。", e)
             }
         }
     }
@@ -99,7 +100,7 @@ object ShizukuManager {
                     service.stopWatcher()
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "停止守护任务时出错。", e)
+                DebugLogger.e(TAG, "停止守护任务时出错。", e)
             }
         }
     }
@@ -122,11 +123,11 @@ object ShizukuManager {
             // 捕获协程取消异常。
             // 这是一个正常的操作流程（例如在重新加载触发器时），不应被记录为错误。
             // 将异常重新抛出，让协程框架正常处理取消逻辑。
-            Log.d(TAG, "Shizuku command execution was cancelled as expected.")
+            DebugLogger.d(TAG, "Shizuku command execution was cancelled as expected.")
             throw e
         } catch (e: Exception) {
             // 其他所有类型的异常仍然被视为执行失败。
-            Log.e(TAG, "执行命令失败，连接可能已丢失。", e)
+            DebugLogger.e(TAG, "执行命令失败，连接可能已丢失。", e)
             shellService = null
             "Error: ${e.message}"
         }
@@ -143,7 +144,7 @@ object ShizukuManager {
             try {
                 return connect(context)
             } catch (e: Exception) {
-                Log.w(TAG, "第 $attempt 次连接 Shizuku 服务失败", e)
+                DebugLogger.w(TAG, "第 $attempt 次连接 Shizuku 服务失败", e)
                 if (attempt < MAX_RETRY_COUNT) {
                     delay(500L * attempt)
                 }
@@ -161,7 +162,7 @@ object ShizukuManager {
         }
 
         if (!isBinding.compareAndSet(false, true)) {
-            Log.w(TAG, "另一个绑定进程正在进行中，等待...")
+            DebugLogger.w(TAG, "另一个绑定进程正在进行中，等待...")
             delay(BIND_TIMEOUT_MS)
             return shellService ?: throw IllegalStateException("另一个绑定进程正在进行但未完成。")
         }
@@ -177,7 +178,7 @@ object ShizukuManager {
                     val connection = object : ServiceConnection {
                         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                             if (service != null && service.isBinderAlive && continuation.isActive) {
-                                Log.d(TAG, "Shizuku 服务已连接。")
+                                DebugLogger.d(TAG, "Shizuku 服务已连接。")
                                 val shell = IShizukuUserService.Stub.asInterface(service)
                                 shellService = shell
                                 continuation.resume(shell)

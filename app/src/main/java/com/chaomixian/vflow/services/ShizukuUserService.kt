@@ -3,6 +3,7 @@ package com.chaomixian.vflow.services
 
 import android.os.IBinder
 import android.util.Log
+import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.*
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -23,25 +24,25 @@ class ShizukuUserService : IShizukuUserService.Stub() {
     }
 
     init {
-        Log.d(TAG, "ShellService 实例被创建")
+        DebugLogger.d(TAG, "ShellService 实例被创建")
     }
 
     override fun destroy() {
-        Log.d(TAG, "收到 destroy 请求 (Shizuku 标准方法)")
+        DebugLogger.d(TAG, "收到 destroy 请求 (Shizuku 标准方法)")
         serviceScope.cancel() // [新增] 销毁时取消所有协程
         System.exit(0)
     }
 
     override fun exec(command: String?): String {
-        Log.d(TAG, "收到命令执行请求: $command")
+        DebugLogger.d(TAG, "收到命令执行请求: $command")
 
         if (command.isNullOrBlank()) {
-            Log.w(TAG, "命令为空")
+            DebugLogger.w(TAG, "命令为空")
             return "Error: Empty command"
         }
 
         return try {
-            Log.d(TAG, "开始执行命令: $command")
+            DebugLogger.d(TAG, "开始执行命令: $command")
 
             // 使用 sh -c 执行命令，这样可以处理管道、重定向等复杂命令
             val processBuilder = ProcessBuilder("sh", "-c", command)
@@ -56,7 +57,7 @@ class ShizukuUserService : IShizukuUserService.Stub() {
             // 等待进程完成
             val exitCode = process.waitFor()
 
-            Log.d(TAG, "命令执行完成: exitCode=$exitCode, stdout长度=${stdout.length}, stderr长度=${stderr.length}")
+            DebugLogger.d(TAG, "命令执行完成: exitCode=$exitCode, stdout长度=${stdout.length}, stderr长度=${stderr.length}")
 
             // 根据退出码返回结果
             when {
@@ -68,17 +69,17 @@ class ShizukuUserService : IShizukuUserService.Stub() {
             }
         } catch (e: SecurityException) {
             val errorMsg = "Permission denied: ${e.message}"
-            Log.e(TAG, errorMsg, e)
+            DebugLogger.e(TAG, errorMsg, e)
             errorMsg
         } catch (e: Exception) {
             val errorMsg = "Exception: ${e.message}"
-            Log.e(TAG, errorMsg, e)
+            DebugLogger.e(TAG, errorMsg, e)
             errorMsg
         }
     }
 
     override fun exit() {
-        Log.d(TAG, "收到退出请求")
+        DebugLogger.d(TAG, "收到退出请求")
         serviceScope.cancel() // 退出时取消所有协程
         try {
             // 给一点时间让响应返回
@@ -94,26 +95,26 @@ class ShizukuUserService : IShizukuUserService.Stub() {
      */
     override fun startWatcher(packageName: String?, serviceName: String?) {
         if (packageName.isNullOrBlank() || serviceName.isNullOrBlank()) {
-            Log.w(TAG, "Watcher 启动失败：包名或服务名为空。")
+            DebugLogger.w(TAG, "Watcher 启动失败：包名或服务名为空。")
             return
         }
         // 先停止旧的守护任务，确保只有一个在运行
         stopWatcher()
-        Log.i(TAG, "启动服务守护任务: $packageName/$serviceName")
+        DebugLogger.i(TAG, "启动服务守护任务: $packageName/$serviceName")
         watcherJob = serviceScope.launch {
             while (isActive) {
                 try {
                     // 每 5 分钟检查并尝试启动一次服务
                     delay(5 * 60 * 1000)
                     val command = "am start-service -n $packageName/$serviceName"
-                    Log.d(TAG, "[Watcher] 执行保活命令: $command")
+                    DebugLogger.d(TAG, "[Watcher] 执行保活命令: $command")
                     // 直接执行启动命令，如果服务已在运行，此命令无害
                     exec(command)
                 } catch (e: CancellationException) {
-                    Log.d(TAG, "[Watcher] 守护任务被正常取消。")
+                    DebugLogger.d(TAG, "[Watcher] 守护任务被正常取消。")
                     break
                 } catch (e: Exception) {
-                    Log.e(TAG, "[Watcher] 守护任务执行时发生异常。", e)
+                    DebugLogger.e(TAG, "[Watcher] 守护任务执行时发生异常。", e)
                     // 发生异常后，等待一段时间再重试
                     delay(60 * 1000)
                 }
@@ -126,7 +127,7 @@ class ShizukuUserService : IShizukuUserService.Stub() {
      */
     override fun stopWatcher() {
         if (watcherJob?.isActive == true) {
-            Log.i(TAG, "正在停止服务守护任务...")
+            DebugLogger.i(TAG, "正在停止服务守护任务...")
             watcherJob?.cancel()
         }
         watcherJob = null
@@ -149,13 +150,13 @@ class ShizukuUserService : IShizukuUserService.Stub() {
             }
             result.toString()
         } catch (e: Exception) {
-            Log.e(TAG, "读取流时发生异常", e)
+            DebugLogger.e(TAG, "读取流时发生异常", e)
             "Error reading stream: ${e.message}"
         }
     }
 
     override fun asBinder(): IBinder {
-        Log.d(TAG, "asBinder() 被调用")
+        DebugLogger.d(TAG, "asBinder() 被调用")
         return super.asBinder()
     }
 }

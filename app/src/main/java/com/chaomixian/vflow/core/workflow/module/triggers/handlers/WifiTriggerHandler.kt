@@ -13,6 +13,7 @@ import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.TextVariable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -33,7 +34,7 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
     override fun getTriggerModuleId(): String = "vflow.trigger.wifi"
 
     override fun startListening(context: Context) {
-        Log.d(TAG, "启动 Wi-Fi 监听...")
+        DebugLogger.d(TAG, "启动 Wi-Fi 监听...")
         // 注册网络连接回调
         registerNetworkCallback(context)
         // 注册 Wi-Fi 开关状态广播
@@ -41,7 +42,7 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
     }
 
     override fun stopListening(context: Context) {
-        Log.d(TAG, "停止 Wi-Fi 监听...")
+        DebugLogger.d(TAG, "停止 Wi-Fi 监听...")
         unregisterNetworkCallback()
         unregisterWifiStateReceiver(context)
     }
@@ -62,7 +63,7 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                     val ssid = getWifiSsidWithRetry(context)
                     if (ssid != null) {
                         activeWifiConnections[network] = ssid
-                        Log.d(TAG, "网络已连接: $ssid")
+                        DebugLogger.d(TAG, "网络已连接: $ssid")
                         findAndExecuteWorkflows(context, "网络连接", "连接到", ssid)
                     }
                 }
@@ -70,7 +71,7 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
             override fun onLost(network: Network) {
                 super.onLost(network)
                 activeWifiConnections.remove(network)?.let { lostSsid ->
-                    Log.d(TAG, "网络已断开: $lostSsid")
+                    DebugLogger.d(TAG, "网络已断开: $lostSsid")
                     findAndExecuteWorkflows(context, "网络连接", "断开连接", lostSsid)
                 }
             }
@@ -99,11 +100,11 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                     val wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN)
                     when (wifiState) {
                         WifiManager.WIFI_STATE_ENABLED -> {
-                            Log.d(TAG, "Wi-Fi 已开启")
+                            DebugLogger.d(TAG, "Wi-Fi 已开启")
                             findAndExecuteWorkflows(context, "Wi-Fi状态", "开启时", null)
                         }
                         WifiManager.WIFI_STATE_DISABLED -> {
-                            Log.d(TAG, "Wi-Fi 已关闭")
+                            DebugLogger.d(TAG, "Wi-Fi 已关闭")
                             findAndExecuteWorkflows(context, "Wi-Fi状态", "关闭时", null)
                         }
                     }
@@ -137,7 +138,7 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                     val configTarget = config["network_target"] as? String
                     val targetMatches = (configTarget == ANY_WIFI_TARGET) || (configTarget.equals(ssid, ignoreCase = true))
                     if (configEvent == event && targetMatches) {
-                        Log.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '$ssid'")
+                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '$ssid'")
                         val triggerData = TextVariable(ssid ?: "")
                         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                         val bssid = if (event == "连接到") wifiManager.connectionInfo?.bssid else ""
@@ -147,7 +148,7 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                 } else { // Wi-Fi状态
                     val configEvent = config["state_event"] as? String
                     if (configEvent == event) {
-                        Log.i(TAG, "触发工作流 '${workflow.name}'，事件: Wi-Fi $event")
+                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: Wi-Fi $event")
                         WorkflowExecutor.execute(workflow, context.applicationContext)
                     }
                 }

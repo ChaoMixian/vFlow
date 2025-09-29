@@ -5,6 +5,7 @@ package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 import android.content.Context
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -73,7 +74,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
 
     override fun startListening(context: Context) {
         if (collectorJob != null) return
-        Log.d(TAG, "启动应用事件监听...")
+        DebugLogger.d(TAG, "启动应用事件监听...")
 
         // 检测当前系统的桌面包名
         detectLauncherPackage(context)
@@ -84,7 +85,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
             lastForegroundPackage?.let { pkg ->
                 if (!isLauncherPackage(pkg)) {
                     appOpenStates[pkg] = true
-                    Log.d(TAG, "初始前台应用: $pkg")
+                    DebugLogger.d(TAG, "初始前台应用: $pkg")
                 }
             }
         }
@@ -135,7 +136,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
         appOpenStates.clear()
         pendingCloseChecks.clear()
         recentWindowHistory.clear()
-        Log.d(TAG, "应用事件监听已停止。")
+        DebugLogger.d(TAG, "应用事件监听已停止。")
     }
 
     /**
@@ -165,7 +166,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
 
         // 如果同一个包名在1秒内出现超过3次，可能是弹窗或异常，忽略
         if (samePackageCount > 3) {
-            Log.d(TAG, "忽略可能的弹窗或异常窗口变化: $packageName (1秒内出现${samePackageCount}次)")
+            DebugLogger.d(TAG, "忽略可能的弹窗或异常窗口变化: $packageName (1秒内出现${samePackageCount}次)")
             return false
         }
 
@@ -182,7 +183,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
         }
 
         if (recentLauncherSwitches > 1) {
-            Log.d(TAG, "忽略可能的误触桌面切换: $launcherPackage")
+            DebugLogger.d(TAG, "忽略可能的误触桌面切换: $launcherPackage")
             return false
         }
 
@@ -194,7 +195,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
         val isNewPackageLauncher = isLauncherPackage(newPackage)
         val wasPreviousPackageLauncher = previousPackage?.let { isLauncherPackage(it) } ?: false
 
-        Log.d(TAG, "有效窗口变化: '$previousPackage' -> '$newPackage' (是否桌面: $isNewPackageLauncher)")
+        DebugLogger.d(TAG, "有效窗口变化: '$previousPackage' -> '$newPackage' (是否桌面: $isNewPackageLauncher)")
 
         // 如果切换到桌面，使用防抖机制
         if (isNewPackageLauncher) {
@@ -239,11 +240,11 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
             val isStillOnLauncher = currentApp?.let { isLauncherPackage(it) } ?: false
 
             if (isStillOnLauncher && previousPackage != null && !isLauncherPackage(previousPackage)) {
-                Log.d(TAG, "确认用户返回桌面，应用 $previousPackage 已关闭")
+                DebugLogger.d(TAG, "确认用户返回桌面，应用 $previousPackage 已关闭")
                 lastForegroundPackage = newPackage
                 handleImmediateAppCloseEvent(context, previousPackage)
             } else {
-                Log.d(TAG, "桌面切换被取消，用户可能只是短暂经过桌面")
+                DebugLogger.d(TAG, "桌面切换被取消，用户可能只是短暂经过桌面")
             }
 
             launcherReturnDebounceJob = null
@@ -251,7 +252,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     }
 
     private fun handleAppOpenFromLauncher(context: Context, packageName: String, className: String) {
-        Log.d(TAG, "从桌面打开应用: $packageName")
+        DebugLogger.d(TAG, "从桌面打开应用: $packageName")
         appOpenStates[packageName] = true
         checkForAppTrigger(context, packageName, className, "打开时")
     }
@@ -264,7 +265,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
         // 如果应用之前是打开状态，直接触发关闭事件
         if (appOpenStates[packageName] == true) {
             appOpenStates[packageName] = false
-            Log.d(TAG, "确认应用关闭（返回桌面）: $packageName")
+            DebugLogger.d(TAG, "确认应用关闭（返回桌面）: $packageName")
             checkForAppTrigger(context, packageName, "", "关闭时")
         }
     }
@@ -275,7 +276,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
         if (!wasOpen) {
             // 应用从关闭状态变为打开状态
             appOpenStates[packageName] = true
-            Log.d(TAG, "应用打开: $packageName")
+            DebugLogger.d(TAG, "应用打开: $packageName")
 
             // 取消该应用的关闭检测任务（如果存在）
             pendingCloseChecks[packageName]?.cancel()
@@ -283,7 +284,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
 
             checkForAppTrigger(context, packageName, className, "打开时")
         } else {
-            Log.d(TAG, "应用 $packageName 已处于打开状态，忽略重复打开事件")
+            DebugLogger.d(TAG, "应用 $packageName 已处于打开状态，忽略重复打开事件")
         }
     }
 
@@ -302,7 +303,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
                 val isReallyClosed = currentForeground != packageName
                 isReallyClosedList.add(isReallyClosed)
 
-                Log.d(TAG, "关闭验证 ${it + 1}/3 for $packageName: 当前前台=$currentForeground, 已关闭=$isReallyClosed")
+                DebugLogger.d(TAG, "关闭验证 ${it + 1}/3 for $packageName: 当前前台=$currentForeground, 已关闭=$isReallyClosed")
 
                 if (it < 2) delay(verificationDelay) // 不是最后一次验证时等待
             }
@@ -312,10 +313,10 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
 
             if (confirmedClosed && appOpenStates[packageName] == true) {
                 appOpenStates[packageName] = false
-                Log.d(TAG, "确认应用关闭: $packageName")
+                DebugLogger.d(TAG, "确认应用关闭: $packageName")
                 checkForAppTrigger(context, packageName, "", "关闭时")
             } else {
-                Log.d(TAG, "应用 $packageName 未真正关闭，取消关闭事件")
+                DebugLogger.d(TAG, "应用 $packageName 未真正关闭，取消关闭事件")
             }
 
             pendingCloseChecks.remove(packageName)
@@ -335,12 +336,12 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
             val launcherPackage = resolveInfo?.activityInfo?.packageName
 
             if (launcherPackage != null && !launcherPackages.contains(launcherPackage)) {
-                Log.d(TAG, "检测到系统桌面包名: $launcherPackage")
+                DebugLogger.d(TAG, "检测到系统桌面包名: $launcherPackage")
                 // 动态添加到桌面包名列表
                 (launcherPackages as MutableSet).add(launcherPackage)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "检测桌面包名失败: ${e.message}")
+            DebugLogger.w(TAG, "检测桌面包名失败: ${e.message}")
         }
     }
 
@@ -374,20 +375,20 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
                     currentApp != null &&
                     currentApp != lastForegroundPackage) {
 
-                    Log.d(TAG, "执行按需检查: 记录=${lastForegroundPackage}, 实际=$currentApp")
+                    DebugLogger.d(TAG, "执行按需检查: 记录=${lastForegroundPackage}, 实际=$currentApp")
 
                     val isCurrentLauncher = isLauncherPackage(currentApp)
                     val wasLastLauncher = lastForegroundPackage?.let { isLauncherPackage(it) } ?: false
 
                     if (isCurrentLauncher && !wasLastLauncher && lastForegroundPackage != null) {
-                        Log.d(TAG, "按需检查发现状态不同步，修正状态")
+                        DebugLogger.d(TAG, "按需检查发现状态不同步，修正状态")
                         handleImmediateAppCloseEvent(context, lastForegroundPackage!!)
                         lastForegroundPackage = currentApp
                         lastSuccessfulEventTime = currentTime
                     }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "按需检查失败: ${e.message}")
+                DebugLogger.w(TAG, "按需检查失败: ${e.message}")
             }
         }
     }
@@ -399,7 +400,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
         return try {
             ServiceStateBus.getAccessibilityService()?.rootInActiveWindow?.packageName?.toString()
         } catch (e: Exception) {
-            Log.w(TAG, "获取当前前台应用失败: ${e.message}")
+            DebugLogger.w(TAG, "获取当前前台应用失败: ${e.message}")
             null
         }
     }
@@ -420,7 +421,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
 
                 if (activityMatches) {
                     triggerScope.launch {
-                        Log.i(TAG, "触发工作流 '${workflow.name}', 事件: $packageName $eventType")
+                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}', 事件: $packageName $eventType")
                         WorkflowExecutor.execute(workflow, context)
                     }
                 }

@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.DictionaryVariable
 import com.chaomixian.vflow.core.module.TextVariable
 import kotlinx.coroutines.launch
@@ -26,7 +27,7 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
 
     override fun startListening(context: Context) {
         if (bluetoothReceiver != null) return
-        Log.d(TAG, "启动蓝牙事件监听...")
+        DebugLogger.d(TAG, "启动蓝牙事件监听...")
 
         bluetoothReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
@@ -45,7 +46,7 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
         bluetoothReceiver?.let {
             try {
                 context.unregisterReceiver(it)
-                Log.d(TAG, "蓝牙事件监听已停止。")
+                DebugLogger.d(TAG, "蓝牙事件监听已停止。")
             } finally {
                 bluetoothReceiver = null
             }
@@ -86,14 +87,14 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
                 if (triggerType == "蓝牙状态") {
                     val configEvent = config["state_event"] as? String
                     if (configEvent == event) {
-                        Log.i(TAG, "触发工作流 '${workflow.name}'，事件: 蓝牙 $event")
+                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: 蓝牙 $event")
                         WorkflowExecutor.execute(workflow, context.applicationContext)
                     }
                 } else { // 设备连接
                     val configEvent = config["device_event"] as? String
                     val configAddress = config["device_address"] as? String
                     if (configEvent == event && (configAddress == "any" || configAddress == device?.address)) {
-                        Log.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '${device?.name}'")
+                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '${device?.name}'")
                         val triggerData = DictionaryVariable(mapOf(
                             "name" to TextVariable(device?.name ?: ""),
                             "address" to TextVariable(device?.address ?: "")

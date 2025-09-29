@@ -5,6 +5,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,7 +21,7 @@ class AccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         // 服务连接成功，立即向总线上报自己的实例
         ServiceStateBus.onAccessibilityServiceConnected(this, this)
-        Log.d("VFlowAccessibility", "无障碍服务已连接。")
+        DebugLogger.d("VFlowAccessibility", "无障碍服务已连接。")
     }
 
     /**
@@ -44,13 +45,13 @@ class AccessibilityService : AccessibilityService() {
     override fun onInterrupt() {
         ServiceStateBus.onAccessibilityServiceDisconnected(this)
         serviceScope.cancel() // 服务中断时取消所有协程
-        Log.w("VFlowAccessibility", "无障碍服务被中断。")
+        DebugLogger.w("VFlowAccessibility", "无障碍服务被中断。")
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         ServiceStateBus.onAccessibilityServiceDisconnected(this)
         serviceScope.cancel() // 服务解绑时也取消所有协程
-        Log.w("VFlowAccessibility", "无障碍服务已解绑。")
+        DebugLogger.w("VFlowAccessibility", "无障碍服务已解绑。")
         return super.onUnbind(intent)
     }
 }

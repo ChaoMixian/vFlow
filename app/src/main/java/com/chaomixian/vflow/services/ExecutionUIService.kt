@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -24,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * 执行时UI服务。
  * 负责处理模块在执行过程中需要用户交互的请求，例如弹出输入对话框或显示信息。
- * [最终方案] 实现了智能三层回退逻辑来启动UI：
+ * 实现了智能三层回退逻辑来启动UI：
  * 1. 尝试直接启动 (适用于前台)
  * 2. 如果失败，则尝试 Shizuku 强制启动 (适用于后台)
  * 3. 如果再次失败，则回退到发送通知 (最终保障)
@@ -64,7 +65,7 @@ class ExecutionUIService(private val context: Context) {
 
         // --- 尝试 1: 直接启动 (最适合前台场景) ---
         try {
-            Log.d(TAG, "尝试 1: 直接调用 startActivity...")
+            DebugLogger.d(TAG, "尝试 1: 直接调用 startActivity...")
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
             // 注意：如果应用在后台，这一步可能会“静默失败”，即不抛出异常但Activity也无法启动。
@@ -72,35 +73,35 @@ class ExecutionUIService(private val context: Context) {
             return deferred
         } catch (e: Exception) {
             // 如果抛出异常，明确表示我们无法直接启动（例如，在某些Android版本上的后台限制）。
-            Log.w(TAG, "尝试 1: 直接启动失败，抛出异常。回退到后台启动策略。")
+            DebugLogger.w(TAG, "尝试 1: 直接启动失败，抛出异常。回退到后台启动策略。")
         }
 
         // --- 后台启动策略 (仅当直接启动失败时执行) ---
 
         // --- 尝试 2: 使用 Shizuku 强制启动 ---
         if (ShizukuManager.isShizukuActive(context)) {
-            Log.d(TAG, "尝试 2: 使用 Shizuku...")
+            DebugLogger.d(TAG, "尝试 2: 使用 Shizuku...")
             try {
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK) // 添加CLEAR_TASK以确保行为一致
                 val command = buildAmStartCommand(intent)
-                Log.d(TAG, "正在通过 Shizuku 执行: $command")
+                DebugLogger.d(TAG, "正在通过 Shizuku 执行: $command")
                 val result = ShizukuManager.execShellCommand(context, command)
 
                 if (!result.startsWith("Error:") && !result.contains("Exception")) {
-                    Log.d(TAG, "尝试 2: Shizuku 启动成功。")
+                    DebugLogger.d(TAG, "尝试 2: Shizuku 启动成功。")
                     return deferred
                 } else {
-                    Log.w(TAG, "尝试 2: Shizuku 命令执行失败: $result。回退到通知。")
+                    DebugLogger.w(TAG, "尝试 2: Shizuku 命令执行失败: $result。回退到通知。")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "尝试 2: Shizuku 执行时抛出异常。回退到通知。", e)
+                DebugLogger.e(TAG, "尝试 2: Shizuku 执行时抛出异常。回退到通知。", e)
             }
         } else {
-            Log.d(TAG, "尝试 2: Shizuku 未激活，跳过。")
+            DebugLogger.d(TAG, "尝试 2: Shizuku 未激活，跳过。")
         }
 
         // --- 尝试 3: 回退到发送高优先级通知 ---
-        Log.d(TAG, "尝试 3: 回退到发送通知。")
+        DebugLogger.d(TAG, "尝试 3: 回退到发送通知。")
         postNotification(intent, title, content)
 
         return deferred
@@ -167,7 +168,7 @@ class ExecutionUIService(private val context: Context) {
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, notification)
-        Log.d(TAG, "已发送交互式通知 (ID: $notificationId)。")
+        DebugLogger.d(TAG, "已发送交互式通知 (ID: $notificationId)。")
     }
 
     suspend fun requestInput(type: String, title: String): Any? {

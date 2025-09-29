@@ -7,11 +7,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import com.chaomixian.vflow.core.logging.DebugLogger
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            Log.d("BootReceiver", "设备启动完成，准备启动 TriggerService。")
+            DebugLogger.d("BootReceiver", "设备启动完成，准备启动 TriggerService。")
             val serviceIntent = Intent(context, TriggerService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent)

@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.launch
 
 class BatteryTriggerHandler : ListeningTriggerHandler() {
@@ -25,7 +26,7 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
 
     override fun startListening(context: Context) {
         if (batteryReceiver != null) return
-        Log.d(TAG, "启动电量监听...")
+        DebugLogger.d(TAG, "启动电量监听...")
 
         batteryReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
@@ -39,7 +40,7 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
             val scale = initialIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
             if (level != -1 && scale != -1) {
                 lastBatteryPercentage = (level * 100 / scale.toFloat()).toInt()
-                Log.d(TAG, "电量监听初始化，当前电量: $lastBatteryPercentage%")
+                DebugLogger.d(TAG, "电量监听初始化，当前电量: $lastBatteryPercentage%")
             }
         }
     }
@@ -48,9 +49,9 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
         batteryReceiver?.let {
             try {
                 context.unregisterReceiver(it)
-                Log.d(TAG, "电量监听已停止。")
+                DebugLogger.d(TAG, "电量监听已停止。")
             } catch (e: Exception) {
-                Log.w(TAG, "注销 BatteryReceiver 时出错: ${e.message}")
+                DebugLogger.w(TAG, "注销 BatteryReceiver 时出错: ${e.message}")
             } finally {
                 batteryReceiver = null
                 lastBatteryPercentage = -1
@@ -69,7 +70,7 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
             return
         }
 
-        Log.d(TAG, "电量从 $lastBatteryPercentage% 变化到 $currentPercentage%")
+        DebugLogger.d(TAG, "电量从 $lastBatteryPercentage% 变化到 $currentPercentage%")
         val previousPercentage = lastBatteryPercentage
         lastBatteryPercentage = currentPercentage
 
@@ -87,7 +88,7 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
                 }
 
                 if (shouldTrigger) {
-                    Log.i(TAG, "条件满足, 触发工作流: ${workflow.name} (电量 $currentPercentage% $condition $threshold%)")
+                    DebugLogger.i(TAG, "条件满足, 触发工作流: ${workflow.name} (电量 $currentPercentage% $condition $threshold%)")
                     WorkflowExecutor.execute(workflow, context.applicationContext)
                 }
             }

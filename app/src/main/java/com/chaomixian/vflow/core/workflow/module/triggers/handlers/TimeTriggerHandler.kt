@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.TimeTriggerReceiver
 import java.util.*
@@ -32,7 +33,7 @@ class TimeTriggerHandler : BaseTriggerHandler() {
 
             val nextTriggerTime = calculateNextTriggerTime(time, days)
             if (nextTriggerTime == null) {
-                Log.w(TAG, "无法为工作流 '${workflow.name}' 计算下一次触发时间 (可能已过期)。")
+                DebugLogger.w(TAG, "无法为工作流 '${workflow.name}' 计算下一次触发时间 (可能已过期)。")
                 cancelAlarm(context, workflow.id) // 如果是单次任务且已过期，则取消
                 return
             }
@@ -40,14 +41,14 @@ class TimeTriggerHandler : BaseTriggerHandler() {
             val alarmClockInfo = AlarmManager.AlarmClockInfo(nextTriggerTime.timeInMillis, intent)
             alarmManager.setAlarmClock(alarmClockInfo, intent)
 
-            Log.d(TAG, "已为 '${workflow.name}' 调度下一次闹钟: ${Date(nextTriggerTime.timeInMillis)}")
+            DebugLogger.d(TAG, "已为 '${workflow.name}' 调度下一次闹钟: ${Date(nextTriggerTime.timeInMillis)}")
         }
 
         private fun cancelAlarm(context: Context, workflowId: String) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             val intent = createPendingIntent(context, workflowId)
             alarmManager.cancel(intent)
-            Log.d(TAG, "已取消工作流 '$workflowId' 的定时触发器。")
+            DebugLogger.d(TAG, "已取消工作流 '$workflowId' 的定时触发器。")
         }
 
         private fun createPendingIntent(context: Context, workflowId: String): PendingIntent {
@@ -112,7 +113,7 @@ class TimeTriggerHandler : BaseTriggerHandler() {
 
     override fun start(context: Context) {
         super.start(context)
-        Log.d(TAG, "TimeTriggerHandler 已启动。")
+        DebugLogger.d(TAG, "TimeTriggerHandler 已启动。")
     }
 
     override fun addWorkflow(context: Context, workflow: Workflow) {

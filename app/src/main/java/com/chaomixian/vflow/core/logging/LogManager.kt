@@ -76,7 +76,17 @@ object LogManager {
         val json = prefs.getString(LOGS_KEY, null)
         return if (json != null) {
             val type = object : TypeToken<List<LogEntry>>() {}.type
-            gson.fromJson(json, type) ?: emptyList()
+            try {
+                // [关键修复] 在反序列化后，过滤掉任何可能导致崩溃的不完整条目
+                val logs: List<LogEntry?>? = gson.fromJson(json, type)
+                logs?.filterNotNull()?.filter {
+                    // 确保所有必要的字段都不是 null
+                    it.workflowId != null && it.workflowName != null && it.status != null
+                } ?: emptyList()
+            } catch (e: Exception) {
+                // 如果解析失败，返回空列表以避免崩溃
+                emptyList()
+            }
         } else {
             emptyList()
         }
