@@ -26,8 +26,6 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
-import com.chaomixian.vflow.ui.workflow_editor.VariableValueUIProvider
 import com.google.android.material.color.MaterialColors
 import java.util.*
 
@@ -66,10 +64,6 @@ class ActionStepAdapter(
         private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container)
         private val categoryColorBar: View = itemView.findViewById(R.id.category_color_bar)
 
-        // [新增] 实例化我们需要的UI提供者
-        private val richTextUIProvider = RichTextUIProvider("value")
-        private val variableValueUIProvider = VariableValueUIProvider()
-
         fun bind(step: ActionStep, position: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
 
@@ -85,30 +79,16 @@ class ActionStepAdapter(
 
             contentContainer.removeAllViews()
 
-            // 1. 根据模块和类型动态选择UI提供者来创建预览
-            var customPreview: View? = null
-
-            // 检查是否是“创建变量”模块
-            if (module.id == CreateVariableModule().id) {
-                val type = step.parameters["type"] as? String
-                // 根据变量类型选择不同的UI提供者
-                customPreview = when (type) {
-                    "文本" -> richTextUIProvider.createPreview(context, contentContainer, step, allSteps)
-                    "字典", "列表" -> variableValueUIProvider.createPreview(context, contentContainer, step, allSteps)
-                    else -> null // 其他类型不使用自定义预览
-                }
-            } else {
-                // 对于其他模块，使用其自带的UI提供者
-                customPreview = module.uiProvider?.createPreview(context, contentContainer, step, allSteps) { intent, callback ->
-                    if (adapterPosition != RecyclerView.NO_POSITION) {
-                        onStartActivityForResult(adapterPosition, intent, callback)
-                    }
+            // 移除所有特殊判断，统一调用 uiProvider
+            val customPreview = module.uiProvider?.createPreview(context, contentContainer, step, allSteps) { intent, callback ->
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    onStartActivityForResult(adapterPosition, intent, callback)
                 }
             }
 
             val hasCustomPreview = customPreview != null
 
-            // 2. 根据是否存在自定义预览来决定标题内容
+            // 根据是否存在自定义预览来决定标题内容
             val rawSummary = module.getSummary(context, step)
             val headerSummary: CharSequence = if (hasCustomPreview) {
                 // 如果有自定义预览，标题只显示简洁的摘要（不包含值）
@@ -118,7 +98,7 @@ class ActionStepAdapter(
                 PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: module.metadata.name
             }
 
-            // 3. 总是创建并添加标题行
+            // 总是创建并添加标题行
             val prefix = "#$position "
             val spannablePrefix = SpannableStringBuilder(prefix).apply {
                 setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -129,7 +109,7 @@ class ActionStepAdapter(
             val headerView = createHeaderRow(finalTitle)
             contentContainer.addView(headerView)
 
-            // 4. 如果有自定义预览，将其添加到标题行下方
+            // 如果有自定义预览，将其添加到标题行下方
             if (customPreview != null) {
                 val layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,

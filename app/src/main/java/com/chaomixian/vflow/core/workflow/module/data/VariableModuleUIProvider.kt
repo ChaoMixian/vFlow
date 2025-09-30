@@ -1,5 +1,4 @@
-// 文件: VariableModuleUIProvider.kt
-// 描述: 为变量设置模块提供自定义UI。
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/data/VariableModuleUIProvider.kt
 package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
@@ -21,11 +20,13 @@ import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.chaomixian.vflow.ui.workflow_editor.ListItemAdapter
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
-import com.chaomixian.vflow.ui.workflow_editor.PillRenderer // [新增] 导入 PillRenderer
+import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
+import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
+import com.chaomixian.vflow.ui.workflow_editor.VariableValueUIProvider
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
-// ... (ViewHolder 和接口定义保持不变) ...
+// ViewHolder 和接口定义保持不变
 class VariableEditorViewHolder(
     view: View, // ViewHolder 的根视图
     val typeSpinner: Spinner, // 用于选择变量类型的 Spinner
@@ -42,10 +43,18 @@ class VariableModuleUIProvider(
     private val typeOptions: List<String>
 ) : ModuleUIProvider {
 
+    // [新增] 实例化内部需要用到的 UI 提供者
+    private val richTextUIProvider = RichTextUIProvider("value")
+    private val variableValueUIProvider = VariableValueUIProvider()
+
     override fun getHandledInputIds(): Set<String> {
         return setOf("type", "value")
     }
 
+    /**
+     * 实现 createPreview 方法。
+     * 这个方法现在是预览逻辑的入口点，它会根据变量类型进行分发。
+     */
     override fun createPreview(
         context: Context,
         parent: ViewGroup,
@@ -54,22 +63,14 @@ class VariableModuleUIProvider(
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): View? {
         val type = step.parameters["type"] as? String
-        if (type != "文本") {
-            return null
+        // 根据变量类型，委托给相应的 UIProvider 来创建预览
+        return when (type) {
+            "文本" -> richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
+            "字典", "列表" -> variableValueUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
+            else -> null // 其他类型（如数字、布尔）不需要自定义预览，返回null即可
         }
-
-        val inflater = LayoutInflater.from(context)
-        val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
-        val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
-
-        val rawText = step.parameters["value"]?.toString() ?: ""
-
-        // [修正] 使用 PillRenderer.renderRichTextToSpannable
-        val spannable = PillRenderer.renderRichTextToSpannable(context, rawText, allSteps)
-        textView.text = spannable
-
-        return previewView
     }
+
 
     override fun createEditor(
         context: Context,
@@ -80,7 +81,7 @@ class VariableModuleUIProvider(
         allSteps: List<ActionStep>?,
         onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
-        // ... (createEditor 的前半部分代码保持不变) ...
+        // createEditor 的代码保持不变
         val view = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(
@@ -129,7 +130,7 @@ class VariableModuleUIProvider(
         return holder
     }
 
-    // ... (readFromEditor 保持不变) ...
+    // readFromEditor 的代码保持不变
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as VariableEditorViewHolder
         val selectedType = h.typeSpinner.selectedItem.toString()
@@ -171,13 +172,12 @@ class VariableModuleUIProvider(
                 val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
                 richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
-                    // [修正] 使用 PillRenderer.getDisplayNameForVariableReference
+                    // 使用 PillRenderer.getDisplayNameForVariableReference
                     PillUtil.createPillDrawable(context, PillRenderer.getDisplayNameForVariableReference(variableRef, holder.allSteps ?: emptyList()))
                 }
                 valueContainer.addView(richEditorLayout)
                 row
             }
-            // ... (其他 "字典", "列表", "布尔" 等 case 保持不变) ...
             "字典" -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.valueContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_dictionary)
