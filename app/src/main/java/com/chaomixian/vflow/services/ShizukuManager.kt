@@ -6,11 +6,11 @@ import android.content.Context
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
-import android.util.Log
 import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import rikka.shizuku.Shizuku
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -26,7 +26,8 @@ object ShizukuManager {
 
     @Volatile
     private var shellService: IShizukuUserService? = null
-    private val isBinding = AtomicBoolean(false)
+    // [核心修改] 使用 Mutex 替代 AtomicBoolean 来保护连接过程
+    private val connectionMutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
@@ -134,80 +135,86 @@ object ShizukuManager {
     }
 
     /**
-     * 获取服务实例，如果未连接则尝试连接。
+     * 获取服务实例，使用 Mutex 解决并发问题。
      */
     private suspend fun getService(context: Context): IShizukuUserService? {
+        // 在尝试加锁前，先进行一次快速检查，提高性能
         if (shellService?.asBinder()?.isBinderAlive == true) {
             return shellService
         }
-        for (attempt in 1..MAX_RETRY_COUNT) {
-            try {
-                return connect(context)
-            } catch (e: Exception) {
-                DebugLogger.w(TAG, "第 $attempt 次连接 Shizuku 服务失败", e)
-                if (attempt < MAX_RETRY_COUNT) {
-                    delay(500L * attempt)
+
+        // 使用互斥锁确保只有一个协程可以执行连接操作
+        connectionMutex.withLock {
+            // 获取锁后，再次检查，因为在等待锁的过程中，可能已有其他协程完成了连接
+            if (shellService?.asBinder()?.isBinderAlive == true) {
+                return shellService
+            }
+
+            // 在锁内执行带重试的连接逻辑
+            for (attempt in 1..MAX_RETRY_COUNT) {
+                try {
+                    shellService = connect(context)
+                    // 连接成功后，直接返回
+                    return shellService
+                } catch (e: Exception) {
+                    DebugLogger.w(TAG, "第 $attempt 次连接 Shizuku 服务失败", e)
+                    if (attempt < MAX_RETRY_COUNT) {
+                        delay(500L * attempt)
+                    }
                 }
             }
+            // 所有重试失败后，返回 null
+            return null
         }
-        return null
     }
 
     /**
-     * 建立与 Shizuku 用户服务的连接。
+     * 简化 connect 函数，移除并发控制逻辑。
+     * 它现在只负责执行单次的绑定尝试。
      */
     private suspend fun connect(context: Context): IShizukuUserService {
         if (!isShizukuActive(context)) {
             throw RuntimeException("Shizuku 未激活或未授权。")
         }
 
-        if (!isBinding.compareAndSet(false, true)) {
-            DebugLogger.w(TAG, "另一个绑定进程正在进行中，等待...")
-            delay(BIND_TIMEOUT_MS)
-            return shellService ?: throw IllegalStateException("另一个绑定进程正在进行但未完成。")
-        }
+        return withTimeout(BIND_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                val userServiceArgs = Shizuku.UserServiceArgs(ComponentName(context, ShizukuUserService::class.java))
+                    .daemon(false)
+                    .processNameSuffix(":vflow_shizuku")
+                    .version(1)
 
-        return try {
-            withTimeout(BIND_TIMEOUT_MS) {
-                suspendCancellableCoroutine { continuation ->
-                    val userServiceArgs = Shizuku.UserServiceArgs(ComponentName(context, ShizukuUserService::class.java))
-                        .daemon(false)
-                        .processNameSuffix(":vflow_shizuku")
-                        .version(1)
-
-                    val connection = object : ServiceConnection {
-                        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                            if (service != null && service.isBinderAlive && continuation.isActive) {
-                                DebugLogger.d(TAG, "Shizuku 服务已连接。")
-                                val shell = IShizukuUserService.Stub.asInterface(service)
-                                shellService = shell
-                                continuation.resume(shell)
-                            }
-                        }
-
-                        override fun onServiceDisconnected(name: ComponentName?) {
-                            shellService = null
-                            if (continuation.isActive) {
-                                continuation.resumeWithException(RuntimeException("Shizuku 服务连接意外断开。"))
-                            }
+                val connection = object : ServiceConnection {
+                    override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                        if (service != null && service.isBinderAlive && continuation.isActive) {
+                            DebugLogger.d(TAG, "Shizuku 服务已连接。")
+                            val shell = IShizukuUserService.Stub.asInterface(service)
+                            shellService = shell
+                            continuation.resume(shell)
                         }
                     }
 
-                    continuation.invokeOnCancellation {
-                        try {
-                            Shizuku.unbindUserService(userServiceArgs, connection, true)
-                        } catch (e: Exception) {
-                            // 忽略解绑时的异常
+                    override fun onServiceDisconnected(name: ComponentName?) {
+                        shellService = null
+                        if (continuation.isActive) {
+                            continuation.resumeWithException(RuntimeException("Shizuku 服务连接意外断开。"))
                         }
-                    }
-
-                    scope.launch(Dispatchers.Main) {
-                        Shizuku.bindUserService(userServiceArgs, connection)
                     }
                 }
+
+                continuation.invokeOnCancellation {
+                    try {
+                        Shizuku.unbindUserService(userServiceArgs, connection, true)
+                    } catch (e: Exception) {
+                        // 忽略解绑时的异常
+                    }
+                }
+
+                // 确保绑定操作在主线程执行
+                scope.launch(Dispatchers.Main) {
+                    Shizuku.bindUserService(userServiceArgs, connection)
+                }
             }
-        } finally {
-            isBinding.set(false)
         }
     }
 }
