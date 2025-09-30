@@ -107,12 +107,11 @@ class SmsTriggerModule : BaseModule() {
             else -> "$contentCondition \"$contentValue\""
         }
 
-        val senderPill = PillUtil.Pill(senderPillText, false, "sender_filter_type", isModuleOption = true)
-        val contentPill = PillUtil.Pill(contentPillText, false, "content_filter_type", isModuleOption = true)
+        val senderPill = PillUtil.Pill(senderPillText, "sender_filter_type", isModuleOption = true)
+        val contentPill = PillUtil.Pill(contentPillText, "content_filter_type", isModuleOption = true)
 
         return PillUtil.buildSpannable(context, "当收到发件人 ", senderPill, " 且内容 ", contentPill, " 的短信时")
     }
-
     /**
      * 将提取到的验证码也作为输出。
      */

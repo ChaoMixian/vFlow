@@ -43,11 +43,13 @@ class BatteryTriggerModule : BaseModule() {
         val aboveOrBelow = step.parameters["above_or_below"] as? String ?: "below"
         val conditionText = if (aboveOrBelow == "below") "低于" else "高于"
 
-        val levelPill = PillUtil.Pill("$level%", false, "level")
-        val conditionPill = PillUtil.Pill(conditionText, false, "above_or_below")
+        // 更新 Pill 的构造以匹配新的签名
+        val levelPill = PillUtil.Pill("$level%", "level")
+        val conditionPill = PillUtil.Pill(conditionText, "above_or_below", isModuleOption = true)
 
         return PillUtil.buildSpannable(context, "当电量", " ", conditionPill, " ", levelPill, " 时触发")
     }
+
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         onProgress(ProgressUpdate("电量任务已触发"))

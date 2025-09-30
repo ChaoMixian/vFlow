@@ -82,8 +82,6 @@ class CreateVariableModule : BaseModule() {
             } else {
                 val namePill = PillUtil.Pill(
                     text = "[[${name}]]",
-                    isVariable = false,
-                    isNamedVariable = true,
                     parameterId = "variableName"
                 )
                 PillUtil.buildSpannable(context, "创建变量 ", namePill, " (文本)")
@@ -97,7 +95,7 @@ class CreateVariableModule : BaseModule() {
                 is String -> value.lines().count { it.isNotEmpty() }
                 else -> 0
             }
-            PillUtil.Pill("[$listSize 项]", isVariable = false, parameterId = "value")
+            PillUtil.Pill("[$listSize 项]", parameterId = "value")
         } else {
             PillUtil.createPillFromParam(value, inputs.find { it.id == "value" })
         }
@@ -108,14 +106,11 @@ class CreateVariableModule : BaseModule() {
             // 在这里创建一个代表命名变量的Pill
             val namePill = PillUtil.Pill(
                 text = "[[${name}]]",
-                isVariable = false,
-                isNamedVariable = true,
                 parameterId = "variableName"
             )
             PillUtil.buildSpannable(context, "创建变量 ", namePill, " (", type, ") 为 ", valuePill)
         }
     }
-
     /**
      * 重写验证逻辑以检查重复的变量名。
      * @param step 要验证的步骤。

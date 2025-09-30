@@ -56,7 +56,8 @@ class ReadSmsModule : BaseModule() {
             if (filterBy == "包含内容" || filterBy == "发件人与内容") {
                 parts.add(" 内容含 ")
                 if (extractCode) {
-                    parts.add(PillUtil.Pill("验证码", false, "extract_code"))
+                    // 更新 Pill 的构造以匹配新的签名
+                    parts.add(PillUtil.Pill("验证码", "extract_code"))
                 } else {
                     parts.add(PillUtil.createPillFromParam(params["content"], getInputs().find { it.id == "content" }))
                 }

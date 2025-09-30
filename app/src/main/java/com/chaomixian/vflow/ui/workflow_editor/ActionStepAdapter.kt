@@ -1,27 +1,19 @@
 // 文件: ActionStepAdapter.kt
 // 描述: 工作流编辑器中步骤列表 (RecyclerView) 的适配器。
-//      负责显示每个步骤的摘要、处理参数药丸的点击、步骤删除等。
+//      [已修复] 解决了设置类别颜色条时因背景为空导致的崩溃问题。
 
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Typeface
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.text.TextPaint
 import android.text.method.LinkMovementMethod
-import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
-import android.text.style.ReplacementSpan
 import android.text.style.StyleSpan
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -36,41 +28,16 @@ import androidx.core.text.getSpans
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.BlockType
-import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleRegistry
-import com.chaomixian.vflow.core.module.isMagicVariable
-import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.color.MaterialColors
 import java.util.*
-import java.util.regex.Pattern
-import kotlin.math.roundToInt
 
-/**
- * 可点击参数药丸的 Span。这是一个自定义的ClickableSpan，用于标记摘要中的可点击部分。
- * @param parameterId 关联的参数ID，用于告知回调哪个参数被点击了。
- * @param isVariable 是否为魔法变量。
- * @param isModuleOption 是否为模块自身配置选项（例如If模块的条件操作符）。
- */
-private class ParameterPillSpan(
-    val parameterId: String,
-    val isVariable: Boolean,
-    val isModuleOption: Boolean,
-    val isNamedVariable: Boolean // 新增：标记是否为命名变量
-) : ClickableSpan() {
-    override fun onClick(widget: View) { /* 点击事件由外部的OnTouchListener统一处理 */ }
-    override fun updateDrawState(ds: TextPaint) { /* 外观由下面的RoundedBackgroundSpan处理，这里不需要额外操作 */ }
-}
-
-/**
- * 工作流步骤列表的 RecyclerView.Adapter。
- */
 class ActionStepAdapter(
     private val actionSteps: MutableList<ActionStep>,
-    private val onEditClick: (position: Int, inputId: String?) -> Unit, // 编辑回调
-    private val onDeleteClick: (position: Int) -> Unit, // 删除回调
-    private val onParameterPillClick: (position: Int, parameterId: String) -> Unit, // 参数药丸点击回调
-    // 回调，允许列表项请求启动一个Activity并获取结果
+    private val onEditClick: (position: Int, inputId: String?) -> Unit,
+    private val onDeleteClick: (position: Int) -> Unit,
+    private val onParameterPillClick: (position: Int, parameterId: String) -> Unit,
     private val onStartActivityForResult: (position: Int, Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit
 ) : RecyclerView.Adapter<ActionStepAdapter.ActionStepViewHolder>() {
 
@@ -108,21 +75,21 @@ class ActionStepAdapter(
             // 设置缩进
             indentSpace.layoutParams.width = (step.indentationLevel * 24 * context.resources.displayMetrics.density).toInt()
 
-            // 设置类别颜色条
+            // [崩溃修复] 创建一个新的Drawable并设置颜色，而不是在null背景上调用setTint
             val categoryColor = ContextCompat.getColor(context, PillUtil.getCategoryColor(module.metadata.category))
             val drawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = (4 * context.resources.displayMetrics.density)
+                cornerRadius = (4 * context.resources.displayMetrics.density) // 保持圆角
                 setColor(categoryColor)
             }
             categoryColorBar.background = drawable
 
+
             contentContainer.removeAllViews()
 
-            // [核心修改] 总是先创建并添加摘要文本
             val rawSummary = module.getSummary(context, step)
-            val finalSummary = PillUtil.processSummarySpans(context, rawSummary, allSteps, step)
-            // 为摘要添加步骤编号前缀
+            val finalSummary = PillRenderer.renderPills(context, rawSummary, allSteps, step)
+
             val prefix = "#$position "
             val spannablePrefix = SpannableStringBuilder(prefix).apply {
                 setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -133,7 +100,7 @@ class ActionStepAdapter(
             val headerView = createHeaderRow(finalTitle) // 创建包含摘要的头部视图
             contentContainer.addView(headerView)
 
-            // [核心修改] 接着，如果模块提供了UIProvider，则创建并添加自定义预览视图
+            // 如果模块提供了UIProvider，则创建并添加自定义预览视图
             val customPreview = module.uiProvider?.createPreview(
                 context,
                 contentContainer,
@@ -157,7 +124,6 @@ class ActionStepAdapter(
                 contentContainer.addView(customPreview)
             }
 
-
             deleteButton.setOnClickListener {
                 if(adapterPosition != RecyclerView.NO_POSITION) onDeleteClick(adapterPosition)
             }
@@ -178,10 +144,10 @@ class ActionStepAdapter(
             val textView = TextView(context).apply {
                 text = summary
                 setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium)
-                movementMethod = LinkMovementMethod.getInstance() // 使ClickableSpan生效
-                highlightColor = Color.TRANSPARENT // 去除点击高亮
+                movementMethod = LinkMovementMethod.getInstance()
+                highlightColor = Color.TRANSPARENT
                 includeFontPadding = false
-                setLineSpacing(0f, 1.4f) // 调整行间距，使药丸更好看
+                setLineSpacing(0f, 1.4f)
             }
 
             // 自定义 TouchListener 以区分药丸点击和列表项点击
@@ -198,13 +164,13 @@ class ActionStepAdapter(
                         return@setOnTouchListener true
                     }
                     val offset = layout.getOffsetForHorizontal(line, x.toFloat())
-                    val links = text.getSpans(offset, offset, ParameterPillSpan::class.java)
-                    if (links.isNotEmpty()) { // 点击到药丸
+                    val links = text.getSpans(offset, offset, PillUtil.ParameterPillSpan::class.java)
+                    if (links.isNotEmpty()) {
                         if (adapterPosition != RecyclerView.NO_POSITION) {
                             onParameterPillClick(adapterPosition, links[0].parameterId)
                         }
                         true
-                    } else { // 未点击到药丸，视为列表项点击
+                    } else {
                         itemView.performClick()
                         true
                     }
@@ -214,342 +180,5 @@ class ActionStepAdapter(
             }
             return textView
         }
-    }
-}
-
-/**
- * 参数药丸 (Pill) UI 工具类。
- * 提供构建和处理摘要中药丸样式的 Spannable 的方法。
- */
-object PillUtil {
-
-    /** 魔法变量来源信息的数据类。 */
-    private data class SourceInfo(val outputName: String, val color: Int)
-
-    /**
-     * 从模块参数创建 Pill 的标准方法。
-     * 封装了魔法变量检测和数字格式化逻辑。
-     *
-     * @param paramValue 步骤中存储的原始参数值。
-     * @param inputDef 该参数的输入定义，用于获取默认值和ID。
-     * @param isModuleOption 是否为模块的内置选项（例如If模块的条件操作符）。
-     * @return 一个配置好的 Pill 对象。
-     */
-    fun createPillFromParam(
-        paramValue: Any?,
-        inputDef: InputDefinition?,
-        isModuleOption: Boolean = false
-    ): Pill {
-        val paramStr = paramValue as? String
-        val isVariable = paramStr?.isMagicVariable() == true
-        val isNamed = paramStr?.isNamedVariable() == true
-        val text: String
-
-        if (isVariable || isNamed) {
-            text = paramValue.toString()
-        } else {
-            val valueToFormat = paramValue ?: inputDef?.defaultValue
-            text = when (valueToFormat) {
-                is Number -> {
-                    if (valueToFormat.toDouble() == valueToFormat.toLong().toDouble()) {
-                        valueToFormat.toLong().toString()
-                    } else {
-                        String.format("%.2f", valueToFormat.toDouble())
-                    }
-                }
-                else -> valueToFormat?.toString() ?: "..."
-            }
-        }
-        return Pill(text, isVariable, inputDef?.id ?: "", isModuleOption, isNamed)
-    }
-
-    /** 构建包含药丸的 Spannable 文本。 */
-    fun buildSpannable(context: Context, vararg parts: Any): CharSequence {
-        val builder = SpannableStringBuilder()
-        parts.forEach { part ->
-            when (part) {
-                is String -> builder.append(part)
-                is Pill -> { // 药丸对象
-                    val start = builder.length
-                    builder.append(" ${part.text} ") // 药丸文本前后加空格
-                    val end = builder.length
-                    // 附加 ParameterPillSpan 以便后续处理和点击
-                    val span = ParameterPillSpan(part.parameterId, part.isVariable, part.isModuleOption, part.isNamedVariable)
-                    builder.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-            }
-        }
-        return builder
-    }
-
-    /** 参数药丸的数据模型。 */
-    data class Pill(
-        val text: String, // 显示文本
-        val isVariable: Boolean, // 是否为魔法变量
-        val parameterId: String, // 对应 InputDefinition 的 ID
-        val isModuleOption: Boolean = false, // 是否为模块自身配置项 (如If模块的操作符)
-        val isNamedVariable: Boolean = false // 新增：是否为命名变量
-    )
-
-    /** 根据模块分类获取颜色资源ID。 */
-    fun getCategoryColor(category: String): Int = when (category) {
-        "触发器" -> R.color.category_trigger
-        "界面交互" -> R.color.category_ui_interaction
-        "逻辑控制" -> R.color.category_logic
-        "数据" -> R.color.category_data
-        "文件" -> R.color.category_file
-        "网络" -> R.color.category_network
-        "应用与系统" -> R.color.category_system
-        "Shizuku" -> R.color.category_shizuku
-        else -> com.google.android.material.R.color.material_dynamic_neutral30
-    }
-
-    /** 查找魔法变量的来源步骤和输出信息。 */
-    private fun findSourceInfo(context: Context, variableRef: String, allSteps: List<ActionStep>): SourceInfo? {
-        if (!variableRef.isMagicVariable()) return null // 不是合法的魔法变量引用
-        val (sourceStepId, sourceOutputId) = variableRef.removeSurrounding("{{", "}}").split('.').let { it.getOrNull(0) to it.getOrNull(1) }
-        if (sourceStepId == null || sourceOutputId == null) return null
-
-        val sourceStep = allSteps.find { it.id == sourceStepId }
-        val sourceModule = sourceStep?.let { ModuleRegistry.getModule(it.moduleId) } ?: return null
-        val sourceOutput = sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId } ?: return null
-        val sourceColor = ContextCompat.getColor(context, getCategoryColor(sourceModule.metadata.category))
-        return SourceInfo(outputName = sourceOutput.name, color = sourceColor)
-    }
-
-    /** 处理模块摘要中的 ParameterPillSpan，为其应用 RoundedBackgroundSpan 样式。 */
-    fun processSummarySpans(
-        context: Context,
-        summary: CharSequence?,
-        allSteps: List<ActionStep>,
-        currentStep: ActionStep // 当前步骤，用于获取模块选项颜色
-    ): CharSequence? {
-        if (summary !is Spanned) return summary // 非Spanned文本无需处理
-        val spannable = SpannableStringBuilder(summary)
-
-        // 从后向前替换，避免索引错乱
-        spannable.getSpans<ParameterPillSpan>().reversed().forEach { span ->
-            val start = spannable.getSpanStart(span)
-            val end = spannable.getSpanEnd(span)
-
-            val color: Int
-            val pillText: CharSequence
-
-            val reference = spannable.substring(start, end).trim()
-
-            when {
-                // 1. 命名变量
-                span.isNamedVariable -> {
-                    pillText = " ${reference.removeSurrounding("[[", "]]")} "
-                    color = ContextCompat.getColor(context, getCategoryColor("数据"))
-                }
-                // 2. 魔法变量
-                span.isVariable -> {
-                    val sourceInfo = findSourceInfo(context, reference, allSteps)
-                    pillText = " ${sourceInfo?.outputName ?: "变量"} "
-                    color = sourceInfo?.color ?: ContextCompat.getColor(context, R.color.variable_pill_color)
-                }
-                // 3. 模块选项
-                span.isModuleOption -> {
-                    pillText = spannable.subSequence(start, end)
-                    val currentModule = ModuleRegistry.getModule(currentStep.moduleId)
-                    color = currentModule?.let { ContextCompat.getColor(context, getCategoryColor(it.metadata.category)) }
-                        ?: ContextCompat.getColor(context, R.color.static_pill_color)
-                }
-                // 4. 普通静态值
-                else -> {
-                    pillText = spannable.subSequence(start, end)
-                    color = ContextCompat.getColor(context, R.color.static_pill_color)
-                }
-            }
-
-            spannable.replace(start, end, pillText) // 替换原始文本为药丸文本
-            val newEnd = start + pillText.length
-            // 应用圆角背景和新的可点击Span
-            val backgroundSpan = RoundedBackgroundSpan(context, color)
-            spannable.setSpan(backgroundSpan, start, newEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            val newClickableSpan = ParameterPillSpan(span.parameterId, span.isVariable, span.isModuleOption, span.isNamedVariable)
-            spannable.setSpan(newClickableSpan, start, newEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        }
-        return spannable
-    }
-
-    /**
-     * 创建一个用于在 EditText 中显示的“药丸”Drawable。
-     * 它通过将一个预设的 XML 布局（magic_variable_pill.xml）绘制到 Bitmap 上来实现。
-     * @param context 上下文。
-     * @param text 药丸上显示的文本。
-     * @return 一个包含文本的 Drawable，其边界已正确设置。
-     */
-    fun createPillDrawable(context: Context, text: String): Drawable {
-        val pillView = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, null)
-        val textView = pillView.findViewById<TextView>(R.id.pill_text)
-        textView.text = text
-
-        pillView.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-        pillView.layout(0, 0, pillView.measuredWidth, pillView.measuredHeight)
-
-        val bitmap = Bitmap.createBitmap(pillView.measuredWidth, pillView.measuredHeight, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        pillView.draw(canvas)
-
-        return BitmapDrawable(context.resources, bitmap).apply {
-            setBounds(0, 0, intrinsicWidth, intrinsicHeight)
-        }
-    }
-
-    /**
-     * [新增] 公共方法，用于解析变量引用的显示名称。
-     */
-    fun getDisplayNameForVariableReference(variableReference: String, allSteps: List<ActionStep>): String {
-        if (variableReference.isNamedVariable()) {
-            return variableReference.removeSurrounding("[[", "]]")
-        }
-        if (variableReference.isMagicVariable()) {
-            val parts = variableReference.removeSurrounding("{{", "}}").split('.')
-            val sourceStepId = parts.getOrNull(0)
-            val sourceOutputId = parts.getOrNull(1)
-            if (sourceStepId != null && sourceOutputId != null) {
-                val sourceStep = allSteps.find { it.id == sourceStepId }
-                if (sourceStep != null) {
-                    val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId)
-                    val outputDef = sourceModule?.getOutputs(sourceStep)?.find { it.id == sourceOutputId }
-                    if (outputDef != null) {
-                        return outputDef.name
-                    }
-                }
-            }
-            return sourceOutputId ?: variableReference
-        }
-        return variableReference
-    }
-
-
-    /**
-     * 将包含变量引用的原始字符串渲染成用于 TextView 显示的 Spannable。
-     * @param context 上下文。
-     * @param rawText 包含 {{...}} 或 [[...]] 的字符串。
-     * @param allSteps 整个工作流的步骤列表，用于解析变量来源。
-     * @return 一个 SpannableStringBuilder，其中变量已被替换为带内外部空格和背景的 Span。
-     */
-    fun renderRichTextToSpannable(context: Context, rawText: String, allSteps: List<ActionStep>): SpannableStringBuilder {
-        val spannable = SpannableStringBuilder()
-        val variablePattern = Pattern.compile("(\\{\\{.*?\\}\\}|\\[\\[.*?\\]\\])")
-        val matcher = variablePattern.matcher(rawText)
-        var lastEnd = 0
-
-        while (matcher.find()) {
-            // 添加变量之前的普通文本
-            spannable.append(rawText.substring(lastEnd, matcher.start()))
-
-            val variableRef = matcher.group(1)
-            if (variableRef != null) {
-                var displayName = variableRef
-                var color = ContextCompat.getColor(context, R.color.variable_pill_color) // 默认颜色
-
-                if (variableRef.isMagicVariable()) {
-                    val sourceInfo = findSourceInfo(context, variableRef, allSteps)
-                    if (sourceInfo != null) {
-                        displayName = sourceInfo.outputName
-                        color = sourceInfo.color
-                    }
-                } else if (variableRef.isNamedVariable()) {
-                    displayName = variableRef.removeSurrounding("[[", "]]")
-                    color = ContextCompat.getColor(context, getCategoryColor("数据"))
-                }
-
-                // --- 修改开始 ---
-
-                // 1. 添加一个外部前置空格，用于分隔
-                spannable.append(" ")
-
-                // 2. 准备带内部前后空格的药丸文本
-                val pillTextWithInternalPadding = " $displayName "
-
-                val start = spannable.length
-                spannable.append(pillTextWithInternalPadding)
-                val end = spannable.length
-
-                // 3. 仅对包含内部空格的文本应用背景 Span
-                spannable.setSpan(RoundedBackgroundSpan(context, color), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-
-                // 4. 添加一个外部后置空格，用于分隔
-                spannable.append(" ")
-
-                // --- 修改结束 ---
-            }
-            lastEnd = matcher.end()
-        }
-
-        // 添加最后一个变量之后的剩余文本
-        if (lastEnd < rawText.length) {
-            spannable.append(rawText.substring(lastEnd))
-        }
-
-        return spannable
-    }
-}
-
-/**
- * 自定义 ReplacementSpan 实现圆角背景药丸效果。
- */
-class RoundedBackgroundSpan(
-    context: Context, // 未使用，但保留以备将来扩展
-    private val backgroundColor: Int
-) : ReplacementSpan() {
-    private val textColor: Int = Color.WHITE // 药丸文字颜色固定为白色
-    private val cornerRadius: Float = 25f // 圆角半径
-    private val paddingHorizontal: Float = 12f // 水平内边距
-    private val paddingVertical: Float = 6f   // 垂直内边距 (影响药丸高度)
-
-    /** 计算Span的宽度和影响FontMetrics。 */
-    override fun getSize(
-        paint: Paint,
-        text: CharSequence,
-        start: Int,
-        end: Int,
-        fm: Paint.FontMetricsInt?
-    ): Int {
-        val textWidth = paint.measureText(text, start, end)
-        if (fm != null) { //调整FontMetrics以确保背景能完全包裹文本
-            val fmPaint = paint.fontMetricsInt
-            val extra = paddingVertical.roundToInt()
-            fm.ascent = fmPaint.ascent - extra
-            fm.descent = fmPaint.descent + extra
-            fm.top = fmPaint.top - extra
-            fm.bottom = fmPaint.bottom + extra
-        }
-        return (textWidth + paddingHorizontal * 2).roundToInt() // 返回总宽度
-    }
-
-    /** 绘制圆角背景和文本。 */
-    override fun draw(
-        canvas: Canvas,
-        text: CharSequence,
-        start: Int,
-        end: Int,
-        x: Float, // Span的起始x坐标
-        top: Int, // 文本顶行y坐标
-        y: Int,   // 文本基线y坐标
-        bottom: Int, // 文本底行y坐标
-        paint: Paint
-    ) {
-        val textWidth = paint.measureText(text, start, end)
-        // 计算背景矩形的坐标 (基于文本的ascent/descent和padding)
-        val rectTop = y + paint.fontMetrics.ascent - paddingVertical
-        val rectBottom = y + paint.fontMetrics.descent + paddingVertical
-        val rect = android.graphics.RectF(x, rectTop, x + textWidth + paddingHorizontal * 2, rectBottom)
-
-        val originalColor = paint.color // 保存原始画笔颜色
-        paint.color = backgroundColor
-        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint) // 绘制圆角背景
-
-        paint.color = textColor
-        canvas.drawText(text, start, end, x + paddingHorizontal, y.toFloat(), paint) // 绘制文本
-
-        paint.color = originalColor // 恢复原始画笔颜色
     }
 }

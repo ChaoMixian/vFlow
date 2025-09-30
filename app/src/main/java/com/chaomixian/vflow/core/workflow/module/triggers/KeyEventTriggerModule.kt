@@ -96,13 +96,13 @@ class KeyEventTriggerModule : BaseModule() {
 
         if (actionType.isNullOrEmpty()) return "配置按键触发器"
 
-        val presetPill = PillUtil.Pill(preset.replace(" (侧键)", "").replace(" (三段式)", ""), false, "device_preset", isModuleOption = true)
-        val actionTypePill = PillUtil.Pill(actionType.replace(" (立即触发)", ""), false, "action_type", isModuleOption = true)
+        val presetPill = PillUtil.Pill(preset.replace(" (侧键)", "").replace(" (三段式)", ""), "device_preset", isModuleOption = true)
+        val actionTypePill = PillUtil.Pill(actionType.replace(" (立即触发)", ""), "action_type", isModuleOption = true)
 
         return when (preset) {
             "手动/自定义" -> {
                 val keyCode = step.parameters["key_code"] as? String ?: "N/A"
-                val keyCodePill = PillUtil.Pill(keyCode, false, "key_code")
+                val keyCodePill = PillUtil.Pill(keyCode, "key_code")
                 PillUtil.buildSpannable(context, "当 ", actionTypePill, " ", keyCodePill, " 键时")
             }
             else -> {
@@ -110,7 +110,6 @@ class KeyEventTriggerModule : BaseModule() {
             }
         }
     }
-
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         onProgress(ProgressUpdate("按键事件已触发"))
         return ExecutionResult.Success()

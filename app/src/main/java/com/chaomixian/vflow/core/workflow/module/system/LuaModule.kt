@@ -51,8 +51,8 @@ class LuaModule : BaseModule() {
         val script = step.parameters["script"] as? String ?: "..."
         val firstLine = script.trim().lines().firstOrNull { it.isNotBlank() && !it.trim().startsWith("--") } ?: "空脚本"
 
-        // Lua 模块的 Pill 代表整个脚本，所以直接创建
-        val scriptPill = PillUtil.Pill(firstLine, false, "script")
+        // 更新 Pill 的构造以匹配新的签名
+        val scriptPill = PillUtil.Pill(firstLine, "script")
 
         return PillUtil.buildSpannable(context,
             "执行Lua脚本: ",

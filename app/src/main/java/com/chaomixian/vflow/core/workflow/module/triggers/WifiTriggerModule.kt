@@ -58,17 +58,16 @@ class WifiTriggerModule : BaseModule() {
         return if (triggerType == "网络连接") {
             val event = step.parameters["connection_event"] as? String ?: "连接到"
             val target = step.parameters["network_target"] as? String ?: WifiTriggerHandler.ANY_WIFI_TARGET
-            val eventPill = PillUtil.Pill(event, false, "connection_event", isModuleOption = true)
+            val eventPill = PillUtil.Pill(event, "connection_event", isModuleOption = true)
             val targetDescription = if (target == WifiTriggerHandler.ANY_WIFI_TARGET) "任意 Wi-Fi" else target
-            val targetPill = PillUtil.Pill(targetDescription, false, "network_target")
+            val targetPill = PillUtil.Pill(targetDescription, "network_target")
             PillUtil.buildSpannable(context, "当 ", eventPill, " ", targetPill)
         } else {
             val event = step.parameters["state_event"] as? String ?: "开启时"
-            val eventPill = PillUtil.Pill(event, false, "state_event", isModuleOption = true)
+            val eventPill = PillUtil.Pill(event, "state_event", isModuleOption = true)
             PillUtil.buildSpannable(context, "当 Wi-Fi ", eventPill)
         }
     }
-
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit

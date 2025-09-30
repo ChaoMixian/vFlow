@@ -54,7 +54,7 @@ class TimeTriggerModule : BaseModule() {
             else -> emptyList()
         }
 
-        val timePill = PillUtil.Pill(time, false, "time")
+        val timePill = PillUtil.Pill(time, "time")
 
         val daysText = when {
             daysInt.size == 7 -> "每天"
@@ -73,11 +73,10 @@ class TimeTriggerModule : BaseModule() {
                 }
             }
         }
-        val daysPill = PillUtil.Pill(daysText, false, "days")
+        val daysPill = PillUtil.Pill(daysText, "days")
 
         return PillUtil.buildSpannable(context, daysPill, " ", timePill, " 触发")
     }
-
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         onProgress(ProgressUpdate("定时任务已触发"))
         return ExecutionResult.Success()

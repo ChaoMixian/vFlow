@@ -59,17 +59,16 @@ class BluetoothTriggerModule : BaseModule() {
 
         return if (triggerType == "蓝牙状态") {
             val event = step.parameters["state_event"] as? String ?: "开启时"
-            val eventPill = PillUtil.Pill(event, false, "state_event", isModuleOption = true)
+            val eventPill = PillUtil.Pill(event, "state_event", isModuleOption = true)
             PillUtil.buildSpannable(context, "当蓝牙 ", eventPill)
         } else {
             val event = step.parameters["device_event"] as? String ?: "连接时"
             val deviceName = step.parameters["device_name"] as? String ?: "任何设备"
-            val eventPill = PillUtil.Pill(event, false, "device_event", isModuleOption = true)
-            val devicePill = PillUtil.Pill(deviceName, false, "device_name")
+            val eventPill = PillUtil.Pill(event, "device_event", isModuleOption = true)
+            val devicePill = PillUtil.Pill(deviceName, "device_name")
             PillUtil.buildSpannable(context, "当 ", eventPill, " ", devicePill)
         }
     }
-
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         onProgress(ProgressUpdate("蓝牙事件已触发"))
         val deviceName = context.triggerData as? DictionaryVariable

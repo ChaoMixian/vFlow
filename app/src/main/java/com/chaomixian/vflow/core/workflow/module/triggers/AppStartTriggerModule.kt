@@ -76,12 +76,11 @@ class AppStartTriggerModule : BaseModule() {
             activityName.substringAfterLast('.')
         }
 
-        val eventPill = PillUtil.Pill(event, false, "event", isModuleOption = true)
-        val appPill = PillUtil.Pill(displayText, false, "packageName")
+        val eventPill = PillUtil.Pill(event, "event", isModuleOption = true)
+        val appPill = PillUtil.Pill(displayText, "packageName")
 
         return PillUtil.buildSpannable(context, "当 ", appPill, " ", eventPill)
     }
-
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit

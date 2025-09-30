@@ -72,10 +72,9 @@ class LaunchAppModule : BaseModule() {
         return PillUtil.buildSpannable(context,
             "启动 ",
             // 创建一个药丸(Pill)，让用户可以点击它来重新选择应用/Activity
-            PillUtil.Pill(displayText, false, "packageName")
+            PillUtil.Pill(displayText, "packageName")
         )
     }
-
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit

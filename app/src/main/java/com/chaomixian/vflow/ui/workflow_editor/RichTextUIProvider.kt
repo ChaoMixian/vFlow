@@ -1,4 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/RichTextUIProvider.kt
+// 描述: 通用的富文本UI提供者，现在使用PillRenderer进行预览渲染。
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
@@ -20,10 +21,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
  */
 class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider {
 
-    // 这个UI提供者不处理任何特定的编辑器输入，因为富文本框由通用逻辑创建。
     override fun getHandledInputIds(): Set<String> = emptySet()
 
-    // 编辑器由 ActionEditorSheet 的默认逻辑生成，这里返回 null。
     override fun createEditor(
         context: Context,
         parent: ViewGroup,
@@ -33,17 +32,16 @@ class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider
         allSteps: List<ActionStep>?,
         onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
-        // 此 Provider 专注于预览，编辑器由通用逻辑处理
         throw NotImplementedError("RichTextUIProvider does not create a custom editor.")
     }
 
-    // 从通用编辑器读取，这里不需要实现。
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         throw NotImplementedError("RichTextUIProvider does not read from a custom editor.")
     }
 
     /**
-     * 创建在工作流步骤卡片中显示的自定义富文本预览视图（“大药丸”）。
+     * 创建在工作流步骤卡片中显示的自定义富文本预览视图。
+     * 现在调用 PillRenderer 来完成渲染，保持了逻辑的解耦。
      */
     override fun createPreview(
         context: Context,
@@ -58,10 +56,8 @@ class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider
 
         val rawText = step.parameters[richTextInputId]?.toString() ?: ""
 
-        // [核心修改] 将原始文本（含变量引用）转换为带“药丸”样式的Spannable文本
-        // 现在可以传入 allSteps，以正确解析变量的显示名称和颜色
-        val spannable = PillUtil.renderRichTextToSpannable(context, rawText, allSteps)
-
+        // 使用 PillRenderer 将原始文本（含变量引用）转换为带“药丸”样式的Spannable文本
+        val spannable = PillRenderer.renderRichTextToSpannable(context, rawText, allSteps)
         textView.text = spannable
 
         return previewView
