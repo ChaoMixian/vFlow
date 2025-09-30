@@ -8,17 +8,13 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-
-/**
- * 显示Toast消息模块。
- * 用于在屏幕底部弹出一个简短的文本提示。
- */
 class ToastModule : BaseModule() {
 
     // 模块的唯一ID
@@ -31,7 +27,6 @@ class ToastModule : BaseModule() {
         category = "应用与系统"
     )
 
-    // 指定一个 RichTextUIProvider 来处理预览的渲染
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("message")
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATIONS)
 
@@ -60,7 +55,11 @@ class ToastModule : BaseModule() {
      * 简化摘要，只返回模块名称。预览将由UIProvider处理。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return metadata.name
+        val messagePill = PillUtil.createPillFromParam(
+            step.parameters["message"],
+            getInputs().find { it.id == "message" }
+        )
+        return PillUtil.buildSpannable(context, "显示Toast: ", messagePill)
     }
 
     /**

@@ -1,5 +1,6 @@
 // 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/RichTextUIProvider.kt
-// 描述: 通用的富文本UI提供者，现在使用PillRenderer进行预览渲染。
+// 描述: [已修改] createPreview现在会判断内容复杂度，只在必要时显示富文本预览。
+
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
@@ -12,6 +13,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import java.util.regex.Pattern
 
 /**
  * 一个可复用的 ModuleUIProvider，专门用于处理富文本输入。
@@ -24,13 +26,9 @@ class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider
     override fun getHandledInputIds(): Set<String> = emptySet()
 
     override fun createEditor(
-        context: Context,
-        parent: ViewGroup,
-        currentParameters: Map<String, Any?>,
-        onParametersChanged: () -> Unit,
-        onMagicVariableRequested: ((String) -> Unit)?,
-        allSteps: List<ActionStep>?,
-        onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
+        context: Context, parent: ViewGroup, currentParameters: Map<String, Any?>,
+        onParametersChanged: () -> Unit, onMagicVariableRequested: ((String) -> Unit)?,
+        allSteps: List<ActionStep>?, onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         throw NotImplementedError("RichTextUIProvider does not create a custom editor.")
     }
@@ -40,26 +38,61 @@ class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider
     }
 
     /**
-     * 创建在工作流步骤卡片中显示的自定义富文本预览视图。
-     * 现在调用 PillRenderer 来完成渲染，保持了逻辑的解耦。
+     * [核心修改]
+     * 创建预览视图的逻辑已更新。
+     * 只有当文本内容复杂（混合文本和变量，或多于一个变量）时，才会创建富文本预览。
+     * 否则返回 null，以便适配器回退到使用模块的 getSummary() 方法。
      */
     override fun createPreview(
-        context: Context,
-        parent: ViewGroup,
-        step: ActionStep,
-        allSteps: List<ActionStep>,
+        context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): View {
+    ): View? {
+        val rawText = step.parameters[richTextInputId]?.toString() ?: ""
+
+        // 如果内容不复杂，则不创建自定义预览，回退到 getSummary
+        if (!isComplex(rawText)) {
+            return null
+        }
+
         val inflater = LayoutInflater.from(context)
         val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
         val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
 
-        val rawText = step.parameters[richTextInputId]?.toString() ?: ""
-
-        // 使用 PillRenderer 将原始文本（含变量引用）转换为带“药丸”样式的Spannable文本
         val spannable = PillRenderer.renderRichTextToSpannable(context, rawText, allSteps)
         textView.text = spannable
 
         return previewView
+    }
+
+    /**
+     * 判断一个字符串是否为“复杂”内容。
+     * 复杂定义为：
+     * 1. 包含至少一个变量，并且还包含非空格的纯文本。
+     * 2. 包含两个或更多个变量。
+     * @param rawText 待检查的原始文本。
+     * @return 如果内容复杂则返回 true，否则返回 false。
+     */
+    private fun isComplex(rawText: String): Boolean {
+        val variablePattern = Pattern.compile("(\\{\\{.*?\\}\\}|\\[\\[.*?\\]\\])")
+        val matcher = variablePattern.matcher(rawText)
+
+        var variableCount = 0
+        while (matcher.find()) {
+            variableCount++
+        }
+
+        if (variableCount == 0) {
+            // 没有变量，不复杂
+            return false
+        }
+
+        if (variableCount > 1) {
+            // 超过一个变量，就算复杂
+            return true
+        }
+
+        // 只有一个变量，检查是否还有其他非空格文本
+        val textWithoutVariable = matcher.replaceAll("").trim()
+        return textWithoutVariable.isNotEmpty()
     }
 }

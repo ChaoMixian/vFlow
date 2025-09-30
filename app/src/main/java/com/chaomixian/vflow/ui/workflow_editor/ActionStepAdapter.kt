@@ -1,6 +1,5 @@
 // 文件: ActionStepAdapter.kt
-// 描述: 工作流编辑器中步骤列表 (RecyclerView) 的适配器。
-//      [已修复] 解决了设置类别颜色条时因背景为空导致的崩溃问题。
+// 描述: [已修复] 1. 解决了设置类别颜色条时导致的崩溃。 2. 实现了当富文本预览存在时，自动切换到简洁版标题，避免信息重复。
 
 package com.chaomixian.vflow.ui.workflow_editor
 
@@ -41,7 +40,6 @@ class ActionStepAdapter(
     private val onStartActivityForResult: (position: Int, Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit
 ) : RecyclerView.Adapter<ActionStepAdapter.ActionStepViewHolder>() {
 
-    /** 移动列表项 (用于拖拽排序)。 */
     fun moveItem(fromPosition: Int, toPosition: Int) {
         if (fromPosition > 0 && toPosition > 0 && fromPosition < actionSteps.size && toPosition < actionSteps.size) {
             Collections.swap(actionSteps, fromPosition, toPosition)
@@ -72,54 +70,61 @@ class ActionStepAdapter(
         fun bind(step: ActionStep, position: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
 
-            // 设置缩进
             indentSpace.layoutParams.width = (step.indentationLevel * 24 * context.resources.displayMetrics.density).toInt()
 
-            // [崩溃修复] 创建一个新的Drawable并设置颜色，而不是在null背景上调用setTint
+            // [崩溃修复] 创建一个新的Drawable并设置颜色
             val categoryColor = ContextCompat.getColor(context, PillUtil.getCategoryColor(module.metadata.category))
             val drawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = (4 * context.resources.displayMetrics.density) // 保持圆角
+                cornerRadius = (4 * context.resources.displayMetrics.density)
                 setColor(categoryColor)
             }
             categoryColorBar.background = drawable
 
-
             contentContainer.removeAllViews()
 
-            val rawSummary = module.getSummary(context, step)
-            val finalSummary = PillRenderer.renderPills(context, rawSummary, allSteps, step)
+            // [核心逻辑修改]
+            // 1. 尝试创建自定义预览
+            val customPreview = module.uiProvider?.createPreview(
+                context, contentContainer, step, allSteps
+            ) { intent, callback ->
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    onStartActivityForResult(adapterPosition, intent, callback)
+                }
+            }
 
+            // 2. 根据是否存在富文本预览来决定标题内容
+            val headerSummary: CharSequence
+            if (customPreview != null && module.uiProvider is RichTextUIProvider) {
+                // 如果有富文本预览，标题只显示模块名，避免信息重复
+                headerSummary = module.metadata.name
+            } else {
+                // 否则，显示完整的、带“药丸”的摘要
+                val rawSummary = module.getSummary(context, step)
+                headerSummary = PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: module.metadata.name
+            }
+
+            // 3. 总是创建并添加标题行
             val prefix = "#$position "
             val spannablePrefix = SpannableStringBuilder(prefix).apply {
                 setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 val prefixColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY)
                 setSpan(ForegroundColorSpan(prefixColor), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
-            val finalTitle = SpannableStringBuilder().append(spannablePrefix).append(finalSummary ?: module.metadata.name)
-            val headerView = createHeaderRow(finalTitle) // 创建包含摘要的头部视图
+            val finalTitle = SpannableStringBuilder().append(spannablePrefix).append(headerSummary)
+            val headerView = createHeaderRow(finalTitle)
             contentContainer.addView(headerView)
 
-            // 如果模块提供了UIProvider，则创建并添加自定义预览视图
-            val customPreview = module.uiProvider?.createPreview(
-                context,
-                contentContainer,
-                step,
-                allSteps // 传递allSteps给预览
-            ) { intent, callback ->
-                // 当自定义预览视图请求启动Activity时，调用Adapter的回调
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    onStartActivityForResult(adapterPosition, intent, callback)
-                }
-            }
-
+            // 4. 如果有自定义预览，将其添加到标题行下方
             if (customPreview != null) {
-                // 为自定义预览添加上边距，以和标题分开
                 val layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                layoutParams.topMargin = (8 * context.resources.displayMetrics.density).toInt()
+                // 如果是富文本预览，给它一个上边距与标题分开
+                if (module.uiProvider is RichTextUIProvider) {
+                    layoutParams.topMargin = (8 * context.resources.displayMetrics.density).toInt()
+                }
                 customPreview.layoutParams = layoutParams
                 contentContainer.addView(customPreview)
             }
@@ -133,13 +138,11 @@ class ActionStepAdapter(
                 }
             }
 
-            // 控制删除按钮的可见性 (触发器不可删，块结束/中间步骤根据配置)
             val behavior = module.blockBehavior
             val isDeletable = position != 0 && (behavior.isIndividuallyDeletable || behavior.type == BlockType.BLOCK_START || behavior.type == BlockType.NONE)
             deleteButton.visibility = if (isDeletable) View.VISIBLE else View.GONE
         }
 
-        /** 创建步骤摘要的 TextView，并处理参数药丸的点击。 */
         private fun createHeaderRow(summary: CharSequence): View {
             val textView = TextView(context).apply {
                 text = summary
@@ -150,7 +153,6 @@ class ActionStepAdapter(
                 setLineSpacing(0f, 1.4f)
             }
 
-            // 自定义 TouchListener 以区分药丸点击和列表项点击
             textView.setOnTouchListener { v, event ->
                 val widget = v as TextView
                 val text = widget.text

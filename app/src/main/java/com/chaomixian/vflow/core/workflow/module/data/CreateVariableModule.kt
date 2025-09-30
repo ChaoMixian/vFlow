@@ -69,48 +69,49 @@ class CreateVariableModule : BaseModule() {
         return listOf(OutputDefinition("variable", "变量值", outputTypeName))
     }
 
+    /**
+     * 优化摘要逻辑。当类型为“文本”时，返回一个不含“值”的简洁摘要，
+     * 因为值会由富文本预览(RichTextUIProvider)来显示。
+     * 这可以避免在UI上同时显示两种摘要内容，解决了内容重复的问题。
+     */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val name = step.parameters["variableName"] as? String
         val type = step.parameters["type"]?.toString() ?: "文本"
-        val value = step.parameters["value"]
-        val inputs = getInputs()
 
-        // 如果类型是文本，则显示一个更简洁的摘要，因为值将由UIProvider的createPreview处理
+        // 如果是文本类型，提供一个简洁的回退摘要，不包含值
         if (type == "文本") {
             return if (name.isNullOrBlank()) {
                 "创建 匿名变量 (文本)"
             } else {
-                val namePill = PillUtil.Pill(
-                    text = "[[${name}]]",
-                    parameterId = "variableName"
-                )
+                val namePill = PillUtil.Pill("[[${name}]]", "variableName")
                 PillUtil.buildSpannable(context, "创建变量 ", namePill, " (文本)")
             }
         }
 
-        // 对其他非文本类型，保持原有的摘要逻辑
-        val valuePill = if (type == "列表") {
-            val listSize = when (value) {
-                is List<*> -> value.size
-                is String -> value.lines().count { it.isNotEmpty() }
-                else -> 0
+        // 对于其他非文本类型，显示包含值的完整摘要
+        val value = step.parameters["value"]
+        val inputs = getInputs()
+        val valuePill = when {
+            type == "列表" -> {
+                val listSize = (value as? List<*>)?.size ?: 0
+                PillUtil.Pill("[$listSize 项]", "value")
             }
-            PillUtil.Pill("[$listSize 项]", parameterId = "value")
-        } else {
-            PillUtil.createPillFromParam(value, inputs.find { it.id == "value" })
+            type == "字典" -> {
+                val dictSize = (value as? Map<*, *>)?.size ?: 0
+                PillUtil.Pill("{$dictSize 项}", "value")
+            }
+            else -> PillUtil.createPillFromParam(value, inputs.find { it.id == "value" })
         }
 
         return if (name.isNullOrBlank()) {
-            PillUtil.buildSpannable(context, "创建匿名变量 (", type, ") 为 ", valuePill)
+            PillUtil.buildSpannable(context, "创建匿名 ", type, " 为 ", valuePill)
         } else {
-            // 在这里创建一个代表命名变量的Pill
-            val namePill = PillUtil.Pill(
-                text = "[[${name}]]",
-                parameterId = "variableName"
-            )
+            val namePill = PillUtil.Pill("[[${name}]]", "variableName")
             PillUtil.buildSpannable(context, "创建变量 ", namePill, " (", type, ") 为 ", valuePill)
         }
     }
+
+
     /**
      * 重写验证逻辑以检查重复的变量名。
      * @param step 要验证的步骤。
