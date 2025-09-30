@@ -1,6 +1,4 @@
-// 文件: ActionStepAdapter.kt
-// 描述: [已修复] 1. 解决了设置类别颜色条时导致的崩溃。 2. 实现了当富文本预览存在时，自动切换到简洁版标题，避免信息重复。
-
+// 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/ActionStepAdapter.kt
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
@@ -23,12 +21,13 @@ import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.core.text.getSpans
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
+import com.chaomixian.vflow.ui.workflow_editor.VariableValueUIProvider
 import com.google.android.material.color.MaterialColors
 import java.util.*
 
@@ -67,12 +66,15 @@ class ActionStepAdapter(
         private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container)
         private val categoryColorBar: View = itemView.findViewById(R.id.category_color_bar)
 
+        // [新增] 实例化我们需要的UI提供者
+        private val richTextUIProvider = RichTextUIProvider("value")
+        private val variableValueUIProvider = VariableValueUIProvider()
+
         fun bind(step: ActionStep, position: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
 
             indentSpace.layoutParams.width = (step.indentationLevel * 24 * context.resources.displayMetrics.density).toInt()
 
-            // [崩溃修复] 创建一个新的Drawable并设置颜色
             val categoryColor = ContextCompat.getColor(context, PillUtil.getCategoryColor(module.metadata.category))
             val drawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -83,25 +85,37 @@ class ActionStepAdapter(
 
             contentContainer.removeAllViews()
 
-            // [核心逻辑修改]
-            // 1. 尝试创建自定义预览
-            val customPreview = module.uiProvider?.createPreview(
-                context, contentContainer, step, allSteps
-            ) { intent, callback ->
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    onStartActivityForResult(adapterPosition, intent, callback)
+            // 1. 根据模块和类型动态选择UI提供者来创建预览
+            var customPreview: View? = null
+
+            // 检查是否是“创建变量”模块
+            if (module.id == CreateVariableModule().id) {
+                val type = step.parameters["type"] as? String
+                // 根据变量类型选择不同的UI提供者
+                customPreview = when (type) {
+                    "文本" -> richTextUIProvider.createPreview(context, contentContainer, step, allSteps)
+                    "字典", "列表" -> variableValueUIProvider.createPreview(context, contentContainer, step, allSteps)
+                    else -> null // 其他类型不使用自定义预览
+                }
+            } else {
+                // 对于其他模块，使用其自带的UI提供者
+                customPreview = module.uiProvider?.createPreview(context, contentContainer, step, allSteps) { intent, callback ->
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        onStartActivityForResult(adapterPosition, intent, callback)
+                    }
                 }
             }
 
-            // 2. 根据是否存在富文本预览来决定标题内容
-            val headerSummary: CharSequence
-            if (customPreview != null && module.uiProvider is RichTextUIProvider) {
-                // 如果有富文本预览，标题只显示模块名，避免信息重复
-                headerSummary = module.metadata.name
+            val hasCustomPreview = customPreview != null
+
+            // 2. 根据是否存在自定义预览来决定标题内容
+            val rawSummary = module.getSummary(context, step)
+            val headerSummary: CharSequence = if (hasCustomPreview) {
+                // 如果有自定义预览，标题只显示简洁的摘要（不包含值）
+                PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: module.metadata.name
             } else {
                 // 否则，显示完整的、带“药丸”的摘要
-                val rawSummary = module.getSummary(context, step)
-                headerSummary = PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: module.metadata.name
+                PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: module.metadata.name
             }
 
             // 3. 总是创建并添加标题行
@@ -121,10 +135,7 @@ class ActionStepAdapter(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                // 如果是富文本预览，给它一个上边距与标题分开
-                if (module.uiProvider is RichTextUIProvider) {
-                    layoutParams.topMargin = (8 * context.resources.displayMetrics.density).toInt()
-                }
+                layoutParams.topMargin = (8 * context.resources.displayMetrics.density).toInt()
                 customPreview.layoutParams = layoutParams
                 contentContainer.addView(customPreview)
             }

@@ -1,28 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingVertical="4dp">
+    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+    app:strokeWidth="0dp"
+    app:cardElevation="0dp">
 
-    <ImageView
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:src="@drawable/ic_variable"
-        app:tint="?attr/colorOnSurface"
-        xmlns:app="http://schemas.android.com/apk/res-auto" />
-
-    <TextView
-        android:id="@+id/text_view_variable_summary"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:id="@+id/variable_preview_container"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_weight="1"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        tools:text="设置变量 文本 为 'Hello World'" />
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp" />
 
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

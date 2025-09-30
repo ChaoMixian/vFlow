@@ -14,7 +14,6 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import java.util.regex.Pattern
-
 /**
  * 一个可复用的 ModuleUIProvider，专门用于处理富文本输入。
  * 它的核心功能是 createPreview，用于在步骤摘要中显示一个包含富文本内容的自定义视图。
@@ -38,7 +37,6 @@ class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider
     }
 
     /**
-     * [核心修改]
      * 创建预览视图的逻辑已更新。
      * 只有当文本内容复杂（混合文本和变量，或多于一个变量）时，才会创建富文本预览。
      * 否则返回 null，以便适配器回退到使用模块的 getSummary() 方法。
