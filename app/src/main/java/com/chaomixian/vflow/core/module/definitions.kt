@@ -43,6 +43,7 @@ interface ModuleUIProvider {
      * @param context Android 上下文。
      * @param parent 父视图组。
      * @param step 当前的动作步骤数据。
+     * @param allSteps 整个工作流的所有步骤列表，用于解析变量名称。
      * @param onStartActivityForResult 一个回调函数，允许预览视图请求启动一个新的Activity并接收其结果。
      * @return 自定义预览视图，或 null。
      */
@@ -50,6 +51,7 @@ interface ModuleUIProvider {
         context: Context,
         parent: ViewGroup,
         step: ActionStep,
+        allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
     ): View?
 
@@ -60,6 +62,7 @@ interface ModuleUIProvider {
      * @param currentParameters 当前步骤已保存的参数值。
      * @param onParametersChanged 当参数发生变化时需要调用的回调函数。
      * @param onMagicVariableRequested 当自定义UI需要请求魔法变量选择器时调用的回调。
+     * @param allSteps [新增] 整个工作流的所有步骤列表，用于上下文分析。
      * @param onStartActivityForResult 一个回调函数，允许编辑器视图请求启动一个新的Activity并接收其结果。
      * @return 持有自定义编辑器视图的 CustomEditorViewHolder 实例。
      */
@@ -69,6 +72,7 @@ interface ModuleUIProvider {
         currentParameters: Map<String, Any?>,
         onParametersChanged: () -> Unit,
         onMagicVariableRequested: ((inputId: String) -> Unit)? = null,
+        allSteps: List<ActionStep>? = null,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
     ): CustomEditorViewHolder
 
@@ -109,6 +113,7 @@ enum class ParameterType {
  * @param acceptsMagicVariable 此参数是否接受魔法变量作为输入。
  * @param acceptsNamedVariable 此参数是否接受命名变量作为输入。
  * @param acceptedMagicVariableTypes 如果接受魔法变量，这里定义了可接受的魔法变量的类型名称集合。
+ * @param supportsRichText 此文本输入是否支持富文本编辑（内嵌变量药丸）。
  * @param isHidden 此参数是否在UI中隐藏 (例如，内部使用的参数)。
  */
 data class InputDefinition(
@@ -120,6 +125,7 @@ data class InputDefinition(
     val acceptsMagicVariable: Boolean = true,
     val acceptsNamedVariable: Boolean = true,
     val acceptedMagicVariableTypes: Set<String> = emptySet(),
+    val supportsRichText: Boolean = false,
     val isHidden: Boolean = false
 )
 

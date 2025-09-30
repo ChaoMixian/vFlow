@@ -11,9 +11,13 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Spinner
+import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
@@ -22,6 +26,8 @@ import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.chaomixian.vflow.ui.workflow_editor.ListItemAdapter
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
+import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -36,8 +42,9 @@ class VariableEditorViewHolder(
 ) : CustomEditorViewHolder(view) {
     var valueInputView: View? = null // 当前值输入视图的引用
     var dictionaryAdapter: DictionaryKVAdapter? = null // 如果类型是字典，则为该字典的适配器
-    var listAdapter: ListItemAdapter? = null // [新增] 如果类型是列表，则为该列表的适配器
+    var listAdapter: ListItemAdapter? = null
     var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // 用于存储魔法变量请求的回调
+    var allSteps: List<ActionStep>? = null // 存储工作流步骤
 }
 
 /**
@@ -55,29 +62,39 @@ class VariableModuleUIProvider(
         return setOf("type", "value") // 指明处理 "type" 和 "value" 这两个输入参数
     }
 
-    /**
-     * 创建模块在工作流编辑器中的预览视图。
-     * 更新方法签名以匹配 ModuleUIProvider 接口。
-     */
     override fun createPreview(
         context: Context,
         parent: ViewGroup,
         step: ActionStep,
+        allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): View? {
-        return null // 不提供自定义预览，将回退到模块的 getSummary
+        val type = step.parameters["type"] as? String
+        // 只为“文本”类型创建预览
+        if (type != "文本") {
+            return null
+        }
+
+        val inflater = LayoutInflater.from(context)
+        val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
+        val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
+
+        val rawText = step.parameters["value"]?.toString() ?: ""
+
+        // 使用可以解析变量名称和颜色的工具方法
+        val spannable = PillUtil.renderRichTextToSpannable(context, rawText, allSteps)
+        textView.text = spannable
+
+        return previewView
     }
 
-    /**
-     * 创建用于在模块详情页编辑参数的自定义视图。
-     * 更新方法签名以匹配 ModuleUIProvider 接口。
-     */
     override fun createEditor(
         context: Context,
         parent: ViewGroup, // 父视图组
         currentParameters: Map<String, Any?>, // 当前已保存的参数值
         onParametersChanged: () -> Unit, // 参数发生变化时的回调
         onMagicVariableRequested: ((inputId: String) -> Unit)?,
+        allSteps: List<ActionStep>?,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         // 编辑器的主布局，垂直排列
@@ -100,6 +117,7 @@ class VariableModuleUIProvider(
 
         val holder = VariableEditorViewHolder(view, typeSpinner, valueContainer)
         holder.onMagicVariableRequested = onMagicVariableRequested // 存储回调
+        holder.allSteps = allSteps // 存储步骤列表
 
         // 设置 Spinner 的适配器和选项
         val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, typeOptions)
@@ -145,8 +163,12 @@ class VariableModuleUIProvider(
         val selectedType = h.typeSpinner.selectedItem.toString()
         // 根据选中的类型，从对应的输入视图中获取值
         val value: Any? = when(selectedType) {
+            "文本" -> {
+                val row = h.valueInputView as? ViewGroup
+                row?.findViewById<RichTextView>(R.id.rich_text_view)?.getRawText()
+            }
             "字典" -> h.dictionaryAdapter?.getItemsAsMap() // 从字典适配器获取键值对 Map
-            "列表" -> h.listAdapter?.getItems() // [修改] 从列表适配器获取项目列表
+            "列表" -> h.listAdapter?.getItems()
             "布尔" -> (h.valueInputView as? SwitchCompat)?.isChecked ?: false // 获取 Switch 的选中状态
             else -> { // 其他类型（文本、数字等）从 EditText 获取
                 val textInputLayout = h.valueInputView as? TextInputLayout
@@ -162,10 +184,32 @@ class VariableModuleUIProvider(
     private fun updateValueInputView(context: Context, holder: VariableEditorViewHolder, type: String, currentValue: Any?) {
         holder.valueContainer.removeAllViews() // 清空旧的值输入视图
         holder.dictionaryAdapter = null // 重置字典适配器（如果之前是字典类型）
-        holder.listAdapter = null // [新增] 重置列表适配器
+        holder.listAdapter = null
 
         // 根据类型创建不同的输入视图
         val valueView: View = when (type) {
+            "文本" -> {
+                // 手动构建一个类似默认编辑器的行布局
+                val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, holder.valueContainer, false)
+                row.findViewById<TextView>(R.id.input_name).text = "值"
+
+                val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+                val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
+                magicButton.isVisible = true
+                magicButton.setOnClickListener {
+                    // [核心修复] 直接调用回调，ActionEditorSheet会在调用前回读最新值
+                    holder.onMagicVariableRequested?.invoke("value")
+                }
+
+                val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor, valueContainer, false)
+                val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
+
+                richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
+                    PillUtil.createPillDrawable(context, PillUtil.getDisplayNameForVariableReference(variableRef, holder.allSteps ?: emptyList()))
+                }
+                valueContainer.addView(richEditorLayout)
+                row
+            }
             "字典" -> {
                 // 加载字典编辑器的布局
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.valueContainer, false)
@@ -198,7 +242,7 @@ class VariableModuleUIProvider(
                 addButton.setOnClickListener { dictAdapter.addItem() } // 添加按钮点击事件
                 editorView
             }
-            "列表" -> { // [新增] 为“列表”类型创建UI
+            "列表" -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_list_editor, holder.valueContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_list)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_list_item)

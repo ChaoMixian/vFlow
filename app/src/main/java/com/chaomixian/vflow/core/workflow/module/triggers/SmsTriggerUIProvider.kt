@@ -35,9 +35,13 @@ class SmsTriggerUIProvider : ModuleUIProvider {
     )
 
     override fun createEditor(
-        context: Context, parent: ViewGroup, currentParameters: Map<String, Any?>,
-        onParametersChanged: () -> Unit, onMagicVariableRequested: ((inputId: String) -> Unit)?,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+        context: Context,
+        parent: ViewGroup,
+        currentParameters: Map<String, Any?>,
+        onParametersChanged: () -> Unit,
+        onMagicVariableRequested: ((String) -> Unit)?,
+        allSteps: List<ActionStep>?,
+        onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_sms_trigger_editor, parent, false)
         val holder = EditorViewHolder(view)
@@ -144,5 +148,5 @@ class SmsTriggerUIProvider : ModuleUIProvider {
     }
 
 
-    override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep, onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?): View? = null
+    override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>, onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?): View? = null
 }

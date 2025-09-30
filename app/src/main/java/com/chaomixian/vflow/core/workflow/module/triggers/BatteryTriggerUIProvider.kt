@@ -30,6 +30,7 @@ class BatteryTriggerUIProvider : ModuleUIProvider {
         context: Context,
         parent: ViewGroup,
         step: ActionStep,
+        allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): View? {
         return null
@@ -40,8 +41,9 @@ class BatteryTriggerUIProvider : ModuleUIProvider {
         parent: ViewGroup,
         currentParameters: Map<String, Any?>,
         onParametersChanged: () -> Unit,
-        onMagicVariableRequested: ((inputId: String) -> Unit)?,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+        onMagicVariableRequested: ((String) -> Unit)?,
+        allSteps: List<ActionStep>?,
+        onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_battery_trigger_editor, parent, false)
         val holder = EditorViewHolder(view)

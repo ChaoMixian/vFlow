@@ -55,6 +55,7 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         context: Context,
         parent: ViewGroup,
         step: ActionStep,
+        allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): View? {
         return null
@@ -68,8 +69,9 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         parent: ViewGroup,
         currentParameters: Map<String, Any?>,
         onParametersChanged: () -> Unit,
-        onMagicVariableRequested: ((inputId: String) -> Unit)?,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+        onMagicVariableRequested: ((String) -> Unit)?,
+        allSteps: List<ActionStep>?,
+        onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         // 创建垂直布局的根容器
         val container = LinearLayout(context).apply {

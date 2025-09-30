@@ -76,14 +76,18 @@ class AdjustImageModuleUIProvider : ModuleUIProvider {
         )
     }
 
-    override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep, onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?): View? {
+    override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>, onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?): View? {
         return null
     }
 
     override fun createEditor(
-        context: Context, parent: ViewGroup, currentParameters: Map<String, Any?>,
-        onParametersChanged: () -> Unit, onMagicVariableRequested: ((inputId: String) -> Unit)?,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+        context: Context,
+        parent: ViewGroup,
+        currentParameters: Map<String, Any?>,
+        onParametersChanged: () -> Unit,
+        onMagicVariableRequested: ((String) -> Unit)?,
+        allSteps: List<ActionStep>?,
+        onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         val inflater = LayoutInflater.from(context)
         val view = inflater.inflate(R.layout.partial_adjust_image_editor, parent, false)

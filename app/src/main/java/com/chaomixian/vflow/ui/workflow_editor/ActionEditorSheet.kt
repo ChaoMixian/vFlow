@@ -109,42 +109,60 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
 
-    /** 更新函数以处理两种变量引用格式 */
-    private fun getDisplayNameForVariableReference(variableReference: String): String {
-        // 情况1: 是命名变量
-        if (variableReference.isNamedVariable()) {
-            return variableReference.removeSurrounding("[[", "]]")
-        }
+    /**
+     * 构建UI的逻辑。现在会检查uiProvider的类型，避免在RichTextUIProvider上调用createEditor。
+     */
+    private fun buildUi(container: LinearLayout) {
+        container.removeAllViews()
+        inputViews.clear()
+        customEditorHolder = null
 
-        // 情况2: 是魔法变量
-        if (variableReference.isMagicVariable()) {
-            val parts = variableReference.removeSurrounding("{{", "}}").split('.')
-            val sourceStepId = parts.getOrNull(0)
-            val sourceOutputId = parts.getOrNull(1)
+        val stepForUi = ActionStep(module.id, currentParameters)
+        val inputsToShow = module.getDynamicInputs(stepForUi, allSteps)
 
-            if (sourceStepId != null && sourceOutputId != null) {
-                val sourceStep = allSteps?.find { it.id == sourceStepId }
-                if (sourceStep != null) {
-                    val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId)
-                    val outputDef = sourceModule?.getOutputs(sourceStep)?.find { it.id == sourceOutputId }
-                    if (outputDef != null) {
-                        return outputDef.name
-                    }
+        // 校正无效的枚举参数值，防止因模块更新导致崩溃
+        inputsToShow.forEach { inputDef ->
+            if (inputDef.staticType == ParameterType.ENUM) {
+                val currentValue = currentParameters[inputDef.id] as? String
+                if (currentValue != null && !inputDef.options.contains(currentValue)) {
+                    currentParameters[inputDef.id] = inputDef.defaultValue
                 }
             }
-            return sourceOutputId ?: variableReference
         }
 
-        // 情况3: 都不是，返回原始值
-        return variableReference
+        val uiProvider = module.uiProvider
+        val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
+
+        // 只有当 uiProvider 存在且不是 RichTextUIProvider 时，才创建自定义编辑器
+        if (uiProvider != null && uiProvider !is RichTextUIProvider) {
+            customEditorHolder = uiProvider.createEditor(
+                context = requireContext(),
+                parent = container,
+                currentParameters = currentParameters,
+                onParametersChanged = { readParametersFromUi() },
+                onMagicVariableRequested = { inputId ->
+                    readParametersFromUi()
+                    this.onMagicVariableRequested?.invoke(inputId)
+                },
+                allSteps = allSteps,
+                onStartActivityForResult = onStartActivityForResult
+            )
+            container.addView(customEditorHolder!!.view)
+        }
+
+        // 为其余未被自定义UI处理的参数创建通用输入控件
+        inputsToShow.forEach { inputDef ->
+            if (!handledInputIds.contains(inputDef.id) && !inputDef.isHidden) {
+                val inputView = createViewForInputDefinition(inputDef, container)
+                container.addView(inputView)
+                inputViews[inputDef.id] = inputView
+            }
+        }
     }
 
-    /** 更新函数以检查两种变量引用 */
-    private fun isVariableReference(value: Any?): Boolean {
-        if (value !is String) return false
-        return value.isMagicVariable() || value.isNamedVariable()
-    }
-
+    /**
+     * 为输入参数创建视图。现在会加载带工具栏的富文本编辑器，并设置其显隐和点击逻辑。
+     */
     private fun createViewForInputDefinition(inputDef: InputDefinition, parent: ViewGroup): View {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, parent, false)
         row.findViewById<TextView>(R.id.input_name).text = inputDef.name
@@ -160,7 +178,31 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         valueContainer.removeAllViews()
-        if (isVariableReference(currentValue)) {
+
+        // 情况一：输入框支持富文本
+        if (inputDef.supportsRichText) {
+            val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor_with_toolbar, valueContainer, false)
+            val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
+            val insertVarButton = richEditorLayout.findViewById<ImageButton>(R.id.button_insert_variable)
+
+            // 设置初始文本，并将变量引用渲染成“药丸”
+            richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
+                PillUtil.createPillDrawable(requireContext(), getDisplayNameForVariableReference(variableRef))
+            }
+
+            // 富文本编辑器的工具栏交互逻辑
+            richTextView.setOnFocusChangeListener { _, hasFocus ->
+                richEditorLayout.findViewById<View>(R.id.keyboard_toolbar_container).isVisible = hasFocus
+            }
+            insertVarButton.setOnClickListener {
+                readParametersFromUi()
+                onMagicVariableRequested?.invoke(inputDef.id)
+            }
+
+
+            valueContainer.addView(richEditorLayout)
+            // 情况二：不支持富文本，但当前值是一个变量引用
+        } else if (isVariableReference(currentValue)) {
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
             val pillText = pill.findViewById<TextView>(R.id.pill_text)
             pillText.text = getDisplayNameForVariableReference(currentValue as String)
@@ -169,6 +211,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 onMagicVariableRequested?.invoke(inputDef.id)
             }
             valueContainer.addView(pill)
+            // 情况三：不支持富文本，且当前值是静态值
         } else {
             val staticInputView = createBaseViewForInputType(inputDef, currentValue)
             valueContainer.addView(staticInputView)
@@ -177,33 +220,71 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         return row
     }
 
+    private fun getDisplayNameForVariableReference(variableReference: String): String {
+        if (variableReference.isNamedVariable()) {
+            return variableReference.removeSurrounding("[[", "]]")
+        }
+        if (variableReference.isMagicVariable()) {
+            val parts = variableReference.removeSurrounding("{{", "}}").split('.')
+            val sourceStepId = parts.getOrNull(0)
+            val sourceOutputId = parts.getOrNull(1)
+            if (sourceStepId != null && sourceOutputId != null) {
+                val sourceStep = allSteps?.find { it.id == sourceStepId }
+                if (sourceStep != null) {
+                    val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId)
+                    val outputDef = sourceModule?.getOutputs(sourceStep)?.find { it.id == sourceOutputId }
+                    if (outputDef != null) {
+                        return outputDef.name
+                    }
+                }
+            }
+            return sourceOutputId ?: variableReference
+        }
+        return variableReference
+    }
+
+    private fun isVariableReference(value: Any?): Boolean {
+        if (value !is String) return false
+        return value.isMagicVariable() || value.isNamedVariable()
+    }
+
     private fun readParametersFromUi() {
         val uiProvider = module.uiProvider
-        if (uiProvider != null && customEditorHolder != null) {
+        if (uiProvider != null && customEditorHolder != null && uiProvider !is RichTextUIProvider) {
             currentParameters.putAll(uiProvider.readFromEditor(customEditorHolder!!))
         }
 
         inputViews.forEach { (id, view) ->
-            if (isVariableReference(currentParameters[id])) return@forEach
+            val stepForUi = ActionStep(module.id, currentParameters)
+            val inputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == id }
+
+            if (inputDef?.supportsRichText == false && isVariableReference(currentParameters[id])) {
+                return@forEach
+            }
 
             val valueContainer = view.findViewById<FrameLayout>(R.id.input_value_container) ?: return@forEach
             if (valueContainer.childCount == 0) return@forEach
 
             val staticView = valueContainer.getChildAt(0)
-            val value: Any? = when(staticView) {
-                is TextInputLayout -> staticView.editText?.text?.toString()
-                is SwitchCompat -> staticView.isChecked
-                is Spinner -> staticView.selectedItem?.toString()
-                else -> null
+
+            val value: Any? = if (inputDef?.supportsRichText == true && staticView is ViewGroup) {
+                staticView.findViewById<RichTextView>(R.id.rich_text_view)?.getRawText()
+            } else {
+                when(staticView) {
+                    is TextInputLayout -> staticView.editText?.text?.toString()
+                    is SwitchCompat -> staticView.isChecked
+                    is Spinner -> staticView.selectedItem?.toString()
+                    else -> null
+                }
             }
 
             if (value != null) {
-                val stepForUi = ActionStep(module.id, currentParameters)
-                val dynamicInputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == id }
-                val convertedValue: Any? = when (dynamicInputDef?.staticType) {
+                val convertedValue: Any? = when (inputDef?.staticType) {
                     ParameterType.NUMBER -> {
-                        val strVal = value.toString()
-                        strVal.toLongOrNull() ?: strVal.toDoubleOrNull()
+                        if (inputDef.supportsRichText) value else {
+                            val strVal = value.toString()
+                            strVal.toLongOrNull() ?: strVal.toDoubleOrNull()
+                        }
                     }
                     else -> value
                 }
@@ -211,8 +292,36 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             }
         }
     }
+
     fun updateInputWithVariable(inputId: String, variableReference: String) {
-        // 支持更新点分隔的嵌套参数 (主要用于字典类型)
+        val stepForUi = ActionStep(module.id, currentParameters)
+        val inputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == inputId }
+
+        var richTextView: RichTextView? = null
+
+        // 尝试从通用输入视图中查找
+        if (inputDef?.supportsRichText == true) {
+            val view = inputViews[inputId]
+            richTextView = (view?.findViewById<FrameLayout>(R.id.input_value_container)?.getChildAt(0) as? ViewGroup)
+                ?.findViewById(R.id.rich_text_view)
+        }
+
+        // [核心修复] 如果在通用视图中找不到，则尝试在自定义编辑器视图中查找
+        if (richTextView == null && customEditorHolder != null) {
+            richTextView = customEditorHolder?.view?.findViewWithTag<RichTextView>("rich_text_view_value")
+            // 如果上面的找不到，再尝试用ID查找作为后备
+            if (richTextView == null) {
+                richTextView = customEditorHolder?.view?.findViewById(R.id.rich_text_view)
+            }
+        }
+
+        if (richTextView != null) {
+            val drawable = PillUtil.createPillDrawable(requireContext(), getDisplayNameForVariableReference(variableReference))
+            richTextView.insertVariablePill(variableReference, drawable)
+            return // 直接操作视图后返回，避免重建UI
+        }
+
+        // 原有的后备逻辑，用于处理非富文本输入
         if (inputId.contains('.')) {
             val parts = inputId.split('.', limit = 2)
             val mainInputId = parts[0]
@@ -223,9 +332,10 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         } else {
             currentParameters[inputId] = variableReference
         }
-        // 更新参数后，重建UI以显示“已连接变量”的药丸
+        // 只有在没有找到富文本框并修改了参数后，才重建UI
         view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
     }
+
 
     fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {
         currentParameters.putAll(newParameters)
@@ -275,58 +385,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
     }
 
-
-    /** 构建编辑器UI。 */
-    private fun buildUi(container: LinearLayout) {
-        container.removeAllViews()
-        inputViews.clear()
-        customEditorHolder = null
-
-        // 模块通过 getDynamicInputs 决定当前应显示的输入项
-        val stepForUi = ActionStep(module.id, currentParameters)
-        val inputsToShow = module.getDynamicInputs(stepForUi, allSteps)
-
-        // 校正无效的枚举参数值，防止因模块更新导致崩溃
-        inputsToShow.forEach { inputDef ->
-            if (inputDef.staticType == ParameterType.ENUM) {
-                val currentValue = currentParameters[inputDef.id] as? String
-                if (currentValue != null && !inputDef.options.contains(currentValue)) {
-                    currentParameters[inputDef.id] = inputDef.defaultValue
-                }
-            }
-        }
-
-        val uiProvider = module.uiProvider
-        val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
-
-        // 如果模块提供了自定义UI，则创建并添加它
-        if (uiProvider != null) {
-            customEditorHolder = uiProvider.createEditor(
-                context = requireContext(),
-                parent = container,
-                currentParameters = currentParameters,
-                onParametersChanged = { readParametersFromUi() },
-                onMagicVariableRequested = { inputId ->
-                    readParametersFromUi()
-                    this.onMagicVariableRequested?.invoke(inputId)
-                },
-                // 将启动Activity的回调传递给自定义UI提供者
-                onStartActivityForResult = onStartActivityForResult
-            )
-            container.addView(customEditorHolder!!.view)
-        }
-
-        // 为其余未被自定义UI处理的参数创建通用输入控件
-        inputsToShow.forEach { inputDef ->
-            if (!handledInputIds.contains(inputDef.id) && !inputDef.isHidden) {
-                val inputView = createViewForInputDefinition(inputDef, container)
-                container.addView(inputView)
-                inputViews[inputDef.id] = inputView
-            }
-        }
-    }
-
-    /** 为单个输入定义创建视图 (标签、输入控件、魔法变量按钮)。 */
     private fun createBaseViewForInputType(inputDef: InputDefinition, currentValue: Any?): View {
         return when (inputDef.staticType) {
             ParameterType.BOOLEAN -> SwitchCompat(requireContext()).apply {

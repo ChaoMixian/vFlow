@@ -8,6 +8,8 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 /**
  * "创建变量" 模块。
@@ -46,7 +48,9 @@ class CreateVariableModule : BaseModule() {
             name = "值",
             staticType = ParameterType.ANY,
             defaultValue = "",
-            acceptsMagicVariable = true
+            acceptsMagicVariable = true,
+            // 当类型为文本时，支持富文本
+            supportsRichText = true
         )
     )
 
@@ -71,7 +75,22 @@ class CreateVariableModule : BaseModule() {
         val value = step.parameters["value"]
         val inputs = getInputs()
 
-        // 为列表类型提供特殊的摘要显示，同时处理 List 和 String 两种情况
+        // 如果类型是文本，则显示一个更简洁的摘要，因为值将由UIProvider的createPreview处理
+        if (type == "文本") {
+            return if (name.isNullOrBlank()) {
+                "创建 匿名变量 (文本)"
+            } else {
+                val namePill = PillUtil.Pill(
+                    text = "[[${name}]]",
+                    isVariable = false,
+                    isNamedVariable = true,
+                    parameterId = "variableName"
+                )
+                PillUtil.buildSpannable(context, "创建变量 ", namePill, " (文本)")
+            }
+        }
+
+        // 对其他非文本类型，保持原有的摘要逻辑
         val valuePill = if (type == "列表") {
             val listSize = when (value) {
                 is List<*> -> value.size
@@ -83,15 +102,14 @@ class CreateVariableModule : BaseModule() {
             PillUtil.createPillFromParam(value, inputs.find { it.id == "value" })
         }
 
-
         return if (name.isNullOrBlank()) {
             PillUtil.buildSpannable(context, "创建匿名变量 (", type, ") 为 ", valuePill)
         } else {
             // 在这里创建一个代表命名变量的Pill
             val namePill = PillUtil.Pill(
-                text = "[[${name}]]", // 保持内部引用格式
-                isVariable = false, // 它不是一个步骤输出
-                isNamedVariable = true, // 标记为命名变量
+                text = "[[${name}]]",
+                isVariable = false,
+                isNamedVariable = true,
                 parameterId = "variableName"
             )
             PillUtil.buildSpannable(context, "创建变量 ", namePill, " (", type, ") 为 ", valuePill)
@@ -131,6 +149,11 @@ class CreateVariableModule : BaseModule() {
 
         // 增加列表变量的创建逻辑
         val variable: Parcelable = when (type) {
+            "文本" -> {
+                // [核心修复] 如果是文本类型，则解析富文本内容
+                val resolvedText = resolveRichText(rawValue?.toString() ?: "", context)
+                TextVariable(resolvedText)
+            }
             "数字" -> {
                 val numValue = when (rawValue) {
                     is NumberVariable -> rawValue.value
@@ -172,5 +195,54 @@ class CreateVariableModule : BaseModule() {
 
         // 将创建的变量作为匿名输出返回，以便紧随其后的模块能立即通过魔法变量使用
         return ExecutionResult.Success(mapOf("variable" to variable))
+    }
+
+    /**
+     * 解析富文本字符串中的变量引用，并替换为实际值。
+     */
+    private fun resolveRichText(richText: String, context: ExecutionContext): String {
+        val pattern = Pattern.compile("(\\{\\{.*?\\}\\}|\\[\\[.*?\\]\\])")
+        val matcher = pattern.matcher(richText)
+        val result = StringBuffer()
+        while (matcher.find()) {
+            val variableRef = matcher.group(1)
+            var replacement = ""
+            if (variableRef != null) {
+                if (variableRef.isMagicVariable()) {
+                    val parts = variableRef.removeSurrounding("{{", "}}").split('.')
+                    val sourceStepId = parts.getOrNull(0)
+                    val sourceOutputId = parts.getOrNull(1)
+                    if (sourceStepId != null && sourceOutputId != null) {
+                        val value = context.stepOutputs[sourceStepId]?.get(sourceOutputId)
+                        replacement = value?.let {
+                            when(it) {
+                                is TextVariable -> it.value
+                                is NumberVariable -> it.value.toString()
+                                is BooleanVariable -> it.value.toString()
+                                is ListVariable -> it.value.joinToString()
+                                is DictionaryVariable -> it.value.toString()
+                                else -> it.toString()
+                            }
+                        } ?: ""
+                    }
+                } else if (variableRef.isNamedVariable()) {
+                    val varName = variableRef.removeSurrounding("[[", "]]")
+                    val value = context.namedVariables[varName]
+                    replacement = value?.let {
+                        when(it) {
+                            is TextVariable -> it.value
+                            is NumberVariable -> it.value.toString()
+                            is BooleanVariable -> it.value.toString()
+                            is ListVariable -> it.value.joinToString()
+                            is DictionaryVariable -> it.value.toString()
+                            else -> it.toString()
+                        }
+                    } ?: ""
+                }
+            }
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement))
+        }
+        matcher.appendTail(result)
+        return result.toString()
     }
 }
