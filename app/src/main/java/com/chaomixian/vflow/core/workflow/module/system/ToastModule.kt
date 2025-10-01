@@ -52,15 +52,57 @@ class ToastModule : BaseModule() {
 
     /**
      * 生成在工作流编辑器中显示模块摘要的文本。
-     * 简化摘要，只返回模块名称。预览将由UIProvider处理。
+     * 当文本复杂时，只显示标题，预览由UIProvider处理。
+     * 当文本简单时，显示完整的带Pill的摘要。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val messagePill = PillUtil.createPillFromParam(
-            step.parameters["message"],
-            getInputs().find { it.id == "message" }
-        )
-        return PillUtil.buildSpannable(context, "显示Toast: ", messagePill)
+        val rawText = step.parameters["message"]?.toString() ?: ""
+
+        if (isComplex(rawText)) {
+            // 内容复杂，只显示模块名，具体内容由 RichTextUIProvider 预览
+            return metadata.name
+        } else {
+            // 内容简单，显示完整的摘要
+            val messagePill = PillUtil.createPillFromParam(
+                step.parameters["message"],
+                getInputs().find { it.id == "message" }
+            )
+            return PillUtil.buildSpannable(context, "显示Toast: ", messagePill)
+        }
     }
+
+    /**
+     * 判断一个字符串是否为“复杂”内容。
+     * 复杂定义为：
+     * 1. 包含至少一个变量，并且还包含非空格的纯文本。
+     * 2. 包含两个或更多个变量。
+     * @param rawText 待检查的原始文本。
+     * @return 如果内容复杂则返回 true，否则返回 false。
+     */
+    private fun isComplex(rawText: String): Boolean {
+        val variablePattern = Pattern.compile("(\\{\\{.*?\\}\\}|\\[\\[.*?\\]\\])")
+        val matcher = variablePattern.matcher(rawText)
+
+        var variableCount = 0
+        while (matcher.find()) {
+            variableCount++
+        }
+
+        if (variableCount == 0) {
+            // 没有变量，不复杂
+            return false
+        }
+
+        if (variableCount > 1) {
+            // 超过一个变量，就算复杂
+            return true
+        }
+
+        // 只有一个变量，检查是否还有其他非空格文本
+        val textWithoutVariable = matcher.replaceAll("").trim()
+        return textWithoutVariable.isNotEmpty()
+    }
+
 
     /**
      * 验证模块参数的有效性。

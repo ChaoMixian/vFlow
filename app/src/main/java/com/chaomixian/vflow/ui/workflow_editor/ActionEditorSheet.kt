@@ -161,7 +161,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
     /**
-     * 为输入参数创建视图。现在会加载带工具栏的富文本编辑器，并设置其显隐和点击逻辑。
+     * 为输入参数创建视图。现在会加载不带工具栏的富文本编辑器。
      */
     private fun createViewForInputDefinition(inputDef: InputDefinition, parent: ViewGroup): View {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, parent, false)
@@ -181,24 +181,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
         // 情况一：输入框支持富文本
         if (inputDef.supportsRichText) {
-            val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor_with_toolbar, valueContainer, false)
+            val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor, valueContainer, false)
             val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
-            val insertVarButton = richEditorLayout.findViewById<ImageButton>(R.id.button_insert_variable)
 
             // 设置初始文本，并将变量引用渲染成“药丸”
             richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
                 PillUtil.createPillDrawable(requireContext(), getDisplayNameForVariableReference(variableRef))
             }
-
-            // 富文本编辑器的工具栏交互逻辑
-            richTextView.setOnFocusChangeListener { _, hasFocus ->
-                richEditorLayout.findViewById<View>(R.id.keyboard_toolbar_container).isVisible = hasFocus
-            }
-            insertVarButton.setOnClickListener {
-                readParametersFromUi()
-                onMagicVariableRequested?.invoke(inputDef.id)
-            }
-
 
             valueContainer.addView(richEditorLayout)
             // 情况二：不支持富文本，但当前值是一个变量引用

@@ -1080,6 +1080,7 @@ class WorkflowEditorActivity : BaseActivity() {
         if (name.isBlank()) {
             Toast.makeText(this, "工作流名称不能为空", Toast.LENGTH_SHORT).show()
         } else {
+            val isNewWorkflow = currentWorkflow == null
             val workflowToSave = currentWorkflow?.copy(
                 name = name,
                 steps = actionSteps.toList(),
@@ -1091,6 +1092,13 @@ class WorkflowEditorActivity : BaseActivity() {
                 steps = actionSteps.toList()
             )
             workflowManager.saveWorkflow(workflowToSave)
+
+            // [如果是第一次保存新工作流，则更新当前Activity的状态
+            if (isNewWorkflow) {
+                currentWorkflow = workflowToSave
+                updateExecuteButton(WorkflowExecutor.isRunning(workflowToSave.id))
+            }
+
             Toast.makeText(this, "工作流已保存", Toast.LENGTH_SHORT).show()
 
             if (shouldFinish) {
