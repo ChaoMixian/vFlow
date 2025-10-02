@@ -187,6 +187,8 @@ sealed class ExecutionSignal {
     object Continue : ExecutionSignal()
     /** 表示需要正常地、无条件地终止工作流。 */
     object Stop : ExecutionSignal()
+    /** 表示需要从子工作流返回一个值。 */
+    data class Return(val result: Any?) : ExecutionSignal()
 }
 
 /**

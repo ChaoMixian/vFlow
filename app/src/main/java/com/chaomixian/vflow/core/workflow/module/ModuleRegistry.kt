@@ -77,6 +77,8 @@ object ModuleRegistry {
         register(BreakLoopModule())
         register(ContinueLoopModule())
         register(StopWorkflowModule())
+        register(CallWorkflowModule())
+        register(StopAndReturnModule())
 
 
         // 数据
