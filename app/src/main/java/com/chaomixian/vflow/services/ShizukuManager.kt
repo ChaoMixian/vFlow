@@ -135,6 +135,77 @@ object ShizukuManager {
     }
 
     /**
+     * 通过 Shizuku 开启无障碍服务。
+     * @return 返回操作是否成功。
+     */
+    suspend fun enableAccessibilityService(context: Context): Boolean {
+        val serviceName = "${context.packageName}/${AccessibilityService::class.java.name}"
+        // 1. 读取当前已启用的服务列表
+        val currentServices = execShellCommand(context, "settings get secure enabled_accessibility_services")
+        if (currentServices.startsWith("Error:")) {
+            DebugLogger.e(TAG, "读取无障碍服务列表失败: $currentServices")
+            return false
+        }
+
+        // 2. 检查服务是否已在列表中
+        if (currentServices.split(':').any { it.equals(serviceName, ignoreCase = true) }) {
+            DebugLogger.d(TAG, "无障碍服务已经启用。")
+            return true
+        }
+
+        // 3. 将我们的服务添加到列表中
+        val newServices = if (currentServices.isBlank() || currentServices == "null") {
+            serviceName
+        } else {
+            "$currentServices:$serviceName"
+        }
+
+        // 4. 写回新的服务列表
+        val result = execShellCommand(context, "settings put secure enabled_accessibility_services '$newServices'")
+        if (result.startsWith("Error:")) {
+            DebugLogger.e(TAG, "写入无障碍服务列表失败: $result")
+            return false
+        }
+
+        // 5. 确保无障碍总开关是打开的
+        execShellCommand(context, "settings put secure accessibility_enabled 1")
+        DebugLogger.d(TAG, "已通过 Shizuku 尝试启用无障碍服务。")
+        return true
+    }
+
+    /**
+     * 通过 Shizuku 关闭无障碍服务。
+     * @return 返回操作是否成功。
+     */
+    suspend fun disableAccessibilityService(context: Context): Boolean {
+        val serviceName = "${context.packageName}/${AccessibilityService::class.java.name}"
+        // 1. 读取当前服务列表
+        val currentServices = execShellCommand(context, "settings get secure enabled_accessibility_services")
+        if (currentServices.startsWith("Error:") || currentServices == "null" || currentServices.isBlank()) {
+            return true // 列表为空，无需操作
+        }
+
+        // 2. 从列表中移除我们的服务
+        val serviceList = currentServices.split(':').toMutableList()
+        val removed = serviceList.removeAll { it.equals(serviceName, ignoreCase = true) }
+
+        if (!removed) {
+            return true // 服务本就不在列表中，无需操作
+        }
+
+        // 3. 写回新的服务列表
+        val newServices = serviceList.joinToString(":")
+        val result = execShellCommand(context, "settings put secure enabled_accessibility_services '$newServices'")
+        if (result.startsWith("Error:")) {
+            DebugLogger.e(TAG, "移除无障碍服务失败: $result")
+            return false
+        }
+        DebugLogger.d(TAG, "已通过 Shizuku 尝试禁用无障碍服务。")
+        return true
+    }
+
+
+    /**
      * 获取服务实例，使用 Mutex 解决并发问题。
      */
     private suspend fun getService(context: Context): IShizukuUserService? {

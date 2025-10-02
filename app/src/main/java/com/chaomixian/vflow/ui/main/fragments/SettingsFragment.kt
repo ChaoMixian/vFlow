@@ -25,6 +25,9 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -91,6 +94,39 @@ class SettingsFragment : Fragment() {
             forceKeepAliveSwitch.isEnabled = false
             forceKeepAliveSwitch.isChecked = false
             forceKeepAliveSwitch.text = "${getString(R.string.settings_switch_force_keep_alive)} (Shizuku未激活)"
+        }
+
+        // --- 新增：自动开启无障碍服务开关逻辑 ---
+        val autoEnableAccessibilitySwitch = view.findViewById<MaterialSwitch>(R.id.switch_auto_enable_accessibility)
+        if (ShizukuManager.isShizukuActive(requireContext())) {
+            autoEnableAccessibilitySwitch.isEnabled = true
+            autoEnableAccessibilitySwitch.isChecked = prefs.getBoolean("autoEnableAccessibility", false)
+            autoEnableAccessibilitySwitch.setOnCheckedChangeListener { _, isChecked ->
+                prefs.edit { putBoolean("autoEnableAccessibility", isChecked) }
+                lifecycleScope.launch {
+                    val success = if (isChecked) {
+                        ShizukuManager.enableAccessibilityService(requireContext())
+                    } else {
+                        ShizukuManager.disableAccessibilityService(requireContext())
+                    }
+                    // 在主线程显示 Toast
+                    launch(Dispatchers.Main) {
+                        if (success) {
+                            val status = if (isChecked) "开启" else "关闭"
+                            Toast.makeText(requireContext(), "自动无障碍服务已$status", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(requireContext(), "操作失败，请检查Shizuku状态", Toast.LENGTH_SHORT).show()
+                            // 操作失败时，将开关恢复原状
+                            autoEnableAccessibilitySwitch.isChecked = !isChecked
+                            prefs.edit { putBoolean("autoEnableAccessibility", !isChecked) }
+                        }
+                    }
+                }
+            }
+        } else {
+            autoEnableAccessibilitySwitch.isEnabled = false
+            autoEnableAccessibilitySwitch.isChecked = false
+            autoEnableAccessibilitySwitch.text = "自动开启无障碍服务 (Shizuku未激活)"
         }
 
         // --- 新增调试功能逻辑 ---

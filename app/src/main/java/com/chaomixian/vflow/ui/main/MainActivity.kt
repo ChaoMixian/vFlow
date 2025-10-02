@@ -2,13 +2,16 @@
 // 描述：应用的主活动，承载底部导航和各个主页面 Fragment。
 package com.chaomixian.vflow.ui.main
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -24,6 +27,7 @@ import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.coroutines.launch
 
 /**
  * 应用的主 Activity。
@@ -75,7 +79,7 @@ class MainActivity : BaseActivity() {
 
     /**
      * Activity 启动时，如果尚未应用边衬区，则应用它们。
-     * 将逻辑放在 onStart 可以确保 Fragment 的 View 已经创建。
+     * 同时检查并应用启动设置。
      */
     override fun onStart() {
         super.onStart()
@@ -86,7 +90,34 @@ class MainActivity : BaseActivity() {
             applyWindowInsets(appBarLayout, navView, navHostFragment.requireView())
             insetsApplied = true
         }
+        // [新增] 每次返回主界面时，检查并应用 Shizuku 相关设置
+        checkAndApplyStartupSettings()
     }
+
+    /**
+     * 检查并应用 Shizuku 相关的启动设置
+     */
+    private fun checkAndApplyStartupSettings() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val autoEnableAccessibility = prefs.getBoolean("autoEnableAccessibility", false)
+        val forceKeepAlive = prefs.getBoolean("forceKeepAliveEnabled", false)
+
+        if (autoEnableAccessibility || forceKeepAlive) {
+            lifecycleScope.launch {
+                if (ShizukuManager.isShizukuActive(this@MainActivity)) {
+                    if (autoEnableAccessibility) {
+                        // 自动启用无障碍服务，这里不显示 Toast 以避免打扰
+                        ShizukuManager.enableAccessibilityService(this@MainActivity)
+                    }
+                    if (forceKeepAlive) {
+                        // 自动启动守护
+                        ShizukuManager.startWatcher(this@MainActivity)
+                    }
+                }
+            }
+        }
+    }
+
 
     /**
      * 应用窗口边衬区到 AppBar、底部导航和 Fragment 容器。

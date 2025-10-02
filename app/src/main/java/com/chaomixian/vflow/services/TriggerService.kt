@@ -29,6 +29,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class TriggerService : Service() {
 
@@ -69,7 +71,41 @@ class TriggerService : Service() {
 
         // 首次启动时，加载所有活动的触发器
         loadAllActiveTriggers()
+
+        // [新增] 在服务创建时（如开机后）检查并应用启动设置
+        checkAndApplyStartupSettings()
     }
+
+    /**
+     * 检查并应用 Shizuku 相关的启动设置
+     */
+    private fun checkAndApplyStartupSettings() {
+        val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+        val autoEnableAccessibility = prefs.getBoolean("autoEnableAccessibility", false)
+        val forceKeepAlive = prefs.getBoolean("forceKeepAliveEnabled", false)
+
+        // 只有当任一开关为 true 时才执行检查
+        if (autoEnableAccessibility || forceKeepAlive) {
+            serviceScope.launch {
+                // 延迟几秒，确保 Shizuku 服务在开机后有足够的时间准备好
+                delay(10000)
+                if (ShizukuManager.isShizukuActive(this@TriggerService)) {
+                    DebugLogger.d(TAG, "正在从后台服务应用启动设置...")
+                    if (autoEnableAccessibility) {
+                        ShizukuManager.enableAccessibilityService(this@TriggerService)
+                        DebugLogger.d(TAG, "已在启动时自动启用无障碍服务。")
+                    }
+                    if (forceKeepAlive) {
+                        ShizukuManager.startWatcher(this@TriggerService)
+                        DebugLogger.d(TAG, "已在启动时自动启动 Shizuku 守护。")
+                    }
+                } else {
+                    DebugLogger.w(TAG, "无法应用启动设置: Shizuku 未激活。")
+                }
+            }
+        }
+    }
+
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, createNotification())
