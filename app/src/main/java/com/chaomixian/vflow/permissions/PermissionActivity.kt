@@ -149,6 +149,8 @@ class PermissionActivity : BaseActivity() {
                     PermissionManager.EXACT_ALARM.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
                     } else null
+                    // 添加对通知使用权的处理
+                    PermissionManager.NOTIFICATION_LISTENER_SERVICE.id -> Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                     else -> null
                 }
                 intent?.let { appSettingsLauncher.launch(it) }

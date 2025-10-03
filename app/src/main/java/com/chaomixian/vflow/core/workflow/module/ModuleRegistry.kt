@@ -5,6 +5,7 @@ import com.chaomixian.vflow.core.workflow.module.file.*
 import com.chaomixian.vflow.core.workflow.module.interaction.*
 import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.core.workflow.module.network.*
+import com.chaomixian.vflow.core.workflow.module.notification.*
 import com.chaomixian.vflow.core.workflow.module.shizuku.*
 import com.chaomixian.vflow.core.workflow.module.system.*
 import com.chaomixian.vflow.core.workflow.module.triggers.*
@@ -57,6 +58,7 @@ object ModuleRegistry {
         register(WifiTriggerModule())
         register(BluetoothTriggerModule())
         register(SmsTriggerModule())
+        register(NotificationTriggerModule())
 
         // 界面交互
         register(FindTextModule())
@@ -114,6 +116,8 @@ object ModuleRegistry {
         register(BluetoothModule())
         register(BrightnessModule())
         register(ReadSmsModule())
+        register(FindNotificationModule())
+        register(RemoveNotificationModule())
 
         // Shizuku 模块
         register(ShellCommandModule())

@@ -14,7 +14,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.util.*
 
-class WorkflowManager(private val context: Context) {
+class WorkflowManager(val context: Context) {
     private val prefs = context.getSharedPreferences("vflow_workflows", Context.MODE_PRIVATE)
     private val gson = Gson()
 

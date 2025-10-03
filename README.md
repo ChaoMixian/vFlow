@@ -62,7 +62,7 @@ vFlow 的核心是其高度解耦的模块化架构。
 
 1.  克隆仓库:
     ```bash
-    git clone [https://github.com/ChaoMixian/vflow.git](https://github.com/ChaoMixian/vflow.git)
+    git clone https://github.com/ChaoMixian/vflow.git
     ```
 2.  使用 Android Studio 打开项目。
 3.  等待 Gradle 同步完成。

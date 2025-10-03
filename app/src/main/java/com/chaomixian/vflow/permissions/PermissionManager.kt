@@ -40,6 +40,14 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
+    // 定义通知使用权
+    val NOTIFICATION_LISTENER_SERVICE = Permission(
+        id = "vflow.permission.NOTIFICATION_LISTENER_SERVICE",
+        name = "通知使用权",
+        description = "允许应用读取和操作状态栏通知，用于实现通知触发器、查找和移除通知等功能。",
+        type = PermissionType.SPECIAL
+    )
+
     // 定义存储权限为一个权限组，根据系统版本动态决定请求内容
     val STORAGE = Permission(
         id = "vflow.permission.STORAGE", // 使用一个自定义的、稳定的ID
@@ -122,6 +130,7 @@ object PermissionManager {
     fun isGranted(context: Context, permission: Permission): Boolean {
         return when (permission.id) {
             ACCESSIBILITY.id -> isAccessibilityServiceEnabledInSettings(context)
+            NOTIFICATION_LISTENER_SERVICE.id -> isNotificationListenerEnabled(context)
             // 检查悬浮窗权限
             OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 Settings.canDrawOverlays(context)
@@ -220,5 +229,14 @@ object PermissionManager {
             }
         }
         return false
+    }
+
+    /**
+     * 检查我们的通知监听服务是否在系统设置中被启用。
+     */
+    private fun isNotificationListenerEnabled(context: Context): Boolean {
+        val enabledListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+        val componentName = "${context.packageName}/com.chaomixian.vflow.services.VFlowNotificationListenerService"
+        return enabledListeners?.contains(componentName) == true
     }
 }

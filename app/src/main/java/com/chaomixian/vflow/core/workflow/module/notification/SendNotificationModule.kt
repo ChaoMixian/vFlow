@@ -1,6 +1,4 @@
-// 文件: SendNotificationModule.kt
-// 描述: 定义了发送系统通知的模块。
-package com.chaomixian.vflow.core.workflow.module.system
+package com.chaomixian.vflow.core.workflow.module.notification
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,7 +7,15 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
-import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.module.ActionMetadata
+import com.chaomixian.vflow.core.module.BaseModule
+import com.chaomixian.vflow.core.module.BooleanVariable
+import com.chaomixian.vflow.core.module.ExecutionResult
+import com.chaomixian.vflow.core.module.InputDefinition
+import com.chaomixian.vflow.core.module.OutputDefinition
+import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.module.ProgressUpdate
+import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -20,7 +26,7 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  */
 class SendNotificationModule : BaseModule() {
 
-    override val id = "vflow.system.send_notification"
+    override val id = "vflow.notification.send_notification"
     override val metadata = ActionMetadata(
         name = "发送通知",
         description = "在系统通知栏中创建一个自定义通知。",
@@ -43,7 +49,7 @@ class SendNotificationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "vFlow 通知",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(TextVariable.Companion.TYPE_NAME)
         ),
         InputDefinition(
             id = "message",
@@ -51,12 +57,12 @@ class SendNotificationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "这是一条来自 vFlow 的消息。",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(TextVariable.Companion.TYPE_NAME)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", BooleanVariable.Companion.TYPE_NAME)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
