@@ -13,14 +13,14 @@ class VFlowNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        // 当服务成功连接时，将其实例传递给 Handler
-        NotificationTriggerHandler.notificationListener = this
+        // 当服务成功连接时，调用Handler的静态方法进行通知
+        NotificationTriggerHandler.onListenerConnected(this)
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        // 当服务断开时，清空引用
-        NotificationTriggerHandler.notificationListener = null
+        // 当服务断开时，调用Handler的静态方法进行通知
+        NotificationTriggerHandler.onListenerDisconnected()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {

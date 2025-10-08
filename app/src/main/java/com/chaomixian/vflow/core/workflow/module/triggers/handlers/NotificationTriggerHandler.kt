@@ -12,7 +12,6 @@ import com.chaomixian.vflow.core.module.DictionaryVariable
 import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.services.VFlowNotificationListenerService
 import kotlinx.coroutines.launch
-import java.util.regex.Pattern
 
 class NotificationTriggerHandler : ListeningTriggerHandler() {
 
@@ -30,6 +29,24 @@ class NotificationTriggerHandler : ListeningTriggerHandler() {
             instance?.handleNotification(sbn)
         }
 
+        /**
+         * 当 VFlowNotificationListenerService 连接时由其调用。
+         * @param service VFlowNotificationListenerService 的实例。
+         */
+        fun onListenerConnected(service: NotificationListenerService) {
+            DebugLogger.i(TAG, "VFlowNotificationListenerService 已连接。")
+            notificationListener = service
+        }
+
+        /**
+         * 当 VFlowNotificationListenerService 断开连接时由其调用。
+         */
+        fun onListenerDisconnected() {
+            DebugLogger.w(TAG, "VFlowNotificationListenerService 已断开连接。")
+            notificationListener = null
+        }
+
+
         // 静态实例，用于让服务回调
         private var instance: NotificationTriggerHandler? = null
     }
@@ -41,15 +58,17 @@ class NotificationTriggerHandler : ListeningTriggerHandler() {
         DebugLogger.d(TAG, "开始监听通知事件。请确保通知使用权已授予。")
         // 实际的监听由 VFlowNotificationListenerService 完成，这里只需标记为活动状态
 
-        // [核心修复] 如果服务当前未连接，主动请求系统重新绑定
+        // 如果服务当前未连接，主动请求系统重新绑定
         if (notificationListener == null) {
             DebugLogger.d(TAG, "通知监听服务当前未连接，正在请求重新绑定...")
-            try {
-                NotificationListenerService.requestRebind(
-                    ComponentName(context, VFlowNotificationListenerService::class.java)
-                )
-            } catch (e: Exception) {
-                DebugLogger.e(TAG, "请求重新绑定通知监听服务时出错", e)
+            triggerScope.launch {
+                try {
+                    NotificationListenerService.requestRebind(
+                        ComponentName(context, VFlowNotificationListenerService::class.java)
+                    )
+                } catch (e: Exception) {
+                    DebugLogger.e(TAG, "请求重新绑定通知监听服务时出错", e)
+                }
             }
         }
     }
