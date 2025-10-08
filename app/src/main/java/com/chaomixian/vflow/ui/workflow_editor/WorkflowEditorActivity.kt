@@ -649,22 +649,38 @@ class WorkflowEditorActivity : BaseActivity() {
         }
     }
 
+    /**
+     * 处理应用选择器返回结果的方法。
+     * 现在可以正确处理 "添加" (position == -1) 和 "编辑" (position != -1) 两种情况。
+     */
     private fun handleAppPickerResult(resultCode: Int, data: Intent?, position: Int) {
-        if (resultCode == Activity.RESULT_OK && data != null && position != -1) {
+        if (resultCode == Activity.RESULT_OK && data != null) {
             val packageName = data.getStringExtra(AppPickerActivity.EXTRA_SELECTED_PACKAGE_NAME)
             val activityName = data.getStringExtra(AppPickerActivity.EXTRA_SELECTED_ACTIVITY_NAME)
 
             if (packageName != null && activityName != null) {
-                val step = actionSteps.getOrNull(position) ?: return
-                val updatedParams = step.parameters.toMutableMap()
-                updatedParams["packageName"] = packageName
-                updatedParams["activityName"] = activityName
-                actionSteps[position] = step.copy(parameters = updatedParams)
-                recalculateAndNotify()
-                currentEditorSheet?.updateParametersAndRebuildUi(updatedParams)
+                val updatedParams = mapOf(
+                    "packageName" to packageName,
+                    "activityName" to activityName
+                )
+
+                if (position != -1) {
+                    // 编辑模式：更新 actionSteps 列表中的现有步骤
+                    val step = actionSteps.getOrNull(position) ?: return
+                    val newParams = step.parameters.toMutableMap()
+                    newParams.putAll(updatedParams)
+                    actionSteps[position] = step.copy(parameters = newParams)
+                    recalculateAndNotify()
+                    // 通知打开的编辑器工作表更新其UI
+                    currentEditorSheet?.updateParametersAndRebuildUi(newParams)
+                } else {
+                    // 添加模式：只通知打开的编辑器工作表更新其内部状态
+                    currentEditorSheet?.updateParametersAndRebuildUi(updatedParams)
+                }
             }
         }
     }
+
 
     private fun setupDragAndDrop() {
         val callback = object : ItemTouchHelper.SimpleCallback(

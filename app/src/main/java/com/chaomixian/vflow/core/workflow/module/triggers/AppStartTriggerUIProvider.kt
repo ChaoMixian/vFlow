@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
@@ -24,7 +25,8 @@ class AppStartTriggerViewHolder(
     val pickButton: Button,
     val eventChipGroup: ChipGroup,
     val openChip: Chip,
-    val closeChip: Chip
+    val closeChip: Chip,
+    val eventSectionViews: List<View>
 ) : CustomEditorViewHolder(view)
 
 class AppStartTriggerUIProvider : ModuleUIProvider {
@@ -47,13 +49,29 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
             view.findViewById(R.id.button_pick_app),
             view.findViewById(R.id.cg_app_event),
             view.findViewById(R.id.chip_app_open),
-            view.findViewById(R.id.chip_app_close)
+            view.findViewById(R.id.chip_app_close),
+            listOf(
+                view.findViewById(R.id.label_event),
+                view.findViewById(R.id.cg_app_event),
+                view.findViewById(R.id.divider_event)
+            )
         )
 
-        // Restore state
-        val currentEvent = currentParameters["event"] as? String ?: "打开时"
-        if (currentEvent == "打开时") holder.openChip.isChecked = true else holder.closeChip.isChecked = true
+        // 检查模块是否定义了 "event" 参数
+        // AppStartTriggerModule 有，而 LaunchAppModule 没有
+        val hasEventParameter = currentParameters.containsKey("event")
+        holder.eventSectionViews.forEach { it.isVisible = hasEventParameter }
 
+
+        // 仅当事件部分可见时，才处理其状态恢复和监听
+        if (hasEventParameter) {
+            val currentEvent = currentParameters["event"] as? String ?: "打开时"
+            if (currentEvent == "打开时") holder.openChip.isChecked = true else holder.closeChip.isChecked = true
+            holder.eventChipGroup.setOnCheckedStateChangeListener { _, _ -> onParametersChanged() }
+        }
+
+
+        // Restore state
         updateSummaryText(context, holder.summaryTextView, currentParameters)
 
         // Listeners
@@ -61,16 +79,19 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
             val intent = Intent(context, AppPickerActivity::class.java)
             onStartActivityForResult?.invoke(intent) { _, _ ->}
         }
-        holder.eventChipGroup.setOnCheckedStateChangeListener { _, _ -> onParametersChanged() }
 
         return holder
     }
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as AppStartTriggerViewHolder
-        val event = if (h.openChip.isChecked) "打开时" else "关闭时"
-        // 包名和Activity名在外部通过回调更新，这里只返回事件
-        return mapOf("event" to event)
+        // 仅当事件部分可见时，才读取其值
+        if (h.eventSectionViews.first().isVisible) {
+            val event = if (h.openChip.isChecked) "打开时" else "关闭时"
+            return mapOf("event" to event)
+        }
+        // 对于 LaunchAppModule，此方法返回空Map，因为它的参数是通过 ActivityResult 更新的
+        return emptyMap()
     }
 
     private fun updateSummaryText(context: Context, textView: TextView, parameters: Map<String, Any?>) {
