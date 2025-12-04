@@ -164,6 +164,26 @@
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
+        <activity
+            android:name=".ui.widget.WidgetConfigActivity"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".ui.widget.WorkflowWidgetProvider"
+            android:exported="true"
+            android:label="vFlow 列表 (4x2)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_4x2" />
+        </receiver>
+
     </application>
 
 </manifest>

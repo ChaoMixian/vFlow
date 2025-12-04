@@ -1,0 +1,30 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_item_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/widget_item_icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_play_arrow"
+        android:tint="#FF6200EE"
+        tools:ignore="UseAppTint" />
+
+    <TextView
+        android:id="@+id/widget_item_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@android:color/black"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:text="工作流名称" />
+</LinearLayout>
