@@ -1,9 +1,10 @@
-// 文件路径: src/main/java/com/chaomixian/vflow/core/workflow/module/shizuku/ShellCommandModule.kt
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/shizuku/ShellCommandModule.kt
 package com.chaomixian.vflow.core.workflow.module.shizuku
 
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -32,7 +33,7 @@ class ShellCommandModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "echo 'Hello from Shizuku'",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
+            supportsRichText = false
         )
     )
 
@@ -52,8 +53,9 @@ class ShellCommandModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val command = (context.magicVariables["command"] as? TextVariable)?.value
-            ?: context.variables["command"] as? String
+        // [重构] 使用 VariableResolver 解析命令
+        val rawCommand = context.variables["command"]?.toString() ?: ""
+        val command = VariableResolver.resolve(rawCommand, context)
 
         if (command.isNullOrBlank()) {
             return ExecutionResult.Failure("参数错误", "要执行的命令不能为空。")

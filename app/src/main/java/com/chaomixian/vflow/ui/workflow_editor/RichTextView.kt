@@ -1,5 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/RichTextView.kt
-// 描述: [已修改] 在setRichText和insertVariablePill方法中为变量药丸前后添加了空格。
+// 描述: [已修改] 移除了在变量药丸前后自动添加空格的逻辑，实现紧凑拼接。
 
 package com.chaomixian.vflow.ui.workflow_editor
 
@@ -27,7 +27,7 @@ class RichTextView @JvmOverloads constructor(
 
     /**
      * 将包含变量引用的纯文本转换为可显示的 Spannable。
-     * [已修改] 在每个药丸前后添加空格。
+     * [已修改] 不再添加空格。
      */
     fun setRichText(rawText: String, getPillDrawable: (String) -> Drawable) {
         val spannable = SpannableStringBuilder()
@@ -40,14 +40,14 @@ class RichTextView @JvmOverloads constructor(
             val variableRef = matcher.group(1)
             if (variableRef != null) {
                 val drawable = getPillDrawable(variableRef)
-                // 在药丸前后添加空格
-                spannable.append(" ")
+                // [修改] 移除前置空格
+                // spannable.append(" ")
                 val start = spannable.length
                 spannable.append(variableRef)
                 val end = spannable.length
                 spannable.setSpan(CenterAlignedImageSpan(drawable), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                // 零宽字符用于光标定位
-                spannable.append(" \u200B")
+                // 零宽字符用于光标定位，必须保留，否则光标无法移动到药丸后面
+                spannable.append("\u200B")
             }
             lastEnd = matcher.end()
         }
@@ -61,27 +61,17 @@ class RichTextView @JvmOverloads constructor(
 
     /**
      * 将当前编辑器中的 Spannable 内容转换回包含变量引用的纯文本字符串。
-     * [已修改] 移除所有零宽字符和药丸前后的空格。
+     * [已修改] 仅移除零宽字符。
      */
     fun getRawText(): String {
-        // 匹配 " {{...}} " 或 " [[...]] " 这样的模式，并将其替换回 " {{...}} "
-        val textWithSpans = text.toString()
-        val matcher = variablePattern.matcher(textWithSpans)
-        val result = StringBuffer()
-        while(matcher.find()) {
-            // 将 " {{var}} " 替换为 "{{var}}"
-            matcher.appendReplacement(result, matcher.group(0).trim())
-        }
-        matcher.appendTail(result)
-
         // 移除所有用于光标定位的零宽字符
-        return result.toString().replace("\u200B", "")
+        return text.toString().replace("\u200B", "")
     }
 
 
     /**
      * 在当前光标位置插入一个变量“药丸”。
-     * 在插入的药丸前后添加空格。
+     * [已修改] 不再添加空格。
      */
     fun insertVariablePill(variableReference: String, drawable: Drawable) {
         val start = selectionStart.coerceAtLeast(0)
@@ -90,13 +80,13 @@ class RichTextView @JvmOverloads constructor(
         val spannable = text as SpannableStringBuilder
         val span = CenterAlignedImageSpan(drawable)
 
-        // 要插入的文本包含前后的空格和用于光标定位的零宽字符
-        val textToInsert = " $variableReference \u200B"
+        // [修改] 插入内容仅包含变量引用和零宽字符
+        val textToInsert = "$variableReference\u200B"
 
         spannable.replace(start, end, textToInsert)
 
-        // ImageSpan 只应用于变量引用本身，不包括空格
-        val spanStart = start + 1
+        // ImageSpan 应用于变量引用
+        val spanStart = start
         val spanEnd = spanStart + variableReference.length
         spannable.setSpan(span, spanStart, spanEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
 

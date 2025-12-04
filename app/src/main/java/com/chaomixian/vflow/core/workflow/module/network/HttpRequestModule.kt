@@ -4,6 +4,7 @@ package com.chaomixian.vflow.core.workflow.module.network
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -25,7 +26,7 @@ class HttpRequestModule : BaseModule() {
     override val metadata = ActionMetadata(
         name = "HTTP 请求",
         description = "发送 HTTP 请求并获取响应。",
-        iconRes = R.drawable.rounded_public_24, // 复用现有图标
+        iconRes = R.drawable.rounded_public_24,
         category = "网络"
     )
 
@@ -37,13 +38,13 @@ class HttpRequestModule : BaseModule() {
     val bodyTypeOptions = listOf("无", "JSON", "表单", "原始文本")
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("url", "URL", ParameterType.STRING, acceptsMagicVariable = true, acceptsNamedVariable = true),
+        InputDefinition("url", "URL", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true),
         InputDefinition("method", "方法", ParameterType.ENUM, "GET", options = methodOptions, acceptsMagicVariable = false),
-        InputDefinition("headers", "请求头", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true, acceptsNamedVariable = true),
-        InputDefinition("query_params", "查询参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true, acceptsNamedVariable = true),
+        InputDefinition("headers", "请求头", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true),
+        InputDefinition("query_params", "查询参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true),
         InputDefinition("body_type", "请求体类型", ParameterType.ENUM, "无", options = bodyTypeOptions, acceptsMagicVariable = false),
-        InputDefinition("body", "请求体", ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true),
-        InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptsNamedVariable = true)
+        InputDefinition("body", "请求体", ParameterType.ANY, acceptsMagicVariable = true, supportsRichText = true), // 原始文本支持富文本
+        InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -62,58 +63,64 @@ class HttpRequestModule : BaseModule() {
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         return withContext(Dispatchers.IO) {
             try {
-                // 解析参数
-                val urlString = (context.magicVariables["url"] as? TextVariable)?.value
-                    ?: (context.variables["url"] as? String)
-                    ?: return@withContext ExecutionResult.Failure("参数错误", "URL不能为空")
+                // [重构] 使用 VariableResolver 解析 URL
+                val rawUrl = context.variables["url"]?.toString() ?: ""
+                var urlString = VariableResolver.resolve(rawUrl, context)
 
-                // 自动为URL添加协议头
-                val finalUrlString = if (!urlString.startsWith("http://") && !urlString.startsWith("https://")) {
-                    "https://$urlString"
-                } else {
-                    urlString
+                if (urlString.isEmpty()) return@withContext ExecutionResult.Failure("参数错误", "URL不能为空")
+
+                if (!urlString.startsWith("http://") && !urlString.startsWith("https://")) {
+                    urlString = "https://$urlString"
                 }
 
                 val method = context.variables["method"] as? String ?: "GET"
+
+                // 处理 Map 类型的参数 (Headers, Query Params)
+                // 这里暂时假设 Map 的 Value 已经是解析好的，或者在 UI 层没有提供富文本输入。
+                // 如果需要深度解析 Map 中的 Value，需要额外的逻辑遍历 Map。
+                // 鉴于目前 DictionaryKVAdapter 较为简单，先保持原样，直接读取 magicVariables 或 raw variables
                 val headers = (context.magicVariables["headers"] as? DictionaryVariable)?.value
                     ?: (context.variables["headers"] as? Map<String, Any?>)
                     ?: emptyMap()
                 val queryParams = (context.magicVariables["query_params"] as? DictionaryVariable)?.value
                     ?: (context.variables["query_params"] as? Map<String, Any?>)
                     ?: emptyMap()
+
                 val bodyType = context.variables["body_type"] as? String ?: "无"
-                val bodyData = context.magicVariables["body"] ?: context.variables["body"]
+                val bodyDataRaw = context.variables["body"]
+                // 对于 Body，我们需要区分处理
+                val bodyData = if (bodyType == "原始文本") {
+                    // 如果是原始文本，支持富文本解析
+                    VariableResolver.resolve(bodyDataRaw?.toString() ?: "", context)
+                } else {
+                    // 如果是 JSON 或表单 (Map)，或者直接连接了变量
+                    context.magicVariables["body"] ?: bodyDataRaw
+                }
+
                 val timeout = ((context.magicVariables["timeout"] as? NumberVariable)?.value
                     ?: (context.variables["timeout"] as? Number)?.toDouble()
                     ?: 10.0).toLong()
 
-                // 构建 OkHttpClient
                 val client = OkHttpClient.Builder()
                     .callTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
 
-                // 构建 URL (带查询参数)
-                val httpUrlBuilder = finalUrlString.toHttpUrlOrNull()?.newBuilder() ?: return@withContext ExecutionResult.Failure("URL格式错误", "无法解析URL: $finalUrlString")
+                val httpUrlBuilder = urlString.toHttpUrlOrNull()?.newBuilder() ?: return@withContext ExecutionResult.Failure("URL格式错误", "无法解析URL: $urlString")
                 queryParams.forEach { (key, value) -> httpUrlBuilder.addQueryParameter(key, value.toString()) }
                 val finalUrl = httpUrlBuilder.build()
 
-                // 构建 RequestBody
                 val requestBody = when {
                     method == "GET" || method == "DELETE" -> null
                     else -> createRequestBody(bodyType, bodyData)
                 }
 
-                // 构建 Request
                 val requestBuilder = Request.Builder().url(finalUrl)
                 headers.forEach { (key, value) -> requestBuilder.addHeader(key, value.toString()) }
                 requestBuilder.method(method, requestBody)
-                val request = requestBuilder.build()
 
-                // 执行请求
                 onProgress(ProgressUpdate("正在发送 $method 请求到 $finalUrl"))
-                val response = client.newCall(request).execute()
+                val response = client.newCall(requestBuilder.build()).execute()
 
-                // 解析响应
                 val statusCode = response.code
                 val responseBody = response.body?.string() ?: ""
                 val responseHeaders = response.headers.toMultimap().mapValues { it.value.joinToString(", ") }
@@ -124,17 +131,14 @@ class HttpRequestModule : BaseModule() {
                     "response_body" to TextVariable(responseBody),
                     "status_code" to NumberVariable(statusCode.toDouble()),
                     "response_headers" to DictionaryVariable(responseHeaders),
-                    "error" to TextVariable("") // 成功时错误信息为空
+                    "error" to TextVariable("")
                 ))
 
             } catch (e: IOException) {
                 ExecutionResult.Failure("网络错误", e.message ?: "未知网络错误").also {
-                    return@withContext it.copy(outputs = mapOf("error" to TextVariable(it.errorMessage)))
                 }
             } catch (e: Exception) {
-                ExecutionResult.Failure("执行失败", e.localizedMessage ?: "发生未知错误").also {
-                    return@withContext it.copy(outputs = mapOf("error" to TextVariable(it.errorMessage)))
-                }
+                ExecutionResult.Failure("执行失败", e.localizedMessage ?: "发生未知错误")
             }
         }
     }
@@ -156,15 +160,6 @@ class HttpRequestModule : BaseModule() {
                 (bodyData?.toString() ?: "").toRequestBody("text/plain; charset=utf-8".toMediaTypeOrNull())
             }
             else -> null
-        }
-    }
-
-    // 增加一个 copy 方法，用于在返回 Failure 的同时也能携带输出
-    private fun ExecutionResult.Failure.copy(outputs: Map<String, Any?>): ExecutionResult.Failure {
-        return ExecutionResult.Failure(this.errorTitle, this.errorMessage).apply {
-            // 虽然是 Failure, 但仍可以附加一些输出，比如 error 信息
-            // this.outputs = outputs
-            // (注意: 原版 ExecutionResult.Failure 没有 outputs 字段, 此处为示意，实际返回中不包含)
         }
     }
 }

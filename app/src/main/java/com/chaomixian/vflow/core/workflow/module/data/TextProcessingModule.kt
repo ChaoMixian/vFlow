@@ -1,27 +1,22 @@
-// 文件: TextProcessingModule.kt
-// 描述: 提供多种文本处理功能，如拼接、分割、替换和正则匹配。
-
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/data/TextProcessingModule.kt
 package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.util.regex.Pattern
 
-/**
- * “文本处理”模块。
- * 提供多种文本操作功能，根据用户选择动态调整输入和输出。
- */
 class TextProcessingModule : BaseModule() {
 
     override val id = "vflow.data.text_processing"
     override val metadata = ActionMetadata(
         name = "文本处理",
         description = "执行文本的拼接、分割、替换、正则匹配等操作。",
-        iconRes = R.drawable.rounded_convert_to_text_24, // 使用新图标
+        iconRes = R.drawable.rounded_convert_to_text_24,
         category = "数据"
     )
 
@@ -30,26 +25,23 @@ class TextProcessingModule : BaseModule() {
     // 定义所有支持的操作
     private val operationOptions = listOf("拼接", "分割", "替换", "正则提取")
 
-    /**
-     * 静态输入定义。
-     */
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = "operation", name = "操作", staticType = ParameterType.ENUM, defaultValue = "拼接", options = operationOptions, acceptsMagicVariable = false),
+        InputDefinition("operation", "操作", ParameterType.ENUM, "拼接", options = operationOptions, acceptsMagicVariable = false),
         // --- 拼接 ---
-        InputDefinition(id = "join_prefix", name = "前缀", staticType = ParameterType.STRING, defaultValue = "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)),
-        InputDefinition(id = "join_list", name = "列表", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ListVariable.TYPE_NAME)),
-        InputDefinition(id = "join_delimiter", name = "分隔符", staticType = ParameterType.STRING, defaultValue = ",", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)),
-        InputDefinition(id = "join_suffix", name = "后缀", staticType = ParameterType.STRING, defaultValue = "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)),
-        // --- 分割/替换/正则 ---
-        InputDefinition(id = "source_text", name = "源文本", staticType = ParameterType.STRING, defaultValue = "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)),
+        InputDefinition("join_prefix", "前缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("join_list", "列表", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ListVariable.TYPE_NAME)),
+        InputDefinition("join_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("join_suffix", "后缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
+        // --- 通用文本输入 ---
+        InputDefinition("source_text", "源文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
         // --- 分割 ---
-        InputDefinition(id = "split_delimiter", name = "分隔符", staticType = ParameterType.STRING, defaultValue = ",", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)),
+        InputDefinition("split_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true),
         // --- 替换 ---
-        InputDefinition(id = "replace_from", name = "查找", staticType = ParameterType.STRING, defaultValue = "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)),
-        InputDefinition(id = "replace_to", name = "替换为", staticType = ParameterType.STRING, defaultValue = "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)),
+        InputDefinition("replace_from", "查找", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("replace_to", "替换为", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
         // --- 正则 ---
-        InputDefinition(id = "regex_pattern", name = "正则表达式", staticType = ParameterType.STRING, defaultValue = "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)),
-        InputDefinition(id = "regex_group", name = "匹配组号", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
+        InputDefinition("regex_pattern", "正则表达式", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("regex_group", "匹配组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
     )
 
     /**
@@ -138,10 +130,18 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeJoin(context: ExecutionContext): ExecutionResult {
-        val prefix = (context.magicVariables["join_prefix"] as? TextVariable)?.value ?: context.variables["join_prefix"]?.toString() ?: ""
-        val suffix = (context.magicVariables["join_suffix"] as? TextVariable)?.value ?: context.variables["join_suffix"]?.toString() ?: ""
-        val delimiter = (context.magicVariables["join_delimiter"] as? TextVariable)?.value ?: context.variables["join_delimiter"]?.toString() ?: ""
-        val listToJoin = (context.magicVariables["join_list"] as? ListVariable)?.value ?: (context.variables["join_list"] as? List<*>)
+        // [重构] 使用 VariableResolver 解析所有文本参数
+        val prefix = VariableResolver.resolve(context.variables["join_prefix"]?.toString() ?: "", context)
+        val suffix = VariableResolver.resolve(context.variables["join_suffix"]?.toString() ?: "", context)
+        val delimiter = VariableResolver.resolve(context.variables["join_delimiter"]?.toString() ?: ",", context)
+
+        // 列表变量通常直接引用，使用 resolveValue
+        val rawList = context.variables["join_list"]
+        val listToJoin = if (rawList is String) {
+            (VariableResolver.resolveValue(rawList, context) as? ListVariable)?.value ?: (VariableResolver.resolveValue(rawList, context) as? List<*>)
+        } else {
+            (rawList as? List<*>)
+        }
 
         if (listToJoin == null) {
             return ExecutionResult.Failure("输入错误", "需要一个列表变量来进行拼接。")
@@ -152,11 +152,12 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeSplit(context: ExecutionContext): ExecutionResult {
-        val source = (context.magicVariables["source_text"] as? TextVariable)?.value ?: context.variables["source_text"]?.toString()
-        val delimiter = (context.magicVariables["split_delimiter"] as? TextVariable)?.value ?: context.variables["split_delimiter"]?.toString()
+        // [重构] 统一解析
+        val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
+        val delimiter = VariableResolver.resolve(context.variables["split_delimiter"]?.toString() ?: ",", context)
 
-        if (source == null || delimiter == null) {
-            return ExecutionResult.Failure("输入错误", "源文本和分隔符不能为空。")
+        if (source.isEmpty()) {
+            return ExecutionResult.Failure("输入错误", "源文本不能为空。")
         }
 
         val resultList = source.split(delimiter)
@@ -164,12 +165,13 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeReplace(context: ExecutionContext): ExecutionResult {
-        val source = (context.magicVariables["source_text"] as? TextVariable)?.value ?: context.variables["source_text"]?.toString()
-        val from = (context.magicVariables["replace_from"] as? TextVariable)?.value ?: context.variables["replace_from"]?.toString()
-        val to = (context.magicVariables["replace_to"] as? TextVariable)?.value ?: context.variables["replace_to"]?.toString()
+        // [重构] 统一解析
+        val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
+        val from = VariableResolver.resolve(context.variables["replace_from"]?.toString() ?: "", context)
+        val to = VariableResolver.resolve(context.variables["replace_to"]?.toString() ?: "", context)
 
-        if (source == null || from == null || to == null) {
-            return ExecutionResult.Failure("输入错误", "源文本、查找内容和替换内容均不能为空。")
+        if (source.isEmpty() || from.isEmpty()) {
+            return ExecutionResult.Failure("输入错误", "源文本和查找内容不能为空。")
         }
 
         val resultText = source.replace(from, to)
@@ -177,11 +179,19 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeRegex(context: ExecutionContext): ExecutionResult {
-        val source = (context.magicVariables["source_text"] as? TextVariable)?.value ?: context.variables["source_text"]?.toString()
-        val patternStr = (context.magicVariables["regex_pattern"] as? TextVariable)?.value ?: context.variables["regex_pattern"]?.toString()
-        val group = (context.magicVariables["regex_group"] as? NumberVariable)?.value?.toInt() ?: (context.variables["regex_group"] as? Number)?.toInt() ?: 0
+        // [重构] 统一解析
+        val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
+        val patternStr = VariableResolver.resolve(context.variables["regex_pattern"]?.toString() ?: "", context)
 
-        if (source == null || patternStr.isNullOrEmpty()) {
+        // 组号通常是数字
+        val groupVar = context.magicVariables["regex_group"] ?: context.variables["regex_group"]
+        val group = when(groupVar) {
+            is NumberVariable -> groupVar.value.toInt()
+            is Number -> groupVar.toInt()
+            else -> 0
+        }
+
+        if (source.isEmpty() || patternStr.isEmpty()) {
             return ExecutionResult.Failure("输入错误", "源文本和正则表达式不能为空。")
         }
 

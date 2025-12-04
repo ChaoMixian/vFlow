@@ -13,8 +13,8 @@ android {
         applicationId = "com.chaomixian.vflow"
         minSdk = 30
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.2.3"
+        versionCode = 12
+        versionName = "1.2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

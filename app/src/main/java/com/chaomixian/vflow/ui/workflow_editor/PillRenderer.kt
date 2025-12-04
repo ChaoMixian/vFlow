@@ -10,17 +10,15 @@ import android.text.Spanned
 import android.text.style.ReplacementSpan
 import androidx.core.content.ContextCompat
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import java.util.regex.Pattern
 import kotlin.math.roundToInt
 
 object PillRenderer {
-
-    // ... (findSourceInfo, getDisplayNameForVariableReference, renderPills, RoundedBackgroundSpan 保持不变) ...
     private data class SourceInfo(val outputName: String, val color: Int)
 
     private fun findSourceInfo(context: Context, variableRef: String, allSteps: List<ActionStep>): SourceInfo? {
@@ -116,8 +114,7 @@ object PillRenderer {
      */
     fun renderRichTextToSpannable(context: Context, rawText: String, allSteps: List<ActionStep>): SpannableStringBuilder {
         val spannable = SpannableStringBuilder()
-        val variablePattern = Pattern.compile("(\\{\\{.*?\\}\\}|\\[\\[.*?\\]\\])")
-        val matcher = variablePattern.matcher(rawText)
+        val matcher = VariableResolver.VARIABLE_PATTERN.matcher(rawText)
         var lastEnd = 0
 
         while (matcher.find()) {
