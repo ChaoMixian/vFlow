@@ -1,9 +1,9 @@
 // 文件: main/java/com/chaomixian/vflow/core/logging/DebugLogger.kt
-// 描述: 提供一个统一的日志记录工具，支持同时输出到 Logcat 和内存缓冲区。
 package com.chaomixian.vflow.core.logging
 
 import android.content.Context
 import android.os.Build
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -12,42 +12,80 @@ object DebugLogger {
     private val logBuffer = mutableListOf<String>()
     private var isLoggingEnabled = false
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-    private var appContext: Context? = null // 存储Context以便获取版本名
+    private var appContext: Context? = null
 
-    // 初始化时从 SharedPreferences 读取日志记录状态
+    // Shell 日志相关常量
+    private const val SHELL_LOG_FILENAME = "vflow_shell.log"
+    private const val MARKER_FILENAME = "vflow_logging_enabled.marker"
+
     fun initialize(context: Context) {
         appContext = context.applicationContext
         val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
         isLoggingEnabled = prefs.getBoolean("debugLoggingEnabled", false)
+        // 初始化时同步标记文件状态
+        syncMarkerFile(context, isLoggingEnabled)
     }
 
-    // 设置是否启用文件日志记录
     fun setLoggingEnabled(enabled: Boolean, context: Context) {
         isLoggingEnabled = enabled
         val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("debugLoggingEnabled", enabled).apply()
+
+        // 同步标记文件
+        syncMarkerFile(context, enabled)
+
         if (!enabled) {
-            logBuffer.clear() // 关闭时清空缓冲区
+            clearLogs() // 关闭时清空所有日志
         }
     }
 
-    // 获取日志记录状态
+    // 私有辅助方法：同步标记文件
+    private fun syncMarkerFile(context: Context, enabled: Boolean) {
+        try {
+            val markerFile = File(context.cacheDir, MARKER_FILENAME)
+            if (enabled) {
+                if (!markerFile.exists()) {
+                    markerFile.createNewFile()
+                }
+            } else {
+                if (markerFile.exists()) {
+                    markerFile.delete()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("DebugLogger", "无法操作标记文件", e)
+        }
+    }
+
     fun isLoggingEnabled(): Boolean = isLoggingEnabled
 
-    // 获取所有日志记录
     fun getLogs(): String {
         val deviceInfo = "App Version: ${getAppVersion()}\n" +
                 "Android Version: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n" +
                 "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n" +
                 "------------------------------------\n"
-        return deviceInfo + synchronized(logBuffer) {
+
+        val appLogs = synchronized(logBuffer) {
             logBuffer.joinToString("\n")
         }
+
+        // 读取 Shell 日志
+        val shellLogs = try {
+            appContext?.let { ctx ->
+                val shellFile = File(ctx.cacheDir, SHELL_LOG_FILENAME)
+                if (shellFile.exists()) {
+                    "\n\n========== Shell Script Logs ==========\n" + shellFile.readText()
+                } else {
+                    ""
+                }
+            } ?: ""
+        } catch (e: Exception) {
+            "\n[Error reading shell logs: ${e.message}]"
+        }
+
+        return deviceInfo + appLogs + shellLogs
     }
 
-    /**
-     * 新增：获取应用版本名
-     */
     private fun getAppVersion(): String {
         return try {
             appContext?.let {
@@ -59,16 +97,23 @@ object DebugLogger {
         }
     }
 
-
-    // 清空日志
     fun clearLogs() {
         synchronized(logBuffer) {
             logBuffer.clear()
         }
-        d("DebugLogger", "日志缓冲区已清空。")
+        // 清除 Shell 日志文件
+        try {
+            appContext?.let { ctx ->
+                val shellFile = File(ctx.cacheDir, SHELL_LOG_FILENAME)
+                if (shellFile.exists()) {
+                    shellFile.delete()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        d("DebugLogger", "应用日志缓冲区和 Shell 日志文件已清空。")
     }
-
-    // --- 重载的日志方法 ---
 
     fun d(tag: String, message: String) {
         android.util.Log.d(tag, message)
@@ -117,7 +162,7 @@ object DebugLogger {
     private fun addToBuffer(level: String, tag: String, message: String) {
         val timestamp = dateFormat.format(Date())
         logBuffer.add("$timestamp $level/$tag: $message")
-        // 为了防止内存溢出，可以限制缓冲区大小
+        // 为了防止内存溢出，限制缓冲区大小
         if (logBuffer.size > 5000) {
             logBuffer.removeAt(0)
         }

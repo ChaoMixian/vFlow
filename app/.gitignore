@@ -56,3 +56,5 @@ captures/
 
 # Google Services (if you manage it securely and don't want to commit actual keys)
 # google-services.json
+
+release/

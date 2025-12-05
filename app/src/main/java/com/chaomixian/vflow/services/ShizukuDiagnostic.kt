@@ -78,4 +78,47 @@ object ShizukuDiagnostic {
             DebugLogger.e(TAG, "检查 Manifest 配置时发生异常", e)
         }
     }
+
+    /**
+     * 专门用于按键触发器的详细诊断
+     */
+    suspend fun runKeyEventDiagnostic(context: Context) {
+        DebugLogger.d(TAG, "=== 按键触发器深度诊断开始 ===")
+
+        if (!ShizukuManager.isShizukuActive(context)) {
+            DebugLogger.e(TAG, "诊断终止：Shizuku 未激活或无权限。")
+            return
+        }
+
+        try {
+            // 1. 检查 getevent 命令是否存在
+            DebugLogger.d(TAG, "1. 检查 getevent 命令...")
+            val whichGetevent = ShizukuManager.execShellCommand(context, "which getevent")
+            DebugLogger.d(TAG, "   > which getevent: $whichGetevent")
+
+            // 2. 检查 /dev/input 目录权限和列表
+            DebugLogger.d(TAG, "2. 检查 /dev/input 设备列表...")
+            val lsOutput = ShizukuManager.execShellCommand(context, "ls -l /dev/input/")
+            DebugLogger.d(TAG, "   > ls -l /dev/input/ 输出:\n$lsOutput")
+
+            // 3. 尝试读取一次事件流 (非阻塞，仅检查是否有输出或报错)
+            // 使用 timeout 防止阻塞，检查是否有权限读取
+            DebugLogger.d(TAG, "3. 权限测试 (尝试读取设备信息)...")
+            val geteventInfo = ShizukuManager.execShellCommand(context, "getevent -p")
+            if (geteventInfo.length > 500) {
+                DebugLogger.d(TAG, "   > getevent -p 输出 (前500字符):\n${geteventInfo.take(500)}...")
+            } else {
+                DebugLogger.d(TAG, "   > getevent -p 输出:\n$geteventInfo")
+            }
+
+            // 4. 检查当前 Shell 用户身份
+            val idInfo = ShizukuManager.execShellCommand(context, "id")
+            DebugLogger.d(TAG, "4. Shell 用户身份: $idInfo")
+
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "按键触发器诊断过程中发生异常", e)
+        }
+
+        DebugLogger.d(TAG, "=== 按键触发器深度诊断结束 ===")
+    }
 }

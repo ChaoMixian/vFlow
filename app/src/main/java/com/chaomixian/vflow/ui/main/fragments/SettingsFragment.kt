@@ -20,6 +20,8 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShizukuManager
+import com.chaomixian.vflow.services.ShizukuDiagnostic
+import com.chaomixian.vflow.ui.settings.KeyTesterActivity
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -96,7 +98,7 @@ class SettingsFragment : Fragment() {
             forceKeepAliveSwitch.text = "${getString(R.string.settings_switch_force_keep_alive)} (Shizuku未激活)"
         }
 
-        // --- 新增：自动开启无障碍服务开关逻辑 ---
+        // --- 自动开启无障碍服务开关逻辑 ---
         val autoEnableAccessibilitySwitch = view.findViewById<MaterialSwitch>(R.id.switch_auto_enable_accessibility)
         if (ShizukuManager.isShizukuActive(requireContext())) {
             autoEnableAccessibilitySwitch.isEnabled = true
@@ -129,19 +131,26 @@ class SettingsFragment : Fragment() {
             autoEnableAccessibilitySwitch.text = "自动开启无障碍服务 (Shizuku未激活)"
         }
 
-        // --- 新增调试功能逻辑 ---
+        // --- 调试功能逻辑 ---
         val loggingSwitch = view.findViewById<MaterialSwitch>(R.id.switch_enable_logging)
         val exportButton = view.findViewById<Button>(R.id.button_export_logs)
         val clearButton = view.findViewById<Button>(R.id.button_clear_logs)
+        val diagnoseButton = view.findViewById<Button>(R.id.button_run_diagnostic)
+        val keyTesterButton = view.findViewById<Button>(R.id.button_key_tester)
 
-        loggingSwitch.isChecked = DebugLogger.isLoggingEnabled()
-        exportButton.isEnabled = DebugLogger.isLoggingEnabled()
-        clearButton.isEnabled = DebugLogger.isLoggingEnabled()
+        // 初始化状态
+        val isLoggingEnabled = DebugLogger.isLoggingEnabled()
+        loggingSwitch.isChecked = isLoggingEnabled
+        exportButton.isEnabled = isLoggingEnabled
+        clearButton.isEnabled = isLoggingEnabled
+        diagnoseButton.isEnabled = isLoggingEnabled
+        // keyTesterButton 可以保持开启，因为它主要依赖 Shizuku
 
         loggingSwitch.setOnCheckedChangeListener { _, isChecked ->
             DebugLogger.setLoggingEnabled(isChecked, requireContext())
             exportButton.isEnabled = isChecked
             clearButton.isEnabled = isChecked
+            diagnoseButton.isEnabled = isChecked
             if (isChecked) {
                 Toast.makeText(requireContext(), "调试日志已开启", Toast.LENGTH_SHORT).show()
             } else {
@@ -160,6 +169,28 @@ class SettingsFragment : Fragment() {
             Toast.makeText(requireContext(), "日志已清空", Toast.LENGTH_SHORT).show()
         }
 
+        // 运行全面诊断
+        diagnoseButton.setOnClickListener {
+            if (!ShizukuManager.isShizukuActive(requireContext())) {
+                Toast.makeText(requireContext(), "请先激活 Shizuku", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            Toast.makeText(requireContext(), "正在运行诊断...", Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch(Dispatchers.IO) {
+                ShizukuDiagnostic.diagnose(requireContext())
+                ShizukuDiagnostic.runKeyEventDiagnostic(requireContext())
+                launch(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "诊断完成，请点击“导出日志”查看详细结果", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        // 启动按键测试器
+        keyTesterButton.setOnClickListener {
+            val intent = Intent(requireContext(), KeyTesterActivity::class.java)
+            startActivity(intent)
+        }
 
         // 权限管理器入口卡片点击逻辑
         view.findViewById<MaterialCardView>(R.id.card_permission_manager).setOnClickListener {

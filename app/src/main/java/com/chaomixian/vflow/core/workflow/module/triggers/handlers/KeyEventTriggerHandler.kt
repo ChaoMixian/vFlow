@@ -325,15 +325,29 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
         val pidFilePath = "$cacheDir/$pidFileName"
 
+        // 增加日志文件定义
+        val logFile = "$cacheDir/vflow_shell.log"
+        val markerFile = "$cacheDir/vflow_logging_enabled.marker"
+
         return """
             #!/system/bin/sh
             DEVICE="$device"
             SERVICE_COMPONENT="$serviceComponent"
             PID_FILE="$pidFilePath"
+            LOG_FILE="$logFile"
+            MARKER_FILE="$markerFile"
+
+            # 日志函数
+            log_msg() {
+              if [ -f "${'$'}MARKER_FILE" ]; then
+                echo "${'$'}(date +"%Y-%m-%d %H:%M:%S") [Slider/${'$'}DEVICE] ${'$'}1" >> "${'$'}LOG_FILE"
+              fi
+            }
 
             if [ -f "${'$'}PID_FILE" ]; then
                 EXISTING_PID=`cat "${'$'}PID_FILE"`
                 if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
+                    log_msg "Listener already running with PID ${'$'}EXISTING_PID"
                     exit 0
                 else
                     rm -f "${'$'}PID_FILE"
@@ -341,15 +355,19 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             fi
 
             echo "$$" > "${'$'}PID_FILE"
-            trap 'rm -f "${'$'}PID_FILE"; exit' INT TERM EXIT
+            log_msg "Listener started with PID $$"
+            trap 'rm -f "${'$'}PID_FILE"; log_msg "Listener stopped"; exit' INT TERM EXIT
             
             CURRENT_RINGER_MODE=`settings get system ringer_mode`
+            log_msg "Initial ringer mode: ${'$'}CURRENT_RINGER_MODE"
             am start-service -n "${'$'}SERVICE_COMPONENT" -a ${KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es ringer_mode "${'$'}CURRENT_RINGER_MODE"
 
             getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
               if echo "${'$'}line" | grep -q "KEY_F3.*UP"; then
+                  log_msg "Detected slider movement event"
                   sleep 0.1
                   NEW_RINGER_MODE=`settings get system ringer_mode`
+                  log_msg "New ringer mode: ${'$'}NEW_RINGER_MODE"
                   am start-service -n "${'$'}SERVICE_COMPONENT" -a ${KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es ringer_mode "${'$'}NEW_RINGER_MODE"
               fi
             done
@@ -363,16 +381,30 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
         val pidFilePath = "$cacheDir/$pidFileName"
 
+        // 增加日志文件定义
+        val logFile = "$cacheDir/vflow_shell.log"
+        val markerFile = "$cacheDir/vflow_logging_enabled.marker"
+
         return """
             #!/system/bin/sh
             DEVICE="$device"
             GREP_PATTERN="$grepPattern"
             SERVICE_COMPONENT="$serviceComponent"
             PID_FILE="$pidFilePath"
+            LOG_FILE="$logFile"
+            MARKER_FILE="$markerFile"
+            
+            # 日志函数
+            log_msg() {
+              if [ -f "${'$'}MARKER_FILE" ]; then
+                echo "${'$'}(date +"%Y-%m-%d %H:%M:%S") [Key/${'$'}DEVICE] ${'$'}1" >> "${'$'}LOG_FILE"
+              fi
+            }
 
             if [ -f "${'$'}PID_FILE" ]; then
                 EXISTING_PID=`cat "${'$'}PID_FILE"`
                 if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
+                    log_msg "Listener already running with PID ${'$'}EXISTING_PID"
                     exit 0
                 else
                     rm -f "${'$'}PID_FILE"
@@ -380,22 +412,27 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             fi
 
             echo "$$" > "${'$'}PID_FILE"
-            trap 'rm -f "${'$'}PID_FILE"; exit' INT TERM EXIT
+            log_msg "Listener started with PID $$ monitoring: ${'$'}GREP_PATTERN"
+            trap 'rm -f "${'$'}PID_FILE"; log_msg "Listener stopped"; exit' INT TERM EXIT
 
             while true; do
               getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
                 if echo "${'$'}line" | grep -E -q "(${'$'}GREP_PATTERN)"; then
+                    log_msg "Event captured: ${'$'}line"
+                    
                     TIMESTAMP=`date +%s%3N`
                     EVENT_TYPE=`echo ${'$'}line | awk '{print ${'$'}NF}'`
                     KEY_CODE=`echo ${'$'}line | awk '{print ${'$'}2}'`
 
                     if [ "${'$'}EVENT_TYPE" = "DOWN" ]; then
                         DOWN_TIMESTAMP=${'$'}TIMESTAMP
+                        log_msg "Processing DOWN for ${'$'}KEY_CODE"
                         am start-service -n "${'$'}SERVICE_COMPONENT" -a ${KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}KEY_CODE" --es event_type "DOWN"
                     elif [ "${'$'}EVENT_TYPE" = "UP" ]; then
                         if [ -z "${'$'}DOWN_TIMESTAMP" ]; then continue; fi
                         PRESS_DURATION=$((TIMESTAMP - DOWN_TIMESTAMP))
                         DOWN_TIMESTAMP=""
+                        log_msg "Processing UP for ${'$'}KEY_CODE (duration: ${'$'}PRESS_DURATION ms)"
                         am start-service -n "${'$'}SERVICE_COMPONENT" -a ${KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}KEY_CODE" --es event_type "UP" --el duration ${'$'}PRESS_DURATION
                     fi
                 fi
