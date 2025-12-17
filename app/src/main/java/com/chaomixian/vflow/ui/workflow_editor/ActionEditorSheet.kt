@@ -356,21 +356,21 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
      * @param updatedValue 新的参数值。
      */
     private fun parameterUpdated(updatedId: String, updatedValue: Any?) {
-        // 1. 基于当前参数状态，应用刚刚发生变化的那个值
+        // 基于当前参数状态，应用刚刚发生变化的那个值
         val parametersBeforeModuleUpdate = currentParameters.toMutableMap()
         parametersBeforeModuleUpdate[updatedId] = updatedValue
 
-        // 2. 创建一个临时的ActionStep实例，用于传递给模块
+        // 创建一个临时的ActionStep实例，用于传递给模块
         val stepForUpdate = ActionStep(module.id, parametersBeforeModuleUpdate)
 
-        // 3. 调用模块的onParameterUpdated方法，获取模块处理后的全新参数集
+        // 调用模块的onParameterUpdated方法，获取模块处理后的全新参数集
         val newParametersFromServer = module.onParameterUpdated(stepForUpdate, updatedId, updatedValue)
 
-        // 4. 使用模块返回的参数集，完全更新编辑器内部的当前参数状态
+        // 使用模块返回的参数集，完全更新编辑器内部的当前参数状态
         currentParameters.clear()
         currentParameters.putAll(newParametersFromServer)
 
-        // 5. 使用新的参数状态，重建整个UI
+        // 使用新的参数状态，重建整个UI
         view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
     }
 

@@ -4,7 +4,9 @@ package com.chaomixian.vflow.permissions
 import android.Manifest
 import android.app.AlarmManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
@@ -15,9 +17,13 @@ import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.AccessibilityService
 import com.chaomixian.vflow.services.ShizukuManager
+import rikka.shizuku.Shizuku
+import java.io.DataOutputStream
+import androidx.core.net.toUri
 
 object PermissionManager {
 
+    // --- 权限定义 (保持不变) ---
     val ACCESSIBILITY = Permission(
         id = "vflow.permission.ACCESSIBILITY_SERVICE",
         name = "无障碍服务",
@@ -50,7 +56,7 @@ object PermissionManager {
 
     // 定义存储权限为一个权限组，根据系统版本动态决定请求内容
     val STORAGE = Permission(
-        id = "vflow.permission.STORAGE", // 使用一个自定义的、稳定的ID
+        id = "vflow.permission.STORAGE",
         name = "存储权限",
         description = "用于读取和保存图片、文件等数据。",
         type = PermissionType.RUNTIME,
@@ -67,7 +73,7 @@ object PermissionManager {
 
     // 明确短信权限是一个权限组
     val SMS = Permission(
-        id = Manifest.permission.RECEIVE_SMS, // 使用一个核心权限作为ID，但在请求时会处理整个组
+        id = Manifest.permission.RECEIVE_SMS,
         name = "短信权限",
         description = "用于接收和读取短信，以触发相应的工作流。此权限组包含接收、读取短信。",
         type = PermissionType.RUNTIME,
@@ -122,78 +128,155 @@ object PermissionManager {
         description = "用于“定时触发”功能，确保工作流可以在精确的时间被唤醒和执行。",
         type = PermissionType.SPECIAL
     )
+    val ROOT = Permission(
+        id = "vflow.permission.ROOT",
+        name = "Root 权限",
+        description = "允许应用通过超级用户权限执行底层系统命令。",
+        type = PermissionType.SPECIAL
+    )
 
+    // 所有已知特殊权限的列表，用于 UI 展示和快速查找
+    val allKnownPermissions = listOf(
+        ACCESSIBILITY, NOTIFICATIONS, OVERLAY, NOTIFICATION_LISTENER_SERVICE,
+        STORAGE, SMS, BLUETOOTH, WRITE_SETTINGS, LOCATION, SHIZUKU,
+        IGNORE_BATTERY_OPTIMIZATIONS, EXACT_ALARM, ROOT
+    )
+
+
+    /** 定义检查策略接口 */
+    private interface PermissionStrategy {
+        fun isGranted(context: Context, permission: Permission): Boolean
+        fun createRequestIntent(context: Context, permission: Permission): Intent?
+    }
+
+    /** 标准运行时权限策略 */
+    private val runtimeStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean {
+            // 特殊处理蓝牙
+            if (permission.id == Manifest.permission.BLUETOOTH_CONNECT && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                return true
+            }
+            // 特殊处理通知 (Android 13+)
+            if (permission.id == Manifest.permission.POST_NOTIFICATIONS && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                return true
+            }
+
+            val permsToCheck = permission.runtimePermissions.ifEmpty {
+                listOf(permission.id)
+            }
+            return permsToCheck.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+
+        override fun createRequestIntent(context: Context, permission: Permission): Intent? = null // 运行时权限不通过Intent请求
+    }
+
+    /** 无障碍服务策略 */
+    private val accessibilityStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean =
+            isAccessibilityServiceEnabledInSettings(context)
+        override fun createRequestIntent(context: Context, permission: Permission) =
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+    }
+
+    /** 悬浮窗策略 */
+    private val overlayStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean =
+            Settings.canDrawOverlays(context)
+
+        override fun createRequestIntent(context: Context, permission: Permission) =
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                "package:${context.packageName}".toUri())
+    }
+
+    /** 修改系统设置策略 */
+    private val writeSettingsStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean =
+            Settings.System.canWrite(context)
+
+        override fun createRequestIntent(context: Context, permission: Permission) =
+            Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, "package:${context.packageName}".toUri())
+    }
+
+    /** 电池优化策略 */
+    private val batteryStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+                pm.isIgnoringBatteryOptimizations(context.packageName)
+            } else true
+        }
+        override fun createRequestIntent(context: Context, permission: Permission) =
+            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                "package:${context.packageName}".toUri())
+    }
+
+    /** 通知使用权策略 */
+    private val notificationListenerStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean {
+            val enabledListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+            val componentName = "${context.packageName}/com.chaomixian.vflow.services.VFlowNotificationListenerService"
+            return enabledListeners?.contains(componentName) == true
+        }
+        override fun createRequestIntent(context: Context, permission: Permission) = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+    }
+
+    /** 精确闹钟策略 */
+    private val exactAlarmStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms() else true
+        override fun createRequestIntent(context: Context, permission: Permission) =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM) else null
+    }
+
+    /** Shizuku 策略 */
+    private val shizukuStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean = ShizukuManager.isShizukuActive(context)
+        override fun createRequestIntent(context: Context, permission: Permission): Intent? = null // Shizuku 有专门的 API 请求
+    }
+
+    /** Root 策略 */
+    private val rootStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean = isRootGranted()
+        override fun createRequestIntent(context: Context, permission: Permission): Intent? = null // Root 通常是执行时触发 su 请求
+    }
+
+    // 策略映射表
+    private val strategies = mapOf(
+        ACCESSIBILITY.id to accessibilityStrategy,
+        OVERLAY.id to overlayStrategy,
+        WRITE_SETTINGS.id to writeSettingsStrategy,
+        IGNORE_BATTERY_OPTIMIZATIONS.id to batteryStrategy,
+        NOTIFICATION_LISTENER_SERVICE.id to notificationListenerStrategy,
+        EXACT_ALARM.id to exactAlarmStrategy,
+        SHIZUKU.id to shizukuStrategy,
+        ROOT.id to rootStrategy
+    )
 
     /**
      * 获取单个权限的当前状态。
+     * 这里的逻辑变得非常清晰：如果是已知特殊权限，查表；否则默认为运行时权限。
      */
     fun isGranted(context: Context, permission: Permission): Boolean {
-        return when (permission.id) {
-            ACCESSIBILITY.id -> isAccessibilityServiceEnabledInSettings(context)
-            NOTIFICATION_LISTENER_SERVICE.id -> isNotificationListenerEnabled(context)
-            // 检查悬浮窗权限
-            OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                Settings.canDrawOverlays(context)
-            } else {
-                true // 6.0以下版本默认授予
-            }
-            WRITE_SETTINGS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                Settings.System.canWrite(context)
-            } else {
-                true // 6.0以下版本默认授予
-            }
-            // 检查电池优化
-            IGNORE_BATTERY_OPTIMIZATIONS.id -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-                    pm.isIgnoringBatteryOptimizations(context.packageName)
-                } else {
-                    true // 6.0以下版本无此限制
-                }
-            }
-            // 检查精确闹钟权限
-            EXACT_ALARM.id -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                    alarmManager.canScheduleExactAlarms()
-                } else {
-                    true // Android 12 以下版本默认授予
-                }
-            }
-            NOTIFICATIONS.id -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    NotificationManagerCompat.from(context).areNotificationsEnabled()
-                } else {
-                    true
-                }
-            }
-            // 统一处理存储和短信权限组
-            STORAGE.id, SMS.id -> {
-                permission.runtimePermissions.all { perm ->
-                    ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
-                }
-            }
-            BLUETOOTH.id -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                } else {
-                    true // 12以下版本不需要此运行时权限
-                }
-            }
-            // Shizuku 权限检查逻辑
-            SHIZUKU.id -> ShizukuManager.isShizukuActive(context)
-            else -> {
-                ContextCompat.checkSelfPermission(context, permission.id) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            }
-        }
+        val strategy = strategies[permission.id] ?: runtimeStrategy
+        return strategy.isGranted(context, permission)
     }
 
     /**
-     * 获取一个工作流所需但尚未授予的所有权限。
+     * 获取特殊权限的请求 Intent（供 PermissionActivity 使用）。
      */
+    fun getSpecialPermissionIntent(context: Context, permission: Permission): Intent? {
+        val strategy = strategies[permission.id]
+        return strategy?.createRequestIntent(context, permission)
+    }
+
+
     fun getMissingPermissions(context: Context, workflow: Workflow): List<Permission> {
         val requiredPermissions = workflow.steps
-            .mapNotNull { ModuleRegistry.getModule(it.moduleId)?.requiredPermissions }
+            .mapNotNull {
+                ModuleRegistry.getModule(it.moduleId)?.getRequiredPermissions(it)
+            }
             .flatten()
             .distinct()
 
@@ -206,7 +289,7 @@ object PermissionManager {
     fun getAllRegisteredPermissions(): List<Permission> {
         // 将电池优化权限也加入到权限管理器中
         return (ModuleRegistry.getAllModules()
-            .map { it.requiredPermissions }
+            .map { it.getRequiredPermissions(null) }
             .flatten() + IGNORE_BATTERY_OPTIMIZATIONS)
             .distinct()
     }
@@ -231,12 +314,16 @@ object PermissionManager {
         return false
     }
 
-    /**
-     * 检查我们的通知监听服务是否在系统设置中被启用。
-     */
-    private fun isNotificationListenerEnabled(context: Context): Boolean {
-        val enabledListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
-        val componentName = "${context.packageName}/com.chaomixian.vflow.services.VFlowNotificationListenerService"
-        return enabledListeners?.contains(componentName) == true
+    private fun isRootGranted(): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec("su")
+            val os = DataOutputStream(process.outputStream)
+            os.writeBytes("exit\n")
+            os.flush()
+            val exitValue = process.waitFor()
+            exitValue == 0
+        } catch (e: Exception) {
+            false
+        }
     }
 }

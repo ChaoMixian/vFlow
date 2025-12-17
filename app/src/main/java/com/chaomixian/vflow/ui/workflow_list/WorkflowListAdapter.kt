@@ -37,6 +37,7 @@ import androidx.core.view.isNotEmpty
  * @param onDuplicate 点击复制菜单项时的回调。
  * @param onExport 点击导出菜单项时的回调。
  * @param onExecute 点击执行按钮时的回调。
+ * @param onAddShortcut 点击添加到桌面菜单项时的回调 (新增)。
  * @param itemTouchHelper 用于启动拖拽的 ItemTouchHelper 实例。
  */
 class WorkflowListAdapter(
@@ -47,6 +48,7 @@ class WorkflowListAdapter(
     private val onDuplicate: (Workflow) -> Unit,
     private val onExport: (Workflow) -> Unit,
     private val onExecute: (Workflow) -> Unit,
+    private val onAddShortcut: (Workflow) -> Unit,
     private val itemTouchHelper: ItemTouchHelper
 ) : RecyclerView.Adapter<WorkflowListAdapter.WorkflowViewHolder>() {
 
@@ -121,8 +123,15 @@ class WorkflowListAdapter(
         holder.moreOptionsButton.setOnClickListener { view ->
             val popup = PopupMenu(view.context, view)
             popup.menuInflater.inflate(R.menu.workflow_item_menu, popup.menu)
+
+            // 只有手动触发的工作流才显示“添加到主屏幕”选项
+            // 自动触发的工作流（如收到短信）通常不需要桌面快捷方式
+            val addShortcutItem = popup.menu.findItem(R.id.menu_add_shortcut)
+            addShortcutItem.isVisible = isManualTrigger
+
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
+                    R.id.menu_add_shortcut -> { onAddShortcut(workflow); true }
                     R.id.menu_delete -> { onDelete(workflow); true }
                     R.id.menu_duplicate -> { onDuplicate(workflow); true }
                     R.id.menu_export_single -> { onExport(workflow); true }

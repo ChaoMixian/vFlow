@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.ui.settings
 
 import android.content.BroadcastReceiver
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -11,6 +12,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.services.ShizukuManager
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +65,7 @@ class KeyTesterActivity : AppCompatActivity() {
 
         // 注册广播接收器
         val filter = IntentFilter(ACTION_KEY_TEST_EVENT)
+        // 注意：在高版本 Android 上，必须使用 RECEIVER_EXPORTED 才能接收来自 Shell 的广播
         ContextCompat.registerReceiver(this, keyEventReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
 
         startKeyListening()
@@ -87,39 +90,54 @@ class KeyTesterActivity : AppCompatActivity() {
     }
 
     private fun startKeyListening() {
+        // 虽然日志显示未授权，但命令能执行，所以我们尝试继续运行
+        // 只有当 ShizukuManager 彻底报错时才停止
         if (!ShizukuManager.isShizukuActive(this)) {
             statusTextView.text = "Shizuku 未激活，无法监听按键。"
             return
         }
 
         statusTextView.text = "正在初始化监听脚本..."
-        logTextView.text = "请按下物理按键...\n(将显示 getevent -l 原始输出)\n----------------------------------------\n"
+        logTextView.text = "请按下物理按键...\n(显示 getevent -l 原始输出)\n----------------------------------------\n"
 
         listenerJob = lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // 创建临时的监听脚本
-                // 仅过滤保留 EV_KEY 以避免触摸屏数据刷屏，但保留整行原始输出
+                // 获取当前包名
+                val packageName = packageName
+
+                // 创建监听脚本
                 val scriptContent = """
                     #!/system/bin/sh
+                    PACKAGE_NAME="$packageName"
+                    ACTION="$ACTION_KEY_TEST_EVENT"
+                    
                     getevent -l | grep --line-buffered "EV_KEY" | while read line; do
-                        am broadcast -a $ACTION_KEY_TEST_EVENT --es data "${'$'}line"
+                        am broadcast -a "${'$'}ACTION" -p "${'$'}PACKAGE_NAME" --es data "${'$'}line"
                     done
                 """.trimIndent()
 
+                DebugLogger.d(TAG, "KeyTesterActivity 缓存文件夹：$cacheDir 脚本：$scriptFileName ")
                 val scriptFile = File(cacheDir, scriptFileName)
                 scriptFile.writeText(scriptContent)
                 scriptFile.setExecutable(true)
 
                 withContext(Dispatchers.Main) {
-                    statusTextView.text = "监听中... (过滤: EV_KEY)"
+                    statusTextView.text = "监听中... "
                 }
 
+                DebugLogger.d(TAG, "KeyTesterActivity 开始执行脚本: ${scriptFile.absolutePath}")
+                withContext(Dispatchers.Main) {
+                    statusTextView.text = "监听中... \n开始执行脚本：${scriptFile.absolutePath} \n 脚本内容：\n${scriptFile.readText()}\n"
+                }
                 // 执行脚本 (会阻塞，直到被 kill)
                 ShizukuManager.execShellCommand(this@KeyTesterActivity, "sh ${scriptFile.absolutePath}")
 
             } catch (e: Exception) {
+                DebugLogger.d(TAG, "KeyTesterActivity 监听出错: ${e.message}")
                 withContext(Dispatchers.Main) {
                     statusTextView.text = "监听出错: ${e.message}"
+                    // 如果出错，把错误信息也打印到日志区方便排查
+                    displayRawData("Error: ${e.message}")
                 }
             }
         }
@@ -129,8 +147,13 @@ class KeyTesterActivity : AppCompatActivity() {
         listenerJob?.cancel()
         // 强制杀掉所有相关的 getevent 进程，防止后台残留
         lifecycleScope.launch(Dispatchers.IO) {
-            ShizukuManager.execShellCommand(this@KeyTesterActivity, "pkill -f \"getevent -l\"")
-            ShizukuManager.execShellCommand(this@KeyTesterActivity, "pkill -f $scriptFileName")
+            try {
+                DebugLogger.d(TAG, "KeyTesterActivity 准备杀死残留进程...")
+                ShizukuManager.execShellCommand(this@KeyTesterActivity, "pkill -f \"getevent -l\"")
+                ShizukuManager.execShellCommand(this@KeyTesterActivity, "pkill -f $scriptFileName")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -141,7 +164,7 @@ class KeyTesterActivity : AppCompatActivity() {
         val logLine = "[$timestamp] $rawData\n"
         logTextView.text = logLine + logTextView.text
 
-        // 如果日志太长，为了性能可以截断（可选）
+        // 避免日志过长影响性能
         if (logTextView.text.length > 10000) {
             logTextView.text = logTextView.text.substring(0, 10000)
         }

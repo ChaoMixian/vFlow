@@ -6,9 +6,6 @@ import androidx.appcompat.app.AppCompatActivity
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 
-/**
- * 一个透明的 Activity，用于接收并执行来自桌面快捷方式的请求。
- */
 class ShortcutExecutorActivity : AppCompatActivity() {
 
     companion object {
@@ -21,9 +18,11 @@ class ShortcutExecutorActivity : AppCompatActivity() {
 
         if (intent?.action == ACTION_EXECUTE_WORKFLOW) {
             val workflowId = intent.getStringExtra(EXTRA_WORKFLOW_ID)
+
             if (workflowId != null) {
                 val workflowManager = WorkflowManager(applicationContext)
                 val workflow = workflowManager.getWorkflow(workflowId)
+
                 if (workflow != null) {
                     // 显示提示并执行工作流
                     Toast.makeText(
@@ -33,12 +32,15 @@ class ShortcutExecutorActivity : AppCompatActivity() {
                     ).show()
                     WorkflowExecutor.execute(workflow, applicationContext)
                 } else {
-                    Toast.makeText(applicationContext, "错误：找不到要执行的工作流", Toast.LENGTH_SHORT).show()
+                    // ID 存在但找不到对应工作流（可能已被删除，或者外部传入了错误的ID）
+                    Toast.makeText(applicationContext, "错误：找不到指定ID的工作流\nID: $workflowId", Toast.LENGTH_LONG).show()
                 }
+            } else {
+                // Intent 中没有 workflow_id 参数
+                Toast.makeText(applicationContext, "错误：调用参数缺失 (workflow_id)", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // 无论结果如何，都立即关闭这个透明的 Activity
         finish()
     }
 }

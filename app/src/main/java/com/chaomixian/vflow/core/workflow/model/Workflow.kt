@@ -17,6 +17,6 @@ data class Workflow(
     val triggerConfig: @RawValue Map<String, Any?>? = null,
     // 工作流是否被收藏
     var isFavorite: Boolean = false,
-    // 新增字段：用于记录在权限丢失前，此工作流是否由用户设置为启用
+    // 记录在权限丢失前，此工作流是否由用户设置为启用
     var wasEnabledBeforePermissionsLost: Boolean = false
 ) : Parcelable

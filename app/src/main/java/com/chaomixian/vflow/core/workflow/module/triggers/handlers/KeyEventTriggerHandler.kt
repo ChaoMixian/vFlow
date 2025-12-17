@@ -64,6 +64,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         super.stop(context)
         keyEventJob?.cancel()
         triggerScope.launch {
+            DebugLogger.d(TAG, "KeyEventTriggerHandler 正在清理资源。")
             ShizukuManager.execShellCommand(context, "killall getevent")
             context.cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }?.forEach { it.delete() }
         }
@@ -137,11 +138,13 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         keyEventJob = triggerScope.launch {
             // 1. 清理旧的监听进程
             try {
+                DebugLogger.d(TAG, "KeyEventTriggerHandler 结束进程并清理残留中...")
                 ShizukuManager.execShellCommand(context, "killall getevent")
                 val pidFiles = context.cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }
                 pidFiles?.forEach { pidFile ->
                     try {
                         val pid = pidFile.readText().trim()
+                        DebugLogger.d(TAG, "KeyEventTriggerHandler 正在结束进程 $pid...")
                         if (pid.isNotEmpty()) ShizukuManager.execShellCommand(context, "kill $pid")
                         pidFile.delete()
                     } catch (e: Exception) {
@@ -153,7 +156,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
                 DebugLogger.e(TAG, "停止旧监听进程时出错: ", e)
             }
 
-            // 2. [核心修复] 使用新的辅助函数来构建 activeTriggers 列表
+            // 2. 使用新的辅助函数来构建 activeTriggers 列表
             activeTriggers.clear()
             val resolvedTriggers = listeningWorkflows.mapNotNull { resolveTriggerFromWorkflow(it) }
             activeTriggers.addAll(resolvedTriggers)
@@ -166,6 +169,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             // 3. 根据设备路径对触发器分组，并启动新的监听脚本
             val triggersByDevice = activeTriggers.groupBy { it.devicePath }
             val cacheDirPath = context.cacheDir.absolutePath
+            DebugLogger.d(TAG, "KeyEventTriggerHandler 设备路径：$triggersByDevice 缓存文件夹：$cacheDirPath")
 
             triggersByDevice.forEach { (path, triggers) ->
                 val isSlider = triggers.any { it.isSlider }
@@ -179,12 +183,15 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
                     launch {
                         try {
                             val scriptFile = File(context.cacheDir, "key_listener_${path.replace('/', '_')}.sh")
+                            DebugLogger.d(TAG, "KeyEventTriggerHandler 准备创建监听脚本：${scriptFile.absolutePath} ...")
                             scriptFile.writeText(script)
                             scriptFile.setExecutable(true)
                             DebugLogger.d(TAG, "正在为设备 $path 启动新的监听脚本...")
                             ShizukuManager.execShellCommand(context, "sh ${scriptFile.absolutePath}")
                         } catch (e: Exception) {
-                            if (e !is CancellationException) {
+                            if (e is CancellationException) {
+                                DebugLogger.e(TAG, "设备 $path 监听脚本的执行被取消。", e)
+                            } else {
                                 DebugLogger.e(TAG, "执行设备 $path 的监听脚本时出错。", e)
                             }
                         }

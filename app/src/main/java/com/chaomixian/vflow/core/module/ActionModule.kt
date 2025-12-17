@@ -68,10 +68,19 @@ interface ActionModule {
     val uiProvider: ModuleUIProvider?
 
     /**
+     * [即将移除]
      * 声明模块运行所需的Android权限列表。
      * 执行引擎会在执行前检查并请求这些权限。
      */
     val requiredPermissions: List<Permission>
+
+    /**
+     * 声明模块运行所需的Android权限列表。
+     * 执行引擎会在执行前检查并请求这些权限。
+     * step 为 null 时（如在模块管理器中）
+     * 应返回该模块可能需要的所有权限
+     */
+    fun getRequiredPermissions(step: ActionStep? = null): List<Permission>
 
     /**
      * 验证指定动作步骤的参数是否有效。

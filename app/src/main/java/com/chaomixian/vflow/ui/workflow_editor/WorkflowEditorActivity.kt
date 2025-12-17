@@ -775,7 +775,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 }
 
                 try {
-                    // 1. 找到要移动的完整积木块范围
+                    // 找到要移动的完整积木块范围
                     val (blockStart, blockEnd) = findBlockRangeInList(originalList, fromPos)
 
                     // 验证范围有效性
@@ -783,12 +783,12 @@ class WorkflowEditorActivity : BaseActivity() {
                         return originalList
                     }
 
-                    // 2. 如果目标在块内部，返回原列表
+                    // 如果目标在块内部，返回原列表
                     if (toPos in blockStart..blockEnd) {
                         return originalList
                     }
 
-                    // 3. 使用索引范围而不是对象引用来移除块（避免重复对象问题）
+                    // 使用索引范围而不是对象引用来移除块（避免重复对象问题）
                     val tempList = originalList.toMutableList()
                     val blockToMove = tempList.subList(blockStart, blockEnd + 1).toList() // 创建副本
 
@@ -797,14 +797,14 @@ class WorkflowEditorActivity : BaseActivity() {
                         tempList.removeAt(i)
                     }
 
-                    // 4. 重新计算目标位置（因为删除操作可能改变了索引）
+                    // 重新计算目标位置（因为删除操作可能改变了索引）
                     val adjustedTargetPos = when {
                         toPos > blockEnd -> toPos - (blockEnd - blockStart + 1) // 向下移动，减去删除的块大小
                         toPos < blockStart -> toPos // 向上移动，位置不变
                         else -> return originalList // 理论上不会到达这里
                     }
 
-                    // 5. 计算最终插入位置
+                    // 计算最终插入位置
                     val insertPos = if (toPos > blockEnd) {
                         // 向下移动：插入到调整后目标位置的后面
                         (adjustedTargetPos + 1).coerceIn(1, tempList.size)
@@ -813,7 +813,7 @@ class WorkflowEditorActivity : BaseActivity() {
                         adjustedTargetPos.coerceIn(1, tempList.size)
                     }
 
-                    // 6. 插入积木块
+                    // 插入积木块
                     tempList.addAll(insertPos, blockToMove)
 
                     return tempList
@@ -826,7 +826,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
 
             /**
-             * 计算正确的插入位置
+             * 计算正确的插入位置（已废除，暂时保留）
              */
             private fun calculateInsertionPosition(
                 originalList: List<ActionStep>,
@@ -1109,7 +1109,7 @@ class WorkflowEditorActivity : BaseActivity() {
             )
             workflowManager.saveWorkflow(workflowToSave)
 
-            // [如果是第一次保存新工作流，则更新当前Activity的状态
+            // 如果是第一次保存新工作流，则更新当前Activity的状态
             if (isNewWorkflow) {
                 currentWorkflow = workflowToSave
                 updateExecuteButton(WorkflowExecutor.isRunning(workflowToSave.id))

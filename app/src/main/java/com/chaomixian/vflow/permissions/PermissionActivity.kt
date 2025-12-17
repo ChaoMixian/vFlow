@@ -21,6 +21,7 @@ import com.google.android.material.appbar.AppBarLayout
 import android.widget.Button
 import android.widget.TextView
 import rikka.shizuku.Shizuku
+import androidx.core.net.toUri
 
 // 继承 BaseActivity 以应用动态主题
 class PermissionActivity : BaseActivity() {
@@ -127,32 +128,12 @@ class PermissionActivity : BaseActivity() {
                 requestMultiplePermissionsLauncher.launch(permissionsToRequest)
             }
             PermissionType.SPECIAL -> {
-                // 特殊权限需要跳转到系统设置页面
                 if (permission.id == PermissionManager.SHIZUKU.id) {
                     Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
                     return
                 }
-
-                val intent = when(permission.id) {
-                    PermissionManager.ACCESSIBILITY.id -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    PermissionManager.OVERLAY.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-                    } else null
-                    PermissionManager.WRITE_SETTINGS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))
-                    } else null
-                    // 添加对电池优化权限的处理
-                    PermissionManager.IGNORE_BATTERY_OPTIMIZATIONS.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
-                    } else null
-                    // 添加对精确闹钟权限的处理
-                    PermissionManager.EXACT_ALARM.id -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                    } else null
-                    // 添加对通知使用权的处理
-                    PermissionManager.NOTIFICATION_LISTENER_SERVICE.id -> Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                    else -> null
-                }
+                // 使用 PermissionManager 提供的统一接口获取 Intent
+                val intent = PermissionManager.getSpecialPermissionIntent(this, permission)
                 intent?.let { appSettingsLauncher.launch(it) }
             }
         }

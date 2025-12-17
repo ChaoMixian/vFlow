@@ -115,6 +115,14 @@ object ShizukuDiagnostic {
             val idInfo = ShizukuManager.execShellCommand(context, "id")
             DebugLogger.d(TAG, "4. Shell 用户身份: $idInfo")
 
+            // 5. 检查当前 cache 目录
+            val cacheDir = ShizukuManager.execShellCommand(context, "ls ${context.cacheDir.absolutePath}")
+            DebugLogger.d(TAG, "5. Cache 目录: $cacheDir")
+
+            // 6. 检查脚本文件内容
+            val script = ShizukuManager.execShellCommand(context, "cat ${context.cacheDir.absolutePath}/key*")
+            DebugLogger.d(TAG, "6. 按键监听脚本: $script")
+
         } catch (e: Exception) {
             DebugLogger.e(TAG, "按键触发器诊断过程中发生异常", e)
         }

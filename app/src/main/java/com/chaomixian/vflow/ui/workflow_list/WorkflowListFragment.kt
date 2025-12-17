@@ -205,7 +205,7 @@ class WorkflowListFragment : Fragment() {
         allWorkflows.forEach { workflow ->
             // 如果工作流之前因权限丢失而被禁用，并且现在是禁用状态...
             if (workflow.wasEnabledBeforePermissionsLost && !workflow.isEnabled) {
-                // ...检查现在权限是否已授予。
+                // 检查现在权限是否已授予。
                 val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
                 if (missingPermissions.isEmpty()) {
                     DebugLogger.i("WorkflowListFragment", "工作流 '${workflow.name}' 的权限已授予，正在自动重新启用。")
@@ -250,6 +250,9 @@ class WorkflowListFragment : Fragment() {
                     } else {
                         executeWorkflow(workflow)
                     }
+                },onAddShortcut = { workflow ->
+                    // 处理添加快捷方式请求
+                    ShortcutHelper.requestPinnedShortcut(requireContext(), workflow)
                 },
                 itemTouchHelper
             )

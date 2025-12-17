@@ -18,6 +18,12 @@
         tools:layout="@layout/fragment_workflows" />
 
     <fragment
+        android:id="@+id/navigation_modules"
+        android:name="com.chaomixian.vflow.ui.main.fragments.ModuleManagementFragment"
+        android:label="模块管理"
+        tools:layout="@layout/fragment_module_management" />
+
+    <fragment
         android:id="@+id/navigation_settings"
         android:name="com.chaomixian.vflow.ui.main.fragments.SettingsFragment"
         android:label="@string/title_settings"

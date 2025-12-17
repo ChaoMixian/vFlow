@@ -76,7 +76,7 @@ object DebugLogger {
                 if (shellFile.exists()) {
                     "\n\n========== Shell Script Logs ==========\n" + shellFile.readText()
                 } else {
-                    ""
+                    "\n\n[Warning: can not find shell logs\n"
                 }
             } ?: ""
         } catch (e: Exception) {

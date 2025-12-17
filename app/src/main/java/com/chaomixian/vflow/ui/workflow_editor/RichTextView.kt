@@ -27,7 +27,7 @@ class RichTextView @JvmOverloads constructor(
 
     /**
      * 将包含变量引用的纯文本转换为可显示的 Spannable。
-     * [已修改] 不再添加空格。
+     * 不再添加空格。
      */
     fun setRichText(rawText: String, getPillDrawable: (String) -> Drawable) {
         val spannable = SpannableStringBuilder()
@@ -40,7 +40,7 @@ class RichTextView @JvmOverloads constructor(
             val variableRef = matcher.group(1)
             if (variableRef != null) {
                 val drawable = getPillDrawable(variableRef)
-                // [修改] 移除前置空格
+                // 移除前置空格
                 // spannable.append(" ")
                 val start = spannable.length
                 spannable.append(variableRef)
@@ -61,7 +61,7 @@ class RichTextView @JvmOverloads constructor(
 
     /**
      * 将当前编辑器中的 Spannable 内容转换回包含变量引用的纯文本字符串。
-     * [已修改] 仅移除零宽字符。
+     * 仅移除零宽字符。
      */
     fun getRawText(): String {
         // 移除所有用于光标定位的零宽字符
@@ -71,7 +71,7 @@ class RichTextView @JvmOverloads constructor(
 
     /**
      * 在当前光标位置插入一个变量“药丸”。
-     * [已修改] 不再添加空格。
+     * 不再添加空格。
      */
     fun insertVariablePill(variableReference: String, drawable: Drawable) {
         val start = selectionStart.coerceAtLeast(0)
@@ -80,7 +80,7 @@ class RichTextView @JvmOverloads constructor(
         val spannable = text as SpannableStringBuilder
         val span = CenterAlignedImageSpan(drawable)
 
-        // [修改] 插入内容仅包含变量引用和零宽字符
+        // 插入内容仅包含变量引用和零宽字符
         val textToInsert = "$variableReference\u200B"
 
         spannable.replace(start, end, textToInsert)

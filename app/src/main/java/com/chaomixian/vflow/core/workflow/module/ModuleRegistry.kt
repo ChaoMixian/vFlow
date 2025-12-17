@@ -1,5 +1,7 @@
 package com.chaomixian.vflow.core.module
 
+import android.content.ContentValues.TAG
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.module.data.*
 import com.chaomixian.vflow.core.workflow.module.file.*
 import com.chaomixian.vflow.core.workflow.module.interaction.*
@@ -13,10 +15,11 @@ import com.chaomixian.vflow.core.workflow.module.snippet.*
 
 object ModuleRegistry {
     private val modules = mutableMapOf<String, ActionModule>()
+    private var isCoreInitialized = false // 这里的Core是指内建额度模块
 
     fun register(module: ActionModule) {
         if (modules.containsKey(module.id)) {
-            println("警告: 模块ID '${module.id}' 被重复注册。")
+            DebugLogger.w(TAG,"警告: 模块ID '${module.id}' 被重复注册。")
         }
         modules[module.id] = module
     }
@@ -46,6 +49,9 @@ object ModuleRegistry {
     }
 
     fun initialize() {
+        // 如果核心模块已经注册过，就不再执行 modules.clear()，防止误删用户模块
+        if (isCoreInitialized) return
+
         modules.clear()
 
         // 触发器
@@ -128,5 +134,7 @@ object ModuleRegistry {
 
         // Snippet 模板
         register(FindTextUntilModule())
+
+        isCoreInitialized = true
     }
 }

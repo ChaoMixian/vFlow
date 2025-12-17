@@ -1,11 +1,11 @@
+// 文件：BaseModule.kt
+// 描述：为 ActionModule 接口提供一个便捷的抽象基类。
+//      它为许多方法提供了默认实现，简化了具体模块的开发。
+
 package com.chaomixian.vflow.core.module
 
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
-
-// 文件：BaseModule.kt
-// 描述：为 ActionModule 接口提供一个便捷的抽象基类。
-//      它为许多方法提供了默认实现，简化了具体模块的开发。
 
 /**
  * ActionModule 接口的标准抽象基类。
@@ -14,8 +14,13 @@ import com.chaomixian.vflow.permissions.Permission
 abstract class BaseModule : ActionModule {
 
     // 模块所需的权限列表。默认实现为空列表，表示不需要任何特殊权限。
-    override val requiredPermissions: List<Permission>
-        get() = emptyList() // 默认模块不需要特定权限
+    // 作为子类方便覆盖的属性
+    override val requiredPermissions: List<Permission> = emptyList()
+
+    // 默认实现直接返回上面的静态属性，保持兼容性
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return requiredPermissions
+    }
 
     // 模块的积木块行为。默认实现为 BlockType.NONE，表示不是一个积木块的开始或结束。
     override val blockBehavior: BlockBehavior

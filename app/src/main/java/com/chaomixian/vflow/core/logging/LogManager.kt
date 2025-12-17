@@ -77,7 +77,7 @@ object LogManager {
         return if (json != null) {
             val type = object : TypeToken<List<LogEntry>>() {}.type
             try {
-                // [关键修复] 在反序列化后，过滤掉任何可能导致崩溃的不完整条目
+                // 在反序列化后，过滤掉任何可能导致崩溃的不完整条目
                 val logs: List<LogEntry?>? = gson.fromJson(json, type)
                 logs?.filterNotNull()?.filter {
                     // 确保所有必要的字段都不是 null
