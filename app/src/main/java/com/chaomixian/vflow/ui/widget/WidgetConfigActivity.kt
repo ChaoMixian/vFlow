@@ -31,7 +31,7 @@ class WidgetConfigActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_widget_config)
 
-        // 1. 获取 Widget ID
+        // 获取 Widget ID
         val extras = intent.extras
         if (extras != null) {
             appWidgetId = extras.getInt(

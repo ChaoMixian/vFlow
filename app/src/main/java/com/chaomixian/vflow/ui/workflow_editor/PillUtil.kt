@@ -157,6 +157,7 @@ object PillUtil {
         "网络" -> R.color.category_network
         "应用与系统" -> R.color.category_system
         "Shizuku" -> R.color.category_shizuku
+        "用户模块" -> R.color.category_user_module
         else -> com.google.android.material.R.color.material_dynamic_neutral30
     }
 }

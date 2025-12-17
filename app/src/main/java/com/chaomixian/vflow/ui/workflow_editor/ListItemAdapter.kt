@@ -30,7 +30,7 @@ class ListItemAdapter(
     }
 
     /**
-     * [新增] 添加一个公共方法来获取适配器内部的数据列表。
+     * 获取适配器内部的数据列表。
      * @return 当前所有列表项的只读列表。
      */
     fun getItems(): List<String> {

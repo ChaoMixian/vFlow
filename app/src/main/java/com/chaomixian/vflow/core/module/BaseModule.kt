@@ -1,11 +1,11 @@
+// 文件：BaseModule.kt
+// 描述：为 ActionModule 接口提供一个便捷的抽象基类。
+//      它为许多方法提供了默认实现，简化了具体模块的开发。
+
 package com.chaomixian.vflow.core.module
 
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
-
-// 文件：BaseModule.kt
-// 描述：为 ActionModule 接口提供一个便捷的抽象基类。
-//      它为许多方法提供了默认实现，简化了具体模块的开发。
 
 /**
  * ActionModule 接口的标准抽象基类。

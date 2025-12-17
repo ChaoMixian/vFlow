@@ -16,6 +16,7 @@
     <color name="category_system">#03A9F4</color>
     <color name="category_network">#E75EA9</color>
     <color name="category_shizuku">#3F4DAB</color>
+    <color name="category_user_module">#A8E066</color>
     <color name="variable_pill_color">#93B1CF</color>
     <color name="static_pill_color">#687E89</color>
 

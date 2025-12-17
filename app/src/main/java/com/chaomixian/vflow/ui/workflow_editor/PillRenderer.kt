@@ -154,7 +154,7 @@ object PillRenderer {
     class RoundedBackgroundSpan(
         context: Context,
         private val backgroundColor: Int,
-        isCompact: Boolean = false // 新增参数
+        isCompact: Boolean = false
     ) : ReplacementSpan() {
         private val textColor: Int = Color.WHITE
         private val cornerRadius: Float = 25f

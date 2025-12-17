@@ -20,6 +20,7 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
 import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.ITriggerHandler
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.KeyEventTriggerHandler
@@ -60,7 +61,8 @@ class TriggerService : Service() {
         // 这可以修复在后台被杀后触发工作流导致的 UninitializedPropertyAccessException 崩溃。
         DebugLogger.initialize(applicationContext) // 确保服务独立运行时也能初始化
         ModuleRegistry.initialize()
-        TriggerHandlerRegistry.initialize() // [新增] 确保服务独立运行时也能初始化注册表
+        ModuleManager.loadModules(applicationContext) // 注册用户模块
+        TriggerHandlerRegistry.initialize() // 确保服务独立运行时也能初始化注册表
         ExecutionNotificationManager.initialize(this)
         LogManager.initialize(applicationContext)
         ExecutionLogger.initialize(applicationContext, serviceScope) // 使用服务的协程作用域
@@ -72,7 +74,7 @@ class TriggerService : Service() {
         // 首次启动时，加载所有活动的触发器
         loadAllActiveTriggers()
 
-        // [新增] 在服务创建时（如开机后）检查并应用启动设置
+        // 在服务创建时（如开机后）检查并应用启动设置
         checkAndApplyStartupSettings()
     }
 

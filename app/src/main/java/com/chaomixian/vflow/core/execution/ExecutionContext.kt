@@ -25,7 +25,7 @@ sealed class LoopState {
 
 
 /**
- * 执行时传递的上下文 (重构)。
+ * 执行时传递的上下文。
  * @param applicationContext 应用的全局上下文。
  * @param variables 存储用户在编辑器中设置的静态参数值。
  * @param magicVariables 存储上游模块传递下来的动态魔法变量。
@@ -46,7 +46,7 @@ data class ExecutionContext(
     val allSteps: List<ActionStep>,
     val currentStepIndex: Int,
     val stepOutputs: Map<String, Map<String, Any?>>,
-    val loopStack: Stack<LoopState>, // 堆栈现在可以存储不同类型的循环状态
+    val loopStack: Stack<LoopState>,
     val triggerData: Parcelable? = null,
     val namedVariables: MutableMap<String, Any?>,
     val workflowStack: Stack<String> = Stack()

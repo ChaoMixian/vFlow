@@ -70,7 +70,7 @@ object ExecutionLogger {
                         }
                     }
                     is ExecutionState.Running -> {
-                        // 通常我们只记录结束状态，但也可以在这里记录开始
+                        // 通常只记录结束状态，但也可以在这里记录开始
                     }
                 }
             }

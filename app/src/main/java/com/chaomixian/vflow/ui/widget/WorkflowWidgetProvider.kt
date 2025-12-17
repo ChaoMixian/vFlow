@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
-import android.graphics.Color
 import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
@@ -37,21 +36,21 @@ class WorkflowWidgetProvider : AppWidgetProvider() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val isNightMode = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
-                // 1. 设置背景色 (Material You 风格)
+                // 设置背景色 (Material You 风格)
                 // 浅色模式使用 system_neutral1_50 (接近白色但带有壁纸色调)
                 // 深色模式使用 system_neutral1_900 (深灰色带有壁纸色调)
                 val bgColorRes = if (isNightMode) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
                 val bgColor = context.getColor(bgColorRes)
                 views.setColorStateList(R.id.widget_root, "setBackgroundTintList", ColorStateList.valueOf(bgColor))
 
-                // 2. 设置插槽项背景色 (与主背景有区分)
+                // 设置插槽项背景色 (与主背景有区分)
                 // 浅色模式使用 system_accent2_100 (淡淡的强调色)
                 // 深色模式使用 system_accent2_800 (深色的强调色)
                 val itemBgColorRes = if (isNightMode) android.R.color.system_accent2_800 else android.R.color.system_accent2_100
                 val itemBgColor = context.getColor(itemBgColorRes)
                 val itemBgTint = ColorStateList.valueOf(itemBgColor)
 
-                // 3. 设置文字颜色
+                // 设置文字颜色
                 val textColorRes = if (isNightMode) android.R.color.system_accent1_100 else android.R.color.system_accent1_900
                 val textColor = context.getColor(textColorRes)
 

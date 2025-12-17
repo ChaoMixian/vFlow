@@ -31,7 +31,7 @@ class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider
 
     /**
      * 创建预览视图。
-     * [修改] 使用 VariableResolver.isComplex 统一判断标准。
+     * 使用 VariableResolver.isComplex 统一判断标准。
      */
     override fun createPreview(
         context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>,

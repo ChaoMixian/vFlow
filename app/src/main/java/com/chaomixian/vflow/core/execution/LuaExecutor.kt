@@ -25,21 +25,21 @@ class LuaExecutor(private val executionContext: ExecutionContext) {
         // 创建标准的 globals 环境
         val globals = JsePlatform.standardGlobals()
 
-        // 1. 注入 vFlow 模块函数 (支持多级路径 vflow.device.click)
+        // 注入 vFlow 模块函数 (支持多级路径 vflow.device.click)
         injectVFlowFunctions(globals)
 
-        // 2. 注入输入变量 inputs
+        // 注入输入变量 inputs
         // 确保 inputs 是一个全局变量，脚本中可以直接访问 inputs.xxx
         val luaInputs = LuaValueConverter.coerceToLua(inputs)
         globals.set("inputs", luaInputs)
 
         try {
-            // 3. 加载并执行脚本
+            // 加载并执行脚本
             // 使用 chunk name "script" 以便在报错时显示
             val chunk = globals.load(script, "script")
             val result = chunk.call()
 
-            // 4. 处理并返回结果
+            // 处理并返回结果
             if (result.istable()) {
                 return LuaValueConverter.coerceToKotlin(result) as? Map<String, Any?> ?: emptyMap()
             }

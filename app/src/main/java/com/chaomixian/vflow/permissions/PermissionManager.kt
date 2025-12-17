@@ -123,6 +123,12 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
+    // 所有已知权限的静态列表，供脚本模块查询，避免递归
+    val allKnownPermissions = listOf(
+        ACCESSIBILITY, NOTIFICATIONS, OVERLAY, NOTIFICATION_LISTENER_SERVICE,
+        STORAGE, SMS, BLUETOOTH, WRITE_SETTINGS, LOCATION, SHIZUKU,
+        IGNORE_BATTERY_OPTIMIZATIONS, EXACT_ALARM
+    )
 
     /**
      * 获取单个权限的当前状态。

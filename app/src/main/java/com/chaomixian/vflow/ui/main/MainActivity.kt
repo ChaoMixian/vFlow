@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnPreDraw
@@ -20,6 +19,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ShizukuManager
@@ -48,6 +48,7 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ModuleRegistry.initialize() // 初始化模块注册表
+        ModuleManager.loadModules(this, true) // 初始化用户模块管理器
         TriggerHandlerRegistry.initialize() // 初始化触发器处理器注册表
         ExecutionNotificationManager.initialize(this) // 初始化通知管理器
         // 移除此处对 ExecutionLogger 的初始化，因为它已在 TriggerService 中完成
@@ -71,7 +72,7 @@ class MainActivity : BaseActivity() {
 
         // 配置 AppBar，定义顶级导航目标
         val appBarConfiguration = AppBarConfiguration(
-            setOf(R.id.navigation_home, R.id.navigation_workflows, R.id.navigation_settings)
+            setOf(R.id.navigation_home, R.id.navigation_workflows, R.id.navigation_modules, R.id.navigation_settings)
         )
         setupActionBarWithNavController(navController, appBarConfiguration) // 将 Toolbar 与 NavController 集成
         navView.setupWithNavController(navController) // 将 BottomNavigationView 与 NavController 集成
@@ -90,7 +91,7 @@ class MainActivity : BaseActivity() {
             applyWindowInsets(appBarLayout, navView, navHostFragment.requireView())
             insetsApplied = true
         }
-        // [新增] 每次返回主界面时，检查并应用 Shizuku 相关设置
+        // 每次返回主界面时，检查并应用 Shizuku 相关设置
         checkAndApplyStartupSettings()
     }
 
@@ -133,16 +134,16 @@ class MainActivity : BaseActivity() {
             insets
         }
 
-        // 2. 为底部导航栏底部添加系统导航栏高度的 padding
+        // 为底部导航栏底部添加系统导航栏高度的 padding
         ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(bottom = systemBars.bottom)
             insets
         }
 
-        // 3. 为 Fragment 容器底部添加 BottomNavigationView 高度的 padding
-        //    使用 doOnPreDraw 可以确保我们在 bottomNav 视图被测量并准备好绘制之前执行代码，
-        //    这样就能获取到它正确的高度，解决了时序问题。
+        // 为 Fragment 容器底部添加 BottomNavigationView 高度的 padding
+        // 使用 doOnPreDraw 可以确保我们在 bottomNav 视图被测量并准备好绘制之前执行代码，
+        // 这样就能获取到它正确的高度，解决了时序问题。
         bottomNav.doOnPreDraw {
             // 在这里，it 指的是 bottomNav 视图，it.height 是它测量后的实际高度。
             fragmentContainer.updatePadding(bottom = it.height)

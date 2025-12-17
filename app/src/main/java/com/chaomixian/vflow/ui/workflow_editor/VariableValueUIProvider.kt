@@ -43,9 +43,9 @@ class VariableValueUIProvider : ModuleUIProvider {
         }
 
         val inflater = LayoutInflater.from(context)
-        // 1. 加载整个卡片视图
+        // 加载整个卡片视图
         val cardView = inflater.inflate(R.layout.partial_variable_preview, parent, false)
-        // 2. 从卡片中找到用于填充内容的容器
+        // 从卡片中找到用于填充内容的容器
         val previewContainer = cardView.findViewById<LinearLayout>(R.id.variable_preview_container)
 
 
@@ -77,7 +77,7 @@ class VariableValueUIProvider : ModuleUIProvider {
             else -> return null
         }
 
-        // 3. 只有当容器内确实有内容时，才返回整个卡片视图
+        // 只有当容器内确实有内容时，才返回整个卡片视图
         return if (previewContainer.childCount > 0) cardView else null
     }
 
