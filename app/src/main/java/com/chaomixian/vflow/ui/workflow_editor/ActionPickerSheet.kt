@@ -1,6 +1,7 @@
-// 文件: ActionPickerSheet.kt
+// 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/ActionPickerSheet.kt
 package com.chaomixian.vflow.ui.workflow_editor
 
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -252,7 +253,16 @@ class ActionPickerItemAdapter(
             icon.setImageResource(module.metadata.iconRes)
 
             val context = itemView.context
-            val colorStateList = ContextCompat.getColorStateList(context, com.google.android.material.R.color.material_dynamic_secondary60)
+
+            // 添加版本检查，兼容低版本 Android
+            val colorRes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                com.google.android.material.R.color.material_dynamic_secondary60
+            } else {
+                // Android 12 以下使用固定颜色 fallback
+                R.color.purple_500
+            }
+
+            val colorStateList = ContextCompat.getColorStateList(context, colorRes)
             DrawableCompat.setTintList(icon.drawable, colorStateList)
 
             itemView.setOnClickListener { onClick(module) }

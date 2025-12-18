@@ -4,10 +4,9 @@
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.TextPaint
@@ -19,6 +18,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.drawable.toDrawable
 
 /**
  * 参数药丸 (Pill) UI 工具类。
@@ -134,11 +135,11 @@ object PillUtil {
         )
         pillView.layout(0, 0, pillView.measuredWidth, pillView.measuredHeight)
 
-        val bitmap = Bitmap.createBitmap(pillView.measuredWidth, pillView.measuredHeight, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(pillView.measuredWidth, pillView.measuredHeight)
         val canvas = Canvas(bitmap)
         pillView.draw(canvas)
 
-        return BitmapDrawable(context.resources, bitmap).apply {
+        return bitmap.toDrawable(context.resources).apply {
             setBounds(0, 0, intrinsicWidth, intrinsicHeight)
         }
     }
@@ -158,6 +159,14 @@ object PillUtil {
         "应用与系统" -> R.color.category_system
         "Shizuku" -> R.color.category_shizuku
         "用户模块" -> R.color.category_user_module
-        else -> com.google.android.material.R.color.material_dynamic_neutral30
+        else -> {
+            // 动态颜色仅在 Android 12 (S) 及以上可用
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                com.google.android.material.R.color.material_dynamic_neutral30
+            } else {
+                // 低版本回退到 colors.xml 中定义的静态颜色
+                R.color.static_pill_color
+            }
+        }
     }
 }

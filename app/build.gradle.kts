@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.chaomixian.vflow"
-        minSdk = 30
+        minSdk = 29
         targetSdk = 36
         versionCode = 14
         versionName = "1.3.0"
