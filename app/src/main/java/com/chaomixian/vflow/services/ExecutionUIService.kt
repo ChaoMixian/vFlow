@@ -1,4 +1,4 @@
-// 文件：ExecutionUIService.kt
+// 文件：main/java/com/chaomixian/vflow/services/ExecutionUIService.kt
 // 描述：提供一个在工作流执行期间请求用户界面交互的服务。
 package com.chaomixian.vflow.services
 
@@ -108,7 +108,7 @@ class ExecutionUIService(private val context: Context) {
     }
 
     /**
-     * [核心修改] 从 Intent 构建 `am start` 命令，并处理 Serializable extra。
+     *  从 Intent 构建 `am start` 命令，并处理 Serializable extra。
      */
     private fun buildAmStartCommand(intent: Intent): String {
         val component = intent.component?.flattenToString() ?: throw IllegalArgumentException("Intent 必须有明确的组件")
@@ -259,5 +259,16 @@ class ExecutionUIService(private val context: Context) {
             }
         }
         return startActivityAndAwaitResult(intent, "分享", "点击以打开系统分享菜单").await() as? Boolean
+    }
+
+    /**
+     * 请求屏幕录制权限（MediaProjection）。
+     * @return 返回用户授权后的 Intent 数据，如果被拒绝则返回 null。
+     */
+    suspend fun requestMediaProjectionPermission(): Intent? {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
+            putExtra("request_type", "media_projection")
+        }
+        return startActivityAndAwaitResult(intent, "需要截图权限", "请点击以授予vFlow屏幕截图权限").await() as? Intent
     }
 }

@@ -1,11 +1,13 @@
-// 文件：OverlayUIActivity.kt
+// 文件：main/java/com/chaomixian/vflow/services/OverlayUIActivity.kt
+// 添加了对 MediaProjection 的支持
 package com.chaomixian.vflow.ui.common
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
@@ -20,7 +22,6 @@ import androidx.core.content.FileProvider
 import coil.load
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.services.ExecutionUIService
-import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
@@ -40,7 +41,19 @@ class OverlayUIActivity : AppCompatActivity() {
         finish()
     }
 
-    // 用于JSON反序列化
+    // MediaProjection Launcher
+    private val mediaProjectionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            // 将结果传递回去
+            ExecutionUIService.inputCompletable?.complete(result.data)
+        } else {
+            ExecutionUIService.inputCompletable?.complete(null)
+        }
+        finish()
+    }
+
     private val gson = Gson()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,8 +88,11 @@ class OverlayUIActivity : AppCompatActivity() {
                 }
             }
             "pick_image" -> pickImageLauncher.launch("image/*")
+            "media_projection" -> {
+                val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                mediaProjectionLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
+            }
             "workflow_chooser" -> {
-                // [核心修改] 优先尝试读取 Serializable，失败则回退到读取 JSON 字符串
                 @Suppress("UNCHECKED_CAST")
                 var workflows = intent.getSerializableExtra("workflow_list") as? Map<String, String>
                 if (workflows == null) {
@@ -91,12 +107,9 @@ class OverlayUIActivity : AppCompatActivity() {
                         }
                     }
                 }
-
                 workflows?.let { showWorkflowChooserDialog(it) } ?: finishWithError()
             }
-            "share" -> {
-                handleShareRequest()
-            }
+            "share" -> handleShareRequest()
             else -> finishWithError()
         }
     }
@@ -134,7 +147,6 @@ class OverlayUIActivity : AppCompatActivity() {
         }
     }
 
-
     private fun handleShareRequest() {
         val shareType = intent.getStringExtra("share_type")
         val shareContent = intent.getStringExtra("share_content")
@@ -164,7 +176,6 @@ class OverlayUIActivity : AppCompatActivity() {
                     val imageFile = File(java.net.URI(shareContent))
                     val authority = "$packageName.provider"
                     val safeUri = FileProvider.getUriForFile(this, authority, imageFile)
-
                     shareIntent.type = contentResolver.getType(safeUri)
                     shareIntent.putExtra(Intent.EXTRA_STREAM, safeUri)
                     shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -179,7 +190,6 @@ class OverlayUIActivity : AppCompatActivity() {
                 return
             }
         }
-
         val chooser = Intent.createChooser(shareIntent, "分享内容")
         startActivity(chooser)
     }
@@ -201,22 +211,18 @@ class OverlayUIActivity : AppCompatActivity() {
         }
     }
 
-
     private fun showWorkflowChooserDialog(workflows: Map<String, String>) {
         val items = workflows.values.toTypedArray()
         val itemIds = workflows.keys.toTypedArray()
-
         MaterialAlertDialogBuilder(this)
             .setTitle("选择要执行的工作流")
-            .setItems(items) { _, which ->
-                complete(itemIds[which])
-            }
+            .setItems(items) { _, which -> complete(itemIds[which]) }
             .setOnCancelListener { cancel() }
             .show()
     }
 
     /**
-     * 更新：为文本快速查看对话框添加复制和分享按钮，并重写行为
+     * 为文本快速查看对话框添加复制和分享按钮，并重写行为
      */
     private fun showQuickViewDialog(title: String, content: String) {
         val dialog = MaterialAlertDialogBuilder(this)
@@ -227,7 +233,6 @@ class OverlayUIActivity : AppCompatActivity() {
             .setNegativeButton("分享", null)
             .setOnCancelListener { cancel() }
             .show()
-
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("vFlow Text", content)
@@ -239,7 +244,6 @@ class OverlayUIActivity : AppCompatActivity() {
         }
     }
 
-
     private fun showTextInputDialog(title: String, type: String?) {
         val editText = EditText(this).apply {
             inputType = if (type == "数字") {
@@ -248,7 +252,6 @@ class OverlayUIActivity : AppCompatActivity() {
                 InputType.TYPE_CLASS_TEXT
             }
         }
-
         MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setView(editText)
@@ -269,24 +272,18 @@ class OverlayUIActivity : AppCompatActivity() {
             .setMinute(Calendar.getInstance().get(Calendar.MINUTE))
             .setTitleText(title)
             .build()
-
-        picker.addOnPositiveButtonClickListener {
-            complete(String.format("%02d:%02d", picker.hour, picker.minute))
-        }
+        picker.addOnPositiveButtonClickListener { complete(String.format("%02d:%02d", picker.hour, picker.minute)) }
         picker.addOnNegativeButtonClickListener { cancel() }
         picker.addOnCancelListener { cancel() }
         picker.show(supportFragmentManager, "TIME_PICKER")
     }
 
     private fun showDatePickerDialog(title: String) {
-        val picker = MaterialDatePicker.Builder.datePicker()
+        val picker = com.google.android.material.datepicker.MaterialDatePicker.Builder.datePicker()
             .setTitleText(title)
-            .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
+            .setSelection(com.google.android.material.datepicker.MaterialDatePicker.todayInUtcMilliseconds())
             .build()
-
-        picker.addOnPositiveButtonClickListener { selection ->
-            complete(selection)
-        }
+        picker.addOnPositiveButtonClickListener { selection -> complete(selection) }
         picker.addOnNegativeButtonClickListener { cancel() }
         picker.addOnCancelListener { cancel() }
         picker.show(supportFragmentManager, "DATE_PICKER")

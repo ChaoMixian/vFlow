@@ -1,11 +1,9 @@
-// 文件：SettingsFragment.kt
-// 描述：主界面中的“设置”屏幕。
+// 文件：main/java/com/chaomixian/vflow/ui/main/fragments/SettingsFragment.kt
 package com.chaomixian.vflow.ui.main.fragments
 
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,6 +23,7 @@ import com.chaomixian.vflow.ui.settings.KeyTesterActivity
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.button.MaterialButtonToggleGroup
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
@@ -35,7 +34,7 @@ import java.util.*
 
 /**
  * “设置” Fragment。
- * 提供应用相关的设置选项，如动态颜色、隐藏连接线和权限管理入口。
+ * 提供应用相关的设置选项，如动态颜色和权限管理入口。
  */
 class SettingsFragment : Fragment() {
 
@@ -98,7 +97,7 @@ class SettingsFragment : Fragment() {
             forceKeepAliveSwitch.text = "${getString(R.string.settings_switch_force_keep_alive)} (Shizuku未激活)"
         }
 
-        // --- 自动开启无障碍服务开关逻辑 ---
+        // 自动开启无障碍服务开关逻辑
         val autoEnableAccessibilitySwitch = view.findViewById<MaterialSwitch>(R.id.switch_auto_enable_accessibility)
         if (ShizukuManager.isShizukuActive(requireContext())) {
             autoEnableAccessibilitySwitch.isEnabled = true
@@ -129,6 +128,31 @@ class SettingsFragment : Fragment() {
             autoEnableAccessibilitySwitch.isEnabled = false
             autoEnableAccessibilitySwitch.isChecked = false
             autoEnableAccessibilitySwitch.text = "自动开启无障碍服务 (Shizuku未激活)"
+        }
+
+        // 权限与 Shell 设置
+        val shellModeToggle = view.findViewById<MaterialButtonToggleGroup>(R.id.toggle_shell_mode)
+        val defaultMode = prefs.getString("default_shell_mode", "shizuku")
+        if (defaultMode == "root") {
+            shellModeToggle.check(R.id.btn_shell_root)
+        } else {
+            shellModeToggle.check(R.id.btn_shell_shizuku)
+        }
+
+        shellModeToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                val mode = if (checkedId == R.id.btn_shell_root) "root" else "shizuku"
+                prefs.edit { putString("default_shell_mode", mode) }
+            }
+        }
+
+        // 权限管理器入口
+        view.findViewById<View>(R.id.btn_open_permission_manager).setOnClickListener {
+            val allPermissions = PermissionManager.getAllRegisteredPermissions()
+            val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
+                putParcelableArrayListExtra(PermissionActivity.EXTRA_PERMISSIONS, ArrayList(allPermissions))
+            }
+            startActivity(intent)
         }
 
         // --- 调试功能逻辑 ---
@@ -192,17 +216,6 @@ class SettingsFragment : Fragment() {
             startActivity(intent)
         }
 
-        // 权限管理器入口卡片点击逻辑
-        view.findViewById<MaterialCardView>(R.id.card_permission_manager).setOnClickListener {
-            val allPermissions = PermissionManager.getAllRegisteredPermissions()
-            val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
-                // 将所有已注册的权限传递给权限管理Activity
-                putParcelableArrayListExtra(PermissionActivity.EXTRA_PERMISSIONS, ArrayList(allPermissions))
-            }
-            startActivity(intent)
-        }
-
-        // “关于”卡片的点击逻辑
         view.findViewById<MaterialCardView>(R.id.card_about).setOnClickListener {
             showAboutDialog()
         }

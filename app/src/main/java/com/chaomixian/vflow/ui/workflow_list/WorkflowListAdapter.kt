@@ -217,9 +217,13 @@ class WorkflowListAdapter(
                 infoChipGroup.addView(stepChip)
             }
 
-            // 2. 添加权限Chips
+            // 添加权限Chips
+            // 使用 getRequiredPermissions(it) 替代 requiredPermissions 属性
+            // 这样才能获取到由步骤参数决定的动态权限 (如 Shell 模式、Shizuku 等)
             val requiredPermissions = workflow.steps
-                .mapNotNull { ModuleRegistry.getModule(it.moduleId)?.requiredPermissions }
+                .mapNotNull { step ->
+                    ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step)
+                }
                 .flatten()
                 .distinct()
 

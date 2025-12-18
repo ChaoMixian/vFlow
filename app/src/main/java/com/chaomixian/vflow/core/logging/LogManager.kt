@@ -8,6 +8,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.parcelize.Parcelize
 import java.util.Date
+import androidx.core.content.edit
 
 // 定义日志条目的数据结构
 @Parcelize
@@ -28,17 +29,21 @@ enum class LogStatus {
 
 /**
  * 日志管理器，负责持久化存储和检索工作流执行日志。
+ * 同时作为全局 ApplicationContext 的持有者供模块使用。
  */
 object LogManager {
     private const val PREFS_NAME = MainActivity.LOG_PREFS_NAME
     private const val LOGS_KEY = "execution_logs"
     private const val MAX_LOGS = 50 // 最多保存50条日志
 
-    private lateinit var context: Context
+    // 公开 applicationContext 供其他模块（如动态权限检查）使用
+    lateinit var applicationContext: Context
+        private set
+
     private val gson = Gson()
 
     fun initialize(appContext: Context) {
-        context = appContext
+        applicationContext = appContext
     }
 
     /**
@@ -65,14 +70,14 @@ object LogManager {
 
     private fun saveLogs(logs: List<LogEntry>) {
         val json = gson.toJson(logs)
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(LOGS_KEY, json)
-            .apply()
+        applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit {
+                putString(LOGS_KEY, json)
+            }
     }
 
     private fun getLogs(): List<LogEntry> {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = prefs.getString(LOGS_KEY, null)
         return if (json != null) {
             val type = object : TypeToken<List<LogEntry>>() {}.type

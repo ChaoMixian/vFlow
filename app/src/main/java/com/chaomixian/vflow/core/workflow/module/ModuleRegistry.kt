@@ -70,6 +70,7 @@ object ModuleRegistry {
         register(FindTextModule())
         register(ClickModule())
         register(SendKeyEventModule())
+        register(CaptureScreenModule())
 
         // 逻辑控制
         register(IfModule())
