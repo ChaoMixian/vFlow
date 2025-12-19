@@ -148,12 +148,13 @@ class ScreenOperationModule : BaseModule() {
                     else -> false
                 }
                 if (success) DebugLogger.d("ScreenOp", "无障碍执行成功")
-            } else if (mode == "无障碍") {
+            } else {
+                // mode == "无障碍" 且服务为空的情况
                 return ExecutionResult.Failure("服务未连接", "指定使用无障碍服务，但服务未运行。")
             }
         }
 
-        // 如果自动模式且无障碍失败，或者指定了 Shell 模式
+        // 如果上述未成功（自动模式下无障碍失败，或者指定了 Shell 模式）
         if (!success && (mode == "Shell" || mode == "自动")) {
             if (ShizukuManager.isShizukuActive(context.applicationContext) || useRoot) {
                 val cmd = when (opType) {

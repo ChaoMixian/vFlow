@@ -75,13 +75,12 @@ class HttpRequestModule : BaseModule() {
 
                 val method = context.variables["method"] as? String ?: "GET"
 
-                // 处理 Map 类型的参数 (Headers, Query Params)
-                // 这里暂时假设 Map 的 Value 已经是解析好的，或者在 UI 层没有提供富文本输入。
-                // 如果需要深度解析 Map 中的 Value，需要额外的逻辑遍历 Map。
-                // 鉴于目前 DictionaryKVAdapter 较为简单，先保持原样，直接读取 magicVariables 或 raw variables
+                @Suppress("UNCHECKED_CAST")
                 val headers = (context.magicVariables["headers"] as? DictionaryVariable)?.value
                     ?: (context.variables["headers"] as? Map<String, Any?>)
                     ?: emptyMap()
+
+                @Suppress("UNCHECKED_CAST")
                 val queryParams = (context.magicVariables["query_params"] as? DictionaryVariable)?.value
                     ?: (context.variables["query_params"] as? Map<String, Any?>)
                     ?: emptyMap()
@@ -135,8 +134,7 @@ class HttpRequestModule : BaseModule() {
                 ))
 
             } catch (e: IOException) {
-                ExecutionResult.Failure("网络错误", e.message ?: "未知网络错误").also {
-                }
+                ExecutionResult.Failure("网络错误", e.message ?: "未知网络错误")
             } catch (e: Exception) {
                 ExecutionResult.Failure("执行失败", e.localizedMessage ?: "发生未知错误")
             }

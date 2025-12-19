@@ -58,4 +58,12 @@
     <string name="workflow_editor_save">保存</string>
     <string name="share_to_vflow">分享到 vFlow</string>
     <string name="shortcut_executing">正在通过快捷方式启动: %s</string>
+
+    <string name="screen_op_type_label">操作类型</string>
+    <string name="screen_op_tap">点击</string>
+    <string name="screen_op_long_press">长按</string>
+    <string name="screen_op_swipe">滑动</string>
+    <string name="screen_op_duration_label">持续时间 (毫秒)</string>
+    <string name="screen_op_advanced_settings">更多设置</string>
+    <string name="screen_op_execution_mode">执行方式</string>
 </resources>

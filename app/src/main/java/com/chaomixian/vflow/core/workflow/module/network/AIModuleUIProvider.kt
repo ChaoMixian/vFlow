@@ -19,17 +19,18 @@ import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider // [新增] 引入
+import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
+import java.util.Locale
 
 class AIModuleUIProvider : ModuleUIProvider {
 
-    // [新增] 实例化 RichTextUIProvider，指定要预览的字段为 "prompt"
+    // 实例化 RichTextUIProvider，指定要预览的字段为 "prompt"
     private val richTextUIProvider = RichTextUIProvider("prompt")
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
@@ -59,7 +60,7 @@ class AIModuleUIProvider : ModuleUIProvider {
         "provider", "api_key", "base_url", "model", "prompt", "system_prompt", "temperature", "show_advanced"
     )
 
-    // [修改] 实现 createPreview，委托给 richTextUIProvider
+    // 实现 createPreview，委托给 richTextUIProvider
     override fun createPreview(
         context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
@@ -95,7 +96,7 @@ class AIModuleUIProvider : ModuleUIProvider {
 
         val temp = (currentParameters["temperature"] as? Number)?.toFloat() ?: 0.7f
         holder.tempSlider.value = temp
-        holder.tempText.text = String.format("%.1f", temp)
+        holder.tempText.text = String.format(Locale.US, "%.1f", temp)
 
         holder.advancedSwitch.isChecked = currentParameters["show_advanced"] as? Boolean ?: false
         holder.advancedContainer.isVisible = holder.advancedSwitch.isChecked
@@ -130,7 +131,7 @@ class AIModuleUIProvider : ModuleUIProvider {
         }
 
         holder.tempSlider.addOnChangeListener { _, value, _ ->
-            holder.tempText.text = String.format("%.1f", value)
+            holder.tempText.text = String.format(Locale.US, "%.1f", value)
             onParametersChanged()
         }
 
