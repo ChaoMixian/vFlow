@@ -54,12 +54,12 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
 
     // JSON 解析库，用于保存和读取工作流
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.13.2")
 
     // Lua 脚本解释器引擎
     implementation("org.luaj:luaj-jse:3.0.1")
 
-    // Shizuku API (未来重新引入高级功能时需要)
+    // Shizuku API
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation(libs.androidx.scenecore)
@@ -74,4 +74,11 @@ dependencies {
 
     // 网络库
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Google ML Kit 文本识别库 (中文和英文)
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-devanagari:16.0.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 }

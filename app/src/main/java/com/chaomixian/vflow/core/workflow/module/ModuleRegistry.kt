@@ -71,6 +71,7 @@ object ModuleRegistry {
         register(ClickModule())
         register(SendKeyEventModule())
         register(CaptureScreenModule())
+        register(OCRModule())
 
         // 逻辑控制
         register(IfModule())
@@ -88,7 +89,6 @@ object ModuleRegistry {
         register(StopWorkflowModule())
         register(CallWorkflowModule())
         register(StopAndReturnModule())
-
 
         // 数据
         register(CreateVariableModule())
