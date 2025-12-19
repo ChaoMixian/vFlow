@@ -73,6 +73,7 @@ object ModuleRegistry {
         register(SendKeyEventModule())
         register(CaptureScreenModule())
         register(OCRModule())
+        register(AgentModule())
 
         // 逻辑控制
         register(IfModule())

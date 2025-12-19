@@ -19,10 +19,10 @@ import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.services.ShizukuManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.CompletableDeferred
+import java.util.regex.Pattern
 
 /**
  * "屏幕操作" 模块。
- * 集成了点击、长按、滑动功能，支持手动选择执行方式 (自动/无障碍/Shell)。
  */
 class ScreenOperationModule : BaseModule() {
 
@@ -38,26 +38,19 @@ class ScreenOperationModule : BaseModule() {
 
     val executionModeOptions = listOf("自动", "无障碍", "Shell")
 
-    // 动态权限声明：根据执行方式返回所需权限
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
-        // 如果是在模块列表中(step==null)，返回基础权限
         if (step == null) return listOf(PermissionManager.ACCESSIBILITY)
-
         val mode = step.parameters["execution_mode"] as? String ?: "自动"
 
         return when (mode) {
             "无障碍" -> listOf(PermissionManager.ACCESSIBILITY)
             "Shell" -> {
-                // 根据全局偏好决定请求 Root 还是 Shizuku
                 val context = LogManager.applicationContext
                 val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
                 val shellType = prefs.getString("default_shell_mode", "shizuku")
                 if (shellType == "root") listOf(PermissionManager.ROOT) else listOf(PermissionManager.SHIZUKU)
             }
-            else -> { // "自动"
-                // 自动模式下，优先使用无障碍，所以必须声明无障碍
-                listOf(PermissionManager.ACCESSIBILITY)
-            }
+            else -> listOf(PermissionManager.ACCESSIBILITY)
         }
     }
 
@@ -69,15 +62,20 @@ class ScreenOperationModule : BaseModule() {
             supportsRichText = false,
             acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, TextVariable.TYPE_NAME)
         ),
+        // [修复] isHidden = false，让 AI 能看到这个参数
         InputDefinition(
             "target_end", "滑动终点", ParameterType.STRING, "",
             acceptsMagicVariable = true,
             supportsRichText = false,
             acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, TextVariable.TYPE_NAME),
-            isHidden = true
+            isHidden = false
         ),
-        InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME), isHidden = true),
-        InputDefinition("execution_mode", "执行方式", ParameterType.ENUM, "自动", options = executionModeOptions, acceptsMagicVariable = false, isHidden = true),
+        // [修复] isHidden = false，让 AI 能控制时间
+        InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME), isHidden = false),
+        // [修复] isHidden = false，允许 AI (极少数情况下) 选择执行模式，或者仅仅是为了 Schema 完整性
+        InputDefinition("execution_mode", "执行方式", ParameterType.ENUM, "自动", options = executionModeOptions, acceptsMagicVariable = false, isHidden = false),
+
+        // show_advanced 仅用于 UI 状态保存，保持隐藏
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
     )
 
@@ -96,8 +94,8 @@ class ScreenOperationModule : BaseModule() {
                 PillUtil.buildSpannable(context, "从 ", targetPill, " 滑动到 ", endPill)
             }
             "长按" -> {
-                val durationPill = PillUtil.createPillFromParam(step.parameters["duration"], inputs.find { it.id == "duration" })
-                PillUtil.buildSpannable(context, "长按 ", targetPill, " 持续 ", durationPill, " ms")
+                val duration = step.parameters["duration"]
+                PillUtil.buildSpannable(context, "长按 ", targetPill, " ($duration ms)")
             }
             else -> { // 点击
                 PillUtil.buildSpannable(context, "点击 ", targetPill)
@@ -117,7 +115,7 @@ class ScreenOperationModule : BaseModule() {
         (durationVal as? String)?.toLongOrNull() ?:
         (if (opType == "长按") 1000L else if (opType == "滑动") 500L else 50L)
 
-        // 解析坐标
+        // 1. 解析坐标
         val targetObj = context.magicVariables["target"] ?: context.variables["target"]
         val startPoint = resolveTargetToPoint(context, targetObj)
             ?: return ExecutionResult.Failure("无效目标", "无法解析起点位置: $targetObj")
@@ -138,7 +136,7 @@ class ScreenOperationModule : BaseModule() {
 
         var success = false
 
-        // 根据模式执行
+        // 2. 根据模式执行
         if (mode == "无障碍" || (mode == "自动" && accService != null)) {
             if (accService != null) {
                 success = when (opType) {
@@ -148,13 +146,11 @@ class ScreenOperationModule : BaseModule() {
                     else -> false
                 }
                 if (success) DebugLogger.d("ScreenOp", "无障碍执行成功")
-            } else {
-                // mode == "无障碍" 且服务为空的情况
+            } else if (mode == "无障碍") {
                 return ExecutionResult.Failure("服务未连接", "指定使用无障碍服务，但服务未运行。")
             }
         }
 
-        // 如果上述未成功（自动模式下无障碍失败，或者指定了 Shell 模式）
         if (!success && (mode == "Shell" || mode == "自动")) {
             if (ShizukuManager.isShizukuActive(context.applicationContext) || useRoot) {
                 val cmd = when (opType) {
@@ -187,19 +183,26 @@ class ScreenOperationModule : BaseModule() {
         }
     }
 
-    // 辅助方法
     private fun resolveTargetToPoint(context: ExecutionContext, target: Any?): Point? {
         return when (target) {
             is ScreenElement -> Point(target.bounds.centerX(), target.bounds.centerY())
             is Coordinate -> Point(target.x, target.y)
             is String -> {
-                if (target.contains(",")) {
+                if (target.contains(",") && !target.contains("[")) {
                     val parts = target.split(",")
                     val x = parts[0].trim().toIntOrNull()
                     val y = parts[1].trim().toIntOrNull()
                     if (x != null && y != null) return Point(x, y)
                 }
-                // 尝试作为 View ID 解析 (需要无障碍服务)
+                val rectMatcher = Pattern.compile("\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]").matcher(target)
+                if (rectMatcher.find()) {
+                    val left = rectMatcher.group(1)?.toIntOrNull() ?: 0
+                    val top = rectMatcher.group(2)?.toIntOrNull() ?: 0
+                    val right = rectMatcher.group(3)?.toIntOrNull() ?: 0
+                    val bottom = rectMatcher.group(4)?.toIntOrNull() ?: 0
+                    return Point((left + right) / 2, (top + bottom) / 2)
+                }
+
                 val accService = ServiceStateBus.getAccessibilityService()
                 if (accService != null) {
                     val root = accService.rootInActiveWindow
@@ -209,7 +212,6 @@ class ScreenOperationModule : BaseModule() {
                         if (node != null) {
                             val rect = Rect()
                             node.getBoundsInScreen(rect)
-                            // 简单回收，注意：此处未深度遍历回收
                             return Point(rect.centerX(), rect.centerY())
                         }
                     }

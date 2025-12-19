@@ -66,4 +66,8 @@
     <string name="screen_op_duration_label">持续时间 (毫秒)</string>
     <string name="screen_op_advanced_settings">更多设置</string>
     <string name="screen_op_execution_mode">执行方式</string>
+
+    <string name="agent_instruction_label">提示词</string>
+    <string name="agent_max_steps_label">最大步数</string>
+    <string name="agent_tools_label">启用能力 (Tools)</string>
 </resources>
