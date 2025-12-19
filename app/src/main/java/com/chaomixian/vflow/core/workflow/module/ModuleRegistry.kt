@@ -69,6 +69,7 @@ object ModuleRegistry {
         // 界面交互
         register(FindTextModule())
         register(ClickModule())
+        register(ScreenOperationModule())
         register(SendKeyEventModule())
         register(CaptureScreenModule())
         register(OCRModule())
@@ -107,6 +108,7 @@ object ModuleRegistry {
         // 网络
         register(GetIpAddressModule())
         register(HttpRequestModule())
+        register(AIModule())
 
         // 应用与系统
         register(DelayModule())

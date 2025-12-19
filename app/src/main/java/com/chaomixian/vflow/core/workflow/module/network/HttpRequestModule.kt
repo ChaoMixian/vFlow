@@ -63,7 +63,7 @@ class HttpRequestModule : BaseModule() {
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         return withContext(Dispatchers.IO) {
             try {
-                // [重构] 使用 VariableResolver 解析 URL
+                // 使用 VariableResolver 解析 URL
                 val rawUrl = context.variables["url"]?.toString() ?: ""
                 var urlString = VariableResolver.resolve(rawUrl, context)
 
