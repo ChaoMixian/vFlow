@@ -148,10 +148,10 @@ class AgentTools(private val context: ExecutionContext) {
             "language" to "中英混合",
             "search_strategy" to "默认 (从上到下)"
         )
-        // 注入图片变量
-        val ocrMagicVars = mutableMapOf<String, Any?>("ocr_source_img" to ImageVariable(imagePath))
-        // 将参数指向这个变量
-        ocrParams["image"] = "{{ocr_source_img}}"
+
+        // 直接注入 "image" 变量，而不是 "ocr_source_img"
+        // 也不要使用 "{{image}}" 引用，因为这里不经过 VariableResolver
+        val ocrMagicVars = mutableMapOf<String, Any?>("image" to ImageVariable(imagePath))
 
         val ocrContext = context.copy(
             variables = ocrParams,
@@ -172,6 +172,8 @@ class AgentTools(private val context: ExecutionContext) {
                     return clickCoordinates(x, y)
                 }
             }
+        } else if (ocrRes is ExecutionResult.Failure) {
+            DebugLogger.e(TAG, "OCR 执行失败: ${ocrRes.errorMessage}")
         }
 
         DebugLogger.w(TAG, "OCR 未找到文本: $targetText")
