@@ -11,10 +11,10 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
-import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
@@ -23,10 +23,8 @@ import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
-import java.util.Locale
 
 class AgentModuleUIProvider : ModuleUIProvider {
 
@@ -44,22 +42,19 @@ class AgentModuleUIProvider : ModuleUIProvider {
 
         val instructionContainer: FrameLayout = view.findViewById(R.id.container_instruction)
 
-        // 绑定新的控件
-        val btnSelectTools: Button = view.findViewById(R.id.btn_select_tools)
-        val tvSelectedTools: TextView = view.findViewById(R.id.tv_selected_tools)
+        // 移除工具选择相关的 View 引用，因为 XML 中虽然可能有，但逻辑已废弃
+        // val btnSelectTools: Button = view.findViewById(R.id.btn_select_tools)
+        // val tvSelectedTools: TextView = view.findViewById(R.id.tv_selected_tools)
 
         val stepsSlider: Slider = view.findViewById(R.id.slider_max_steps)
         val stepsText: TextView = view.findViewById(R.id.tv_max_steps_value)
 
         var instructionRichText: RichTextView? = null
         var allSteps: List<ActionStep>? = null
-
-        // 存储当前选中的模块 ID 列表
-        var selectedToolIds: MutableList<String> = mutableListOf()
     }
 
     override fun getHandledInputIds(): Set<String> = setOf(
-        "provider", "base_url", "model", "api_key", "instruction", "tools", "max_steps"
+        "provider", "base_url", "model", "api_key", "instruction", "max_steps"
     )
 
     override fun createPreview(
@@ -82,6 +77,10 @@ class AgentModuleUIProvider : ModuleUIProvider {
         val holder = ViewHolder(view)
         holder.allSteps = allSteps
 
+        // 隐藏旧的工具选择 UI，未来可能再次加入
+        view.findViewById<View>(R.id.btn_select_tools)?.isVisible = false
+        view.findViewById<View>(R.id.tv_selected_tools)?.isVisible = false
+
         // 恢复服务商配置
         val provider = currentParameters["provider"] as? String ?: "阿里云百炼"
         when (provider) {
@@ -96,13 +95,6 @@ class AgentModuleUIProvider : ModuleUIProvider {
 
         // 恢复 Instruction
         setupInstructionEditor(context, holder, currentParameters["instruction"] as? String ?: "", onMagicVariableRequested)
-
-        // 恢复 Tools (列表)
-        val savedTools = (currentParameters["tools"] as? List<*>)?.map { it.toString() }
-            ?: AgentModule().defaultTools
-        holder.selectedToolIds.clear()
-        holder.selectedToolIds.addAll(savedTools)
-        updateToolsSummary(holder)
 
         // 恢复 Max Steps
         val maxSteps = (currentParameters["max_steps"] as? Number)?.toFloat() ?: 10f
@@ -130,67 +122,12 @@ class AgentModuleUIProvider : ModuleUIProvider {
         holder.modelEdit.doAfterTextChanged(textWatcher)
         holder.apiKeyEdit.doAfterTextChanged(textWatcher)
 
-        // 工具选择按钮点击事件
-        holder.btnSelectTools.setOnClickListener {
-            showToolSelectionDialog(context, holder, onParametersChanged)
-        }
-
         holder.stepsSlider.addOnChangeListener { _, value, _ ->
             holder.stepsText.text = "${value.toInt()}"
             onParametersChanged()
         }
 
         return holder
-    }
-
-    /**
-     * 显示多选对话框，列出所有可用的 ActionModule
-     */
-    private fun showToolSelectionDialog(context: Context, holder: ViewHolder, onParametersChanged: () -> Unit) {
-        // 获取所有模块，并过滤掉不适合作为工具的模块
-        val allModules = ModuleRegistry.getAllModules().filter {
-            it.metadata.category != "触发器" &&
-                    it.metadata.category != "逻辑控制" &&
-                    it.metadata.category != "模板" &&
-                    it.id != "vflow.ai.agent" // 避免递归调用自己
-        }
-
-        val moduleNames = allModules.map { "${it.metadata.name} (${it.metadata.category})" }.toTypedArray()
-        val moduleIds = allModules.map { it.id }.toTypedArray()
-
-        // 确定哪些是被选中的
-        val checkedItems = BooleanArray(allModules.size) { i ->
-            holder.selectedToolIds.contains(moduleIds[i])
-        }
-
-        MaterialAlertDialogBuilder(context)
-            .setTitle("选择 AI 可用工具")
-            .setMultiChoiceItems(moduleNames, checkedItems) { _, which, isChecked ->
-                val id = moduleIds[which]
-                if (isChecked) {
-                    if (!holder.selectedToolIds.contains(id)) holder.selectedToolIds.add(id)
-                } else {
-                    holder.selectedToolIds.remove(id)
-                }
-            }
-            .setPositiveButton("确定") { _, _ ->
-                updateToolsSummary(holder)
-                onParametersChanged()
-            }
-            .setNegativeButton("取消", null)
-            .show()
-    }
-
-    private fun updateToolsSummary(holder: ViewHolder) {
-        if (holder.selectedToolIds.isEmpty()) {
-            holder.tvSelectedTools.text = "未选择任何工具"
-            return
-        }
-
-        val names = holder.selectedToolIds.map { id ->
-            ModuleRegistry.getModule(id)?.metadata?.name ?: id
-        }
-        holder.tvSelectedTools.text = "已选: " + names.joinToString(", ")
     }
 
     private fun setupInstructionEditor(
@@ -234,8 +171,6 @@ class AgentModuleUIProvider : ModuleUIProvider {
             "model" to h.modelEdit.text.toString(),
             "api_key" to h.apiKeyEdit.text.toString(),
             "instruction" to (h.instructionRichText?.getRawText() ?: ""),
-            // 直接保存 ID 列表
-            "tools" to h.selectedToolIds,
             "max_steps" to h.stepsSlider.value.toDouble()
         )
     }
