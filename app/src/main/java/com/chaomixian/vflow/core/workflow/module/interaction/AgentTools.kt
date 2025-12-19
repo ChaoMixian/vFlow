@@ -5,7 +5,6 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.graphics.Rect
-import android.net.Uri
 import android.view.accessibility.AccessibilityNodeInfo
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
@@ -16,13 +15,15 @@ import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.services.ShizukuManager
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.ArrayDeque
 import kotlin.math.abs
+import kotlin.random.Random
 
 /**
  * Agent 专用工具集。
  * 封装了底层的操作逻辑，提供高容错性的原子操作供 AI 调用。
- * 集成 OCR 兜底逻辑，解决微信等 App 无障碍失效的问题。
  */
 class AgentTools(private val context: ExecutionContext) {
 
@@ -30,11 +31,21 @@ class AgentTools(private val context: ExecutionContext) {
     private val TAG = "AgentTools"
 
     /**
+     * 主动等待一段时间。
+     * 当 AI 发现正在生成内容或加载时，应调用此工具而不是盲目操作。
+     */
+    suspend fun wait(seconds: Int): String {
+        val safeSeconds = seconds.coerceIn(1, 60) // 限制单次等待 1-60 秒
+        DebugLogger.d(TAG, "Agent 主动等待 $safeSeconds 秒...")
+        delay(safeSeconds * 1000L)
+        return "Success: Waited for $safeSeconds seconds. Check the screen status again."
+    }
+
+    /**
      * 智能点击元素。
-     * 策略升级：
      * 1. 无障碍查找 (快速，准确，但可能被屏蔽)
      * 2. 全局模糊扫描 (处理文本细微差异)
-     * 3. OCR 视觉查找 (终极兜底，专门对付微信/游戏等非标准UI)
+     * 3. OCR 视觉查找 (最终兜底，专门对付微信/游戏等非标准UI)
      */
     suspend fun clickElement(target: String): String {
         DebugLogger.d(TAG, "Agent请求点击: $target")
@@ -83,6 +94,44 @@ class AgentTools(private val context: ExecutionContext) {
 
         return "Failed: 在屏幕上未找到包含 '$target' 的元素 (无障碍和OCR均失败)。"
     }
+
+    /**
+     * 等待元素消失。
+     */
+    suspend fun waitForElementToDisappear(target: String, timeoutMillis: Long = 30000): String {
+        DebugLogger.d(TAG, "开始恭候元素消失: $target, 超时: ${timeoutMillis}ms")
+        val service = ServiceStateBus.getAccessibilityService()
+            ?: return "Error: 无障碍服务未运行，无法检测屏幕状态。"
+
+        val cleanTarget = normalizeText(target)
+        val startTime = System.currentTimeMillis()
+
+        val result = withTimeoutOrNull(timeoutMillis) {
+            while (true) {
+                val root = service.rootInActiveWindow
+                if (root == null) {
+                    delay(500)
+                    continue
+                }
+                var isFound = !root.findAccessibilityNodeInfosByText(target).isNullOrEmpty()
+                if (!isFound) {
+                    val deepScanResult = findBestNodeFuzzy(root, cleanTarget)
+                    if (deepScanResult != null && calculateMatchScore(deepScanResult, cleanTarget) < 40) {
+                        isFound = true
+                    }
+                }
+
+                if (!isFound) {
+                    DebugLogger.d(TAG, "元素 '$target' 已消失，耗时: ${System.currentTimeMillis() - startTime}ms")
+                    return@withTimeoutOrNull "Success: 元素 '$target' 已消失。"
+                }
+                delay(1000)
+            }
+        }
+        return (result ?: "Failed: 等待元素 '$target' 消失超时。") as String
+    }
+
+    // --- 内部点击实现 ---
 
     /**
      * 执行无障碍节点的点击逻辑
@@ -149,8 +198,6 @@ class AgentTools(private val context: ExecutionContext) {
             "search_strategy" to "默认 (从上到下)"
         )
 
-        // 直接注入 "image" 变量，而不是 "ocr_source_img"
-        // 也不要使用 "{{image}}" 引用，因为这里不经过 VariableResolver
         val ocrMagicVars = mutableMapOf<String, Any?>("image" to ImageVariable(imagePath))
 
         val ocrContext = context.copy(
@@ -180,7 +227,7 @@ class AgentTools(private val context: ExecutionContext) {
         return false
     }
 
-    // --- 辅助逻辑 ---
+    // --- 辅助方法 ---
 
     private fun calculateMatchScore(node: AccessibilityNodeInfo, cleanTarget: String): Int {
         val text = normalizeText(node.text?.toString() ?: "")
@@ -270,9 +317,14 @@ class AgentTools(private val context: ExecutionContext) {
         val w = displayMetrics.widthPixels.toFloat()
         val cy = (h / 2)
         val path = Path()
+
+        // 模拟自然滑动，增加随机偏移
+        val xOffset = Random.nextInt(-50, 50)
+        val startX = (cx + xOffset)
+
         when (direction.lowercase()) {
-            "down" -> { path.moveTo(cx, h * 0.8f); path.lineTo(cx, h * 0.2f) }
-            "up" -> { path.moveTo(cx, h * 0.2f); path.lineTo(cx, h * 0.8f) }
+            "down" -> { path.moveTo(startX, h * 0.8f); path.lineTo(startX, h * 0.2f) }
+            "up" -> { path.moveTo(startX, h * 0.2f); path.lineTo(startX, h * 0.8f) }
             "right" -> { path.moveTo(w * 0.8f, cy); path.lineTo(w * 0.2f, cy) }
             "left" -> { path.moveTo(w * 0.2f, cy); path.lineTo(w * 0.8f, cy) }
             else -> return "Error: 未知方向"

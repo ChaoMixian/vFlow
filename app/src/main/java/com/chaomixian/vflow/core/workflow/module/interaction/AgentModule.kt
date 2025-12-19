@@ -75,6 +75,7 @@ class AgentModule : BaseModule() {
         schema.put(JSONObject("""{ "type": "function", "function": { "name": "scroll", "description": "Scroll the view. 'down' means going further down the page (finger moves up).", "parameters": { "type": "object", "properties": { "direction": { "type": "string", "enum": ["up", "down", "left", "right"] } }, "required": ["direction"] } } }"""))
         schema.put(JSONObject("""{ "type": "function", "function": { "name": "press_key", "description": "System keys.", "parameters": { "type": "object", "properties": { "action": { "type": "string", "enum": ["back", "home", "recents"] } }, "required": ["action"] } } }"""))
         schema.put(JSONObject("""{ "type": "function", "function": { "name": "launch_app", "description": "Launch app.", "parameters": { "type": "object", "properties": { "app_name": { "type": "string" } }, "required": ["app_name"] } } }"""))
+        schema.put(JSONObject("""{ "type": "function", "function": { "name": "wait", "description": "Wait for a specific amount of time. Use this when the app is loading, generating content, or processing.", "parameters": { "type": "object", "properties": { "seconds": { "type": "integer", "description": "Time to wait in seconds." } }, "required": ["seconds"] } } }"""))
         schema.put(JSONObject("""{ "type": "function", "function": { "name": "finish_task", "description": "Finish task. CALL THIS when goal is achieved or impossible.", "parameters": { "type": "object", "properties": { "result": { "type": "string" }, "success": { "type": "boolean" } }, "required": ["result", "success"] } } }"""))
         return schema
     }
@@ -108,11 +109,7 @@ class AgentModule : BaseModule() {
 
         val messages = JSONArray()
 
-        // --- 2. 构建 System Prompt ---
-        // 参考了 prompts_zh.py 的优秀实践：
-        // 1. 加入日期时间
-        // 2. 强制 <think> 标签
-        // 3. 细化操作规则 (App检查, 返回逻辑, 滑动查找, 验证生效)
+        // System Prompt
         val systemPrompt = """
             You are vFlow Agent, an expert Android automation assistant.
             Current Date: $dateString
@@ -134,6 +131,7 @@ class AgentModule : BaseModule() {
             6. **Loop Prevention**: If you perform the same action twice with no effect, STOP. Try a different approach (e.g., scroll, back, or finish with failure).
             7. **Verification**: After every action, observe the new screen state in the next turn to verify success.
             8. **Termination**: Call `finish_task` immediately when the goal is achieved or deemed impossible. Do not idle.
+            9. **Patience**: If you see status indicators like "Generating", "Loading", "Processing", or buttons like "Stop generating", DO NOT click them. Instead, use the `wait` tool to give it time to finish.
             
             # Goal
             Complete the user's instruction: "$instruction"
@@ -244,8 +242,8 @@ class AgentModule : BaseModule() {
                     if (lastAction == currentAction) repeatCount++ else repeatCount = 0
                     lastAction = currentAction
 
-                    // Scroll 允许最多5次重复，其他操作允许2次
-                    val threshold = if (name == "scroll") 5 else 2
+                    // scroll和wait 允许最多5次重复，其他操作允许2次
+                    val threshold = if (name == "scroll" || name == "wait") 5 else 2
 
                     if (repeatCount >= threshold) {
                         DebugLogger.w("AgentModule", "检测到死循环: $name (重复 $repeatCount 次)")
@@ -267,6 +265,7 @@ class AgentModule : BaseModule() {
                                 "scroll" -> agentTools.scroll(args["direction"]?.toString() ?: "up")
                                 "press_key" -> agentTools.pressKey(args["action"]?.toString() ?: "")
                                 "launch_app" -> agentTools.launchApp(args["app_name"]?.toString() ?: "")
+                                "wait" -> agentTools.wait((args["seconds"] as? Number)?.toInt() ?: 5)
                                 else -> "Error: Unknown tool"
                             }
                         }
@@ -279,7 +278,7 @@ class AgentModule : BaseModule() {
                     })
 
                     if (taskResult != null) break
-                    delay(500) // 增加等待时间，给 App 更多响应时间
+                    delay(1000)
                 }
                 if (taskResult != null) break
             } else {
