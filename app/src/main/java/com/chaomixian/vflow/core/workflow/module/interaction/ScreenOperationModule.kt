@@ -16,7 +16,7 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ServiceStateBus
-import com.chaomixian.vflow.services.ShizukuManager
+import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.CompletableDeferred
 import java.util.regex.Pattern
@@ -39,43 +39,21 @@ class ScreenOperationModule : BaseModule() {
     val executionModeOptions = listOf("自动", "无障碍", "Shell")
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
-        if (step == null) return listOf(PermissionManager.ACCESSIBILITY)
-        val mode = step.parameters["execution_mode"] as? String ?: "自动"
-
+        val mode = step?.parameters?.get("execution_mode") as? String ?: "自动"
         return when (mode) {
             "无障碍" -> listOf(PermissionManager.ACCESSIBILITY)
-            "Shell" -> {
-                val context = LogManager.applicationContext
-                val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-                val shellType = prefs.getString("default_shell_mode", "shizuku")
-                if (shellType == "root") listOf(PermissionManager.ROOT) else listOf(PermissionManager.SHIZUKU)
-            }
-            else -> listOf(PermissionManager.ACCESSIBILITY)
+            "Shell" -> ShellManager.getRequiredPermissions(LogManager.applicationContext)
+            // 自动模式下，如果无障碍不可用，可能会用到 Shell，所以都带上
+            else -> listOf(PermissionManager.ACCESSIBILITY) + ShellManager.getRequiredPermissions(LogManager.applicationContext)
         }
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("operation_type", "类型", ParameterType.ENUM, "点击", options = listOf("点击", "长按", "滑动"), acceptsMagicVariable = false),
-        InputDefinition(
-            "target", "目标/起点", ParameterType.STRING, "",
-            acceptsMagicVariable = true,
-            supportsRichText = false,
-            acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, TextVariable.TYPE_NAME)
-        ),
-        // [修复] isHidden = false，让 AI 能看到这个参数
-        InputDefinition(
-            "target_end", "滑动终点", ParameterType.STRING, "",
-            acceptsMagicVariable = true,
-            supportsRichText = false,
-            acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, TextVariable.TYPE_NAME),
-            isHidden = false
-        ),
-        // [修复] isHidden = false，让 AI 能控制时间
+        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, TextVariable.TYPE_NAME)),
+        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, TextVariable.TYPE_NAME), isHidden = false),
         InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME), isHidden = false),
-        // [修复] isHidden = false，允许 AI (极少数情况下) 选择执行模式，或者仅仅是为了 Schema 完整性
         InputDefinition("execution_mode", "执行方式", ParameterType.ENUM, "自动", options = executionModeOptions, acceptsMagicVariable = false, isHidden = false),
-
-        // show_advanced 仅用于 UI 状态保存，保持隐藏
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
     )
 
@@ -130,13 +108,9 @@ class ScreenOperationModule : BaseModule() {
         onProgress(ProgressUpdate("执行 $opType ($mode)..."))
 
         val accService = ServiceStateBus.getAccessibilityService()
-        val shellMode = context.applicationContext.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-            .getString("default_shell_mode", "shizuku")
-        val useRoot = shellMode == "root"
-
         var success = false
 
-        // 2. 根据模式执行
+        // 1. 无障碍模式
         if (mode == "无障碍" || (mode == "自动" && accService != null)) {
             if (accService != null) {
                 success = when (opType) {
@@ -151,35 +125,28 @@ class ScreenOperationModule : BaseModule() {
             }
         }
 
+        // 2. Shell 模式 (自动回落或强制指定)
         if (!success && (mode == "Shell" || mode == "自动")) {
-            if (ShizukuManager.isShizukuActive(context.applicationContext) || useRoot) {
-                val cmd = when (opType) {
-                    "点击" -> "input tap ${startPoint.x} ${startPoint.y}"
-                    "长按" -> "input swipe ${startPoint.x} ${startPoint.y} ${startPoint.x} ${startPoint.y} $duration"
-                    "滑动" -> "input swipe ${startPoint.x} ${startPoint.y} ${endPoint!!.x} ${endPoint.y} $duration"
-                    else -> ""
-                }
-                if (cmd.isNotEmpty()) {
-                    val result = if (useRoot) {
-                        try {
-                            Runtime.getRuntime().exec(arrayOf("su", "-c", cmd)).waitFor() == 0
-                            "Success"
-                        } catch (e: Exception) { "Error: ${e.message}" }
-                    } else {
-                        ShizukuManager.execShellCommand(context.applicationContext, cmd)
-                    }
-                    success = !result.startsWith("Error")
-                    if (success) DebugLogger.d("ScreenOp", "Shell 执行成功")
-                }
+            val cmd = when (opType) {
+                "点击" -> "input tap ${startPoint.x} ${startPoint.y}"
+                "长按" -> "input swipe ${startPoint.x} ${startPoint.y} ${startPoint.x} ${startPoint.y} $duration"
+                "滑动" -> "input swipe ${startPoint.x} ${startPoint.y} ${endPoint!!.x} ${endPoint.y} $duration"
+                else -> ""
+            }
+            if (cmd.isNotEmpty()) {
+                val result = ShellManager.execShellCommand(context.applicationContext, cmd, ShellManager.ShellMode.AUTO)
+                success = !result.startsWith("Error")
+                if (success) DebugLogger.d("ScreenOp", "Shell 执行成功")
             } else if (mode == "Shell") {
-                return ExecutionResult.Failure("权限不足", "指定使用 Shell，但无 Root 或 Shizuku 权限。")
+                // 如果命令生成失败但又指定了 Shell
+                return ExecutionResult.Failure("内部错误", "无法生成 Shell 命令")
             }
         }
 
-        if (success) {
-            return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+        return if (success) {
+            ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
         } else {
-            return ExecutionResult.Failure("执行失败", "操作无法执行，请检查相关权限或服务状态。")
+            ExecutionResult.Failure("执行失败", "操作无法执行，请检查相关权限或服务状态。")
         }
     }
 

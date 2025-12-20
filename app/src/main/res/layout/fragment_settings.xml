@@ -89,12 +89,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="自动开启无障碍服务 (Shizuku)" />
+                    android:text="自动开启无障碍服务" />
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="当服务意外关闭时，通过 Shizuku 自动重新启用无障碍服务。此功能需要 Shizuku 激活。"
+                    android:text="当服务意外关闭时，通过 Shizuku / Root 自动重新启用无障碍服务。此功能需要 Shizuku / Root权限。"
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
             </LinearLayout>

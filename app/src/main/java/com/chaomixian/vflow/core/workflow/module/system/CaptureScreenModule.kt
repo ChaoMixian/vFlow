@@ -2,7 +2,6 @@
 package com.chaomixian.vflow.core.workflow.module.system
 
 import android.app.Activity
-import android.content.ContentValues.TAG
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
@@ -23,7 +22,7 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ExecutionUIService
-import com.chaomixian.vflow.services.ShizukuManager
+import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -47,21 +46,7 @@ class CaptureScreenModule : BaseModule() {
 
     // 动态权限声明
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
-        // 如果 step 为 null (如在模块管理器列表中)，返回所有可能的权限
-        if (step == null) {
-            return listOf(PermissionManager.SHIZUKU, PermissionManager.ROOT)
-        }
-
-        // 读取全局 Shell 设置 (Root 还是 Shizuku)
-        // 使用 LogManager 获取全局 Context
-        val context = LogManager.applicationContext
-        val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-        val defaultShellMode = prefs.getString("default_shell_mode", "shizuku")
-        return when (defaultShellMode) {
-            "root" -> listOf(PermissionManager.ROOT)
-            "shizuku" -> listOf(PermissionManager.SHIZUKU)
-            else -> listOf(PermissionManager.SHIZUKU)
-        }
+        return ShellManager.getRequiredPermissions(LogManager.applicationContext)
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -95,15 +80,11 @@ class CaptureScreenModule : BaseModule() {
         val mode = context.variables["mode"] as? String ?: "自动"
         val appContext = context.applicationContext
 
-        val prefs = appContext.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-        // 默认为 shizuku，因为它是较安全且通用的选择
-        val defaultShellMode = prefs.getString("default_shell_mode", "shizuku")
-
         onProgress(ProgressUpdate("准备截屏 (模式: $mode)..."))
 
         val imageUri: Uri? = when (mode) {
-            "自动" -> performAutomaticCapture(context, defaultShellMode, onProgress)
-            "screencap" -> performShellCapture(appContext, defaultShellMode, onProgress)
+            "自动" -> performAutomaticCapture(context, onProgress)
+            "screencap" -> performShellCapture(appContext, onProgress)
             else -> return ExecutionResult.Failure("参数错误", "无效的截屏模式")
         }
 
@@ -115,60 +96,28 @@ class CaptureScreenModule : BaseModule() {
         }
     }
 
-    /**
-     * 自动模式下的执行逻辑
-     */
     private suspend fun performAutomaticCapture(
         context: ExecutionContext,
-        defaultShellMode: String?,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): Uri? {
         val appContext = context.applicationContext
 
-        // 1. 如果设置为 Root，优先尝试 Root
-        if (defaultShellMode == "root") {
-            onProgress(ProgressUpdate("自动模式：优先尝试 Root 截图..."))
-            val uri = captureWithShell(appContext, useRoot = true)
-            if (uri != null) return uri
-            DebugLogger.w("CaptureScreenModule", "Root 截图失败，尝试回落。")
-        }
+        // 1. 尝试 Shell 截图 (自动模式)
+        onProgress(ProgressUpdate("自动模式：尝试 Shell 截图..."))
+        val uri = performShellCapture(appContext, onProgress)
+        if (uri != null) return uri
 
-        // 2. 如果设置为 Shizuku 或 Root 失败且 Shizuku 激活，尝试 Shizuku
-        // 注意：如果首选是 Shizuku，这里会是第一步
-        if (ShizukuManager.isShizukuActive(appContext)) {
-            onProgress(ProgressUpdate("自动模式：尝试 Shizuku 截图..."))
-            val uri = captureWithShell(appContext, useRoot = false)
-            if (uri != null) return uri
-            DebugLogger.w("CaptureScreenModule", "Shizuku 截图失败，尝试回落。")
-        }
+        DebugLogger.w("CaptureScreenModule", "Shell 截图失败，回落到 MediaProjection。")
 
-        // 3. 如果首选是 Shizuku 且失败了，尝试 Root (前提是首选不是 Root，因为那样在第1步已经试过了)
-        if (defaultShellMode == "shizuku") {
-            // 这里是一个隐式尝试，如果用户没 Root 权限这步会很快失败
-            val uri = captureWithShell(appContext, useRoot = true)
-            if (uri != null) return uri
-        }
-
-        // 4. 最终回落：MediaProjection
+        // 2. 最终回落：MediaProjection
         onProgress(ProgressUpdate("自动模式：回落到 MediaProjection..."))
         return captureWithMediaProjection(context, onProgress)
     }
 
-    /**
-     * 强制 Shell 模式下的逻辑
-     */
     private suspend fun performShellCapture(
         context: Context,
-        defaultShellMode: String?,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): Uri? {
-        // 遵循用户偏好，如果偏好是 Root 则只用 Root，反之亦然
-        val useRoot = defaultShellMode == "root"
-        onProgress(ProgressUpdate("正在使用 ${if (useRoot) "Root" else "Shizuku"} 执行 screencap..."))
-        return captureWithShell(context, useRoot)
-    }
-
-    private suspend fun captureWithShell(context: Context, useRoot: Boolean): Uri? {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
         val fileName = "screenshot_$timestamp.png"
         val cacheFile = File(context.cacheDir, fileName)
@@ -178,21 +127,14 @@ class CaptureScreenModule : BaseModule() {
 
         return withContext(Dispatchers.IO) {
             try {
-                if (useRoot) {
-                    val process = Runtime.getRuntime().exec("su")
-                    val os = java.io.DataOutputStream(process.outputStream)
-                    os.writeBytes("$command\n")
-                    os.writeBytes("exit\n")
-                    os.flush()
-                    process.waitFor()
-                } else {
-                    ShizukuManager.execShellCommand(context, command)
-                }
+                // 使用 ShellManager 自动选择最佳方式 (Root/Shizuku)
+                val result = ShellManager.execShellCommand(context, command, ShellManager.ShellMode.AUTO)
 
+                // 检查文件是否存在且大小正常 (忽略 ShellManager 的文本返回值，只看文件结果)
                 if (cacheFile.exists() && cacheFile.length() > 0) {
                     Uri.fromFile(cacheFile)
                 } else {
-                    DebugLogger.w("CaptureScreenModule", "Shell 截图文件未生成或为空。")
+                    DebugLogger.w("CaptureScreenModule", "Shell 截图未生成文件: $result")
                     null
                 }
             } catch (e: Exception) {

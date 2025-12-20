@@ -6,10 +6,12 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
@@ -42,9 +44,8 @@ class AgentModule : BaseModule() {
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(
             PermissionManager.ACCESSIBILITY,
-            PermissionManager.SHIZUKU,
             PermissionManager.STORAGE,
-        )
+        ) + ShellManager.getRequiredPermissions(LogManager.applicationContext)
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(

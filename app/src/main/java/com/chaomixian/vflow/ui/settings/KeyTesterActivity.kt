@@ -13,7 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.services.ShizukuManager
+import com.chaomixian.vflow.services.ShellManager
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -91,9 +91,9 @@ class KeyTesterActivity : AppCompatActivity() {
 
     private fun startKeyListening() {
         // 虽然日志显示未授权，但命令能执行，所以我们尝试继续运行
-        // 只有当 ShizukuManager 彻底报错时才停止
-        if (!ShizukuManager.isShizukuActive(this)) {
-            statusTextView.text = "Shizuku 未激活，无法监听按键。"
+        // 只有当 ShellManager 彻底报错时才停止
+        if (!ShellManager.isShizukuActive(this) && !ShellManager.isRootAvailable()) {
+            statusTextView.text = "Shizuku/Root不可用，无法监听按键。"
             return
         }
 
@@ -130,7 +130,7 @@ class KeyTesterActivity : AppCompatActivity() {
                     statusTextView.text = "监听中... \n开始执行脚本：${scriptFile.absolutePath} \n 脚本内容：\n${scriptFile.readText()}\n"
                 }
                 // 执行脚本 (会阻塞，直到被 kill)
-                ShizukuManager.execShellCommand(this@KeyTesterActivity, "sh ${scriptFile.absolutePath}")
+                ShellManager.execShellCommand(this@KeyTesterActivity, "sh ${scriptFile.absolutePath}")
 
             } catch (e: Exception) {
                 DebugLogger.d(TAG, "KeyTesterActivity 监听出错: ${e.message}")
@@ -149,8 +149,8 @@ class KeyTesterActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 DebugLogger.d(TAG, "KeyTesterActivity 准备杀死残留进程...")
-                ShizukuManager.execShellCommand(this@KeyTesterActivity, "pkill -f \"getevent -l\"")
-                ShizukuManager.execShellCommand(this@KeyTesterActivity, "pkill -f $scriptFileName")
+                ShellManager.execShellCommand(this@KeyTesterActivity, "pkill -f \"getevent -l\"")
+                ShellManager.execShellCommand(this@KeyTesterActivity, "pkill -f $scriptFileName")
             } catch (e: Exception) {
                 e.printStackTrace()
             }

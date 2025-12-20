@@ -11,7 +11,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
@@ -91,14 +90,14 @@ class TriggerService : Service() {
             serviceScope.launch {
                 // 延迟几秒，确保 Shizuku 服务在开机后有足够的时间准备好
                 delay(10000)
-                if (ShizukuManager.isShizukuActive(this@TriggerService)) {
+                if (ShellManager.isShizukuActive(this@TriggerService)) {
                     DebugLogger.d(TAG, "正在从后台服务应用启动设置...")
                     if (autoEnableAccessibility) {
-                        ShizukuManager.enableAccessibilityService(this@TriggerService)
+                        ShellManager.enableAccessibilityService(this@TriggerService)
                         DebugLogger.d(TAG, "已在启动时自动启用无障碍服务。")
                     }
                     if (forceKeepAlive) {
-                        ShizukuManager.startWatcher(this@TriggerService)
+                        ShellManager.startWatcher(this@TriggerService)
                         DebugLogger.d(TAG, "已在启动时自动启动 Shizuku 守护。")
                     }
                 } else {

@@ -13,7 +13,7 @@ import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.services.ServiceStateBus
-import com.chaomixian.vflow.services.ShizukuManager
+import com.chaomixian.vflow.services.ShellManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
@@ -286,8 +286,8 @@ class AgentTools(private val context: ExecutionContext) {
             }, null)
             if (deferred.await()) return true
         }
-        if (ShizukuManager.isShizukuActive(appContext)) {
-            val result = ShizukuManager.execShellCommand(appContext, "input tap $x $y")
+        if (ShellManager.isShizukuActive(appContext)) {
+            val result = ShellManager.execShellCommand(appContext, "input tap $x $y", ShellManager.ShellMode.AUTO)
             return !result.startsWith("Error")
         }
         return false
@@ -301,9 +301,9 @@ class AgentTools(private val context: ExecutionContext) {
             args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
             if (focusNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) return "Success: 已输入文本。"
         }
-        if (ShizukuManager.isShizukuActive(appContext)) {
+        if (ShellManager.isShizukuActive(appContext)) {
             val safeText = text.replace("\"", "\\\"").replace("'", "\\'")
-            val result = ShizukuManager.execShellCommand(appContext, "input text \"$safeText\"")
+            val result = ShellManager.execShellCommand(appContext, "input text \"$safeText\"", ShellManager.ShellMode.AUTO)
             if (!result.startsWith("Error")) return "Success: 通过 Shell 输入了文本。"
         }
         return "Failed: 无法输入文本。"

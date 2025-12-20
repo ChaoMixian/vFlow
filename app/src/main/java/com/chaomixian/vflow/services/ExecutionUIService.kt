@@ -8,8 +8,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.os.Bundle
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
@@ -79,13 +77,13 @@ class ExecutionUIService(private val context: Context) {
         // --- 后台启动策略 (仅当直接启动失败时执行) ---
 
         // --- 尝试 2: 使用 Shizuku 强制启动 ---
-        if (ShizukuManager.isShizukuActive(context)) {
+        if (ShellManager.isShizukuActive(context)) {
             DebugLogger.d(TAG, "尝试 2: 使用 Shizuku...")
             try {
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK) // 添加CLEAR_TASK以确保行为一致
                 val command = buildAmStartCommand(intent)
                 DebugLogger.d(TAG, "正在通过 Shizuku 执行: $command")
-                val result = ShizukuManager.execShellCommand(context, command)
+                val result = ShellManager.execShellCommand(context, command, ShellManager.ShellMode.AUTO)
 
                 if (!result.startsWith("Error:") && !result.contains("Exception")) {
                     DebugLogger.d(TAG, "尝试 2: Shizuku 启动成功。")

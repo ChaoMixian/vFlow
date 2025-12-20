@@ -1,4 +1,4 @@
-// 文件路径: main/java/com/chaomixian/vflow/services/ShizukuManager.kt
+// 文件路径: main/java/com/chaomixian/vflow/services/ShellManager.kt
 package com.chaomixian.vflow.services
 
 import android.content.ComponentName
@@ -7,28 +7,57 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import rikka.shizuku.Shizuku
+import java.io.DataOutputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Shizuku 管理工具类 (精简优化版)。
- * 负责管理与 Shizuku 服务的连接，并提供核心的命令执行功能。
- * 新增了 proactiveConnect() 方法用于应用启动时预连接，以优化首次执行速度。
+ * Shell 管理工具类 (原 ShizukuManager)。
+ * 负责管理与 Shizuku 服务的连接，并提供核心的 Shell 命令执行功能。
+ * 支持 Shizuku 和 Root 两种执行后端，并可根据设置自动切换。
  */
-object ShizukuManager {
-    private const val TAG = "vFlowShizukuManager"
+object ShellManager {
+    private const val TAG = "vFlowShellManager"
     private const val BIND_TIMEOUT_MS = 3000L
     private const val MAX_RETRY_COUNT = 3
 
+    /**
+     * Shell 执行模式
+     */
+    enum class ShellMode {
+        AUTO,    // 自动：根据用户在设置中的偏好决定
+        SHIZUKU, // 强制使用 Shizuku
+        ROOT     // 强制使用 Root
+    }
+
     @Volatile
     private var shellService: IShizukuUserService? = null
-    // [核心修改] 使用 Mutex 替代 AtomicBoolean 来保护连接过程
+
+    // 使用 Mutex 替代 AtomicBoolean 来保护 Shizuku 连接过程
     private val connectionMutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * 动态获取所需的权限。
+     * 模块可以调用此方法来声明它们需要的权限，而无需自己判断是 Root 还是 Shizuku。
+     * @param context 上下文，用于读取 SharedPreferences。
+     * @return 包含 PermissionManager.ROOT 或 PermissionManager.SHIZUKU 的列表。
+     */
+    fun getRequiredPermissions(context: Context): List<Permission> {
+        val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+        val defaultMode = prefs.getString("default_shell_mode", "shizuku")
+        return if (defaultMode == "root") {
+            listOf(PermissionManager.ROOT)
+        } else {
+            listOf(PermissionManager.SHIZUKU)
+        }
+    }
 
     /**
      * 主动预连接 Shizuku 服务。
@@ -67,9 +96,32 @@ object ShizukuManager {
     }
 
     /**
-     * 启动 Shizuku 守护任务
+     * 检查 Root 权限是否可用。
+     * 尝试执行 'su' 命令并检查退出码。
+     */
+    fun isRootAvailable(): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec("su")
+            val os = DataOutputStream(process.outputStream)
+            os.writeBytes("exit\n")
+            os.flush()
+            val exitCode = process.waitFor()
+            exitCode == 0
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * 启动守护任务 (目前仅支持 Shizuku 模式)
      */
     fun startWatcher(context: Context) {
+        // 守护任务依赖于 IShizukuUserService 的长连接，Root 模式下暂不支持此机制
+        if (!isShizukuActive(context)) {
+            DebugLogger.w(TAG, "Shizuku 未激活，无法启动守护任务。")
+            return
+        }
+
         scope.launch {
             val service = getService(context)
             if (service == null) {
@@ -87,9 +139,11 @@ object ShizukuManager {
     }
 
     /**
-     * 停止 Shizuku 守护任务
+     * 停止守护任务 (目前仅支持 Shizuku 模式)
      */
     fun stopWatcher(context: Context) {
+        if (!isShizukuActive(context)) return
+
         scope.launch {
             val service = getService(context)
             if (service == null) {
@@ -106,24 +160,83 @@ object ShizukuManager {
         }
     }
 
-
     /**
      * 执行一条 Shell 命令。
+     * @param context 上下文
+     * @param command 要执行的命令
+     * @param mode 执行模式，默认为 AUTO (自动根据设置选择)
+     * @return 命令输出字符串，或以 "Error:" 开头的错误信息。
      */
-    suspend fun execShellCommand(context: Context, command: String): String {
+    suspend fun execShellCommand(
+        context: Context,
+        command: String,
+        mode: ShellMode = ShellMode.AUTO
+    ): String {
+        return withContext(Dispatchers.IO) {
+            // 确定最终使用的模式
+            val finalMode = if (mode == ShellMode.AUTO) {
+                val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+                val defaultMode = prefs.getString("default_shell_mode", "shizuku")
+                if (defaultMode == "root") ShellMode.ROOT else ShellMode.SHIZUKU
+            } else {
+                mode
+            }
+
+            // 根据模式分发执行
+            if (finalMode == ShellMode.ROOT) {
+                executeRootCommand(command)
+            } else {
+                executeShizukuCommand(context, command)
+            }
+        }
+    }
+
+    /**
+     * 内部 Root 执行逻辑
+     */
+    private fun executeRootCommand(command: String): String {
+        return try {
+            val process = Runtime.getRuntime().exec("su")
+            val os = DataOutputStream(process.outputStream)
+
+            // 写入命令和退出指令
+            os.writeBytes("$command\n")
+            os.writeBytes("exit\n")
+            os.flush()
+
+            // 读取输出
+            // use 块会自动关闭流
+            val stdout = process.inputStream.bufferedReader().use { it.readText() }
+            val stderr = process.errorStream.bufferedReader().use { it.readText() }
+
+            val exitCode = process.waitFor()
+
+            if (exitCode == 0) {
+                if (stdout.isNotEmpty()) stdout.trim() else "Success"
+            } else {
+                // 优先返回 stderr，如果没有则返回 stdout，最后返回错误码
+                val msg = if (stderr.isNotBlank()) stderr else if (stdout.isNotBlank()) stdout else "Exit code $exitCode"
+                "Error: ${msg.trim()}"
+            }
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "Root execution failed", e)
+            "Error: ${e.message}"
+        }
+    }
+
+    /**
+     * 内部 Shizuku 执行逻辑 (保留原有逻辑)
+     */
+    private suspend fun executeShizukuCommand(context: Context, command: String): String {
         val service = getService(context)
         if (service == null) {
             val status = if (!isShizukuActive(context)) "Shizuku 未激活或未授权" else "服务连接失败"
             return "Error: $status"
         }
         return try {
-            withContext(Dispatchers.IO) {
-                service.exec(command)
-            }
+            service.exec(command)
         } catch (e: CancellationException) {
             // 捕获协程取消异常。
-            // 这是一个正常的操作流程（例如在重新加载触发器时），不应被记录为错误。
-            // 将异常重新抛出，让协程框架正常处理取消逻辑。
             DebugLogger.d(TAG, "Shizuku command execution was cancelled as expected.")
             throw e
         } catch (e: Exception) {
@@ -135,7 +248,8 @@ object ShizukuManager {
     }
 
     /**
-     * 通过 Shizuku 开启无障碍服务。
+     * 通过 Shell 开启无障碍服务。
+     * 使用 AUTO 模式，自动适配 Root 或 Shizuku。
      * @return 返回操作是否成功。
      */
     suspend fun enableAccessibilityService(context: Context): Boolean {
@@ -169,12 +283,13 @@ object ShizukuManager {
 
         // 5. 确保无障碍总开关是打开的
         execShellCommand(context, "settings put secure accessibility_enabled 1")
-        DebugLogger.d(TAG, "已通过 Shizuku 尝试启用无障碍服务。")
+        DebugLogger.d(TAG, "已通过 Shell 尝试启用无障碍服务。")
         return true
     }
 
     /**
-     * 通过 Shizuku 关闭无障碍服务。
+     * 通过 Shell 关闭无障碍服务。
+     * 使用 AUTO 模式，自动适配 Root 或 Shizuku。
      * @return 返回操作是否成功。
      */
     suspend fun disableAccessibilityService(context: Context): Boolean {
@@ -200,13 +315,12 @@ object ShizukuManager {
             DebugLogger.e(TAG, "移除无障碍服务失败: $result")
             return false
         }
-        DebugLogger.d(TAG, "已通过 Shizuku 尝试禁用无障碍服务。")
+        DebugLogger.d(TAG, "已通过 Shell 尝试禁用无障碍服务。")
         return true
     }
 
-
     /**
-     * 获取服务实例，使用 Mutex 解决并发问题。
+     * 获取服务实例，使用 Mutex 解决并发问题 (仅用于 Shizuku)。
      */
     private suspend fun getService(context: Context): IShizukuUserService? {
         // 在尝试加锁前，先进行一次快速检查，提高性能
@@ -216,7 +330,7 @@ object ShizukuManager {
 
         // 使用互斥锁确保只有一个协程可以执行连接操作
         connectionMutex.withLock {
-            // 获取锁后，再次检查，因为在等待锁的过程中，可能已有其他协程完成了连接
+            // 获取锁后，再次检查
             if (shellService?.asBinder()?.isBinderAlive == true) {
                 return shellService
             }

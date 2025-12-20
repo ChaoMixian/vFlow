@@ -22,7 +22,7 @@ import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
-import com.chaomixian.vflow.services.ShizukuManager
+import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
@@ -55,7 +55,7 @@ class MainActivity : BaseActivity() {
         LogManager.initialize(applicationContext)
         DebugLogger.initialize(applicationContext) // 初始化调试日志记录器
         // 应用启动时，立即发起 Shizuku 预连接
-        ShizukuManager.proactiveConnect(applicationContext)
+        ShellManager.proactiveConnect(applicationContext)
         // 启动后台触发器服务
         startService(Intent(this, TriggerService::class.java))
 
@@ -105,14 +105,14 @@ class MainActivity : BaseActivity() {
 
         if (autoEnableAccessibility || forceKeepAlive) {
             lifecycleScope.launch {
-                if (ShizukuManager.isShizukuActive(this@MainActivity)) {
+                if (ShellManager.isShizukuActive(this@MainActivity)) {
                     if (autoEnableAccessibility) {
                         // 自动启用无障碍服务，这里不显示 Toast 以避免打扰
-                        ShizukuManager.enableAccessibilityService(this@MainActivity)
+                        ShellManager.enableAccessibilityService(this@MainActivity)
                     }
                     if (forceKeepAlive) {
                         // 自动启动守护
-                        ShizukuManager.startWatcher(this@MainActivity)
+                        ShellManager.startWatcher(this@MainActivity)
                     }
                 }
             }

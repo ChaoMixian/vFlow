@@ -6,7 +6,6 @@ import android.content.Context
 import android.net.Uri
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ModuleRegistry
-import com.chaomixian.vflow.services.ShizukuDiagnostic
 import com.google.gson.Gson
 import java.io.File
 import java.util.zip.ZipInputStream

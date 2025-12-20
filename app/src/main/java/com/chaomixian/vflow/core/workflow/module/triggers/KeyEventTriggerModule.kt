@@ -5,9 +5,11 @@ package com.chaomixian.vflow.core.workflow.module.triggers
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.permissions.*
+import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class KeyEventTriggerModule : BaseModule() {
@@ -15,12 +17,13 @@ class KeyEventTriggerModule : BaseModule() {
     override val id = "vflow.trigger.key_event"
     override val metadata = ActionMetadata(
         name = "按键触发",
-        description = "当指定的物理按键被按下时，触发此工作流（需要Shizuku）。",
+        description = "当指定的物理按键被按下时，触发此工作流（需要Shizuku或Root）。",
         iconRes = R.drawable.rounded_horizontal_align_bottom_24,
         category = "触发器"
     )
 
-    override val requiredPermissions = listOf(PermissionManager.SHIZUKU)
+    override val requiredPermissions: List<Permission>
+        get() = ShellManager.getRequiredPermissions(LogManager.applicationContext)
 
     private val presetOptions = listOf("手动/自定义", "一加 13T (侧键)", "一加 13 (三段式)")
     private val onePlus13TActions = listOf("单击", "双击", "长按", "短按 (立即触发)")

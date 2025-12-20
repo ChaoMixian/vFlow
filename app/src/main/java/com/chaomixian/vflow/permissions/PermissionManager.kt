@@ -6,18 +6,15 @@ import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.AccessibilityService
-import com.chaomixian.vflow.services.ShizukuManager
-import rikka.shizuku.Shizuku
+import com.chaomixian.vflow.services.ShellManager
 import java.io.DataOutputStream
 import androidx.core.net.toUri
 
@@ -232,14 +229,23 @@ object PermissionManager {
 
     /** Shizuku 策略 */
     private val shizukuStrategy = object : PermissionStrategy {
-        override fun isGranted(context: Context, permission: Permission): Boolean = ShizukuManager.isShizukuActive(context)
+        override fun isGranted(context: Context, permission: Permission): Boolean = ShellManager.isShizukuActive(context)
         override fun createRequestIntent(context: Context, permission: Permission): Intent? = null // Shizuku 有专门的 API 请求
     }
 
     /** Root 策略 */
     private val rootStrategy = object : PermissionStrategy {
-        override fun isGranted(context: Context, permission: Permission): Boolean = isRootGranted()
-        override fun createRequestIntent(context: Context, permission: Permission): Intent? = null // Root 通常是执行时触发 su 请求
+        override fun isGranted(context: Context, permission: Permission): Boolean {
+            // 简单的 Root 检查：尝试执行 'su'
+            return try {
+                val process = Runtime.getRuntime().exec("su")
+                val os = DataOutputStream(process.outputStream)
+                os.writeBytes("exit\n")
+                os.flush()
+                process.waitFor() == 0
+            } catch (_: Exception) { false }
+        }
+        override fun createRequestIntent(context: Context, permission: Permission): Intent? = null
     }
 
     // 策略映射表
@@ -314,16 +320,4 @@ object PermissionManager {
         return false
     }
 
-    private fun isRootGranted(): Boolean {
-        return try {
-            val process = Runtime.getRuntime().exec("su")
-            val os = DataOutputStream(process.outputStream)
-            os.writeBytes("exit\n")
-            os.flush()
-            val exitValue = process.waitFor()
-            exitValue == 0
-        } catch (e: Exception) {
-            false
-        }
-    }
 }

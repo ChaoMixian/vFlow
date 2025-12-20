@@ -5,12 +5,11 @@ package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.ExecutionUIService
-import com.chaomixian.vflow.services.ShizukuManager
+import com.chaomixian.vflow.services.ShellManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -65,7 +64,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         keyEventJob?.cancel()
         triggerScope.launch {
             DebugLogger.d(TAG, "KeyEventTriggerHandler 正在清理资源。")
-            ShizukuManager.execShellCommand(context, "killall getevent")
+            ShellManager.execShellCommand(context, "killall getevent", ShellManager.ShellMode.AUTO)
             context.cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }?.forEach { it.delete() }
         }
         DebugLogger.d(TAG, "KeyEventTriggerHandler 已停止并清理了资源。")
@@ -139,13 +138,13 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             // 1. 清理旧的监听进程
             try {
                 DebugLogger.d(TAG, "KeyEventTriggerHandler 结束进程并清理残留中...")
-                ShizukuManager.execShellCommand(context, "killall getevent")
+                ShellManager.execShellCommand(context, "killall getevent", ShellManager.ShellMode.AUTO)
                 val pidFiles = context.cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }
                 pidFiles?.forEach { pidFile ->
                     try {
                         val pid = pidFile.readText().trim()
                         DebugLogger.d(TAG, "KeyEventTriggerHandler 正在结束进程 $pid...")
-                        if (pid.isNotEmpty()) ShizukuManager.execShellCommand(context, "kill $pid")
+                        if (pid.isNotEmpty()) ShellManager.execShellCommand(context, "kill $pid", ShellManager.ShellMode.AUTO)
                         pidFile.delete()
                     } catch (e: Exception) {
                         DebugLogger.w(TAG, "清理 PID 文件 ${pidFile.name} 时出错: ", e)
@@ -187,7 +186,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
                             scriptFile.writeText(script)
                             scriptFile.setExecutable(true)
                             DebugLogger.d(TAG, "正在为设备 $path 启动新的监听脚本...")
-                            ShizukuManager.execShellCommand(context, "sh ${scriptFile.absolutePath}")
+                            ShellManager.execShellCommand(context, "sh ${scriptFile.absolutePath}", ShellManager.ShellMode.AUTO)
                         } catch (e: Exception) {
                             if (e is CancellationException) {
                                 DebugLogger.e(TAG, "设备 $path 监听脚本的执行被取消。", e)

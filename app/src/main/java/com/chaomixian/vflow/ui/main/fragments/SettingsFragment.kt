@@ -1,4 +1,4 @@
-// 文件：main/java/com/chaomixian/vflow/ui/main/fragments/SettingsFragment.kt
+// 文件: main/java/com/chaomixian/vflow/ui/main/fragments/SettingsFragment.kt
 package com.chaomixian.vflow.ui.main.fragments
 
 import android.content.Context
@@ -17,8 +17,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
-import com.chaomixian.vflow.services.ShizukuManager
-import com.chaomixian.vflow.services.ShizukuDiagnostic
+import com.chaomixian.vflow.services.ShellManager
+import com.chaomixian.vflow.services.ShellDiagnostic
 import com.chaomixian.vflow.ui.settings.KeyTesterActivity
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -78,16 +78,16 @@ class SettingsFragment : Fragment() {
 
         // 强制保活开关逻辑
         val forceKeepAliveSwitch = view.findViewById<MaterialSwitch>(R.id.switch_force_keep_alive)
-        if (ShizukuManager.isShizukuActive(requireContext())) {
+        if (ShellManager.isShizukuActive(requireContext())) {
             forceKeepAliveSwitch.isEnabled = true
             forceKeepAliveSwitch.isChecked = prefs.getBoolean("forceKeepAliveEnabled", false)
             forceKeepAliveSwitch.setOnCheckedChangeListener { _, isChecked ->
                 prefs.edit { putBoolean("forceKeepAliveEnabled", isChecked) }
                 if (isChecked) {
-                    ShizukuManager.startWatcher(requireContext())
+                    ShellManager.startWatcher(requireContext())
                     Toast.makeText(requireContext(), "Shizuku 守护已开启", Toast.LENGTH_SHORT).show()
                 } else {
-                    ShizukuManager.stopWatcher(requireContext())
+                    ShellManager.stopWatcher(requireContext())
                     Toast.makeText(requireContext(), "Shizuku 守护已关闭", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -99,16 +99,20 @@ class SettingsFragment : Fragment() {
 
         // 自动开启无障碍服务开关逻辑
         val autoEnableAccessibilitySwitch = view.findViewById<MaterialSwitch>(R.id.switch_auto_enable_accessibility)
-        if (ShizukuManager.isShizukuActive(requireContext())) {
+
+        // 使用 ShellManager 检查 Shizuku 或 Root 是否可用
+        val canUseShell = ShellManager.isShizukuActive(requireContext()) || ShellManager.isRootAvailable()
+
+        if (canUseShell) {
             autoEnableAccessibilitySwitch.isEnabled = true
             autoEnableAccessibilitySwitch.isChecked = prefs.getBoolean("autoEnableAccessibility", false)
             autoEnableAccessibilitySwitch.setOnCheckedChangeListener { _, isChecked ->
                 prefs.edit { putBoolean("autoEnableAccessibility", isChecked) }
                 lifecycleScope.launch {
                     val success = if (isChecked) {
-                        ShizukuManager.enableAccessibilityService(requireContext())
+                        ShellManager.enableAccessibilityService(requireContext())
                     } else {
-                        ShizukuManager.disableAccessibilityService(requireContext())
+                        ShellManager.disableAccessibilityService(requireContext())
                     }
                     // 在主线程显示 Toast
                     launch(Dispatchers.Main) {
@@ -116,8 +120,7 @@ class SettingsFragment : Fragment() {
                             val status = if (isChecked) "开启" else "关闭"
                             Toast.makeText(requireContext(), "自动无障碍服务已$status", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(requireContext(), "操作失败，请检查Shizuku状态", Toast.LENGTH_SHORT).show()
-                            // 操作失败时，将开关恢复原状
+                            Toast.makeText(requireContext(), "操作失败，请检查Shell权限", Toast.LENGTH_SHORT).show()
                             autoEnableAccessibilitySwitch.isChecked = !isChecked
                             prefs.edit { putBoolean("autoEnableAccessibility", !isChecked) }
                         }
@@ -127,7 +130,7 @@ class SettingsFragment : Fragment() {
         } else {
             autoEnableAccessibilitySwitch.isEnabled = false
             autoEnableAccessibilitySwitch.isChecked = false
-            autoEnableAccessibilitySwitch.text = "自动开启无障碍服务 (Shizuku未激活)"
+            autoEnableAccessibilitySwitch.text = "自动开启无障碍服务 (Shizuku/Root 未授权)"
         }
 
         // 权限与 Shell 设置
@@ -195,15 +198,15 @@ class SettingsFragment : Fragment() {
 
         // 运行全面诊断
         diagnoseButton.setOnClickListener {
-            if (!ShizukuManager.isShizukuActive(requireContext())) {
+            if (!ShellManager.isShizukuActive(requireContext())) {
                 Toast.makeText(requireContext(), "请先激活 Shizuku", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             Toast.makeText(requireContext(), "正在运行诊断...", Toast.LENGTH_SHORT).show()
             lifecycleScope.launch(Dispatchers.IO) {
-                ShizukuDiagnostic.diagnose(requireContext())
-                ShizukuDiagnostic.runKeyEventDiagnostic(requireContext())
+                ShellDiagnostic.diagnose(requireContext())
+                ShellDiagnostic.runKeyEventDiagnostic(requireContext())
                 launch(Dispatchers.Main) {
                     Toast.makeText(requireContext(), "诊断完成，请点击“导出日志”查看详细结果", Toast.LENGTH_LONG).show()
                 }
