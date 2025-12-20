@@ -6,10 +6,10 @@ package com.chaomixian.vflow.ui.app_picker
 
 import android.app.Activity
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.SearchView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.*
 
 /**
  * AppPickerActivity 类
@@ -30,12 +31,13 @@ import kotlinx.coroutines.withContext
  */
 class AppPickerActivity : BaseActivity() {
 
-    private lateinit var recyclerView: RecyclerView // 用于显示应用列表的视图
-    private lateinit var adapter: AppListAdapter // 列表的适配器
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: AppListAdapter
+    private lateinit var searchView: SearchView
 
-    /**
-     * 伴生对象，用于存放常量。
-     */
+    // 保存完整列表用于本地过滤
+    private var allApps: List<AppInfo> = emptyList()
+
     companion object {
         // Intent extra 的键名，用于在 Activity 之间传递所选应用的包名
         const val EXTRA_SELECTED_PACKAGE_NAME = "selected_package_name"
@@ -83,6 +85,19 @@ class AppPickerActivity : BaseActivity() {
         // 初始化 RecyclerView
         recyclerView = findViewById(R.id.recycler_view_apps)
 
+        // 获取搜索框视图
+        searchView = findViewById(R.id.search_view)
+
+        // 设置搜索监听
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean = false
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                filterApps(newText)
+                return true
+            }
+        })
+
         // 开始异步加载应用列表
         loadApps()
     }
@@ -94,27 +109,27 @@ class AppPickerActivity : BaseActivity() {
     private fun loadApps() {
         // 创建一个在IO线程池中运行的协程
         CoroutineScope(Dispatchers.IO).launch {
-            val pm = packageManager // 获取 PackageManager 实例
-            // 获取所有已安装应用的列表
-            val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            val pm = packageManager
+            // 获取已安装应用
+            val packages = pm.getInstalledApplications(0)
 
             // 过滤、映射和排序应用列表
             val appList = packages
-                .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 && pm.getLaunchIntentForPackage(it.packageName) != null } // 只保留非系统且可启动的应用
+                // 仅显示有启动入口的应用
+                .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
                 .map { appInfo ->
-                    // 将 ApplicationInfo 转换为我们自定义的 AppInfo 数据类
                     AppInfo(
                         appName = appInfo.loadLabel(pm).toString(), // 应用名称
                         packageName = appInfo.packageName,         // 应用包名
                         icon = appInfo.loadIcon(pm)                  // 应用图标
                     )
                 }
-                .sortedBy { it.appName } // 按应用名称排序
+                .sortedBy { it.appName.lowercase(Locale.getDefault()) }
 
             // 切换回主线程来更新UI
             withContext(Dispatchers.Main) {
-                // 创建 RecyclerView 的适配器
-                adapter = AppListAdapter(appList) { appInfo ->
+                allApps = appList
+                adapter = AppListAdapter(allApps) { appInfo ->
                     // 定义列表项的点击事件
                     // 当用户点击一个应用时，启动 ActivityPickerActivity
                     val intent = Intent(this@AppPickerActivity, ActivityPickerActivity::class.java).apply {
@@ -128,5 +143,20 @@ class AppPickerActivity : BaseActivity() {
                 recyclerView.adapter = adapter
             }
         }
+    }
+
+    private fun filterApps(query: String?) {
+        if (!::adapter.isInitialized) return
+
+        val filteredList = if (query.isNullOrBlank()) {
+            allApps
+        } else {
+            val lowercaseQuery = query.lowercase(Locale.getDefault())
+            allApps.filter {
+                it.appName.lowercase(Locale.getDefault()).contains(lowercaseQuery) ||
+                        it.packageName.lowercase(Locale.getDefault()).contains(lowercaseQuery)
+            }
+        }
+        adapter.updateData(filteredList)
     }
 }

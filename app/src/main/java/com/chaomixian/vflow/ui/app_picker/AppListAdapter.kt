@@ -18,9 +18,14 @@ import com.chaomixian.vflow.R
  * @param onItemClick 一个回调函数，当用户点击列表中的任何一项时会被调用。
  */
 class AppListAdapter(
-    private val apps: List<AppInfo>,
+    private var apps: List<AppInfo>,
     private val onItemClick: (AppInfo) -> Unit
 ) : RecyclerView.Adapter<AppListAdapter.ViewHolder>() {
+
+    fun updateData(newApps: List<AppInfo>) {
+        this.apps = newApps
+        notifyDataSetChanged()
+    }
 
     /**
      * ViewHolder 内部类
@@ -30,7 +35,8 @@ class AppListAdapter(
      */
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon) // 应用图标
-        val appName: TextView = view.findViewById(R.id.app_name)   // 应用名称
+        val appName: TextView = view.findViewById(R.id.app_name) // 应用名称
+        val packageName: TextView = view.findViewById(R.id.package_name) // 应用包名
     }
 
     /**
@@ -55,9 +61,8 @@ class AppListAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         // 从数据列表中获取对应位置的应用信息。
         val app = apps[position]
-        // 将应用名称设置到 TextView 上。
         holder.appName.text = app.appName
-        // 将应用图标设置到 ImageView 上。
+        holder.packageName.text = app.packageName
         holder.appIcon.setImageDrawable(app.icon)
         // 为整个列表项（itemView）设置点击监听器。
         // 当用户点击时，调用我们从构造函数传入的 onItemClick 回调，并把当前应用信息传递过去。

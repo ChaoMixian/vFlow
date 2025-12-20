@@ -21,6 +21,15 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
+    <androidx.appcompat.widget.SearchView
+        android:id="@+id/search_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:background="@drawable/bg_search_view_rounded"
+        app:iconifiedByDefault="false"
+        app:queryHint="搜索应用名称或包名..." />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view_apps"
         android:layout_width="match_parent"
