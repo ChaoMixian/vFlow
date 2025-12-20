@@ -90,18 +90,28 @@ class TriggerService : Service() {
             serviceScope.launch {
                 // 延迟几秒，确保 Shizuku 服务在开机后有足够的时间准备好
                 delay(10000)
-                if (ShellManager.isShizukuActive(this@TriggerService)) {
-                    DebugLogger.d(TAG, "正在从后台服务应用启动设置...")
+                val isShellReady = ShellManager.isShizukuActive(this@TriggerService) || ShellManager.isRootAvailable()
+                if (isShellReady) {
+                    DebugLogger.d(TAG, "Shell 环境就绪，正在应用启动设置...")
                     if (autoEnableAccessibility) {
-                        ShellManager.enableAccessibilityService(this@TriggerService)
-                        DebugLogger.d(TAG, "已在启动时自动启用无障碍服务。")
+                        val success = ShellManager.enableAccessibilityService(this@TriggerService)
+                        if (success) {
+                            DebugLogger.d(TAG, "已在启动时自动启用无障碍服务。")
+                        } else {
+                            DebugLogger.w(TAG, "尝试自动启用无障碍服务失败。")
+                        }
                     }
                     if (forceKeepAlive) {
-                        ShellManager.startWatcher(this@TriggerService)
-                        DebugLogger.d(TAG, "已在启动时自动启动 Shizuku 守护。")
+                        // 守护任务目前仍仅支持 Shizuku，因为它依赖 Binder 监听
+                        if (ShellManager.isShizukuActive(this@TriggerService)) {
+                            ShellManager.startWatcher(this@TriggerService)
+                            DebugLogger.d(TAG, "已在启动时自动启动 Shizuku 守护。")
+                        } else {
+                            DebugLogger.w(TAG, "Shizuku 未激活，跳过守护任务启动（Root 模式不支持守护）。")
+                        }
                     }
                 } else {
-                    DebugLogger.w(TAG, "无法应用启动设置: Shizuku 未激活。")
+                    DebugLogger.w(TAG, "无法应用启动设置: Shell (Shizuku/Root) 环境未就绪。")
                 }
             }
         }

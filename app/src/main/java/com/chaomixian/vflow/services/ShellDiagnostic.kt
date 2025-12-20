@@ -4,6 +4,7 @@ package com.chaomixian.vflow.services
 import android.content.Context
 import android.content.pm.PackageManager
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.utils.StorageManager
 import rikka.shizuku.Shizuku
 
 /**
@@ -104,11 +105,11 @@ object ShellDiagnostic {
             DebugLogger.d(TAG, "4. Shell 用户身份: $idInfo")
 
             // 5. 检查当前 cache 目录
-            val cacheDir = ShellManager.execShellCommand(context, "ls ${context.cacheDir.absolutePath}")
+            val cacheDir = ShellManager.execShellCommand(context, "ls ${StorageManager.tempDir.absolutePath}")
             DebugLogger.d(TAG, "5. Cache 目录: $cacheDir")
 
             // 6. 检查脚本文件内容
-            val script = ShellManager.execShellCommand(context, "cat ${context.cacheDir.absolutePath}/key*")
+            val script = ShellManager.execShellCommand(context, "cat ${StorageManager.tempDir.absolutePath}/key*")
             DebugLogger.d(TAG, "6. 按键监听脚本: $script")
 
         } catch (e: Exception) {

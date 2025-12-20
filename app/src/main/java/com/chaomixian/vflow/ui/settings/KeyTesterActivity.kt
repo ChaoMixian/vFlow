@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.services.ShellManager
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.Dispatchers
@@ -117,7 +118,7 @@ class KeyTesterActivity : AppCompatActivity() {
                 """.trimIndent()
 
                 DebugLogger.d(TAG, "KeyTesterActivity 缓存文件夹：$cacheDir 脚本：$scriptFileName ")
-                val scriptFile = File(cacheDir, scriptFileName)
+                val scriptFile = File(StorageManager.scriptsDir, scriptFileName)
                 scriptFile.writeText(scriptContent)
                 scriptFile.setExecutable(true)
 

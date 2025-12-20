@@ -8,6 +8,7 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import java.io.File
 import java.io.FileOutputStream
@@ -71,7 +72,7 @@ class GetClipboardModule : BaseModule() {
                 val mimeType = context.applicationContext.contentResolver.getType(item.uri)
                 if (mimeType?.startsWith("image/") == true) {
                     // 为了持久化访问，将图片复制到应用缓存
-                    val tempFile = File(context.applicationContext.cacheDir, "clipboard_${UUID.randomUUID()}.tmp")
+                    val tempFile = File(context.workDir, "clipboard_${UUID.randomUUID()}.tmp")
                     try {
                         context.applicationContext.contentResolver.openInputStream(item.uri)?.use { input ->
                             FileOutputStream(tempFile).use { output ->

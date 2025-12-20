@@ -3,6 +3,7 @@ package com.chaomixian.vflow.core.logging
 
 import android.content.Context
 import android.os.Build
+import com.chaomixian.vflow.core.utils.StorageManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -14,7 +15,7 @@ object DebugLogger {
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
     private var appContext: Context? = null
 
-    // Shell 日志相关常量
+    // 使用公共目录下的日志文件
     private const val SHELL_LOG_FILENAME = "vflow_shell.log"
     private const val MARKER_FILENAME = "vflow_logging_enabled.marker"
 
@@ -22,8 +23,7 @@ object DebugLogger {
         appContext = context.applicationContext
         val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
         isLoggingEnabled = prefs.getBoolean("debugLoggingEnabled", false)
-        // 初始化时同步标记文件状态
-        syncMarkerFile(context, isLoggingEnabled)
+        syncMarkerFile(isLoggingEnabled)
     }
 
     fun setLoggingEnabled(enabled: Boolean, context: Context) {
@@ -31,18 +31,17 @@ object DebugLogger {
         val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("debugLoggingEnabled", enabled).apply()
 
-        // 同步标记文件
-        syncMarkerFile(context, enabled)
+        syncMarkerFile(enabled)
 
         if (!enabled) {
-            clearLogs() // 关闭时清空所有日志
+            clearLogs()
         }
     }
 
-    // 私有辅助方法：同步标记文件
-    private fun syncMarkerFile(context: Context, enabled: Boolean) {
+    // 使用 StorageManager 的日志目录
+    private fun syncMarkerFile(enabled: Boolean) {
         try {
-            val markerFile = File(context.cacheDir, MARKER_FILENAME)
+            val markerFile = File(StorageManager.logsDir, MARKER_FILENAME)
             if (enabled) {
                 if (!markerFile.exists()) {
                     markerFile.createNewFile()
@@ -53,7 +52,7 @@ object DebugLogger {
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("DebugLogger", "无法操作标记文件", e)
+            android.util.Log.e("DebugLogger", "无法操作标记文件 (Permission denied?)", e)
         }
     }
 
@@ -69,16 +68,14 @@ object DebugLogger {
             logBuffer.joinToString("\n")
         }
 
-        // 读取 Shell 日志
+        // 从 StorageManager 读取 Shell 日志
         val shellLogs = try {
-            appContext?.let { ctx ->
-                val shellFile = File(ctx.cacheDir, SHELL_LOG_FILENAME)
-                if (shellFile.exists()) {
-                    "\n\n========== Shell Script Logs ==========\n" + shellFile.readText()
-                } else {
-                    "\n\n[Warning: can not find shell logs\n"
-                }
-            } ?: ""
+            val shellFile = File(StorageManager.logsDir, SHELL_LOG_FILENAME)
+            if (shellFile.exists()) {
+                "\n\n========== Shell Script Logs ==========\n" + shellFile.readText()
+            } else {
+                "\n\n[Shell logs not found at ${shellFile.absolutePath}]\n"
+            }
         } catch (e: Exception) {
             "\n[Error reading shell logs: ${e.message}]"
         }
@@ -101,13 +98,11 @@ object DebugLogger {
         synchronized(logBuffer) {
             logBuffer.clear()
         }
-        // 清除 Shell 日志文件
+        // 清除 StorageManager 中的 Shell 日志
         try {
-            appContext?.let { ctx ->
-                val shellFile = File(ctx.cacheDir, SHELL_LOG_FILENAME)
-                if (shellFile.exists()) {
-                    shellFile.delete()
-                }
+            val shellFile = File(StorageManager.logsDir, SHELL_LOG_FILENAME)
+            if (shellFile.exists()) {
+                shellFile.delete()
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -117,52 +112,38 @@ object DebugLogger {
 
     fun d(tag: String, message: String) {
         android.util.Log.d(tag, message)
-        if (isLoggingEnabled) {
-            addToBuffer("D", tag, message)
-        }
+        if (isLoggingEnabled) addToBuffer("D", tag, message)
     }
 
     fun d(tag: String, message: String, throwable: Throwable?) {
         android.util.Log.d(tag, message, throwable)
-        if (isLoggingEnabled) {
-            addToBuffer("D", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
-        }
+        if (isLoggingEnabled) addToBuffer("D", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun i(tag: String, message: String) {
         android.util.Log.i(tag, message)
-        if (isLoggingEnabled) {
-            addToBuffer("I", tag, message)
-        }
+        if (isLoggingEnabled) addToBuffer("I", tag, message)
     }
 
     fun i(tag: String, message: String, throwable: Throwable?) {
         android.util.Log.i(tag, message, throwable)
-        if (isLoggingEnabled) {
-            addToBuffer("I", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
-        }
+        if (isLoggingEnabled) addToBuffer("I", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun w(tag: String, message: String, throwable: Throwable? = null) {
         android.util.Log.w(tag, message, throwable)
-        if (isLoggingEnabled) {
-            addToBuffer("W", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
-        }
+        if (isLoggingEnabled) addToBuffer("W", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun e(tag: String, message: String, throwable: Throwable? = null) {
         android.util.Log.e(tag, message, throwable)
-        if (isLoggingEnabled) {
-            addToBuffer("E", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
-        }
+        if (isLoggingEnabled) addToBuffer("E", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
-    // 将日志条目添加到缓冲区
     @Synchronized
     private fun addToBuffer(level: String, tag: String, message: String) {
         val timestamp = dateFormat.format(Date())
         logBuffer.add("$timestamp $level/$tag: $message")
-        // 为了防止内存溢出，限制缓冲区大小
         if (logBuffer.size > 5000) {
             logBuffer.removeAt(0)
         }

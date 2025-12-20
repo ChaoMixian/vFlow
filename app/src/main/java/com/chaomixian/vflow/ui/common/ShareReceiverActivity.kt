@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.ExecutionUIService
@@ -88,7 +89,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             intent.type?.startsWith("image/") == true -> {
                 (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let { uri ->
                     // 为了持久化访问，将分享的图片复制到应用的缓存目录中
-                    val tempFile = File(cacheDir, "shared_${UUID.randomUUID()}.tmp")
+                    val tempFile = File(StorageManager.tempDir, "shared_${UUID.randomUUID()}.tmp")
                     try {
                         contentResolver.openInputStream(uri)?.use { input ->
                             FileOutputStream(tempFile).use { output ->

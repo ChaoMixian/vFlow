@@ -18,6 +18,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -84,7 +85,7 @@ class CaptureScreenModule : BaseModule() {
 
         val imageUri: Uri? = when (mode) {
             "自动" -> performAutomaticCapture(context, onProgress)
-            "screencap" -> performShellCapture(appContext, onProgress)
+            "screencap" -> performShellCapture(appContext, context.workDir, onProgress)
             else -> return ExecutionResult.Failure("参数错误", "无效的截屏模式")
         }
 
@@ -104,7 +105,7 @@ class CaptureScreenModule : BaseModule() {
 
         // 1. 尝试 Shell 截图 (自动模式)
         onProgress(ProgressUpdate("自动模式：尝试 Shell 截图..."))
-        val uri = performShellCapture(appContext, onProgress)
+        val uri = performShellCapture(appContext, context.workDir, onProgress)
         if (uri != null) return uri
 
         DebugLogger.w("CaptureScreenModule", "Shell 截图失败，回落到 MediaProjection。")
@@ -116,11 +117,12 @@ class CaptureScreenModule : BaseModule() {
 
     private suspend fun performShellCapture(
         context: Context,
+        workDir: File,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): Uri? {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
         val fileName = "screenshot_$timestamp.png"
-        val cacheFile = File(context.cacheDir, fileName)
+        val cacheFile = File(workDir, fileName)
         val path = cacheFile.absolutePath
 
         val command = "screencap -p \"$path\""
@@ -197,7 +199,7 @@ class CaptureScreenModule : BaseModule() {
                         val finalBitmap = if (rowPadding == 0) bitmap else Bitmap.createBitmap(bitmap, 0, 0, width, height)
 
                         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
-                        val file = File(appContext.cacheDir, "screenshot_mp_$timestamp.png")
+                        val file = File(context.workDir, "screenshot_mp_$timestamp.png")
                         val fos = FileOutputStream(file)
                         finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
                         fos.close()

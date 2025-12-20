@@ -6,18 +6,18 @@ import android.content.Context
 import android.net.Uri
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.google.gson.Gson
 import java.io.File
 import java.util.zip.ZipInputStream
 
 object ModuleManager {
     private const val TAG = "ModuleManager"
-    private const val MODULES_DIR_NAME = "vflow_modules"
     private const val MANIFEST_NAME = "manifest.json"
     private const val SCRIPT_NAME = "script.lua"
 
     private val gson = Gson()
-    private var hasLoaded = false // 新增：防止重复加载标志位
+    private var hasLoaded = false
 
     /**
      * 从 ZIP 文件安装模块。
@@ -27,8 +27,8 @@ object ModuleManager {
             val inputStream = context.contentResolver.openInputStream(zipUri)
                 ?: return Result.failure(Exception("无法打开文件"))
 
-            // 临时解压目录
-            val tempDir = File(context.cacheDir, "temp_module_install")
+            // 使用公共存储的临时目录进行解压，而不是内部 cacheDir
+            val tempDir = File(StorageManager.tempDir, "temp_module_install")
             if (tempDir.exists()) tempDir.deleteRecursively()
             tempDir.mkdirs()
 
@@ -55,14 +55,14 @@ object ModuleManager {
                 }
             }
 
-            // 递归查找 manifest.json，以兼容套了一层文件夹的情况
+            // 递归查找 manifest.json
             val manifestFile = tempDir.walkTopDown().find { it.name == MANIFEST_NAME }
 
             if (manifestFile == null) {
                 return Result.failure(Exception("模块格式错误：未找到 manifest.json"))
             }
 
-            // 确定模块的真实根目录（manifest.json 所在的目录）
+            // 确定模块的真实根目录
             val moduleRoot = manifestFile.parentFile ?: tempDir
             val scriptFile = File(moduleRoot, SCRIPT_NAME)
 
@@ -76,12 +76,12 @@ object ModuleManager {
                 return Result.failure(Exception("模块 ID 不能为空"))
             }
 
-            // 最终安装目录
-            val modulesDir = File(context.filesDir, MODULES_DIR_NAME)
+            // 最终安装目录迁移到 /sdcard/vFlow/modules
+            val modulesDir = StorageManager.modulesDir
             val targetDir = File(modulesDir, manifest.id)
             if (targetDir.exists()) targetDir.deleteRecursively() // 覆盖旧版本
 
-            // 只将模块根目录下的内容复制到安装目录
+            // 复制文件
             moduleRoot.copyRecursively(targetDir, overwrite = true)
 
             // 清理临时文件
@@ -99,23 +99,23 @@ object ModuleManager {
 
     /**
      * 加载所有已安装的模块。
-     * @param force 是否强制重新加载（默认 false）。
      */
     fun loadModules(context: Context, force: Boolean = false) {
         DebugLogger.d(TAG, "开始加载用户模块...")
         if (hasLoaded && !force) {
             DebugLogger.d(TAG, "模块已经加载，跳过")
             return
-        } // 如果已经加载过且不强制，则跳过
+        }
 
-        val modulesDir = File(context.filesDir, MODULES_DIR_NAME)
+        // 从公共存储目录加载
+        val modulesDir = StorageManager.modulesDir
         if (!modulesDir.exists()) {
-            DebugLogger.d(TAG, "没有找到用户模块")
+            DebugLogger.d(TAG, "没有找到用户模块目录 (${modulesDir.absolutePath})")
             return
         }
 
         modulesDir.listFiles()?.filter { it.isDirectory }?.forEach { dir ->
-            DebugLogger.d(TAG, "发现用户模块，开始加载...")
+            DebugLogger.d(TAG, "发现用户模块，开始加载: ${dir.name}")
             loadSingleModule(dir)
         }
         hasLoaded = true
@@ -144,7 +144,8 @@ object ModuleManager {
      */
     fun getInstalledModules(context: Context): List<ModuleManifest> {
         val list = mutableListOf<ModuleManifest>()
-        val modulesDir = File(context.filesDir, MODULES_DIR_NAME)
+        // 从公共存储目录读取
+        val modulesDir = StorageManager.modulesDir
         if (!modulesDir.exists()) return emptyList()
 
         modulesDir.listFiles()?.filter { it.isDirectory }?.forEach { dir ->
@@ -160,7 +161,8 @@ object ModuleManager {
     }
 
     fun deleteModule(context: Context, moduleId: String) {
-        val modulesDir = File(context.filesDir, MODULES_DIR_NAME)
+        // 从公共存储目录删除
+        val modulesDir = StorageManager.modulesDir
         val targetDir = File(modulesDir, moduleId)
         if (targetDir.exists()) {
             targetDir.deleteRecursively()

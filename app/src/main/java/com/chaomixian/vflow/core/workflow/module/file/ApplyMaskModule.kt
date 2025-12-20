@@ -1,6 +1,4 @@
 // 文件: ApplyMaskModule.kt
-// 描述: Material You 风格圆角矩形蒙版模块，仅保留圆角矩形选项
-
 package com.chaomixian.vflow.core.workflow.module.file
 
 import android.content.Context
@@ -91,6 +89,7 @@ class ApplyMaskModule : BaseModule() {
         return try {
             val request = ImageRequest.Builder(appContext)
                 .data(Uri.parse(imageVar.uri))
+                .allowHardware(false) // [修复] 禁止硬件位图
                 .build()
             val result = Coil.imageLoader(appContext).execute(request)
             val originalBitmap = result.drawable?.toBitmap()
@@ -103,14 +102,16 @@ class ApplyMaskModule : BaseModule() {
             val maskedBitmap = createRoundedBitmap(softwareBitmap)
 
             onProgress(ProgressUpdate("正在保存处理后的图像..."))
-
-            val outputFile = File(appContext.cacheDir, "masked_${UUID.randomUUID()}.png")
+            // 使用 workDir
+            val outputFile = File(context.workDir, "masked_${UUID.randomUUID()}.png")
             FileOutputStream(outputFile).use {
                 maskedBitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }
 
-            // 安全释放
-            softwareBitmap.recycle()
+            // 安全释放（softwareBitmap 如果等于 originalBitmap 则不要回收）
+            if (softwareBitmap != originalBitmap) {
+                softwareBitmap.recycle()
+            }
             maskedBitmap.recycle()
 
             val outputUri = Uri.fromFile(outputFile).toString()

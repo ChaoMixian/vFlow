@@ -105,13 +105,14 @@ class MainActivity : BaseActivity() {
 
         if (autoEnableAccessibility || forceKeepAlive) {
             lifecycleScope.launch {
-                if (ShellManager.isShizukuActive(this@MainActivity)) {
+                val isShellReady = ShellManager.isShizukuActive(this@MainActivity) || ShellManager.isRootAvailable()
+                if (isShellReady) {
                     if (autoEnableAccessibility) {
                         // 自动启用无障碍服务，这里不显示 Toast 以避免打扰
                         ShellManager.enableAccessibilityService(this@MainActivity)
                     }
-                    if (forceKeepAlive) {
-                        // 自动启动守护
+                    if (forceKeepAlive && ShellManager.isShizukuActive(this@MainActivity)) {
+                        // 自动启动守护，仅支持 Shizuku
                         ShellManager.startWatcher(this@MainActivity)
                     }
                 }

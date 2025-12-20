@@ -1,12 +1,10 @@
 // 文件: AdjustImageModule.kt
 // 描述: 定义了对图像进行各种视觉效果调整的模块。
-
 package com.chaomixian.vflow.core.workflow.module.file
 
 import android.content.Context
 import android.graphics.*
 import android.net.Uri
-import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toBitmap
 import coil.Coil
 import coil.request.ImageRequest
@@ -103,17 +101,20 @@ class AdjustImageModule : BaseModule() {
 
         onProgress(ProgressUpdate("正在加载图像..."))
         try {
-            val request = ImageRequest.Builder(appContext).data(Uri.parse(imageVar.uri)).build()
+            // 设置 allowHardware(false) 以确保获取软件位图，避免 copy 异常
+            val request = ImageRequest.Builder(appContext)
+                .data(Uri.parse(imageVar.uri))
+                .allowHardware(false)
+                .build()
             val result = Coil.imageLoader(appContext).execute(request)
             val originalBitmap = result.drawable?.toBitmap()
                 ?: return ExecutionResult.Failure("图像加载失败", "无法从URI加载位图: ${imageVar.uri}")
 
             var mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
-            originalBitmap.recycle()
 
             onProgress(ProgressUpdate("正在应用图像效果..."))
 
-            // [完成] 链式应用所有效果
+            // 链式应用所有效果
             val width = mutableBitmap.width
             val height = mutableBitmap.height
             val pixels = IntArray(width * height)
@@ -138,7 +139,8 @@ class AdjustImageModule : BaseModule() {
             }
 
             onProgress(ProgressUpdate("正在保存处理后的图像..."))
-            val outputFile = File(appContext.cacheDir, "adjusted_${UUID.randomUUID()}.png")
+            // 使用 context.workDir 存储结果
+            val outputFile = File(context.workDir, "adjusted_${UUID.randomUUID()}.png")
             FileOutputStream(outputFile).use {
                 mutableBitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }

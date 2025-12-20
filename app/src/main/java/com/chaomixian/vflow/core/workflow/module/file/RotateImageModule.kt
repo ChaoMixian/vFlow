@@ -1,6 +1,5 @@
 // 文件: RotateImageModule.kt
-// 描述: 定义了旋转图像的模块。
-
+// 描述: 旋转图像模块。
 package com.chaomixian.vflow.core.workflow.module.file
 
 import android.content.Context
@@ -93,6 +92,7 @@ class RotateImageModule : BaseModule() {
         return try {
             val request = ImageRequest.Builder(appContext)
                 .data(Uri.parse(imageVar.uri))
+                .allowHardware(false) // 禁止硬件位图
                 .build()
             val result = Coil.imageLoader(appContext).execute(request)
             val originalBitmap = result.drawable?.toBitmap()
@@ -104,13 +104,13 @@ class RotateImageModule : BaseModule() {
             val rotatedBitmap = Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
 
             onProgress(ProgressUpdate("正在保存处理后的图像..."))
-
-            val outputFile = File(appContext.cacheDir, "rotated_${UUID.randomUUID()}.png")
+            // 使用 workDir
+            val outputFile = File(context.workDir, "rotated_${UUID.randomUUID()}.png")
             FileOutputStream(outputFile).use {
                 rotatedBitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }
 
-            originalBitmap.recycle()
+            // 不回收 originalBitmap
             rotatedBitmap.recycle()
 
             val outputUri = Uri.fromFile(outputFile).toString()

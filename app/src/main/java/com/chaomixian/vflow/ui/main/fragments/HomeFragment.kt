@@ -120,7 +120,8 @@ class HomeFragment : Fragment() {
         val allWorkflows = workflowManager.getAllWorkflows()
         val requiredPermissions = allWorkflows
             .flatMap { it.steps }
-            .mapNotNull { ModuleRegistry.getModule(it.moduleId)?.requiredPermissions }
+            .mapNotNull { step ->
+                ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step) }
             .flatten()
             .distinct()
 

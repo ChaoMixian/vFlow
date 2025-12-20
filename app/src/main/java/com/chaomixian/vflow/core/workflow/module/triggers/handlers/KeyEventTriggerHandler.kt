@@ -10,6 +10,7 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ShellManager
+import com.chaomixian.vflow.core.utils.StorageManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -65,7 +66,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         triggerScope.launch {
             DebugLogger.d(TAG, "KeyEventTriggerHandler 正在清理资源。")
             ShellManager.execShellCommand(context, "killall getevent", ShellManager.ShellMode.AUTO)
-            context.cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }?.forEach { it.delete() }
+            StorageManager.scriptsDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }?.forEach { it.delete() }
         }
         DebugLogger.d(TAG, "KeyEventTriggerHandler 已停止并清理了资源。")
     }
@@ -139,7 +140,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             try {
                 DebugLogger.d(TAG, "KeyEventTriggerHandler 结束进程并清理残留中...")
                 ShellManager.execShellCommand(context, "killall getevent", ShellManager.ShellMode.AUTO)
-                val pidFiles = context.cacheDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }
+                val pidFiles = StorageManager.scriptsDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }
                 pidFiles?.forEach { pidFile ->
                     try {
                         val pid = pidFile.readText().trim()
@@ -167,7 +168,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
 
             // 3. 根据设备路径对触发器分组，并启动新的监听脚本
             val triggersByDevice = activeTriggers.groupBy { it.devicePath }
-            val cacheDirPath = context.cacheDir.absolutePath
+            val cacheDirPath = StorageManager.scriptsDir.absolutePath
             DebugLogger.d(TAG, "KeyEventTriggerHandler 设备路径：$triggersByDevice 缓存文件夹：$cacheDirPath")
 
             triggersByDevice.forEach { (path, triggers) ->
@@ -181,7 +182,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
                 if (script.isNotBlank()) {
                     launch {
                         try {
-                            val scriptFile = File(context.cacheDir, "key_listener_${path.replace('/', '_')}.sh")
+                            val scriptFile = File(StorageManager.scriptsDir, "key_listener_${path.replace('/', '_')}.sh")
                             DebugLogger.d(TAG, "KeyEventTriggerHandler 准备创建监听脚本：${scriptFile.absolutePath} ...")
                             scriptFile.writeText(script)
                             scriptFile.setExecutable(true)

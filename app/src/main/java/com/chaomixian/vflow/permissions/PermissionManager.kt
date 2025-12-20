@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
@@ -51,20 +52,14 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
-    // 定义存储权限为一个权限组，根据系统版本动态决定请求内容
+    // 存储权限现在优先请求“所有文件访问权限”
     val STORAGE = Permission(
         id = "vflow.permission.STORAGE",
-        name = "存储权限",
-        description = "用于读取和保存图片、文件等数据。",
-        type = PermissionType.RUNTIME,
-        // 根据安卓版本动态提供正确的权限请求列表
-        runtimePermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13 (API 33) 及以上，请求细分的媒体权限
-            listOf(Manifest.permission.READ_MEDIA_IMAGES)
-        } else {
-            // 旧版本，请求传统的外部存储权限
-            listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
+        name = "文件访问权限",
+        description = "允许应用读写 /sdcard/vFlow 目录下的脚本和资源文件。",
+        type = PermissionType.SPECIAL, // 改为 SPECIAL，因为 Android 11+ 需要跳转设置
+        // 兼容旧版本
+        runtimePermissions = listOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
     )
 
 
@@ -248,6 +243,24 @@ object PermissionManager {
         override fun createRequestIntent(context: Context, permission: Permission): Intent? = null
     }
 
+    // 存储权限策略：Android 11+ 检查 MANAGE_EXTERNAL_STORAGE，否则检查旧权限
+    private val storageStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Environment.isExternalStorageManager()
+            } else {
+                runtimeStrategy.isGranted(context, permission)
+            }
+        }
+        override fun createRequestIntent(context: Context, permission: Permission): Intent? {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, "package:${context.packageName}".toUri())
+            } else {
+                null // 旧版本通过 runtime 请求
+            }
+        }
+    }
+
     // 策略映射表
     private val strategies = mapOf(
         ACCESSIBILITY.id to accessibilityStrategy,
@@ -257,7 +270,8 @@ object PermissionManager {
         NOTIFICATION_LISTENER_SERVICE.id to notificationListenerStrategy,
         EXACT_ALARM.id to exactAlarmStrategy,
         SHIZUKU.id to shizukuStrategy,
-        ROOT.id to rootStrategy
+        ROOT.id to rootStrategy,
+        STORAGE.id to storageStrategy
     )
 
     /**
@@ -293,10 +307,9 @@ object PermissionManager {
      * 获取应用中所有模块定义的所有权限。
      */
     fun getAllRegisteredPermissions(): List<Permission> {
-        // 将电池优化权限也加入到权限管理器中
         return (ModuleRegistry.getAllModules()
             .map { it.getRequiredPermissions(null) }
-            .flatten() + IGNORE_BATTERY_OPTIMIZATIONS)
+            .flatten() + IGNORE_BATTERY_OPTIMIZATIONS + STORAGE)
             .distinct()
     }
 

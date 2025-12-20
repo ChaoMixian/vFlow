@@ -1,28 +1,26 @@
-// main/java/com/chaomixian/vflow/core/execution/ExecutionContext.kt
+// 文件: main/java/com/chaomixian/vflow/core/execution/ExecutionContext.kt
 package com.chaomixian.vflow.core.execution
 
 import android.content.Context
 import android.os.Parcelable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import java.io.File
 import java.util.*
 
 /**
- * 循环控制流状态的密封类，以支持不同类型的循环。
+ * 循环控制流状态的密封类。
  */
 sealed class LoopState {
-    /** 用于固定次数循环的状态 */
     data class CountLoopState(
         val totalIterations: Long,
         var currentIteration: Long = 0
     ) : LoopState()
 
-    /** 用于 "For Each" 列表循环的状态 */
     data class ForEachLoopState(
         val itemList: List<Any?>,
         var currentIndex: Int = 0
     ) : LoopState()
 }
-
 
 /**
  * 执行时传递的上下文。
@@ -37,6 +35,7 @@ sealed class LoopState {
  * @param triggerData 触发器传入的外部数据（例如分享的内容）。
  * @param namedVariables 存储在整个工作流执行期间有效的命名变量。
  * @param workflowStack 用于跟踪工作流调用栈，防止无限递归。
+ * @param workDir 工作流执行时的工作文件夹。
  */
 data class ExecutionContext(
     val applicationContext: Context,
@@ -49,5 +48,6 @@ data class ExecutionContext(
     val loopStack: Stack<LoopState>,
     val triggerData: Parcelable? = null,
     val namedVariables: MutableMap<String, Any?>,
-    val workflowStack: Stack<String> = Stack()
+    val workflowStack: Stack<String> = Stack(),
+    val workDir: File
 )

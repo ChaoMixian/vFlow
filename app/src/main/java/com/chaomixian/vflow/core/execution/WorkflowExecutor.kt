@@ -6,6 +6,7 @@ import android.os.Parcelable
 import android.util.Log
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.logic.*
@@ -14,6 +15,7 @@ import com.chaomixian.vflow.services.ExecutionNotificationState
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.*
+import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
@@ -67,6 +69,11 @@ object WorkflowExecutor {
             DebugLogger.d("WorkflowExecutor", "开始执行主工作流: ${workflow.name} (ID: ${workflow.id})")
             ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
 
+            // 创建本次执行的独立工作目录
+            val executionId = "${workflow.id}_${System.currentTimeMillis()}"
+            val workDir = File(StorageManager.tempDir, "exec_$executionId")
+            if (!workDir.exists()) workDir.mkdirs()
+
             try {
                 // 创建并注册执行期间所需的服务
                 val services = ExecutionServices()
@@ -85,7 +92,8 @@ object WorkflowExecutor {
                     loopStack = Stack(),
                     triggerData = triggerData,
                     namedVariables = ConcurrentHashMap(),
-                    workflowStack = Stack<String>().apply { push(workflow.id) } // 初始化调用栈
+                    workflowStack = Stack<String>().apply { push(workflow.id) }, // 初始化调用栈
+                    workDir = workDir
                 )
 
                 // 调用内部执行循环
@@ -101,6 +109,16 @@ object WorkflowExecutor {
                 DebugLogger.e("WorkflowExecutor", "主工作流 '${workflow.name}' 执行时发生未捕获的异常。", e)
                 ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("执行异常"))
             } finally {
+                // 执行结束后清理工作目录
+                try {
+                    if (workDir.exists()) {
+                        workDir.deleteRecursively()
+                        DebugLogger.d("WorkflowExecutor", "已清理工作目录: ${workDir.absolutePath}")
+                    }
+                } catch (e: Exception) {
+                    DebugLogger.w("WorkflowExecutor", "清理工作目录失败: ${e.message}")
+                }
+
                 // 广播最终状态
                 val wasStopped = stoppedWorkflows[workflow.id] == true
                 val wasCancelled = !isActive && !wasStopped
@@ -141,6 +159,7 @@ object WorkflowExecutor {
                 addAll(parentContext.workflowStack)
                 push(workflow.id)
             }
+            // 子工作流共享父工作流的 workDir，这样文件可以互通
         )
 
         // 调用内部执行循环，并返回其结果
