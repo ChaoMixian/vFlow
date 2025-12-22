@@ -15,20 +15,29 @@ import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
+import com.chaomixian.vflow.ui.overlay.AgentOverlayManager
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class AgentModule : BaseModule() {
 
@@ -48,6 +57,7 @@ class AgentModule : BaseModule() {
             PermissionManager.ACCESSIBILITY,
             PermissionManager.STORAGE,
             PermissionManager.USAGE_STATS,
+            PermissionManager.OVERLAY
         ) + ShellManager.getRequiredPermissions(LogManager.applicationContext)
     }
 
@@ -71,6 +81,7 @@ class AgentModule : BaseModule() {
         return PillUtil.buildSpannable(context, "AI Agent: ", instructionPill)
     }
 
+    // 定义工具 Schema
     private fun getNativeToolsSchema(): JSONArray {
         val schema = JSONArray()
         schema.put(JSONObject("""{ "type": "function", "function": { "name": "click_point", "description": "Tap at specific NORMALIZED coordinates (0-1000). x=0 is left, x=1000 is right. y=0 is top, y=1000 is bottom.", "parameters": { "type": "object", "properties": { "x": { "type": "integer", "description": "Normalized X coordinate (0-1000)" }, "y": { "type": "integer", "description": "Normalized Y coordinate (0-1000)" } }, "required": ["x", "y"] } } }"""))
@@ -90,6 +101,7 @@ class AgentModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
+        // 1. 获取参数
         val baseUrl = context.variables["base_url"] as? String ?: ""
         val apiKey = context.variables["api_key"] as? String ?: ""
         val model = context.variables["model"] as? String ?: "glm-4.6v-flash"
@@ -98,24 +110,32 @@ class AgentModule : BaseModule() {
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
 
-        val agentTools = AgentTools(context)
-        val client = OkHttpClient.Builder()
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
-            .build()
+        // 2. 初始化悬浮窗
+        val overlayManager = AgentOverlayManager(context.applicationContext)
+        withContext(Dispatchers.Main) {
+            overlayManager.show()
+        }
 
-        val date = Date()
-        val dateFormat = SimpleDateFormat("yyyy年MM月dd日 EEEE", Locale.getDefault())
-        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val dateString = dateFormat.format(date)
-        val timeString = timeFormat.format(date)
+        // --- 开始 try 块，确保 finally 一定执行 ---
+        try {
+            val agentTools = AgentTools(context)
+            val client = OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .build()
 
-        val recentApps = AgentUtils.getRecentApps(context.applicationContext)
+            val date = Date()
+            val dateFormat = SimpleDateFormat("yyyy年MM月dd日 EEEE", Locale.getDefault())
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val dateString = dateFormat.format(date)
+            val timeString = timeFormat.format(date)
 
-        val messages = JSONArray()
+            val recentApps = AgentUtils.getRecentApps(context.applicationContext)
 
-        // System Prompt
-        val systemPrompt = """
+            val messages = JSONArray()
+
+            // System Prompt
+            val systemPrompt = """
             # SETUP
             You are a professional Android operation agent assistant that can fulfill the user's high-level instructions. Given a screenshot of the Android interface at each step, you first analyze the situation, then plan the best course of action using Python-style pseudo-code.
 
@@ -199,227 +219,304 @@ class AgentModule : BaseModule() {
             "$instruction"
         """.trimIndent()
 
-        messages.put(JSONObject().apply {
-            put("role", "system")
-            put("content", systemPrompt)
-        })
-
-        var currentStep = 0
-        var taskResult: ExecutionResult? = null
-
-        var lastAction: LastAction? = null
-        var repeatCount = 0
-        var noToolCallCount = 0
-
-        while (currentStep < maxSteps) {
-            onProgress(ProgressUpdate("正在观察屏幕 (步骤 ${currentStep + 1}/$maxSteps)..."))
-
-            // --- 感知 ---
-            val screenshotResult = AgentUtils.captureScreen(context.applicationContext, context)
-            val uiHierarchy = AgentUtils.dumpHierarchy(context.applicationContext)
-
-            val windowManager = context.applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val displayMetrics = DisplayMetrics()
-            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-            val screenWidth = displayMetrics.widthPixels
-            val screenHeight = displayMetrics.heightPixels
-
-            val contentParts = JSONArray()
-            val stepsLeft = maxSteps - currentStep
-            val urgencyWarning = if (stepsLeft <= 2) "\n[WARNING] Only $stepsLeft steps left! Wrap up." else ""
-
-            val textContext = """
-                Step: ${currentStep + 1} / $maxSteps $urgencyWarning
-                Screen Size: ${screenWidth}x${screenHeight} (Coordinates must be normalized 0-1000)
-                
-                UI Hierarchy (Reference Only):
-                ${uiHierarchy.take(8000)} ${if(uiHierarchy.length > 8000) "...(truncated)" else ""}
-            """.trimIndent()
-
-            contentParts.put(JSONObject().apply {
-                put("type", "text")
-                put("text", textContext)
+            messages.put(JSONObject().apply {
+                put("role", "system")
+                put("content", systemPrompt)
             })
 
-            if (screenshotResult.base64 != null) {
-                contentParts.put(JSONObject().apply {
-                    put("type", "image_url")
-                    put("image_url", JSONObject().apply {
-                        put("url", "data:image/jpeg;base64,${screenshotResult.base64}")
-                    })
-                })
-            } else {
+            var currentStep = 0
+            var taskResult: ExecutionResult? = null
+            var lastAction: LastAction? = null
+            var repeatCount = 0
+            var noToolCallCount = 0
+
+            // --- 主循环 ---
+            while (currentStep < maxSteps) {
+                // 更新悬浮窗状态
+                overlayManager.updateStatus("分析屏幕...", "准备截屏")
+                onProgress(ProgressUpdate("正在观察屏幕 (步骤 ${currentStep + 1}/$maxSteps)..."))
+
+                // --- 感知 ---
+
+                // 隐藏悬浮窗
+                overlayManager.hideForScreenshot()
+
+                val screenshotResult = AgentUtils.captureScreen(context.applicationContext, context)
+
+                val uiHierarchy = AgentUtils.dumpHierarchy(context.applicationContext)
+
+                // 恢复悬浮窗
+                overlayManager.restoreAfterScreenshot()
+
+                val windowManager = context.applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                val displayMetrics = DisplayMetrics()
+                windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+                val screenWidth = displayMetrics.widthPixels
+                val screenHeight = displayMetrics.heightPixels
+
+                val contentParts = JSONArray()
+                val stepsLeft = maxSteps - currentStep
+                val urgencyWarning = if (stepsLeft <= 2) "\n[WARNING] Only $stepsLeft steps left! Wrap up." else ""
+
+                val textContext = """
+                    Step: ${currentStep + 1} / $maxSteps $urgencyWarning
+                    Screen Size: ${screenWidth}x${screenHeight} (Coordinates must be normalized 0-1000)
+                    
+                    UI Hierarchy (Reference Only):
+                    ${uiHierarchy.take(8000)} ${if(uiHierarchy.length > 8000) "...(truncated)" else ""}
+                """.trimIndent()
+
                 contentParts.put(JSONObject().apply {
                     put("type", "text")
-                    put("text", "[System: Screenshot failed. Rely on XML.]")
+                    put("text", textContext)
                 })
-            }
 
-            messages.put(JSONObject().apply {
-                put("role", "user")
-                put("content", contentParts)
-            })
-
-            // --- 思考 ---
-            onProgress(ProgressUpdate("思考中..."))
-
-            val requestBody = JSONObject().apply {
-                put("model", model)
-                put("messages", messages)
-                put("tools", getNativeToolsSchema())
-                put("tool_choice", "required") // 强制工具调用
-            }
-
-            val responseJson = callLLM(client, baseUrl, apiKey, requestBody)
-
-            if (responseJson == null) {
-                return ExecutionResult.Failure("API Error", "请求大模型失败，请检查网络或配置。")
-            }
-
-            val choice = responseJson.getJSONArray("choices").getJSONObject(0)
-            val message = choice.getJSONObject("message")
-            if (!message.has("content") || message.isNull("content")) message.put("content", "")
-            messages.put(message)
-
-            val content = message.optString("content", "")
-            if (content.isNotEmpty()) {
-                DebugLogger.d("AgentModule", "AI Output: $content")
-                onProgress(ProgressUpdate("AI: ${content.take(50)}..."))
-            }
-
-            // --- 行动 ---
-            if (message.has("tool_calls")) {
-                noToolCallCount = 0
-                val toolCalls = message.getJSONArray("tool_calls")
-
-                if (toolCalls.length() > 0) {
-                    try {
-                        // 使用 optJSONObject 和 optString 安全解析，防止崩溃
-                        val toolCall = toolCalls.getJSONObject(0)
-                        val function = toolCall.optJSONObject("function")
-
-                        if (function == null) {
-                            throw Exception("Missing 'function' object in tool call")
-                        }
-
-                        val name = function.optString("name", "")
-                        val argsStr = function.optString("arguments", "{}")
-                        val callId = toolCall.optString("id", "call_${System.currentTimeMillis()}")
-
-                        if (name.isEmpty()) {
-                            throw Exception("Tool name is missing or empty")
-                        }
-
-                        val args = try { gson.fromJson(argsStr, Map::class.java) as Map<String, Any> } catch (e: Exception) { emptyMap<String, Any>() }
-
-                        // 死循环检测
-                        val currentAction = LastAction(name, argsStr)
-                        var toolResult = ""
-
-                        if (lastAction == currentAction) repeatCount++ else repeatCount = 0
-                        lastAction = currentAction
-
-                        val threshold = if (name == "scroll" || name == "wait") 5 else 2
-
-                        if (repeatCount >= threshold) {
-                            DebugLogger.w("AgentModule", "检测到死循环: $name")
-                            toolResult = "SYSTEM_INTERVENTION: Repeated action detected. STOP. Try 'scroll', 'press_key(back)', or 'finish_task(success=false)'."
-                            onProgress(ProgressUpdate("检测到操作卡死，强制AI换策略"))
-                        } else {
-                            onProgress(ProgressUpdate("执行: $name"))
-                            DebugLogger.d("AgentModule", "Calling tool: $name args: $args")
-
-                            if (name == "finish_task") {
-                                val res = args["result"]?.toString() ?: "Done"
-                                val suc = args["success"] as? Boolean ?: true
-                                taskResult = ExecutionResult.Success(mapOf("result" to TextVariable(res), "success" to BooleanVariable(suc)))
-                            } else {
-                                toolResult = when(name) {
-                                    "click_point" -> {
-                                        val normX = (args["x"] as? Number)?.toInt() ?: 0
-                                        val normY = (args["y"] as? Number)?.toInt() ?: 0
-                                        val realX = (normX / 1000.0 * screenWidth).toInt()
-                                        val realY = (normY / 1000.0 * screenHeight).toInt()
-                                        DebugLogger.d("AgentModule", "坐标映射: Norm($normX, $normY) -> Pixel($realX, $realY)")
-                                        agentTools.clickPoint(realX, realY)
-                                    }
-                                    "click_element" -> agentTools.clickElement(args["target"]?.toString() ?: "")
-                                    "input_text" -> agentTools.inputText(args["text"]?.toString() ?: "")
-                                    "scroll" -> agentTools.scroll(args["direction"]?.toString() ?: "up")
-                                    "press_key" -> agentTools.pressKey(args["action"]?.toString() ?: "")
-                                    "launch_app" -> agentTools.launchApp(args["app_name"]?.toString() ?: "")
-                                    "wait" -> agentTools.wait((args["seconds"] as? Number)?.toInt() ?: 5)
-                                    else -> "Error: Unknown tool name '$name'"
-                                }
-                            }
-                        }
-
-                        messages.put(JSONObject().apply {
-                            put("role", "tool")
-                            put("tool_call_id", callId)
-                            put("content", toolResult)
+                if (screenshotResult.base64 != null) {
+                    contentParts.put(JSONObject().apply {
+                        put("type", "image_url")
+                        put("image_url", JSONObject().apply {
+                            put("url", "data:image/jpeg;base64,${screenshotResult.base64}")
                         })
-
-                        if (taskResult != null) break
-
-                    } catch (e: Exception) {
-                        DebugLogger.e("AgentModule", "Error parsing/executing tool call", e)
-                        // 反馈错误给 AI，不崩溃
-                        messages.put(JSONObject().apply {
-                            put("role", "tool")
-                            put("tool_call_id", "error") // 占位
-                            put("content", "SYSTEM ERROR: Invalid tool call format or parameters. Error: ${e.message}. Please generate a valid JSON tool call.")
-                        })
-                    }
-                }
-            } else {
-                noToolCallCount++
-                val thoughtSnippet = if (content.length > 20) content.take(20) + "..." else content
-                onProgress(ProgressUpdate("AI 未执行操作 ($noToolCallCount/3): $thoughtSnippet"))
-
-                if (noToolCallCount >= 3) {
-                    return ExecutionResult.Failure("AI 响应异常", "连续 3 次未调用任何工具，任务终止。AI 回复: $content")
+                    })
+                } else {
+                    contentParts.put(JSONObject().apply {
+                        put("type", "text")
+                        put("text", "[System: Screenshot failed. Rely on XML.]")
+                    })
                 }
 
-                // 警告AI，要求使用工具
                 messages.put(JSONObject().apply {
                     put("role", "user")
-                    put("content", "SYSTEM ERROR: You outputted text but did NOT call any tool. I cannot read your mind. You MUST call a tool (e.g. `launch_app`, `click_point`) to make things happen.")
+                    put("content", contentParts)
                 })
 
-                continue
+                // --- 思考 ---
+                overlayManager.updateStatus("AI 思考中...", "生成计划")
+                onProgress(ProgressUpdate("思考中..."))
+
+                val requestBody = JSONObject().apply {
+                    put("model", model)
+                    put("messages", messages)
+                    put("tools", getNativeToolsSchema())
+                    put("tool_choice", "required") // 强制工具调用
+                }
+
+                val responseJson = callLLM(client, baseUrl, apiKey, requestBody)
+
+                if (responseJson == null) {
+                    return ExecutionResult.Failure("API Error", "请求大模型失败，请检查网络或配置。")
+                }
+
+                val choice = responseJson.getJSONArray("choices").getJSONObject(0)
+                val message = choice.getJSONObject("message")
+                if (!message.has("content") || message.isNull("content")) message.put("content", "")
+                messages.put(message)
+
+                val content = message.optString("content", "")
+                if (content.isNotEmpty()) {
+                    DebugLogger.d("AgentModule", "AI Output: $content")
+                    val thoughtDisplay = if (content.contains("<think>")) {
+                        content.substringAfter("<think>").substringBefore("</think>").trim()
+                    } else {
+                        content
+                    }
+                    // 悬浮窗显示想法
+                    overlayManager.updateStatus(thoughtDisplay, "决策中...")
+                    onProgress(ProgressUpdate("AI: ${content.take(50)}..."))
+                }
+
+                // --- 行动 ---
+                if (message.has("tool_calls")) {
+                    noToolCallCount = 0
+                    val toolCalls = message.getJSONArray("tool_calls")
+
+                    if (toolCalls.length() > 0) {
+                        try {
+                            // 使用 optJSONObject 和 optString 安全解析，防止崩溃
+                            val toolCall = toolCalls.getJSONObject(0)
+                            val function = toolCall.optJSONObject("function")
+
+                            if (function == null) {
+                                throw Exception("Missing 'function' object in tool call")
+                            }
+
+                            val name = function.optString("name", "")
+                            val argsStr = function.optString("arguments", "{}")
+                            val callId = toolCall.optString("id", "call_${System.currentTimeMillis()}")
+
+                            if (name.isEmpty()) {
+                                throw Exception("Tool name is missing or empty")
+                            }
+
+                            val args = try { gson.fromJson(argsStr, Map::class.java) as Map<String, Any> } catch (e: Exception) { emptyMap<String, Any>() }
+
+                            // 更新悬浮窗显示即将执行的操作
+                            val actionDisplay = when(name) {
+                                "click_point" -> "点击坐标"
+                                "click_element" -> "点击元素"
+                                "input_text" -> "输入文本"
+                                "scroll" -> "滚动屏幕"
+                                "launch_app" -> "启动应用"
+                                "wait" -> "等待中..."
+                                "finish_task" -> "任务完成"
+                                else -> "执行: $name"
+                            }
+                            overlayManager.updateStatus(null, actionDisplay)
+
+                            // 死循环检测
+                            val currentAction = LastAction(name, argsStr)
+                            var toolResult = ""
+
+                            if (lastAction == currentAction) repeatCount++ else repeatCount = 0
+                            lastAction = currentAction
+
+                            val threshold = if (name == "scroll" || name == "wait") 5 else 2
+
+                            if (repeatCount >= threshold) {
+                                DebugLogger.w("AgentModule", "检测到死循环: $name")
+                                toolResult = "SYSTEM_INTERVENTION: Repeated action detected. STOP. Try 'scroll', 'press_key(back)', or 'finish_task(success=false)'."
+                                onProgress(ProgressUpdate("检测到操作卡死，强制AI换策略"))
+                            } else {
+                                onProgress(ProgressUpdate("执行: $name"))
+                                DebugLogger.d("AgentModule", "Calling tool: $name args: $args")
+
+                                if (name == "finish_task") {
+                                    val res = args["result"]?.toString() ?: "Done"
+                                    val suc = args["success"] as? Boolean ?: true
+                                    taskResult = ExecutionResult.Success(mapOf("result" to TextVariable(res), "success" to BooleanVariable(suc)))
+                                } else {
+                                    toolResult = when(name) {
+                                        "click_point" -> {
+                                            val normX = (args["x"] as? Number)?.toInt() ?: 0
+                                            val normY = (args["y"] as? Number)?.toInt() ?: 0
+                                            val realX = (normX / 1000.0 * screenWidth).toInt()
+                                            val realY = (normY / 1000.0 * screenHeight).toInt()
+                                            DebugLogger.d("AgentModule", "坐标映射: Norm($normX, $normY) -> Pixel($realX, $realY)")
+                                            agentTools.clickPoint(realX, realY)
+                                        }
+                                        "click_element" -> agentTools.clickElement(args["target"]?.toString() ?: "")
+                                        "input_text" -> agentTools.inputText(args["text"]?.toString() ?: "")
+                                        "scroll" -> agentTools.scroll(args["direction"]?.toString() ?: "up")
+                                        "press_key" -> agentTools.pressKey(args["action"]?.toString() ?: "")
+                                        "launch_app" -> agentTools.launchApp(args["app_name"]?.toString() ?: "")
+                                        "wait" -> agentTools.wait((args["seconds"] as? Number)?.toInt() ?: 5)
+                                        else -> "Error: Unknown tool name '$name'"
+                                    }
+                                }
+                            }
+
+                            messages.put(JSONObject().apply {
+                                put("role", "tool")
+                                put("tool_call_id", callId)
+                                put("content", toolResult)
+                            })
+
+                            if (taskResult != null) break
+
+                        } catch (e: Exception) {
+                            DebugLogger.e("AgentModule", "Error parsing/executing tool call", e)
+                            // 反馈错误给 AI，不崩溃
+                            messages.put(JSONObject().apply {
+                                put("role", "tool")
+                                put("tool_call_id", "error")
+                                put("content", "SYSTEM ERROR: Invalid tool call format or parameters. Error: ${e.message}. Please generate a valid JSON tool call.")
+                            })
+                        }
+                    }
+                } else {
+                    noToolCallCount++
+                    val thoughtSnippet = if (content.length > 20) content.take(20) + "..." else content
+                    onProgress(ProgressUpdate("AI 未执行操作 ($noToolCallCount/3): $thoughtSnippet"))
+
+                    if (noToolCallCount >= 3) {
+                        return ExecutionResult.Failure("AI 响应异常", "连续多次未操作。AI 回复: $content")
+                    }
+
+                    messages.put(JSONObject().apply {
+                        put("role", "user")
+                        put("content", "SYSTEM ERROR: You MUST call a tool.")
+                    })
+                    continue
+                }
+
+                currentStep++
+
+                // 我觉得没必要了
+                // delay(1000)
+
+            } // 主循环结束
+
+            return taskResult ?: ExecutionResult.Success(mapOf(
+                "result" to TextVariable("Task stopped: Max steps ($maxSteps) reached."),
+                "success" to BooleanVariable(false)
+            ))
+
+        } finally {
+            // 关闭悬浮窗
+            withContext(NonCancellable) {
+                withContext(Dispatchers.Main) {
+                    overlayManager.dismiss()
+                }
             }
-
-            currentStep++
-            delay(1000)
         }
-
-        return taskResult ?: ExecutionResult.Success(mapOf(
-            "result" to TextVariable("Task stopped: Max steps ($maxSteps) reached."),
-            "success" to BooleanVariable(false)
-        ))
     }
 
     private suspend fun callLLM(client: OkHttpClient, url: String, key: String, body: JSONObject): JSONObject? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val endpoint = if (url.endsWith("/")) "${url}chat/completions" else "$url/chat/completions"
-                val request = Request.Builder()
-                    .url(endpoint)
-                    .addHeader("Authorization", "Bearer $key")
-                    .addHeader("Content-Type", "application/json")
-                    .post(body.toString().toRequestBody("application/json".toMediaType()))
-                    .build()
-                val response = client.newCall(request).execute()
-                val str = response.body?.string()
-                if (response.isSuccessful && str != null) JSONObject(str) else {
-                    DebugLogger.e("AgentModule", "LLM Error: ${response.code} $str")
-                    null
+        val endpoint = if (url.endsWith("/")) "${url}chat/completions" else "$url/chat/completions"
+        val request = Request.Builder()
+            .url(endpoint)
+            .addHeader("Authorization", "Bearer $key")
+            .addHeader("Content-Type", "application/json")
+            .post(body.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        return try {
+            suspendCancellableCoroutine { continuation ->
+                val call = client.newCall(request)
+
+                // 注册取消回调：一旦协程被取消，立即终止网络请求
+                continuation.invokeOnCancellation {
+                    try {
+                        call.cancel()
+                    } catch (e: Exception) {
+                        DebugLogger.e("AgentModule", "Cancel request failed", e)
+                    }
                 }
-            } catch (e: Exception) {
-                DebugLogger.e("AgentModule", "LLM Exception", e)
-                null
+
+                // 异步执行
+                call.enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        if (continuation.isActive) {
+                            continuation.resumeWithException(e)
+                        }
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        // 在回调中读取数据，注意异常处理
+                        try {
+                            val str = response.body?.string()
+                            if (continuation.isActive) {
+                                if (response.isSuccessful && str != null) {
+                                    continuation.resume(JSONObject(str))
+                                } else {
+                                    DebugLogger.e("AgentModule", "LLM Error: ${response.code} $str")
+                                    continuation.resume(null)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            if (continuation.isActive) {
+                                continuation.resumeWithException(e)
+                            }
+                        }
+                    }
+                })
             }
+        } catch (e: Exception) {
+            // 如果是取消异常，直接抛出，让外层 finally 块处理
+            if (e is kotlinx.coroutines.CancellationException) throw e
+
+            DebugLogger.e("AgentModule", "LLM Exception", e)
+            null
         }
     }
 }
