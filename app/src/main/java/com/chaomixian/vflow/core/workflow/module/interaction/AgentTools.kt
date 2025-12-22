@@ -390,21 +390,57 @@ class AgentTools(private val context: ExecutionContext) {
         return if (deferred.await()) "Success: 向 $direction 滚动完成。" else "Failed: 滚动被取消。"
     }
 
+    /**
+     * 启动应用。
+     * 支持输入：
+     * 1. 包名 (com.tencent.mm)
+     * 2. 应用名 (微信)
+     * 3. 混合格式 (微信 (com.tencent.mm) 或 Apple Music（com.apple.android.music）) -> 自动提取包名
+     */
     suspend fun launchApp(appNameOrPackage: String): String {
         val pm = appContext.packageManager
-        var targetPackage = appNameOrPackage
+        var targetPackage = appNameOrPackage.trim()
+
+        // 智能提取包名
+        // 正则匹配括号内的内容：支持英文括号 () 和中文括号 （）
+        // 假设包名至少包含一个点号 '.' 且不包含空格
+        val packageRegex = Regex("[\\(（]([a-zA-Z0-9_\\.]+)[\\)）]")
+        val match = packageRegex.find(targetPackage)
+
+        if (match != null) {
+            val extracted = match.groupValues[1]
+            // 双重确认提取到的是个像包名的东西
+            if (extracted.contains(".")) {
+                DebugLogger.d(TAG, "从 '$targetPackage' 提取到包名: $extracted")
+                targetPackage = extracted
+            }
+        }
+
+        // 如果不包含点号，说明是纯应用名，需要去搜索
         if (!targetPackage.contains(".")) {
             val packages = pm.getInstalledPackages(0)
-            val match = packages.find { pkg -> pkg.applicationInfo?.let { pm.getApplicationLabel(it).toString().contains(appNameOrPackage, true) } == true }
-            if (match != null) targetPackage = match.packageName else return "Failed: 未找到应用。"
+            val matchApp = packages.find { pkg ->
+                val label = pkg.applicationInfo?.let { pm.getApplicationLabel(it).toString() } ?: ""
+                label.equals(targetPackage, ignoreCase = true) || label.contains(targetPackage, ignoreCase = true)
+            }
+
+            if (matchApp != null) {
+                targetPackage = matchApp.packageName
+                DebugLogger.d(TAG, "根据名称 '$appNameOrPackage' 找到包名: $targetPackage")
+            } else {
+                return "Failed: 未找到名称包含 '$appNameOrPackage' 的应用。"
+            }
         }
+
+        // 尝试启动
         val intent = pm.getLaunchIntentForPackage(targetPackage)
         if (intent != null) {
             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             appContext.startActivity(intent)
-            return "Success: 已启动应用。"
+            return "Success: 已启动应用 ($targetPackage)。"
         }
-        return "Failed: 无法启动应用。"
+
+        return "Failed: 无法启动应用 ($targetPackage)。可能未安装或没有启动入口。"
     }
 
     suspend fun pressKey(action: String): String {

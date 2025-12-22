@@ -3,6 +3,7 @@ package com.chaomixian.vflow.permissions
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -127,11 +128,19 @@ object PermissionManager {
         type = PermissionType.SPECIAL
     )
 
+    // 使用情况访问权限
+    val USAGE_STATS = Permission(
+        id = Manifest.permission.PACKAGE_USAGE_STATS,
+        name = "使用情况访问",
+        description = "允许 vFlow 读取应用的使用统计信息（如使用时长、最后使用时间），提高 Agent 行为准确度。",
+        type = PermissionType.SPECIAL
+    )
+
     // 所有已知特殊权限的列表，用于 UI 展示和快速查找
     val allKnownPermissions = listOf(
         ACCESSIBILITY, NOTIFICATIONS, OVERLAY, NOTIFICATION_LISTENER_SERVICE,
         STORAGE, SMS, BLUETOOTH, WRITE_SETTINGS, LOCATION, SHIZUKU,
-        IGNORE_BATTERY_OPTIMIZATIONS, EXACT_ALARM, ROOT
+        IGNORE_BATTERY_OPTIMIZATIONS, EXACT_ALARM, ROOT, USAGE_STATS
     )
 
 
@@ -261,6 +270,22 @@ object PermissionManager {
         }
     }
 
+    // 使用情况权限策略
+    private val usageStatsStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), context.packageName)
+            } else {
+                appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), context.packageName)
+            }
+            return mode == AppOpsManager.MODE_ALLOWED
+        }
+
+        override fun createRequestIntent(context: Context, permission: Permission) =
+            Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+    }
+
     // 策略映射表
     private val strategies = mapOf(
         ACCESSIBILITY.id to accessibilityStrategy,
@@ -271,7 +296,8 @@ object PermissionManager {
         EXACT_ALARM.id to exactAlarmStrategy,
         SHIZUKU.id to shizukuStrategy,
         ROOT.id to rootStrategy,
-        STORAGE.id to storageStrategy
+        STORAGE.id to storageStrategy,
+        USAGE_STATS.id to usageStatsStrategy
     )
 
     /**

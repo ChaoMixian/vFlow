@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Rect
@@ -10,12 +11,15 @@ import android.util.Base64
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
+import android.app.usage.UsageStatsManager
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ServiceStateBus
 import java.io.ByteArrayOutputStream
+import java.util.Calendar
 
 /**
  * Agent 感知工具类。
@@ -146,5 +150,87 @@ object AgentUtils {
             DebugLogger.e(TAG, "图片处理失败", e)
             Triple(null, 0, 0)
         }
+    }
+
+    // 获取最近 30 天使用过的应用列表，按时长排序
+    fun getRecentApps(context: Context): String {
+        // 1. 检查权限
+        if (!PermissionManager.isGranted(context, PermissionManager.USAGE_STATS)) {
+            // 如果没权限，回退到获取所有应用（原来的逻辑）
+            return getInstalledApps(context)
+        }
+
+        try {
+            val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+            val pm = context.packageManager
+
+            // 2. 获取过去 30 天的数据
+            val calendar = Calendar.getInstance()
+            val endTime = calendar.timeInMillis
+            calendar.add(Calendar.DAY_OF_YEAR, -30)
+            val startTime = calendar.timeInMillis
+
+            // queryAndAggregateUsageStats 返回 Map<packageName, UsageStats>
+            val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+
+            if (statsMap.isEmpty()) {
+                return getInstalledApps(context) // 系统未记录到数据，回退
+            }
+
+            // 3. 获取所有可启动的 App (作为白名单，过滤掉系统后台服务)
+            val intent = Intent(Intent.ACTION_MAIN, null)
+            intent.addCategory(Intent.CATEGORY_LAUNCHER)
+            val launchableApps = pm.queryIntentActivities(intent, 0)
+            val launchablePackageNames = launchableApps.map { it.activityInfo.packageName }.toSet()
+
+            // 4. 过滤和排序
+            val recentAppList = statsMap.values
+                .filter {
+                    it.totalTimeInForeground > 0 && // 确实使用过
+                            launchablePackageNames.contains(it.packageName) // 是用户可见的 App
+                }
+                .sortedByDescending { it.totalTimeInForeground } // 按使用时长降序
+                .mapNotNull { usageStats ->
+                    try {
+                        val appInfo = pm.getApplicationInfo(usageStats.packageName, 0)
+                        val appName = appInfo.loadLabel(pm).toString()
+                        // 格式: 微信 (com.tencent.mm)
+                        "$appName (${usageStats.packageName})"
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+
+            if (recentAppList.isEmpty()) {
+                return getInstalledApps(context)
+            }
+
+            return recentAppList.joinToString(", ")
+
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "获取应用使用记录失败", e)
+            return getInstalledApps(context) // 出错回退
+        }
+    }
+
+    // 原有的全量获取方法，作为回退方案
+    private fun getInstalledApps(context: Context): String {
+        val pm = context.packageManager
+        val intent = Intent(Intent.ACTION_MAIN, null)
+        intent.addCategory(Intent.CATEGORY_LAUNCHER)
+
+        val apps = pm.queryIntentActivities(intent, 0)
+
+        val appList = apps.mapNotNull { resolveInfo ->
+            try {
+                val appName = resolveInfo.loadLabel(pm).toString()
+                val packageName = resolveInfo.activityInfo.packageName
+                "$appName ($packageName)"
+            } catch (e: Exception) {
+                null
+            }
+        }.joinToString(", ")
+
+        return if (appList.isNotEmpty()) appList else "No launchable apps found."
     }
 }

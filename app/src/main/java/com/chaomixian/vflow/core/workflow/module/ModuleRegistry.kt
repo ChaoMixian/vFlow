@@ -129,6 +129,7 @@ object ModuleRegistry {
         register(ReadSmsModule())
         register(FindNotificationModule())
         register(RemoveNotificationModule())
+        register(GetAppUsageStatsModule())
 
         // Shizuku 模块
         register(ShellCommandModule())
