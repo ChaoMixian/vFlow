@@ -187,9 +187,7 @@ class AgentOverlayManager(private val context: Context) {
             y = 120 // 底部留出 Margin，避开手势条
         }
 
-        // ============================
-        // 3. 添加视图
-        // ============================
+        // 添加视图
         try {
             windowManager.addView(borderRoot, borderParams)
             windowManager.addView(controlRoot, controlWindowParams)

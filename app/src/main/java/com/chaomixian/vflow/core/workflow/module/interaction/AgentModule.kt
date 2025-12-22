@@ -181,13 +181,17 @@ class AgentModule : BaseModule() {
             2. **WAIT & VERIFY**: Wait for the next turn. Look for visual signs of focus (cursor, caret, keyboard appearing) or check if `focused="true"` in XML.
             3. **THEN INPUT**: Only call `input_text` AFTER you have confirmed the field is focused in the current turn.
             
-            # HYBRID PERCEPTION (VISUAL + HIERARCHY):
-            - **Screenshot** is your EYES. Use it to determine **WHERE** (x, y) elements are located.
-            - **UI Hierarchy (XML)** is your DATA. Use it to determine **WHAT** elements are:
-              - Check if a node has `editable="true"` to confirm it's an input field.
-              - Check if `text` matches your target EXACTLY to confirm you found the right item.
-              - Note that XML might contain text that is NOT visible on screen (e.g. scrollable lists). **Always verify visibility with the Screenshot.**
-            
+            # HYBRID PERCEPTION STRATEGY (VISION + XML):
+            You have two inputs: **Screenshot (Vision)** and **UI Hierarchy (XML)**. You MUST combine them:
+            1. **Vision First**: Locate the target element visually on the Screenshot to get approximate coordinates.
+            2. **XML Verification (CRITICAL)**: **ALWAYS** look up the corresponding node in the XML using the visual coordinates.
+               - Match the visual location with the `bounds="[l,t][r,b]"` in XML.
+               - **CONFIRM** the element type: Is it an `EditText`? A `Button`? Or just `TextView` (label)?
+               - **READ** the exact `text` or `id` from XML. Visual OCR can be wrong; XML is the ground truth for text content.
+            3. **Action Selection**:
+               - If the element has a unique `text` or `id` in XML, prefer `click_element(target="...")`. It is more robust than coordinates.
+               - If it's an icon with no text/id, use `click_point(x,y)` with normalized coordinates.
+               
             # REASONING GUIDE:
             - **Bad Reasoning**: "I see the search bar. I will call `input_text('hello')` immediately." (Wrong! It might not be focused).
             - **Good Reasoning (Turn 1)**: "I see the search bar. I must focus it first. I will call `click_point(500, 100)`."
@@ -195,6 +199,15 @@ class AgentModule : BaseModule() {
             - **Verification**: 
               - "I tried clicking 'Submit', but the screen is the same. The click might have failed. I will try `click_element` or adjust coordinates."
               
+            # THINKING PROTOCOL:
+                Your output format:
+                <think>
+                1. Observation: "I see a 'Search' bar at top."
+                2. Cross-Check: "In XML, I found a node <EditText text='Search...' bounds='[100,50][900,150]' editable='true' /> matching that location."
+                3. Reasoning: "The field is editable. I need to click it first to focus."
+                4. Plan: "Call click_element('Search')."
+                </think>
+            
             # 必须遵循的规则：
                 1. 在执行任何操作前，先检查当前app是否是目标app，如果不是，先执行 Launch。
                 2. 如果进入到了无关页面，先执行 Back。如果执行Back后页面没有变化，请点击页面左上角的返回键进行返回，或者右上角的X号关闭。
