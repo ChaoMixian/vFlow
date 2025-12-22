@@ -109,34 +109,41 @@ object WorkflowExecutor {
                 DebugLogger.e("WorkflowExecutor", "主工作流 '${workflow.name}' 执行时发生未捕获的异常。", e)
                 ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("执行异常"))
             } finally {
-                // 执行结束后清理工作目录
-                try {
-                    if (workDir.exists()) {
-                        workDir.deleteRecursively()
-                        DebugLogger.d("WorkflowExecutor", "已清理工作目录: ${workDir.absolutePath}")
-                    }
-                } catch (e: Exception) {
-                    DebugLogger.w("WorkflowExecutor", "清理工作目录失败: ${e.message}")
-                }
+                // 捕获当前协程的取消状态，因为进入 withContext(NonCancellable) 后 isActive 将总是 true
+                val isCoroutineCancelled = !isActive
 
-                // 广播最终状态
-                val wasStopped = stoppedWorkflows[workflow.id] == true
-                val wasCancelled = !isActive && !wasStopped
-
-                if (runningWorkflows.containsKey(workflow.id)) {
-                    runningWorkflows.remove(workflow.id)
-                    stoppedWorkflows.remove(workflow.id)
-                    if (wasCancelled) {
-                        ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id))
-                    } else {
-                        // 正常结束或Stop信号都视为Finished
-                        ExecutionStateBus.postState(ExecutionState.Finished(workflow.id))
+                // 使用 NonCancellable 上下文，确保即使协程被取消（如手动停止），清理和广播逻辑也能完整执行
+                withContext(NonCancellable) {
+                    // 执行结束后清理工作目录
+                    try {
+                        if (workDir.exists()) {
+                            workDir.deleteRecursively()
+                            DebugLogger.d("WorkflowExecutor", "已清理工作目录: ${workDir.absolutePath}")
+                        }
+                    } catch (e: Exception) {
+                        DebugLogger.w("WorkflowExecutor", "清理工作目录失败: ${e.message}")
                     }
-                    DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 执行完毕。")
+
+                    // 广播最终状态
+                    val wasStopped = stoppedWorkflows[workflow.id] == true
+                    // 如果协程不再活跃且不是因为“停止工作流”模块导致的，则视为手动取消
+                    val wasCancelled = isCoroutineCancelled && !wasStopped
+
+                    if (runningWorkflows.containsKey(workflow.id)) {
+                        runningWorkflows.remove(workflow.id)
+                        stoppedWorkflows.remove(workflow.id)
+                        if (wasCancelled) {
+                            ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id))
+                        } else {
+                            // 正常结束或Stop信号都视为Finished
+                            ExecutionStateBus.postState(ExecutionState.Finished(workflow.id))
+                        }
+                        DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 执行完毕。")
+                    }
+                    // 延迟后取消通知，给用户时间查看最终状态
+                    delay(3000)
+                    ExecutionNotificationManager.cancelNotification()
                 }
-                // 延迟后取消通知，给用户时间查看最终状态
-                delay(3000)
-                ExecutionNotificationManager.cancelNotification()
             }
         }
         // 将 Job 实例存入 map
