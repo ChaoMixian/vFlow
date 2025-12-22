@@ -9,13 +9,6 @@
     android:paddingHorizontal="8dp"
     android:paddingVertical="4dp">
 
-    <ImageView
-        android:id="@+id/pill_icon"
-        android:layout_width="14dp"
-        android:layout_height="14dp"
-        android:src="@drawable/ic_variable"
-        tools:ignore="ContentDescription" />
-
     <TextView
         android:id="@+id/pill_text"
         android:layout_width="wrap_content"

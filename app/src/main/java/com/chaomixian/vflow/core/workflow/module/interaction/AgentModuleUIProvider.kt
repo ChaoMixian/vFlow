@@ -32,7 +32,7 @@ class AgentModuleUIProvider : ModuleUIProvider {
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val providerGroup: ChipGroup = view.findViewById(R.id.cg_provider)
-        val chipOpenAI: Chip = view.findViewById(R.id.chip_bigmodel)
+        val chipBigModel: Chip = view.findViewById(R.id.chip_bigmodel)
         val chipDashScope: Chip = view.findViewById(R.id.chip_dashscope)
         val chipCustom: Chip = view.findViewById(R.id.chip_custom)
 
@@ -81,7 +81,7 @@ class AgentModuleUIProvider : ModuleUIProvider {
         val provider = currentParameters["provider"] as? String ?: "阿里云百炼"
         when (provider) {
             "阿里云百炼" -> holder.chipDashScope.isChecked = true
-            "OpenAI" -> holder.chipOpenAI.isChecked = true
+            "智谱" -> holder.chipBigModel.isChecked = true
             else -> holder.chipCustom.isChecked = true
         }
 

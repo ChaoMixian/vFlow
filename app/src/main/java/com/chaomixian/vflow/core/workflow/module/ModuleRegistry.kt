@@ -130,6 +130,7 @@ object ModuleRegistry {
         register(FindNotificationModule())
         register(RemoveNotificationModule())
         register(GetAppUsageStatsModule())
+        register(InvokeModule())
 
         // Shizuku 模块
         register(ShellCommandModule())

@@ -517,7 +517,16 @@ class WorkflowEditorActivity : BaseActivity() {
 
 
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule) {
-        val targetInputDef = editingModule.getDynamicInputs(actionSteps.getOrNull(editingStepPosition), actionSteps).find { it.id == targetInputId }
+        // 处理嵌套 ID (例如 "extras.myKey")
+        // 如果 targetInputId 包含点号，则只取第一部分 (extras) 作为 InputDefinition 的 ID 来查找定义
+        val realInputId = if (targetInputId.contains('.')) {
+            targetInputId.split('.', limit = 2)[0]
+        } else {
+            targetInputId
+        }
+
+        val targetInputDef = editingModule.getDynamicInputs(actionSteps.getOrNull(editingStepPosition), actionSteps).find { it.id == realInputId }
+
         if (targetInputDef == null) {
             Toast.makeText(this, "无法找到输入定义: $targetInputId", Toast.LENGTH_SHORT).show()
             return
