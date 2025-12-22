@@ -27,11 +27,11 @@
             android:layout_height="wrap_content"
             android:text="阿里云百炼" />
         <com.google.android.material.chip.Chip
-            android:id="@+id/chip_openai"
+            android:id="@+id/chip_bigmodel"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="OpenAI" />
+            android:text="智谱" />
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_custom"
             style="@style/Widget.Material3.Chip.Filter"
@@ -154,6 +154,6 @@
         android:layout_height="wrap_content"
         android:stepSize="1"
         android:valueFrom="1"
-        android:valueTo="30" />
+        android:valueTo="50" />
 
 </LinearLayout>

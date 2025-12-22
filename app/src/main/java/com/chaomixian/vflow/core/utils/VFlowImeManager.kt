@@ -1,0 +1,82 @@
+// 文件: main/java/com/chaomixian/vflow/core/utils/VFlowImeManager.kt
+package com.chaomixian.vflow.core.utils
+
+import android.content.Context
+import android.provider.Settings
+import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.services.ShellManager
+import com.chaomixian.vflow.services.VFlowIME
+import kotlinx.coroutines.delay
+
+/**
+ * 管理 vFlow 输入法的切换和输入操作。
+ */
+object VFlowImeManager {
+    private const val TAG = "VFlowImeManager"
+
+    // vFlow 输入法的完整 ID (包名/类名)
+    private const val VFLOW_IME_ID = "com.chaomixian.vflow/.services.VFlowIME"
+
+    /**
+     * 使用 vFlow IME 输入文本。
+     * 自动处理：备份当前IME -> 切换vFlow IME -> 发送文本 -> 恢复IME。
+     */
+    suspend fun inputText(context: Context, text: String): Boolean {
+        if (!ShellManager.isShizukuActive(context) && !ShellManager.isRootAvailable()) {
+            DebugLogger.e(TAG, "IME 输入需要 Shizuku 或 Root 权限。")
+            return false
+        }
+
+        // 1. 获取当前默认输入法
+        val currentIme = Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+        DebugLogger.d(TAG, "当前输入法: $currentIme")
+
+        // 2. 如果当前不是 vFlow IME，则切换
+        if (currentIme != VFLOW_IME_ID) {
+            val enabledMethods = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_INPUT_METHODS)
+
+            // 2.1 确保 vFlow IME 已启用 (如果没有，尝试通过 Shell 启用它)
+            if (!enabledMethods.contains(VFLOW_IME_ID)) {
+                DebugLogger.d(TAG, "vFlow IME 未启用，尝试启用...")
+                // 注意：直接修改 enabled_input_methods 比较危险，更安全的是让用户去设置里开一次
+                // 但在 Shell 模式下，我们可以尝试 append
+                val newEnabled = "$enabledMethods:$VFLOW_IME_ID"
+                ShellManager.execShellCommand(context, "settings put secure ${Settings.Secure.ENABLED_INPUT_METHODS} \"$newEnabled\"", ShellManager.ShellMode.AUTO)
+            }
+
+            // 2.2 切换到 vFlow IME
+            DebugLogger.d(TAG, "切换到 vFlow IME...")
+            ShellManager.execShellCommand(context, "ime set $VFLOW_IME_ID", ShellManager.ShellMode.AUTO)
+            delay(500) // 等待系统切换
+        }
+
+        // 3. 发送广播进行输入
+        // escapeText 处理：防止 shell 命令注入
+        val safeText = text.replace("\"", "\\\"").replace("'", "'\\''")
+        val cmd = "am broadcast -a ${VFlowIME.ACTION_INPUT_TEXT} --es ${VFlowIME.EXTRA_TEXT} \"$safeText\""
+
+        DebugLogger.d(TAG, "发送输入广播: $safeText")
+        val result = ShellManager.execShellCommand(context, cmd, ShellManager.ShellMode.AUTO)
+
+        val success = !result.startsWith("Error")
+
+        // 4. 给一点时间让文字上屏
+        delay(300)
+
+        // 5. 恢复原来的输入法 (如果之前切过)
+        if (currentIme != VFLOW_IME_ID && !currentIme.isNullOrBlank()) {
+            DebugLogger.d(TAG, "恢复原输入法: $currentIme")
+            ShellManager.execShellCommand(context, "ime set $currentIme", ShellManager.ShellMode.AUTO)
+        }
+
+        return success
+    }
+
+    /**
+     * 检查是否已经启用了 vFlow 输入法 (在系统设置中勾选)
+     */
+    fun isImeEnabled(context: Context): Boolean {
+        val enabledMethods = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_INPUT_METHODS)
+        return enabledMethods?.contains(VFLOW_IME_ID) == true
+    }
+}

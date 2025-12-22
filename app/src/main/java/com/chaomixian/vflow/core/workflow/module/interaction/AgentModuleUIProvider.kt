@@ -32,7 +32,7 @@ class AgentModuleUIProvider : ModuleUIProvider {
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val providerGroup: ChipGroup = view.findViewById(R.id.cg_provider)
-        val chipOpenAI: Chip = view.findViewById(R.id.chip_openai)
+        val chipOpenAI: Chip = view.findViewById(R.id.chip_bigmodel)
         val chipDashScope: Chip = view.findViewById(R.id.chip_dashscope)
         val chipCustom: Chip = view.findViewById(R.id.chip_custom)
 
@@ -41,10 +41,6 @@ class AgentModuleUIProvider : ModuleUIProvider {
         val apiKeyEdit: TextInputEditText = view.findViewById(R.id.et_api_key)
 
         val instructionContainer: FrameLayout = view.findViewById(R.id.container_instruction)
-
-        // 移除工具选择相关的 View 引用，因为 XML 中虽然可能有，但逻辑已废弃
-        // val btnSelectTools: Button = view.findViewById(R.id.btn_select_tools)
-        // val tvSelectedTools: TextView = view.findViewById(R.id.tv_selected_tools)
 
         val stepsSlider: Slider = view.findViewById(R.id.slider_max_steps)
         val stepsText: TextView = view.findViewById(R.id.tv_max_steps_value)
@@ -105,9 +101,9 @@ class AgentModuleUIProvider : ModuleUIProvider {
         holder.providerGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
             when (checkedIds[0]) {
-                R.id.chip_openai -> {
-                    holder.baseUrlEdit.setText("https://api.openai.com/v1")
-                    holder.modelEdit.setText("gpt-4o")
+                R.id.chip_bigmodel -> {
+                    holder.baseUrlEdit.setText("https://open.bigmodel.cn/api/paas/v4")
+                    holder.modelEdit.setText("glm-4.6v-flash")
                 }
                 R.id.chip_dashscope -> {
                     holder.baseUrlEdit.setText("https://dashscope.aliyuncs.com/compatible-mode/v1")
@@ -162,7 +158,7 @@ class AgentModuleUIProvider : ModuleUIProvider {
         val provider = when {
             h.chipDashScope.isChecked -> "阿里云百炼"
             h.chipCustom.isChecked -> "自定义"
-            else -> "OpenAI"
+            else -> "智谱"
         }
 
         return mapOf(

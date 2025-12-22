@@ -3,6 +3,9 @@ package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Path
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
@@ -12,6 +15,7 @@ import com.chaomixian.vflow.core.module.BooleanVariable
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.utils.VFlowImeManager
 import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.services.ShellManager
 import kotlinx.coroutines.CompletableDeferred
@@ -42,13 +46,26 @@ class AgentTools(private val context: ExecutionContext) {
     }
 
     /**
-     * 智能点击元素。
+     * 直接点击指定坐标。
+     * 这是 AI 基于视觉判断后的首选操作方式。
+     */
+    suspend fun clickPoint(x: Int, y: Int): String {
+        DebugLogger.d(TAG, "Agent请求点击坐标: ($x, $y)")
+        if (clickCoordinates(x, y)) {
+            return "Success: Tapped at ($x, $y)."
+        }
+        return "Failed: Could not tap at ($x, $y). Check service or shell status."
+    }
+
+    /**
+     * 智能点击元素 (基于文本/ID)。
+     * 仅作为备用方案，当视觉识别失败时使用。
      * 1. 无障碍查找 (快速，准确，但可能被屏蔽)
      * 2. 全局模糊扫描 (处理文本细微差异)
      * 3. OCR 视觉查找 (最终兜底，专门对付微信/游戏等非标准UI)
      */
     suspend fun clickElement(target: String): String {
-        DebugLogger.d(TAG, "Agent请求点击: $target")
+        DebugLogger.d(TAG, "Agent请求点击元素(文本/ID): $target")
         val service = ServiceStateBus.getAccessibilityService()
 
         // 1. 尝试无障碍查找 (如果服务可用)
@@ -99,7 +116,7 @@ class AgentTools(private val context: ExecutionContext) {
      * 等待元素消失。
      */
     suspend fun waitForElementToDisappear(target: String, timeoutMillis: Long = 30000): String {
-        DebugLogger.d(TAG, "开始恭候元素消失: $target, 超时: ${timeoutMillis}ms")
+        DebugLogger.d(TAG, "开始等待元素消失: $target, 超时: ${timeoutMillis}ms")
         val service = ServiceStateBus.getAccessibilityService()
             ?: return "Error: 无障碍服务未运行，无法检测屏幕状态。"
 
@@ -293,20 +310,55 @@ class AgentTools(private val context: ExecutionContext) {
         return false
     }
 
+    // 检查是否只包含 ASCII 字符
+    private fun isAscii(text: String): Boolean {
+        return text.all { it.code < 128 }
+    }
+
+    /**
+     * 智能输入文本
+     * 1. 尝试无障碍直接 SET_TEXT (最快，最稳，不占剪贴板)
+     * 2. 如果是 ASCII 且有 Shell，使用 input text
+     * 3. 如果是中文/Unicode 且有 Shell，使用 vFlow IME，
+     * 如果失败回落到 剪贴板 + KEYCODE_PASTE (解决乱码问题)
+     */
     suspend fun inputText(text: String): String {
+        // 1. 无障碍直接输入
         val service = ServiceStateBus.getAccessibilityService()
-        val focusNode = service?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-        if (focusNode != null && focusNode.isEditable) {
-            val args = android.os.Bundle()
-            args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
-            if (focusNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) return "Success: 已输入文本。"
+        if (service != null) {
+            val focusNode = service.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            if (focusNode != null && focusNode.isEditable) {
+                val args = android.os.Bundle()
+                args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+                if (focusNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
+                    return "Success: 已通过无障碍接口输入文本。"
+                }
+            }
         }
-        if (ShellManager.isShizukuActive(appContext)) {
-            val safeText = text.replace("\"", "\\\"").replace("'", "\\'")
-            val result = ShellManager.execShellCommand(appContext, "input text \"$safeText\"", ShellManager.ShellMode.AUTO)
-            if (!result.startsWith("Error")) return "Success: 通过 Shell 输入了文本。"
+
+        // 2. Shell 方案
+        if (ShellManager.isShizukuActive(appContext) || ShellManager.isRootAvailable()) {
+            // 优先尝试 VFlow IME (最稳，支持中文，不干扰剪贴板)
+            val imeSuccess = VFlowImeManager.inputText(appContext, text)
+            if (imeSuccess) {
+                return "Success: 通过 vFlow IME 输入了文本。"
+            }
+
+            // 失败回退：剪贴板粘贴
+            try {
+                val clipboardContext = ServiceStateBus.getAccessibilityService() ?: appContext
+                val clipboard = clipboardContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Agent Input", text)
+                clipboard.setPrimaryClip(clip)
+                delay(200)
+                val result = ShellManager.execShellCommand(appContext, "input keyevent 279", ShellManager.ShellMode.AUTO)
+                if (!result.startsWith("Error")) return "Success: 通过 Shell (剪贴板粘贴) 输入了文本 (IME回退)。"
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "Shell 粘贴输入失败", e)
+            }
         }
-        return "Failed: 无法输入文本。"
+
+        return "Failed: 无法输入文本。无障碍未找到焦点框，且 Shell 方案也不可用。"
     }
 
     suspend fun scroll(direction: String): String {

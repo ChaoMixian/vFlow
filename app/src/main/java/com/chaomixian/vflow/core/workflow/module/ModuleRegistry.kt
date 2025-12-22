@@ -71,6 +71,7 @@ object ModuleRegistry {
         register(ClickModule())
         register(ScreenOperationModule())
         register(SendKeyEventModule())
+        register(InputTextModule())
         register(CaptureScreenModule())
         register(OCRModule())
         register(AgentModule())

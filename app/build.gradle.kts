@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // 启用 Parcelize 功能，用于在组件间传递我们新的数据模型（如 Workflow）
     id("org.jetbrains.kotlin.plugin.parcelize")
 }
 
@@ -13,8 +12,8 @@ android {
         applicationId = "com.chaomixian.vflow"
         minSdk = 29
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.3.0"
+        versionCode = 16
+        versionName = "1.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

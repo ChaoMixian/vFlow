@@ -2,6 +2,8 @@
 package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.content.Context
+import android.util.DisplayMetrics
+import android.view.WindowManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
@@ -49,10 +51,10 @@ class AgentModule : BaseModule() {
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("provider", "服务商", ParameterType.ENUM, "OpenAI", options = listOf("阿里云百炼", "OpenAI", "自定义")),
+        InputDefinition("provider", "服务商", ParameterType.ENUM, "智谱", options = listOf("阿里云百炼", "智谱", "自定义")),
         InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://dashscope.aliyuncs.com/compatible-mode/v1"),
         InputDefinition("api_key", "API Key", ParameterType.STRING, ""),
-        InputDefinition("model", "模型", ParameterType.STRING, "qwen-vl-max"),
+        InputDefinition("model", "模型", ParameterType.STRING, "glm-4.6v-flash"),
         InputDefinition("instruction", "指令", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
         InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 15.0),
         InputDefinition("tools", "工具配置", ParameterType.ANY, isHidden = true)
@@ -68,16 +70,16 @@ class AgentModule : BaseModule() {
         return PillUtil.buildSpannable(context, "AI Agent: ", instructionPill)
     }
 
-    // Native Tools Schema 定义
     private fun getNativeToolsSchema(): JSONArray {
         val schema = JSONArray()
-        schema.put(JSONObject("""{ "type": "function", "function": { "name": "click_element", "description": "Click an element. Prefer EXACT text match from UI hierarchy.", "parameters": { "type": "object", "properties": { "target": { "type": "string", "description": "Text or ID of the element." } }, "required": ["target"] } } }"""))
+        schema.put(JSONObject("""{ "type": "function", "function": { "name": "click_point", "description": "Tap at specific NORMALIZED coordinates (0-1000). x=0 is left, x=1000 is right. y=0 is top, y=1000 is bottom.", "parameters": { "type": "object", "properties": { "x": { "type": "integer", "description": "Normalized X coordinate (0-1000)" }, "y": { "type": "integer", "description": "Normalized Y coordinate (0-1000)" } }, "required": ["x", "y"] } } }"""))
+        schema.put(JSONObject("""{ "type": "function", "function": { "name": "click_element", "description": "Click an element by exact text. Only use this if visual coordinates are impossible to determine.", "parameters": { "type": "object", "properties": { "target": { "type": "string", "description": "Exact text or ID." } }, "required": ["target"] } } }"""))
         schema.put(JSONObject("""{ "type": "function", "function": { "name": "input_text", "description": "Input text into focused field.", "parameters": { "type": "object", "properties": { "text": { "type": "string" } }, "required": ["text"] } } }"""))
-        schema.put(JSONObject("""{ "type": "function", "function": { "name": "scroll", "description": "Scroll the view. 'down' means going further down the page (finger moves up).", "parameters": { "type": "object", "properties": { "direction": { "type": "string", "enum": ["up", "down", "left", "right"] } }, "required": ["direction"] } } }"""))
+        schema.put(JSONObject("""{ "type": "function", "function": { "name": "scroll", "description": "Scroll the view. 'down' means going further down (swiping up).", "parameters": { "type": "object", "properties": { "direction": { "type": "string", "enum": ["up", "down", "left", "right"] } }, "required": ["direction"] } } }"""))
         schema.put(JSONObject("""{ "type": "function", "function": { "name": "press_key", "description": "System keys.", "parameters": { "type": "object", "properties": { "action": { "type": "string", "enum": ["back", "home", "recents"] } }, "required": ["action"] } } }"""))
-        schema.put(JSONObject("""{ "type": "function", "function": { "name": "launch_app", "description": "Launch app.", "parameters": { "type": "object", "properties": { "app_name": { "type": "string" } }, "required": ["app_name"] } } }"""))
-        schema.put(JSONObject("""{ "type": "function", "function": { "name": "wait", "description": "Wait for a specific amount of time. Use this when the app is loading, generating content, or processing.", "parameters": { "type": "object", "properties": { "seconds": { "type": "integer", "description": "Time to wait in seconds." } }, "required": ["seconds"] } } }"""))
-        schema.put(JSONObject("""{ "type": "function", "function": { "name": "finish_task", "description": "Finish task. CALL THIS when goal is achieved or impossible.", "parameters": { "type": "object", "properties": { "result": { "type": "string" }, "success": { "type": "boolean" } }, "required": ["result", "success"] } } }"""))
+        schema.put(JSONObject("""{ "type": "function", "function": { "name": "launch_app", "description": "Launch an app by name.", "parameters": { "type": "object", "properties": { "app_name": { "type": "string", "description": "Exact app name (e.g. 'WeChat')" } }, "required": ["app_name"] } } }"""))
+        schema.put(JSONObject("""{ "type": "function", "function": { "name": "wait", "description": "Wait for a specific amount of time (seconds).", "parameters": { "type": "object", "properties": { "seconds": { "type": "integer" } }, "required": ["seconds"] } } }"""))
+        schema.put(JSONObject("""{ "type": "function", "function": { "name": "finish_task", "description": "Call this when goal is achieved.", "parameters": { "type": "object", "properties": { "result": { "type": "string" }, "success": { "type": "boolean" } }, "required": ["result", "success"] } } }"""))
         return schema
     }
 
@@ -89,7 +91,7 @@ class AgentModule : BaseModule() {
     ): ExecutionResult {
         val baseUrl = context.variables["base_url"] as? String ?: ""
         val apiKey = context.variables["api_key"] as? String ?: ""
-        val model = context.variables["model"] as? String ?: "qwen-vl-max"
+        val model = context.variables["model"] as? String ?: "glm-4.6v-flash"
         val instruction = VariableResolver.resolve(context.variables["instruction"]?.toString() ?: "", context)
         val maxSteps = (context.variables["max_steps"] as? Number)?.toInt() ?: 15
 
@@ -101,7 +103,6 @@ class AgentModule : BaseModule() {
             .readTimeout(120, TimeUnit.SECONDS)
             .build()
 
-        // --- 1. 获取动态环境信息 ---
         val date = Date()
         val dateFormat = SimpleDateFormat("yyyy年MM月dd日 EEEE", Locale.getDefault())
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -116,26 +117,45 @@ class AgentModule : BaseModule() {
             Current Date: $dateString
             Current Time: $timeString
             
-            # Protocol
-            You must output your reasoning in <think>...</think> tags before calling any tool.
+            # CRITICAL INSTRUCTION: TOOL USAGE
+            **You MUST use the native Function Calling mechanism.**
+            - **DO NOT** output Markdown code blocks or XML tags for tools.
+            - **DO NOT** just describe actions.
+            - **First** `<think>...</think>`, **Then** `Tool Call`.
             
-            # Operational Rules (MUST FOLLOW):
-            1. **Context Check**: Before operating, check if you are in the correct App. If not, use `launch_app`.
-            2. **Visual & Structure**: Analyze both the screenshot and the XML hierarchy. The XML provides exact text/IDs, while the screenshot shows layout and icons.
-            3. **Navigation**: 
-               - If you enter an irrelevant page, use `press_key(action='back')`.
-               - If you need to find something not visible, try `scroll(direction='down')`.
-            4. **Interaction**:
-               - Use `click_element` with exact text from XML if possible.
-               - If a click doesn't work (screen didn't change), try adjusting the target or scrolling slightly.
-            5. **Search**: If searching for specific content (e.g., specific chat or product), try exact keywords first. If failed, try broader keywords.
-            6. **Loop Prevention**: If you perform the same action twice with no effect, STOP. Try a different approach (e.g., scroll, back, or finish with failure).
-            7. **Verification**: After every action, observe the new screen state in the next turn to verify success.
-            8. **Termination**: Call `finish_task` immediately when the goal is achieved or deemed impossible. Do not idle.
-            9. **Patience**: If you see status indicators like "Generating", "Loading", "Processing", or buttons like "Stop generating", DO NOT click them. Instead, use the `wait` tool to give it time to finish.
+            # MANDATORY PROTOCOL:
+            1. **LAUNCH APP FIRST**: If task requires a specific app (e.g. "WeChat") and it's not open, CALL `launch_app`.
+            2. **ONE STEP AT A TIME**: ONE tool call per turn.
+            3. **VISUAL PRIORITY**: Use `click_point(x, y)` with normalized coordinates (0-1000) from the screenshot.
+            4. **VERIFY SUCCESS (CRITICAL)**: Before taking the next step, **CHECK the screen state** (Screenshot/XML) to confirm the previous action worked. 
+               - Did the screen change? 
+               - Did the text appear in the box?
+               - **If NOT, DO NOT proceed. RETRY with a different method.**
             
-            # Goal
-            Complete the user's instruction: "$instruction"
+            # MOBILE UI COMMON SENSE (CRITICAL):
+            1. **Search Hints are NOT Content**: Text inside search bars (e.g., "Search...", "请输入", "Type here") is usually a **placeholder**. You do **NOT** need to delete it. Just click the field and call `input_text`.
+            2. **Popups**: If a permission popup or ad appears, close or allow it first.
+            
+            # INPUT TEXT PROTOCOL (STRICT):
+            1. **CLICK FIRST**: You CANNOT input text into a field that is not focused. **Step 1: Click the input field.**
+            2. **WAIT & VERIFY**: Wait for the next turn. Look for visual signs of focus (cursor, caret, keyboard appearing) or check if `focused="true"` in XML.
+            3. **THEN INPUT**: Only call `input_text` AFTER you have confirmed the field is focused in the current turn.
+            
+            # HYBRID PERCEPTION (VISUAL + HIERARCHY):
+            - **Screenshot** is your EYES. Use it to determine **WHERE** (x, y) elements are located.
+            - **UI Hierarchy (XML)** is your DATA. Use it to determine **WHAT** elements are:
+              - Check if a node has `editable="true"` to confirm it's an input field.
+              - Check if `text` matches your target EXACTLY to confirm you found the right item.
+              - Note that XML might contain text that is NOT visible on screen (e.g. scrollable lists). **Always verify visibility with the Screenshot.**
+            
+            # REASONING GUIDE:
+            - **Bad Reasoning**: "I see the search bar. I will call `input_text('hello')` immediately." (Wrong! It might not be focused).
+            - **Good Reasoning (Turn 1)**: "I see the search bar. I must focus it first. I will call `click_point(500, 100)`."
+            - **Good Reasoning (Turn 2)**: "I see the keyboard is now visible / the field cursor is blinking. Now it is safe to call `input_text('hello')`."
+            - **Verification**: "I tried clicking 'Submit', but the screen is the same. The click might have failed. I will try `click_element` or adjust coordinates."
+            
+            # User Goal
+            "$instruction"
         """.trimIndent()
 
         messages.put(JSONObject().apply {
@@ -148,23 +168,30 @@ class AgentModule : BaseModule() {
 
         var lastAction: LastAction? = null
         var repeatCount = 0
+        var noToolCallCount = 0
 
         while (currentStep < maxSteps) {
             onProgress(ProgressUpdate("正在观察屏幕 (步骤 ${currentStep + 1}/$maxSteps)..."))
 
             // --- 感知 ---
-            val (screenshotBase64, _) = AgentUtils.captureScreen(context.applicationContext, context)
+            val screenshotResult = AgentUtils.captureScreen(context.applicationContext, context)
             val uiHierarchy = AgentUtils.dumpHierarchy(context.applicationContext)
+
+            val windowManager = context.applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val displayMetrics = DisplayMetrics()
+            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+            val screenWidth = displayMetrics.widthPixels
+            val screenHeight = displayMetrics.heightPixels
 
             val contentParts = JSONArray()
             val stepsLeft = maxSteps - currentStep
-            // 倒计时压力提示
-            val urgencyWarning = if (stepsLeft <= 2) "\n[WARNING] Only $stepsLeft steps left! Wrap up the task." else ""
+            val urgencyWarning = if (stepsLeft <= 2) "\n[WARNING] Only $stepsLeft steps left! Wrap up." else ""
 
             val textContext = """
-                Current Step: ${currentStep + 1} / $maxSteps $urgencyWarning
+                Step: ${currentStep + 1} / $maxSteps $urgencyWarning
+                Screen Size: ${screenWidth}x${screenHeight} (Coordinates must be normalized 0-1000)
                 
-                UI Hierarchy (Simplified):
+                UI Hierarchy (Reference Only):
                 ${uiHierarchy.take(8000)} ${if(uiHierarchy.length > 8000) "...(truncated)" else ""}
             """.trimIndent()
 
@@ -173,17 +200,17 @@ class AgentModule : BaseModule() {
                 put("text", textContext)
             })
 
-            if (screenshotBase64 != null) {
+            if (screenshotResult.base64 != null) {
                 contentParts.put(JSONObject().apply {
                     put("type", "image_url")
                     put("image_url", JSONObject().apply {
-                        put("url", "data:image/jpeg;base64,$screenshotBase64")
+                        put("url", "data:image/jpeg;base64,${screenshotResult.base64}")
                     })
                 })
             } else {
                 contentParts.put(JSONObject().apply {
                     put("type", "text")
-                    put("text", "[System: Screenshot failed. Please rely on UI Hierarchy XML.]")
+                    put("text", "[System: Screenshot failed. Rely on XML.]")
                 })
             }
 
@@ -199,7 +226,7 @@ class AgentModule : BaseModule() {
                 put("model", model)
                 put("messages", messages)
                 put("tools", getNativeToolsSchema())
-                put("tool_choice", "auto")
+                put("tool_choice", "required") // 强制工具调用
             }
 
             val responseJson = callLLM(client, baseUrl, apiKey, requestBody)
@@ -213,81 +240,117 @@ class AgentModule : BaseModule() {
             if (!message.has("content") || message.isNull("content")) message.put("content", "")
             messages.put(message)
 
-            // 提取 <think> 内容用于日志展示
             val content = message.optString("content", "")
-            if (content.contains("<think>")) {
-                val thought = content.substringAfter("<think>").substringBefore("</think>").trim()
-                if (thought.isNotEmpty()) {
-                    DebugLogger.d("AgentModule", "Thought: $thought")
-                    onProgress(ProgressUpdate("AI 想法: ${thought.take(50)}..."))
-                }
+            if (content.isNotEmpty()) {
+                DebugLogger.d("AgentModule", "AI Output: $content")
+                onProgress(ProgressUpdate("AI: ${content.take(50)}..."))
             }
 
             // --- 行动 ---
             if (message.has("tool_calls")) {
+                noToolCallCount = 0
                 val toolCalls = message.getJSONArray("tool_calls")
 
-                for (i in 0 until toolCalls.length()) {
-                    val toolCall = toolCalls.getJSONObject(i)
-                    val function = toolCall.getJSONObject("function")
-                    val name = function.getString("name")
-                    val argsStr = function.getString("arguments")
-                    val callId = toolCall.getString("id")
+                if (toolCalls.length() > 0) {
+                    try {
+                        // 使用 optJSONObject 和 optString 安全解析，防止崩溃
+                        val toolCall = toolCalls.getJSONObject(0)
+                        val function = toolCall.optJSONObject("function")
 
-                    val args = try { gson.fromJson(argsStr, Map::class.java) as Map<String, Any> } catch (e: Exception) { emptyMap<String, Any>() }
+                        if (function == null) {
+                            throw Exception("Missing 'function' object in tool call")
+                        }
 
-                    // 死循环检测
-                    val currentAction = LastAction(name, argsStr)
-                    var toolResult = ""
+                        val name = function.optString("name", "")
+                        val argsStr = function.optString("arguments", "{}")
+                        val callId = toolCall.optString("id", "call_${System.currentTimeMillis()}")
 
-                    if (lastAction == currentAction) repeatCount++ else repeatCount = 0
-                    lastAction = currentAction
+                        if (name.isEmpty()) {
+                            throw Exception("Tool name is missing or empty")
+                        }
 
-                    // scroll和wait 允许最多5次重复，其他操作允许2次
-                    val threshold = if (name == "scroll" || name == "wait") 5 else 2
+                        val args = try { gson.fromJson(argsStr, Map::class.java) as Map<String, Any> } catch (e: Exception) { emptyMap<String, Any>() }
 
-                    if (repeatCount >= threshold) {
-                        DebugLogger.w("AgentModule", "检测到死循环: $name (重复 $repeatCount 次)")
-                        toolResult = "SYSTEM_INTERVENTION: You repeated '$name' $repeatCount times. It seems ineffective. STOP. Try 'scroll' (reverse direction) or 'press_key' (back)."
-                        onProgress(ProgressUpdate("检测到操作卡死，强制AI换策略"))
-                    } else {
-                        onProgress(ProgressUpdate("执行: $name"))
-                        DebugLogger.d("AgentModule", "Calling tool: $name args: $args")
+                        // 死循环检测
+                        val currentAction = LastAction(name, argsStr)
+                        var toolResult = ""
 
-                        if (name == "finish_task") {
-                            val res = args["result"]?.toString() ?: "Done"
-                            val suc = args["success"] as? Boolean ?: true
-                            taskResult = ExecutionResult.Success(mapOf("result" to TextVariable(res), "success" to BooleanVariable(suc)))
-                            break
+                        if (lastAction == currentAction) repeatCount++ else repeatCount = 0
+                        lastAction = currentAction
+
+                        val threshold = if (name == "scroll" || name == "wait") 5 else 2
+
+                        if (repeatCount >= threshold) {
+                            DebugLogger.w("AgentModule", "检测到死循环: $name")
+                            toolResult = "SYSTEM_INTERVENTION: Repeated action detected. STOP. Try 'scroll', 'press_key(back)', or 'finish_task(success=false)'."
+                            onProgress(ProgressUpdate("检测到操作卡死，强制AI换策略"))
                         } else {
-                            toolResult = when(name) {
-                                "click_element" -> agentTools.clickElement(args["target"]?.toString() ?: "")
-                                "input_text" -> agentTools.inputText(args["text"]?.toString() ?: "")
-                                "scroll" -> agentTools.scroll(args["direction"]?.toString() ?: "up")
-                                "press_key" -> agentTools.pressKey(args["action"]?.toString() ?: "")
-                                "launch_app" -> agentTools.launchApp(args["app_name"]?.toString() ?: "")
-                                "wait" -> agentTools.wait((args["seconds"] as? Number)?.toInt() ?: 5)
-                                else -> "Error: Unknown tool"
+                            onProgress(ProgressUpdate("执行: $name"))
+                            DebugLogger.d("AgentModule", "Calling tool: $name args: $args")
+
+                            if (name == "finish_task") {
+                                val res = args["result"]?.toString() ?: "Done"
+                                val suc = args["success"] as? Boolean ?: true
+                                taskResult = ExecutionResult.Success(mapOf("result" to TextVariable(res), "success" to BooleanVariable(suc)))
+                            } else {
+                                toolResult = when(name) {
+                                    "click_point" -> {
+                                        val normX = (args["x"] as? Number)?.toInt() ?: 0
+                                        val normY = (args["y"] as? Number)?.toInt() ?: 0
+                                        val realX = (normX / 1000.0 * screenWidth).toInt()
+                                        val realY = (normY / 1000.0 * screenHeight).toInt()
+                                        DebugLogger.d("AgentModule", "坐标映射: Norm($normX, $normY) -> Pixel($realX, $realY)")
+                                        agentTools.clickPoint(realX, realY)
+                                    }
+                                    "click_element" -> agentTools.clickElement(args["target"]?.toString() ?: "")
+                                    "input_text" -> agentTools.inputText(args["text"]?.toString() ?: "")
+                                    "scroll" -> agentTools.scroll(args["direction"]?.toString() ?: "up")
+                                    "press_key" -> agentTools.pressKey(args["action"]?.toString() ?: "")
+                                    "launch_app" -> agentTools.launchApp(args["app_name"]?.toString() ?: "")
+                                    "wait" -> agentTools.wait((args["seconds"] as? Number)?.toInt() ?: 5)
+                                    else -> "Error: Unknown tool name '$name'"
+                                }
                             }
                         }
+
+                        messages.put(JSONObject().apply {
+                            put("role", "tool")
+                            put("tool_call_id", callId)
+                            put("content", toolResult)
+                        })
+
+                        if (taskResult != null) break
+
+                    } catch (e: Exception) {
+                        DebugLogger.e("AgentModule", "Error parsing/executing tool call", e)
+                        // 反馈错误给 AI，不崩溃
+                        messages.put(JSONObject().apply {
+                            put("role", "tool")
+                            put("tool_call_id", "error") // 占位
+                            put("content", "SYSTEM ERROR: Invalid tool call format or parameters. Error: ${e.message}. Please generate a valid JSON tool call.")
+                        })
                     }
-
-                    messages.put(JSONObject().apply {
-                        put("role", "tool")
-                        put("tool_call_id", callId)
-                        put("content", toolResult)
-                    })
-
-                    if (taskResult != null) break
-                    delay(1000)
                 }
-                if (taskResult != null) break
             } else {
-                // 如果没有调用工具，大概率是在输出 <think> 或者纯对话
-                onProgress(ProgressUpdate("AI 正在规划..."))
+                noToolCallCount++
+                val thoughtSnippet = if (content.length > 20) content.take(20) + "..." else content
+                onProgress(ProgressUpdate("AI 未执行操作 ($noToolCallCount/3): $thoughtSnippet"))
+
+                if (noToolCallCount >= 3) {
+                    return ExecutionResult.Failure("AI 响应异常", "连续 3 次未调用任何工具，任务终止。AI 回复: $content")
+                }
+
+                // 警告AI，要求使用工具
+                messages.put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", "SYSTEM ERROR: You outputted text but did NOT call any tool. I cannot read your mind. You MUST call a tool (e.g. `launch_app`, `click_point`) to make things happen.")
+                })
+
+                continue
             }
 
             currentStep++
+            delay(1000)
         }
 
         return taskResult ?: ExecutionResult.Success(mapOf(

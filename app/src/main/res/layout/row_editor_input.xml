@@ -23,7 +23,7 @@
         android:layout_centerVertical="true"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@drawable/rounded_dataset_24"
-        android:contentDescription="选择魔法变量"
+        android:contentDescription="选择变量"
         app:tint="?attr/colorPrimary"/>
 
     <FrameLayout

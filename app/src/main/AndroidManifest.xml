@@ -137,6 +137,19 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name=".services.VFlowIME"
+            android:label="vFlow 输入法"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
         <receiver
             android:name=".services.BootReceiver"
             android:exported="true">
