@@ -38,6 +38,7 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import java.util.concurrent.CancellationException
 
 class AgentModule : BaseModule() {
 
@@ -217,7 +218,7 @@ class AgentModule : BaseModule() {
                 
             # User Goal
             "$instruction"
-        """.trimIndent()
+            """.trimIndent()
 
             messages.put(JSONObject().apply {
                 put("role", "system")
@@ -232,7 +233,14 @@ class AgentModule : BaseModule() {
 
             // --- 主循环 ---
             while (currentStep < maxSteps) {
-                // 更新悬浮窗状态
+                // 在每一步开始前，检查是否暂停或被取消
+                try {
+                    overlayManager.awaitState()
+                } catch (e: CancellationException) {
+                    // 如果是用户点击悬浮窗的“结束”，会抛出异常
+                    return ExecutionResult.Failure("任务取消", "用户手动停止了任务。")
+                }
+
                 overlayManager.updateStatus("分析屏幕...", "准备截屏")
                 onProgress(ProgressUpdate("正在观察屏幕 (步骤 ${currentStep + 1}/$maxSteps)..."))
 
@@ -301,6 +309,9 @@ class AgentModule : BaseModule() {
                     put("tool_choice", "required") // 强制工具调用
                 }
 
+                // 再次检查暂停状态（因为截图和思考可能耗时）
+                try { overlayManager.awaitState() } catch (e: CancellationException) { return ExecutionResult.Failure("任务取消", "用户手动停止了任务。") }
+
                 val responseJson = callLLM(client, baseUrl, apiKey, requestBody)
 
                 if (responseJson == null) {
@@ -362,6 +373,9 @@ class AgentModule : BaseModule() {
                                 else -> "执行: $name"
                             }
                             overlayManager.updateStatus(null, actionDisplay)
+
+                            // 行动前最后一次检查暂停，方便用户拦截操作
+                            try { overlayManager.awaitState() } catch (e: CancellationException) { return ExecutionResult.Failure("任务取消", "用户手动停止了任务。") }
 
                             // 死循环检测
                             val currentAction = LastAction(name, argsStr)
