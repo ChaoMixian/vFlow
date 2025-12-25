@@ -115,22 +115,6 @@ class AutoGLMModule : BaseModule() {
                 - {think} 是对你为什么选择这个操作的简短推理说明。
                 - {action} 是本次执行的具体操作指令，必须严格遵循下方定义的指令格式。
                 
-                你必须严格按照要求输出以下格式：
-                <think>{think}</think>
-                <answer>{action}</answer>
-
-                其中：
-                - {think} 是对你为什么选择这个操作的简短推理说明。
-                - {action} 是本次执行的具体操作指令，必须严格遵循下方定义的指令格式。
-                
-                你必须严格按照要求输出以下格式：
-                <think>{think}</think>
-                <answer>{action}</answer>
-
-                其中：
-                - {think} 是对你为什么选择这个操作的简短推理说明。
-                - {action} 是本次执行的具体操作指令，必须严格遵循下方定义的指令格式。
-                
                 操作指令及其作用如下：
                 - do(action="Launch", app="xxx")  
                     Launch是启动目标app的操作，这比通过主屏幕导航更快。此操作完成后，您将自动收到结果状态的截图。
@@ -213,12 +197,14 @@ class AutoGLMModule : BaseModule() {
 
                 overlayManager.hideForScreenshot()
                 val screenshotResult = AgentUtils.captureScreen(context.applicationContext, context)
+                val currentUI = AgentUtils.getCurrentUIInfo(context.applicationContext)
+                DebugLogger.d("AutoGLM", "Step ${currentStep + 1} Context: $currentUI")
                 overlayManager.restoreAfterScreenshot()
 
                 val contentParts = JSONArray()
                 contentParts.put(JSONObject().apply {
                     put("type", "text")
-                    put("text", "Current Step: ${currentStep + 1}")
+                    put("text", "Current Step: ${currentStep + 1}\nCurrent Interface: $currentUI")
                 })
 
                 if (screenshotResult.base64 != null) {
@@ -251,7 +237,7 @@ class AutoGLMModule : BaseModule() {
                 val content = message.optString("content", "")
                 DebugLogger.d("AutoGLM: ", content)
 
-                // 清理历史图片消息 (同原逻辑)
+                // 清理历史图片消息
                 if (messages.length() > 0) {
                     val lastUserMsg = messages.getJSONObject(messages.length() - 1)
                     if (lastUserMsg.optString("role") == "user") {
@@ -461,22 +447,18 @@ class AutoGLMModule : BaseModule() {
         if (cleanCmd.startsWith("finish")) {
             result["action"] = "finish"
 
-            // 使用“贪婪”逻辑手动提取 message，以兼容包含未转义引号的内容
-            // 查找 message=" 的位置 (允许 = 号周围有空格)
-            val msgStartRegex = Regex("message\\s*=\\s*\"", extractionOptions)
-            val match = msgStartRegex.find(cleanCmd)
+            // 从后往前查找 ") 组合，避免中间的引号导致截断
+            val msgTag = "message=\""
+            val startIdx = cleanCmd.indexOf(msgTag)
+            // 查找最后一个 ") 组合
+            val endIdx = cleanCmd.lastIndexOf("\")")
 
-            if (match != null) {
-                val start = match.range.last + 1
-                // 查找字符串中最后一个引号的位置
-                val end = cleanCmd.lastIndexOf('"')
-
-                if (end > start) {
-                    val rawMsg = cleanCmd.substring(start, end)
-                    result["message"] = unescape(rawMsg)
-                }
+            if (startIdx != -1 && endIdx > startIdx) {
+                // 截取 message=" 和 ") 之间的所有内容
+                val rawMsg = cleanCmd.substring(startIdx + msgTag.length, endIdx)
+                result["message"] = unescape(rawMsg)
             } else {
-                // 如果格式极其不标准，尝试回退到旧正则（通常不会走到这）
+                // 如果格式极不标准，回退到正则（通常不会执行到这里）
                 Regex("message=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)?.let {
                     result["message"] = unescape(it.groupValues[1])
                 }

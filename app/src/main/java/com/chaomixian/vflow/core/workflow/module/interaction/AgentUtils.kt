@@ -18,6 +18,7 @@ import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ServiceStateBus
+import com.chaomixian.vflow.services.ShellManager
 import java.io.ByteArrayOutputStream
 import java.util.Calendar
 
@@ -232,5 +233,54 @@ object AgentUtils {
         }.joinToString(", ")
 
         return if (appList.isNotEmpty()) appList else "No launchable apps found."
+    }
+
+    /**
+     * 获取当前界面信息。
+     * 1. 优先使用 Shell (dumpsys window) 获取精确的 Activity 名。
+     * 2. 如果失败，回退到 AccessibilityService 获取包名。
+     */
+    suspend fun getCurrentUIInfo(context: Context): String {
+        // 尝试 Shell (Shizuku / Root) 获取 Activity
+        if (ShellManager.isShizukuActive(context) || ShellManager.isRootAvailable()) {
+            try {
+                // 命令：获取当前焦点窗口
+                val result = ShellManager.execShellCommand(context, "dumpsys window | grep mCurrentFocus", ShellManager.ShellMode.AUTO)
+
+                // 常见输出格式：
+                // mCurrentFocus=Window{2b2c9d5 u0 com.package/com.package.Activity}
+                // 或者在某些设备上：mCurrentFocus=null
+                if (result.contains("/")) {
+                    // 尝试提取 com.pkg/com.pkg.Activity
+                    // 匹配 "u0 space package/activity" 或者 "package/activity}"
+                    val match = Regex("u0\\s+(\\S+)/(\\S+)[}\\s]").find(result)
+                    if (match != null) {
+                        return "${match.groupValues[1]}/${match.groupValues[2].replace("}", "")}"
+                    }
+
+                    // 备用简单正则：匹配斜杠两侧的非空白字符
+                    val simpleMatch = Regex("(\\S+\\.\\S+)/(\\S+\\.\\S+)").find(result)
+                    if (simpleMatch != null) {
+                        return simpleMatch.value.replace("}", "")
+                    }
+                }
+            } catch (e: Exception) {
+                DebugLogger.w("AutoGLM", "Shell fetch activity failed: ${e.message}")
+            }
+        }
+
+        // 尝试无障碍服务 (仅获取包名)
+        val service = ServiceStateBus.getAccessibilityService()
+        if (service != null) {
+            val root = service.rootInActiveWindow
+            if (root != null) {
+                val pkg = root.packageName?.toString()
+                if (!pkg.isNullOrBlank()) {
+                    return pkg
+                }
+            }
+        }
+
+        return "Unknown UI"
     }
 }
