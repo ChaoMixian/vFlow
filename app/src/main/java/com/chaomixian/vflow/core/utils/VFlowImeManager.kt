@@ -3,6 +3,7 @@ package com.chaomixian.vflow.core.utils
 
 import android.content.Context
 import android.provider.Settings
+import android.util.Base64
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.VFlowIME
@@ -50,12 +51,14 @@ object VFlowImeManager {
             delay(500) // 等待系统切换
         }
 
-        // 3. 发送广播进行输入
-        // escapeText 处理：防止 shell 命令注入
-        val safeText = text.replace("\"", "\\\"").replace("'", "'\\''")
-        val cmd = "am broadcast -a ${VFlowIME.ACTION_INPUT_TEXT} --es ${VFlowIME.EXTRA_TEXT} \"$safeText\""
+        // 将中文转为 Base64 字符串 (NO_WRAP 避免换行)
+        val base64Text = Base64.encodeToString(text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
 
-        DebugLogger.d(TAG, "发送输入广播: $safeText")
+        // 使用 --es 指定新的 EXTRA_TEXT_BASE64 参数
+        val cmd = "am broadcast -a ${VFlowIME.ACTION_INPUT_TEXT} --es ${VFlowIME.EXTRA_TEXT_BASE64} \"$base64Text\""
+
+        DebugLogger.d(TAG, "发送输入广播(Base64): $base64Text (原文本: $text)")
+
         val result = ShellManager.execShellCommand(context, cmd, ShellManager.ShellMode.AUTO)
 
         val success = !result.startsWith("Error")

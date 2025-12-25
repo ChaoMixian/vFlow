@@ -102,7 +102,7 @@ class AgentModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 1. 获取参数
+        // 获取参数
         val baseUrl = context.variables["base_url"] as? String ?: ""
         val apiKey = context.variables["api_key"] as? String ?: ""
         val model = context.variables["model"] as? String ?: "glm-4.6v-flash"
@@ -111,13 +111,12 @@ class AgentModule : BaseModule() {
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
 
-        // 2. 初始化悬浮窗
+        // 初始化悬浮窗
         val overlayManager = AgentOverlayManager(context.applicationContext)
         withContext(Dispatchers.Main) {
             overlayManager.show()
         }
 
-        // --- 开始 try 块，确保 finally 一定执行 ---
         try {
             val agentTools = AgentTools(context)
             val client = OkHttpClient.Builder()
@@ -284,7 +283,7 @@ class AgentModule : BaseModule() {
                     Screen Size: ${screenWidth}x${screenHeight} (Coordinates must be normalized 0-1000)
                     
                     UI Hierarchy (Reference Only):
-                    ${uiHierarchy.take(8000)} ${if(uiHierarchy.length > 8000) "...(truncated)" else ""}
+                    ${uiHierarchy.take(16000)} ${if(uiHierarchy.length > 16000) "...(truncated)" else ""}
                 """.trimIndent()
 
                 contentParts.put(JSONObject().apply {

@@ -75,6 +75,7 @@ object ModuleRegistry {
         register(CaptureScreenModule())
         register(OCRModule())
         register(AgentModule())
+        register(AutoGLMModule())
 
         // 逻辑控制
         register(IfModule())

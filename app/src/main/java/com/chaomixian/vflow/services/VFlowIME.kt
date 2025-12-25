@@ -12,6 +12,7 @@ import android.view.inputmethod.InputConnection
 import androidx.core.content.ContextCompat
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
+import android.util.Base64 // 引入 Base64
 
 /**
  * vFlow 专用输入法服务。
@@ -26,16 +27,29 @@ class VFlowIME : InputMethodService() {
         private const val TAG = "VFlowIME"
         const val ACTION_INPUT_TEXT = "com.chaomixian.vflow.action.IME_INPUT"
         const val EXTRA_TEXT = "text"
-        const val EXTRA_COMMIT_ACTION = "commit_action" // 可选：输入后是否执行回车/搜索等
+        const val EXTRA_TEXT_BASE64 = "text_base64"
+        const val EXTRA_COMMIT_ACTION = "commit_action"
     }
 
     private val inputReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == ACTION_INPUT_TEXT) {
-                val text = intent.getStringExtra(EXTRA_TEXT) ?: return
+                var text = intent.getStringExtra(EXTRA_TEXT)
                 val commitAction = intent.getBooleanExtra(EXTRA_COMMIT_ACTION, false)
 
-                inputText(text, commitAction)
+                val base64Text = intent.getStringExtra(EXTRA_TEXT_BASE64)
+                if (!base64Text.isNullOrEmpty()) {
+                    try {
+                        val bytes = Base64.decode(base64Text, Base64.DEFAULT)
+                        text = String(bytes, Charsets.UTF_8)
+                    } catch (e: Exception) {
+                        DebugLogger.e(TAG, "Base64 解码失败: $base64Text", e)
+                    }
+                }
+
+                if (text != null) {
+                    inputText(text, commitAction)
+                }
             }
         }
     }
