@@ -44,11 +44,11 @@ class AutoGLMModule : BaseModule() {
     override val metadata = ActionMetadata(
         name = "AutoGLM 智能体",
         description = "复刻 AutoGLM 项目。基于思维链(CoT)和自定义指令协议，执行复杂的手机操作任务。",
-        iconRes = R.drawable.rounded_android_wifi_3_bar_24,
+        iconRes = R.drawable.rounded_hexagon_nodes_24,
         category = "界面交互"
     )
 
-    override val uiProvider: ModuleUIProvider = AgentModuleUIProvider()
+    override val uiProvider: ModuleUIProvider = AutoGLMModuleUIProvider()
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(
@@ -60,12 +60,12 @@ class AutoGLMModule : BaseModule() {
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("provider", "服务商", ParameterType.ENUM, "智谱", options = listOf("阿里云百炼", "智谱", "自定义")),
+        InputDefinition("provider", "服务商", ParameterType.ENUM, "智谱", options = listOf("智谱", "自定义")),
         InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://open.bigmodel.cn/api/paas/v4"),
         InputDefinition("api_key", "API Key", ParameterType.STRING, ""),
         InputDefinition("model", "模型", ParameterType.STRING, "autoglm-phone"),
         InputDefinition("instruction", "指令", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 15.0)
+        InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 30.0)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -84,9 +84,9 @@ class AutoGLMModule : BaseModule() {
     ): ExecutionResult {
         val baseUrl = context.variables["base_url"] as? String ?: ""
         val apiKey = context.variables["api_key"] as? String ?: ""
-        val model = context.variables["model"] as? String ?: "glm-4v-plus"
+        val model = context.variables["model"] as? String ?: "autoglm-phone"
         val instruction = VariableResolver.resolve(context.variables["instruction"]?.toString() ?: "", context)
-        val maxSteps = (context.variables["max_steps"] as? Number)?.toInt() ?: 15
+        val maxSteps = (context.variables["max_steps"] as? Number)?.toInt() ?: 30
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
 
@@ -251,6 +251,7 @@ class AutoGLMModule : BaseModule() {
                 val content = message.optString("content", "")
                 DebugLogger.d("AutoGLM: ", content)
 
+                // 清理历史图片消息 (同原逻辑)
                 if (messages.length() > 0) {
                     val lastUserMsg = messages.getJSONObject(messages.length() - 1)
                     if (lastUserMsg.optString("role") == "user") {
@@ -259,14 +260,11 @@ class AutoGLMModule : BaseModule() {
                             // 遍历 content 数组，移除 image_url 类型的内容
                             for (i in contents.length() - 1 downTo 0) {
                                 val item = contents.getJSONObject(i)
-                                if (item.optString("type") == "image_url") {
-                                    contents.remove(i)
-                                }
+                                if (item.optString("type") == "image_url") contents.remove(i)
                             }
-                            // 可选：添加一个标记说明图片已被清理
                             contents.put(JSONObject().apply {
                                 put("type", "text")
-                                put("text", "[Image removed to save context]")
+                                put("text", "[Image removed]")
                             })
                         }
                     }
@@ -274,16 +272,12 @@ class AutoGLMModule : BaseModule() {
 
                 messages.put(message)
 
-                // --- 解析 AutoGLM 格式 (增强版) ---
+                // --- 解析 AutoGLM 格式 ---
                 val think = extractTag(content, "think")
                 var answer = extractTag(content, "answer")
 
-                // 1. 容错提取：支持跨行匹配
+                // 容错提取
                 if (answer.isEmpty()) {
-                    // 正则优化：
-                    // 1. (?:do\(action=|finish\()  -> 匹配指令头
-                    // 2. (?:[^)]|"(?:[^"\\]|\\.)*")* -> 循环匹配：要么是非括号字符，要么是完整的双引号字符串(支持转义)
-                    // 3. \) -> 匹配指令尾
                     val commandRegex = Regex("""((?:do\(action=|finish\()(?:[^)]|"(?:[^"\\]|\\.)*")*\))""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
                     val match = commandRegex.find(content)
                     if (match != null) {
@@ -296,10 +290,7 @@ class AutoGLMModule : BaseModule() {
                     }
                 }
 
-                if (think.isNotEmpty()) {
-                    overlayManager.updateStatus(think, "决策中...")
-                    DebugLogger.d("AutoGLM", "Think: $think")
-                }
+                if (think.isNotEmpty()) overlayManager.updateStatus(think, "决策中...")
 
                 if (answer.isNotEmpty()) {
                     errorCount = 0
@@ -310,7 +301,8 @@ class AutoGLMModule : BaseModule() {
                     val actionName = command["action"] ?: "unknown"
 
                     overlayManager.updateStatus(null, "执行: $actionName")
-                    try { overlayManager.awaitState() } catch (e: CancellationException) { return ExecutionResult.Failure("任务取消", "停止") }
+
+                    var actionFeedback = "Action '$actionName' executed."
 
                     when (actionName) {
                         "Tap" -> {
@@ -323,7 +315,7 @@ class AutoGLMModule : BaseModule() {
                                 agentTools.clickPoint(realX, realY)
                             }
                         }
-                        "Type" -> {
+                        "Type", "Type_Name" -> { // 处理 Type 和 Type_Name
                             val text = command["text"] as? String ?: ""
                             agentTools.inputText(text)
                         }
@@ -340,7 +332,6 @@ class AutoGLMModule : BaseModule() {
                                 val ex = (end[0] as Number).toInt()
                                 val ey = (end[1] as Number).toInt()
                                 val dy = ey - sy
-
                                 val direction = if (abs(dy) > abs(ex - sx)) {
                                     if (dy > 0) "up" else "down"
                                 } else {
@@ -348,6 +339,50 @@ class AutoGLMModule : BaseModule() {
                                 }
                                 agentTools.scroll(direction)
                             }
+                        }
+                        "Double Tap" -> {
+                            val rawPos = command["element"] as? List<*>
+                            if (rawPos != null && rawPos.size == 2) {
+                                val normX = (rawPos[0] as Number).toInt()
+                                val normY = (rawPos[1] as Number).toInt()
+                                val realX = (normX / 999.0 * screenWidth).toInt()
+                                val realY = (normY / 999.0 * screenHeight).toInt()
+                                agentTools.doubleTap(realX, realY)
+                            }
+                        }
+                        "Long Press" -> {
+                            val rawPos = command["element"] as? List<*>
+                            if (rawPos != null && rawPos.size == 2) {
+                                val normX = (rawPos[0] as Number).toInt()
+                                val normY = (rawPos[1] as Number).toInt()
+                                val realX = (normX / 999.0 * screenWidth).toInt()
+                                val realY = (normY / 999.0 * screenHeight).toInt()
+                                agentTools.longPress(realX, realY)
+                            }
+                        }
+                        "Note" -> {
+                            val msg = command["message"] as? String ?: ""
+                            DebugLogger.i("AutoGLM", "Note recorded: $msg")
+                            actionFeedback = "Note saved locally."
+                        }
+                        "Call_API" -> {
+                            val instr = command["instruction"] as? String ?: ""
+                            DebugLogger.i("AutoGLM", "Internal Call_API: $instr")
+                            actionFeedback = "Sub-task '$instr' processed (simulated)."
+                        }
+                        "Interact" -> {
+                            // 通知用户并短暂等待
+                            val msg = "Interact triggered. Waiting for user choice..."
+                            overlayManager.updateStatus("请协助选择", "等待用户...")
+                            agentTools.wait(5)
+                            actionFeedback = "Waited 5 seconds for user interaction."
+                        }
+                        "Take_over" -> {
+                            val msg = command["message"] as? String ?: "Manual help needed"
+                            overlayManager.updateStatus("需要人工接管", msg)
+                            // 等待较长时间让用户操作
+                            agentTools.wait(10)
+                            actionFeedback = "Paused 10s for manual takeover."
                         }
                         "Back" -> agentTools.pressKey("back")
                         "Home" -> agentTools.pressKey("home")
@@ -381,18 +416,13 @@ class AutoGLMModule : BaseModule() {
 
                 } else {
                     errorCount++
-                    DebugLogger.w("AutoGLM", "未找到 <answer> 标签或指令，AI 回复: $content")
-
-                    if (errorCount >= 3) {
-                        return ExecutionResult.Failure("AI 响应异常", "连续 3 次未输出有效指令。AI 最后回复: $content")
-                    }
-
+                    DebugLogger.w("AutoGLM", "未找到指令，AI 回复: $content")
+                    if (errorCount >= 3) return ExecutionResult.Failure("AI 响应异常", "连续 3 次未输出有效指令。AI 最后回复: $content")
                     messages.put(JSONObject().apply {
                         put("role", "user")
-                        put("content", "SYSTEM ERROR: No valid action found in your response. You MUST output the action inside <answer>...</answer> tags. Example: <answer>do(action=\"Tap\", element=[500,500])</answer>")
+                        put("content", "SYSTEM ERROR: No valid action found. Output <answer>do(...)</answer>.")
                     })
-
-                    onProgress(ProgressUpdate("格式错误，正在请求 AI 重试 ($errorCount/3)..."))
+                    onProgress(ProgressUpdate("格式错误，重试 ($errorCount/3)..."))
                     continue
                 }
 
@@ -430,9 +460,27 @@ class AutoGLMModule : BaseModule() {
 
         if (cleanCmd.startsWith("finish")) {
             result["action"] = "finish"
-            // 支持转义引号的参数提取: "((?:[^"\\]|\\.)*)"
-            val msgMatch = Regex("message=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)
-            if (msgMatch != null) result["message"] = unescape(msgMatch.groupValues[1])
+
+            // 使用“贪婪”逻辑手动提取 message，以兼容包含未转义引号的内容
+            // 查找 message=" 的位置 (允许 = 号周围有空格)
+            val msgStartRegex = Regex("message\\s*=\\s*\"", extractionOptions)
+            val match = msgStartRegex.find(cleanCmd)
+
+            if (match != null) {
+                val start = match.range.last + 1
+                // 查找字符串中最后一个引号的位置
+                val end = cleanCmd.lastIndexOf('"')
+
+                if (end > start) {
+                    val rawMsg = cleanCmd.substring(start, end)
+                    result["message"] = unescape(rawMsg)
+                }
+            } else {
+                // 如果格式极其不标准，尝试回退到旧正则（通常不会走到这）
+                Regex("message=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)?.let {
+                    result["message"] = unescape(it.groupValues[1])
+                }
+            }
             return result
         }
 
@@ -448,7 +496,6 @@ class AutoGLMModule : BaseModule() {
         }
 
         Regex("action=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)?.let { result["action"] = it.groupValues[1] }
-
         Regex("element=\\[(.*?)\\]", extractionOptions).find(cleanCmd)?.let { match ->
             val parts = match.groupValues[1].split(",")
             if (parts.size == 2) {
@@ -467,6 +514,8 @@ class AutoGLMModule : BaseModule() {
         Regex("text=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)?.let { result["text"] = unescape(it.groupValues[1]) }
         Regex("app=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)?.let { result["app"] = unescape(it.groupValues[1]) }
         Regex("duration=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)?.let { result["duration"] = unescape(it.groupValues[1]) }
+        Regex("message=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)?.let { result["message"] = unescape(it.groupValues[1]) }
+        Regex("instruction=\"((?:[^\"\\\\]|\\\\.)*)\"", extractionOptions).find(cleanCmd)?.let { result["instruction"] = unescape(it.groupValues[1]) }
 
         return result
     }

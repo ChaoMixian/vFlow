@@ -54,7 +54,68 @@ class AgentTools(private val context: ExecutionContext) {
         if (clickCoordinates(x, y)) {
             return "Success: Tapped at ($x, $y)."
         }
-        return "Failed: Could not tap at ($x, $y). Check service or shell status."
+        return "Failed: Could not tap at ($x, $y)."
+    }
+
+    /**
+     * 长按指定坐标
+     */
+    suspend fun longPress(x: Int, y: Int, durationMs: Long = 1000): String {
+        DebugLogger.d(TAG, "Agent请求长按坐标: ($x, $y), 时长: $durationMs")
+        val service = ServiceStateBus.getAccessibilityService()
+        if (service != null) {
+            val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+            val gesture = GestureDescription.Builder()
+                .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
+                .build()
+            val deferred = CompletableDeferred<Boolean>()
+            service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
+                override fun onCompleted(g: GestureDescription?) { deferred.complete(true) }
+                override fun onCancelled(g: GestureDescription?) { deferred.complete(false) }
+            }, null)
+            if (deferred.await()) return "Success: Long Pressed at ($x, $y)."
+        }
+        // Shell 回退
+        if (ShellManager.isShizukuActive(appContext)) {
+            // input swipe x y x y duration
+            val result = ShellManager.execShellCommand(appContext, "input swipe $x $y $x $y $durationMs", ShellManager.ShellMode.AUTO)
+            if (!result.startsWith("Error")) return "Success: Long Pressed (Shell) at ($x, $y)."
+        }
+        return "Failed: Could not long press."
+    }
+
+    /**
+     * 双击指定坐标
+     */
+    suspend fun doubleTap(x: Int, y: Int): String {
+        DebugLogger.d(TAG, "Agent请求双击坐标: ($x, $y)")
+        val service = ServiceStateBus.getAccessibilityService()
+        if (service != null) {
+            val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+            // 创建两个连续的点击笔画
+            val stroke1 = GestureDescription.StrokeDescription(path, 0, 50)
+            val stroke2 = GestureDescription.StrokeDescription(path, 100, 50) // 间隔 50ms (0+50+interval)
+
+            val gesture = GestureDescription.Builder()
+                .addStroke(stroke1)
+                .addStroke(stroke2)
+                .build()
+
+            val deferred = CompletableDeferred<Boolean>()
+            service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
+                override fun onCompleted(g: GestureDescription?) { deferred.complete(true) }
+                override fun onCancelled(g: GestureDescription?) { deferred.complete(false) }
+            }, null)
+            if (deferred.await()) return "Success: Double Tapped at ($x, $y)."
+        }
+
+        // Shell 回退 (模拟两次 tap)
+        if (ShellManager.isShizukuActive(appContext)) {
+            val res1 = ShellManager.execShellCommand(appContext, "input tap $x $y", ShellManager.ShellMode.AUTO)
+            val res2 = ShellManager.execShellCommand(appContext, "input tap $x $y", ShellManager.ShellMode.AUTO)
+            if (!res1.startsWith("Error") && !res2.startsWith("Error")) return "Success: Double Tapped (Shell) at ($x, $y)."
+        }
+        return "Failed: Could not double tap."
     }
 
     /**
