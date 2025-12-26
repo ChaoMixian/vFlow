@@ -4,13 +4,13 @@ package com.chaomixian.vflow.ui.workflow_editor
 import android.animation.Animator
 import android.animation.AnimatorInflater
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -66,6 +66,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private lateinit var itemTouchHelper: ItemTouchHelper
     private var currentEditorSheet: ActionEditorSheet? = null
     private lateinit var executeButton: MaterialButton
+    private lateinit var aiMagicButton: ImageButton
     private lateinit var recyclerView: RecyclerView
     private val gson = Gson()
 
@@ -138,6 +139,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         workflowManager = WorkflowManager(this)
         nameEditText = findViewById(R.id.edit_text_workflow_name)
+        aiMagicButton = findViewById(R.id.btn_ai_magic)
         executeButton = findViewById(R.id.button_execute_workflow)
         recyclerView = findViewById(R.id.recycler_view_action_steps)
 
@@ -204,6 +206,11 @@ class WorkflowEditorActivity : BaseActivity() {
             } else {
                 executeWorkflow(workflowToExecute)
             }
+        }
+
+        // AI 按钮点击事件
+        aiMagicButton.setOnClickListener {
+            showAiCreationSheet()
         }
 
         lifecycleScope.launch {
@@ -1131,6 +1138,45 @@ class WorkflowEditorActivity : BaseActivity() {
             } else {
                 initialWorkflowJson = gson.toJson(workflowToSave)
             }
+        }
+    }
+
+    private fun showAiCreationSheet() {
+        val sheet = AiGenerationSheet()
+        sheet.onWorkflowGenerated = { generatedWorkflow ->
+            applyGeneratedWorkflow(generatedWorkflow)
+        }
+        sheet.show(supportFragmentManager, "AiGenerationSheet")
+    }
+
+    private fun applyGeneratedWorkflow(workflow: Workflow) {
+        // 如果生成了名字且当前名字为空，则使用生成的名字
+        if (nameEditText.text.isBlank() && workflow.name.isNotBlank()) {
+            nameEditText.setText(workflow.name)
+        }
+
+        // 覆盖现有步骤（策略可以是追加，但通常用户希望重写）
+        if (actionSteps.isNotEmpty()) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle("覆盖现有步骤？")
+                .setMessage("AI 生成了新的工作流步骤。是否要清空当前编辑器的所有步骤并应用新生成的内容？")
+                .setPositiveButton("覆盖") { _, _ ->
+                    actionSteps.clear()
+                    actionSteps.addAll(workflow.steps)
+                    recalculateAndNotify()
+                    Toast.makeText(this, "已应用 AI 生成的工作流", Toast.LENGTH_SHORT).show()
+                }
+                .setNeutralButton("追加到末尾") { _, _ ->
+                    actionSteps.addAll(workflow.steps)
+                    recalculateAndNotify()
+                    Toast.makeText(this, "已追加步骤", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        } else {
+            actionSteps.addAll(workflow.steps)
+            recalculateAndNotify()
+            Toast.makeText(this, "已应用 AI 生成的工作流", Toast.LENGTH_SHORT).show()
         }
     }
 }
