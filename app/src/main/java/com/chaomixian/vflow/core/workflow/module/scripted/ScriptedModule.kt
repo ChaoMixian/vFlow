@@ -30,8 +30,11 @@ class ScriptedModule(
         category = manifest.category
     )
 
+    // 公开元数据供 UI 使用
+    val author: String get() = manifest.author
+    val version: String get() = manifest.version
+
     // 动态映射权限
-    // 支持动态生成 Runtime 权限对象
     override val requiredPermissions: List<Permission> by lazy {
         val allPerms = PermissionManager.allKnownPermissions
 

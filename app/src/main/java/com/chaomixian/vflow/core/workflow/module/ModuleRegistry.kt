@@ -1,3 +1,4 @@
+// 文件: main/java/com/chaomixian/vflow/core/module/ModuleRegistry.kt
 package com.chaomixian.vflow.core.module
 
 import android.content.ContentValues.TAG
@@ -31,7 +32,6 @@ object ModuleRegistry {
         return modules.values
             .filter { it.blockBehavior.type != BlockType.BLOCK_END && it.blockBehavior.type != BlockType.BLOCK_MIDDLE }
             .groupBy { it.metadata.category }
-            // 更新为新的分类和排序
             .toSortedMap(compareBy {
                 when (it) {
                     "触发器" -> 0
@@ -46,6 +46,15 @@ object ModuleRegistry {
                     else -> 99
                 }
             })
+    }
+
+    /**
+     * 强制重置注册表。
+     * 用于在删除模块后清空缓存，以便重新加载。
+     */
+    fun reset() {
+        modules.clear()
+        isCoreInitialized = false
     }
 
     fun initialize() {

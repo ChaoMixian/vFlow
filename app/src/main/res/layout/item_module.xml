@@ -5,81 +5,127 @@
     style="?attr/materialCardViewElevatedStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="2dp"
+    android:layout_marginHorizontal="4dp"
     android:layout_marginVertical="6dp"
-    app:cardCornerRadius="24dp">
+    app:cardCornerRadius="24dp"
+    app:strokeColor="?attr/colorOutlineVariant">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="12dp">
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/text_module_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_toStartOf="@id/button_delete_module"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textAppearance="?attr/textAppearanceTitleLarge"
-                tools:text="Hello World 模块" />
-
-            <ImageButton
-                android:id="@+id/button_delete_module"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_delete"
-                app:tint="?attr/colorError" />
-        </RelativeLayout>
+        <ImageView
+            android:id="@+id/iv_module_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@null"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="@+id/btn_module_info"
+            app:tint="?attr/colorPrimary"
+            tools:src="@drawable/rounded_android_wifi_3_bar_24" />
 
         <TextView
-            android:id="@+id/text_module_description"
-            android:layout_width="match_parent"
+            android:id="@+id/tv_module_name"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginStart="8dp"
+            android:text="模块名称"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toEndOf="@id/iv_module_icon"
+            app:layout_constraintEnd_toStartOf="@id/tv_module_category"
+            app:layout_constraintTop_toTopOf="@+id/iv_module_icon"
+            app:layout_constraintBottom_toBottomOf="@+id/iv_module_icon" />
+
+        <TextView
+            android:id="@+id/tv_module_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/shape_variable_pill"
+            android:backgroundTint="?attr/colorSurfaceVariant"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:text="分类"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            app:layout_constraintStart_toEndOf="@id/tv_module_name"
+            app:layout_constraintEnd_toStartOf="@+id/btn_module_info"
+            app:layout_constraintTop_toTopOf="@id/tv_module_name"
+            app:layout_constraintBottom_toBottomOf="@id/tv_module_name"
+            tools:visibility="visible" />
+
+        <ImageButton
+            android:id="@+id/btn_module_info"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="详情"
+            android:padding="4dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/rounded_auto_transmission_24"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <TextView
+            android:id="@+id/tv_module_description"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="这里是模块的功能描述..."
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant"
-            tools:text="这是一个示例模块描述。" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/iv_module_icon" />
 
-        <LinearLayout
-            android:id="@+id/container_metadata"
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/tv_module_author_version"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/text_module_author"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                android:textColor="?attr/colorPrimary"
-                tools:text="作者: ChaoMixian" />
-
-            <TextView
-                android:id="@+id/text_module_version"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
-                tools:text="版本: 1.0.0" />
-        </LinearLayout>
+            android:layout_marginTop="4dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorOutline"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_module_description"
+            tools:text="作者: ChaoMixian  版本: v1.0"
+            tools:visibility="visible"/>
 
         <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chip_group_permissions"
-            android:layout_width="match_parent"
+            android:id="@+id/cg_permissions"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            app:chipSpacingHorizontal="8dp" />
+            android:layout_marginTop="4dp"
+            app:chipSpacingVertical="-16dp"
+            app:chipSpacingHorizontal="8dp"
+            app:singleLine="false"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btn_delete_module"
+            app:layout_constraintTop_toBottomOf="@id/tv_module_author_version" />
 
-    </LinearLayout>
+        <ImageButton
+            android:id="@+id/btn_delete_module"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="删除"
+            android:padding="4dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_delete"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:tint="?attr/colorError"
+            tools:visibility="visible" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

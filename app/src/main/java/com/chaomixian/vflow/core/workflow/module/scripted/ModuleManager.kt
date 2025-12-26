@@ -1,5 +1,4 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/scripted/ModuleManager.kt
-
 package com.chaomixian.vflow.core.workflow.module.scripted
 
 import android.content.Context
@@ -19,16 +18,24 @@ object ModuleManager {
     private val gson = Gson()
     private var hasLoaded = false
 
+    // 安装会话数据类
+    data class InstallSession(
+        val manifest: ModuleManifest,
+        val tempDir: File
+    )
+
     /**
-     * 从 ZIP 文件安装模块。
+     * 阶段1：准备安装。
+     * 解压 ZIP，校验文件结构，读取 Manifest。
+     * 不会覆盖现有模块，用于 UI 检查冲突。
      */
-    fun installModule(context: Context, zipUri: Uri): Result<String> {
+    fun prepareInstall(context: Context, zipUri: Uri): Result<InstallSession> {
         return try {
             val inputStream = context.contentResolver.openInputStream(zipUri)
                 ?: return Result.failure(Exception("无法打开文件"))
 
-            // 使用公共存储的临时目录进行解压，而不是内部 cacheDir
-            val tempDir = File(StorageManager.tempDir, "temp_module_install")
+            // 使用临时目录
+            val tempDir = File(StorageManager.tempDir, "install_${System.currentTimeMillis()}")
             if (tempDir.exists()) tempDir.deleteRecursively()
             tempDir.mkdirs()
 
@@ -41,58 +48,70 @@ object ModuleManager {
                     if (entryName.contains("..")) {
                         throw SecurityException("Zip entry path invalid: $entryName")
                     }
-
                     val file = File(tempDir, entryName)
                     if (entry.isDirectory) {
                         file.mkdirs()
                     } else {
                         file.parentFile?.mkdirs()
-                        file.outputStream().use { output ->
-                            zip.copyTo(output)
-                        }
+                        file.outputStream().use { zip.copyTo(it) }
                     }
                     entry = zip.nextEntry
                 }
             }
 
-            // 递归查找 manifest.json
+            // 查找 manifest.json (处理可能的嵌套目录)
             val manifestFile = tempDir.walkTopDown().find { it.name == MANIFEST_NAME }
-
-            if (manifestFile == null) {
-                return Result.failure(Exception("模块格式错误：未找到 manifest.json"))
-            }
+                ?: return Result.failure(Exception("模块格式错误：未找到 manifest.json"))
 
             // 确定模块的真实根目录
             val moduleRoot = manifestFile.parentFile ?: tempDir
-            val scriptFile = File(moduleRoot, SCRIPT_NAME)
 
-            if (!scriptFile.exists()) {
-                return Result.failure(Exception("模块格式错误：在 manifest.json 同级目录下未找到 script.lua"))
+            // 校验 script.lua
+            if (!File(moduleRoot, SCRIPT_NAME).exists()) {
+                return Result.failure(Exception("模块格式错误：未找到 script.lua"))
             }
 
-            // 解析 Manifest 以获取 ID
+            // 解析 Manifest
             val manifest = gson.fromJson(manifestFile.readText(), ModuleManifest::class.java)
             if (manifest.id.isBlank()) {
                 return Result.failure(Exception("模块 ID 不能为空"))
             }
 
-            // 最终安装目录迁移到 /sdcard/vFlow/modules
-            val modulesDir = StorageManager.modulesDir
-            val targetDir = File(modulesDir, manifest.id)
-            if (targetDir.exists()) targetDir.deleteRecursively() // 覆盖旧版本
+            // 返回会话信息 (包含模块根目录)
+            Result.success(InstallSession(manifest, moduleRoot))
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "准备安装模块失败", e)
+            Result.failure(e)
+        }
+    }
 
-            // 复制文件
-            moduleRoot.copyRecursively(targetDir, overwrite = true)
+    /**
+     * 阶段2：提交安装。
+     * 将临时文件移动到正式目录，并注册模块。
+     */
+    fun commitInstall(session: InstallSession): Result<String> {
+        return try {
+            val modulesDir = StorageManager.modulesDir
+            // 使用 ID 作为目录名
+            val targetDir = File(modulesDir, session.manifest.id)
+
+            if (targetDir.exists()) {
+                targetDir.deleteRecursively()
+            }
+            targetDir.mkdirs()
+
+            // 从临时目录复制到正式目录
+            session.tempDir.copyRecursively(targetDir, overwrite = true)
 
             // 清理临时文件
-            tempDir.deleteRecursively()
+            session.tempDir.deleteRecursively()
 
-            // 立即加载新模块
+            // 立即加载
             loadSingleModule(targetDir)
 
-            Result.success("模块 '${manifest.name}' 安装成功")
+            Result.success("模块 '${session.manifest.name}' 安装成功")
         } catch (e: Exception) {
-            DebugLogger.e(TAG, "安装模块失败", e)
+            DebugLogger.e(TAG, "提交安装失败", e)
             Result.failure(e)
         }
     }
@@ -140,32 +159,9 @@ object ModuleManager {
     }
 
     /**
-     * 获取已安装模块列表 (用于 UI 显示)。
+     * 检查模块 ID 是否已安装
      */
-    fun getInstalledModules(context: Context): List<ModuleManifest> {
-        val list = mutableListOf<ModuleManifest>()
-        // 从公共存储目录读取
-        val modulesDir = StorageManager.modulesDir
-        if (!modulesDir.exists()) return emptyList()
-
-        modulesDir.listFiles()?.filter { it.isDirectory }?.forEach { dir ->
-            val manifestFile = File(dir, MANIFEST_NAME)
-            if (manifestFile.exists()) {
-                try {
-                    val manifest = gson.fromJson(manifestFile.readText(), ModuleManifest::class.java)
-                    list.add(manifest)
-                } catch (e: Exception) { /* ignore */ }
-            }
-        }
-        return list
-    }
-
-    fun deleteModule(context: Context, moduleId: String) {
-        // 从公共存储目录删除
-        val modulesDir = StorageManager.modulesDir
-        val targetDir = File(modulesDir, moduleId)
-        if (targetDir.exists()) {
-            targetDir.deleteRecursively()
-        }
+    fun isModuleInstalled(moduleId: String): Boolean {
+        return ModuleRegistry.getModule(moduleId) != null
     }
 }
