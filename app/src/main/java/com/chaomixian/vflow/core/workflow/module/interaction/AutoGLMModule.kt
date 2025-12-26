@@ -312,18 +312,23 @@ class AutoGLMModule : BaseModule() {
                         "Swipe" -> {
                             val start = command["start"] as? List<*>
                             val end = command["end"] as? List<*>
-                            if (start != null && end != null) {
-                                val sx = (start[0] as Number).toInt()
-                                val sy = (start[1] as Number).toInt()
-                                val ex = (end[0] as Number).toInt()
-                                val ey = (end[1] as Number).toInt()
-                                val dy = ey - sy
-                                val direction = if (abs(dy) > abs(ex - sx)) {
-                                    if (dy > 0) "up" else "down"
-                                } else {
-                                    if ((ex - sx) > 0) "left" else "right"
-                                }
-                                agentTools.scroll(direction)
+                            if (start != null && end != null && start.size == 2 && end.size == 2) {
+                                // 解析归一化坐标 (0-1000)
+                                val normSX = (start[0] as Number).toInt()
+                                val normSY = (start[1] as Number).toInt()
+                                val normEX = (end[0] as Number).toInt()
+                                val normEY = (end[1] as Number).toInt()
+
+                                // 映射到真实屏幕坐标
+                                val realSX = (normSX / 1000.0 * screenWidth).toInt()
+                                val realSY = (normSY / 1000.0 * screenHeight).toInt()
+                                val realEX = (normEX / 1000.0 * screenWidth).toInt()
+                                val realEY = (normEY / 1000.0 * screenHeight).toInt()
+
+                                // 调用精确滑动
+                                actionFeedback = agentTools.swipe(realSX, realSY, realEX, realEY)
+                            } else {
+                                actionFeedback = "Failed: Invalid swipe coordinates."
                             }
                         }
                         "Double Tap" -> {

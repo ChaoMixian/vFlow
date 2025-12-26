@@ -27,7 +27,7 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
-import com.chaomixian.vflow.ui.main.LogViewerSheet
+import com.chaomixian.vflow.ui.home.LogViewerSheet
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.divider.MaterialDivider

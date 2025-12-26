@@ -515,4 +515,32 @@ class AgentTools(private val context: ExecutionContext) {
         service.performGlobalAction(key)
         return "Success: 执行了按键。"
     }
+
+    suspend fun swipe(startX: Int, startY: Int, endX: Int, endY: Int, duration: Long = 300): String {
+        DebugLogger.d(TAG, "Agent请求滑动: ($startX, $startY) -> ($endX, $endY)")
+
+        val service = ServiceStateBus.getAccessibilityService()
+        if (service != null) {
+            val path = Path()
+            path.moveTo(startX.toFloat(), startY.toFloat())
+            path.lineTo(endX.toFloat(), endY.toFloat())
+            val gesture = GestureDescription.Builder()
+                .addStroke(GestureDescription.StrokeDescription(path, 0, duration))
+                .build()
+            val deferred = CompletableDeferred<Boolean>()
+            service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
+                override fun onCompleted(g: GestureDescription?) { deferred.complete(true) }
+                override fun onCancelled(g: GestureDescription?) { deferred.complete(false) }
+            }, null)
+            if (deferred.await()) return "Success: Swiped from ($startX, $startY) to ($endX, $endY)."
+        }
+
+        // Shell 回退
+        if (ShellManager.isShizukuActive(appContext)) {
+            val result = ShellManager.execShellCommand(appContext, "input swipe $startX $startY $endX $endY $duration", ShellManager.ShellMode.AUTO)
+            if (!result.startsWith("Error")) return "Success: Swiped (Shell) from ($startX, $startY) to ($endX, $endY)."
+        }
+
+        return "Failed: Could not swipe (Accessibility & Shell both failed)."
+    }
 }

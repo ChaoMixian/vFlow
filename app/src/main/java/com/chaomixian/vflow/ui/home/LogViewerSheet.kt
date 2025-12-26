@@ -1,5 +1,5 @@
-// 文件: main/java/com/chaomixian/vflow/ui/main/LogViewerSheet.kt
-package com.chaomixian.vflow.ui.main
+// 文件: main/java/com/chaomixian/vflow/ui/home/LogViewerSheet.kt
+package com.chaomixian.vflow.ui.home
 
 import android.content.Context
 import android.os.Bundle

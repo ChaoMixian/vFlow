@@ -1,5 +1,5 @@
-// 文件: main/java/com/chaomixian/vflow/ui/main/LogAdapter.kt
-package com.chaomixian.vflow.ui.main
+// 文件: main/java/com/chaomixian/vflow/ui/home/LogAdapter.kt
+package com.chaomixian.vflow.ui.home
 
 import android.text.format.DateUtils
 import android.view.LayoutInflater
