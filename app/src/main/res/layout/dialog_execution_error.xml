@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingTop="24dp"
+    android:paddingBottom="16dp"
+    android:paddingHorizontal="24dp">
+
+    <ImageView
+        android:id="@+id/icon_error"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:src="@drawable/ic_alert"
+        app:tint="?attr/colorError"
+        android:contentDescription="错误图标" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="工作流执行出错"
+        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+        android:textColor="?attr/colorError"
+        android:textStyle="bold"/>
+
+    <com.google.android.material.card.MaterialCardView
+        style="?attr/materialCardViewFilledStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="?attr/colorErrorContainer">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/text_workflow_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="工作流：未命名"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textColor="?attr/colorOnErrorContainer"
+                tools:text="工作流：每日签到" />
+
+            <TextView
+                android:id="@+id/text_module_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="出错模块：#1 点击"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textColor="?attr/colorOnErrorContainer"
+                tools:text="出错模块：#1 点击" />
+
+            <TextView
+                android:id="@+id/text_error_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="错误原因"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnErrorContainer"
+                tools:text="找不到指定的控件：id/button_confirm" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

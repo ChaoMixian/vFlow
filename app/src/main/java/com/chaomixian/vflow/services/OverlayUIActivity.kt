@@ -14,6 +14,7 @@ import android.text.InputType
 import android.view.LayoutInflater
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -110,6 +111,12 @@ class OverlayUIActivity : AppCompatActivity() {
                 workflows?.let { showWorkflowChooserDialog(it) } ?: finishWithError()
             }
             "share" -> handleShareRequest()
+            "error_dialog" -> {
+                val workflowName = intent.getStringExtra("workflow_name") ?: "未知工作流"
+                val moduleName = intent.getStringExtra("module_name") ?: "未知模块"
+                val errorMessage = intent.getStringExtra("error_message") ?: "未知错误"
+                showErrorDialog(workflowName, moduleName, errorMessage)
+            }
             else -> finishWithError()
         }
     }
@@ -287,6 +294,27 @@ class OverlayUIActivity : AppCompatActivity() {
         picker.addOnNegativeButtonClickListener { cancel() }
         picker.addOnCancelListener { cancel() }
         picker.show(supportFragmentManager, "DATE_PICKER")
+    }
+
+    /**
+     * 显示错误详情弹窗
+     */
+    private fun showErrorDialog(workflowName: String, moduleName: String, errorMessage: String) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_execution_error, null)
+
+        val workflowText = dialogView.findViewById<TextView>(R.id.text_workflow_name)
+        val moduleText = dialogView.findViewById<TextView>(R.id.text_module_name)
+        val messageText = dialogView.findViewById<TextView>(R.id.text_error_message)
+
+        workflowText.text = "工作流：$workflowName"
+        moduleText.text = "出错模块：$moduleName"
+        messageText.text = errorMessage
+
+        MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .setPositiveButton("确定") { _, _ -> complete(true) }
+            .setOnCancelListener { cancel() }
+            .show()
     }
 
     private fun complete(result: Any?) {

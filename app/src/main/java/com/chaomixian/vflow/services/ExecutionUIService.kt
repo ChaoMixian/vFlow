@@ -55,7 +55,7 @@ class ExecutionUIService(private val context: Context) {
     }
 
     /**
-     * [核心] 使用三层回退逻辑来启动UI并等待结果。
+     * 使用三层回退逻辑来启动UI并等待结果。
      */
     private suspend fun startActivityAndAwaitResult(intent: Intent, title: String, content: String): CompletableDeferred<Any?> {
         val deferred = CompletableDeferred<Any?>()
@@ -268,5 +268,21 @@ class ExecutionUIService(private val context: Context) {
             putExtra("request_type", "media_projection")
         }
         return startActivityAndAwaitResult(intent, "需要截图权限", "请点击以授予vFlow屏幕截图权限").await() as? Intent
+    }
+
+    /**
+     * 挂起函数，用于显示错误提示弹窗。
+     * @param workflowName 出错的工作流名称
+     * @param moduleName 出错的模块名称
+     * @param errorMessage 具体的错误信息
+     */
+    suspend fun showError(workflowName: String, moduleName: String, errorMessage: String) {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
+            putExtra("request_type", "error_dialog")
+            putExtra("workflow_name", workflowName)
+            putExtra("module_name", moduleName)
+            putExtra("error_message", errorMessage)
+        }
+        startActivityAndAwaitResult(intent, "执行出错", "$workflowName - $moduleName: $errorMessage").await()
     }
 }

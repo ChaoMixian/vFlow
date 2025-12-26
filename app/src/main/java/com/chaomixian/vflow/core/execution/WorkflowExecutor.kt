@@ -285,6 +285,22 @@ object WorkflowExecutor {
                 is ExecutionResult.Failure -> {
                     DebugLogger.e("WorkflowExecutor", "模块执行失败: ${result.errorTitle} - ${result.errorMessage}")
                     ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("失败: ${result.errorMessage}"))
+
+                    // 尝试获取 UI 服务并显示错误弹窗
+                    // 仅当应用在前台或有悬浮窗权限时，弹窗才会显示（由 ExecutionUIService 处理）
+                    try {
+                        val uiService = initialContext.services.get(ExecutionUIService::class)
+                        if (uiService != null) {
+                            uiService.showError(
+                                workflowName = workflow.name,
+                                moduleName = "#${pc} ${module.metadata.name}",
+                                errorMessage = result.errorMessage
+                            )
+                        }
+                    } catch (e: Exception) {
+                        DebugLogger.e("WorkflowExecutor", "显示错误弹窗失败", e)
+                    }
+
                     // 广播失败状态和索引
                     ExecutionStateBus.postState(ExecutionState.Failure(workflow.id, pc))
                     break // 终止工作流
