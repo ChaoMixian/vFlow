@@ -163,7 +163,7 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         // 复用通用的 row_editor_input 布局以保持UI一致性
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null, false)
         row.findViewById<TextView>(R.id.input_name).text = inputDef.name
-        val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+        val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
 
         magicButton.isVisible = inputDef.acceptsMagicVariable
@@ -210,7 +210,7 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         parameters["operation"] = h.operationSpinner.selectedItem.toString()
 
         h.inputViews.forEach { (id, view) ->
-            val valueContainer = view.findViewById<FrameLayout>(R.id.input_value_container)
+            val valueContainer = view.findViewById<ViewGroup>(R.id.input_value_container)
             if (valueContainer != null && valueContainer.childCount > 0) {
                 val child = valueContainer.getChildAt(0)
                 // 从 TextInputLayout 中提取文本

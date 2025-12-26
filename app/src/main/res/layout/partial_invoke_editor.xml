@@ -19,28 +19,24 @@
         android:layout_marginTop="8dp"
         app:singleSelection="true"
         app:selectionRequired="true">
-
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_uri"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="打开链接(Uri)" />
-
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_activity"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="启动活动(Activity)" />
-
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_broadcast"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="发送广播(Broadcast)" />
-
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_service"
             style="@style/Widget.Material3.Chip.Filter"
@@ -92,79 +88,115 @@
         android:id="@+id/editor_extras"
         layout="@layout/partial_dictionary_editor" />
 
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/switch_advanced"
+    <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="显示高级选项 (包名/类名/MimeType)" />
+        android:layout_marginBottom="8dp"/>
 
     <LinearLayout
-        android:id="@+id/container_advanced"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone">
+        android:orientation="vertical">
 
         <LinearLayout
+            android:id="@+id/layout_advanced_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:layout_marginTop="8dp">
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="8dp"
+            android:paddingHorizontal="4dp">
 
-            <com.google.android.material.textfield.TextInputLayout
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/rounded_settings_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:hint="应用包名 (Package)">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_package"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </com.google.android.material.textfield.TextInputLayout>
+                android:text="高级选项 (包名/类名/Type)"
+                android:textAppearance="?attr/textAppearanceLabelLarge" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:hint="类名 (Class)">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_class"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </com.google.android.material.textfield.TextInputLayout>
+            <ImageView
+                android:id="@+id/iv_expand_arrow"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/rounded_arrow_drop_down_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
-        <com.google.android.material.textfield.TextInputLayout
+        <LinearLayout
+            android:id="@+id/container_advanced"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="MIME Type (例如 image/*)">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_type"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
+            android:orientation="vertical"
+            android:visibility="gone">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Flags (整数，多个用 | 分隔)"
-            android:textAppearance="?attr/textAppearanceBodySmall" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Flags (例如 268435456 或 0x10000000)">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_flags"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" />
-        </com.google.android.material.textfield.TextInputLayout>
-    </LinearLayout>
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
 
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:hint="应用包名 (Package)">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_package"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:hint="类名 (Class)">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_class"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="MIME Type (例如 image/*)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_type"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Flags (整数，多个用 | 分隔)"
+                android:textAppearance="?attr/textAppearanceBodySmall" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Flags (例如 268435456 或 0x10000000)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_flags"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>

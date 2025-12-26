@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -19,7 +20,6 @@ import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -31,15 +31,17 @@ class OCRModuleUIProvider : ModuleUIProvider {
         val chipFind: Chip = view.findViewById(R.id.chip_mode_find)
         val targetTextLayout: TextInputLayout = view.findViewById(R.id.til_target_text)
         val targetTextEdit: TextInputEditText = view.findViewById(R.id.et_target_text)
-        val advancedSwitch: MaterialSwitch = view.findViewById(R.id.switch_advanced_options)
+
+        val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
         val advancedContainer: LinearLayout = view.findViewById(R.id.container_advanced_options)
+        val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
+
         val languageSpinner: Spinner = view.findViewById(R.id.spinner_language)
         val strategySpinner: Spinner = view.findViewById(R.id.spinner_strategy)
         val strategyLabel: TextView = view.findViewById(R.id.tv_strategy_label)
     }
 
     override fun getHandledInputIds(): Set<String> {
-        // 接管 "show_advanced" 以便我们可以保存和恢复开关状态
         return setOf("mode", "target_text", "language", "search_strategy", "show_advanced")
     }
 
@@ -70,9 +72,10 @@ class OCRModuleUIProvider : ModuleUIProvider {
 
         holder.targetTextEdit.setText(currentParameters["target_text"] as? String ?: "")
 
-        // 恢复 Switch 的状态
+        // 恢复高级菜单的状态
         val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
-        holder.advancedSwitch.isChecked = showAdvanced
+        holder.advancedContainer.isVisible = showAdvanced
+        holder.expandArrow.rotation = if (showAdvanced) 180f else 0f
 
         // 初始化 Spinner
         setupSpinner(context, holder.languageSpinner, module.languageOptions, currentParameters["language"] as? String) { onParametersChanged() }
@@ -81,11 +84,9 @@ class OCRModuleUIProvider : ModuleUIProvider {
         // UI 逻辑
         fun updateVisibility() {
             val isFindMode = holder.chipFind.isChecked
-            val isAdvancedShown = holder.advancedSwitch.isChecked
+            val isAdvancedShown = holder.advancedContainer.isVisible
 
             holder.targetTextLayout.isVisible = isFindMode
-            holder.advancedContainer.isVisible = isAdvancedShown
-            // 查找策略仅在查找模式且展开高级选项时显示
             holder.strategySpinner.isVisible = isFindMode
             holder.strategyLabel.isVisible = isFindMode
         }
@@ -98,9 +99,11 @@ class OCRModuleUIProvider : ModuleUIProvider {
             onParametersChanged()
         }
 
-        holder.advancedSwitch.setOnCheckedChangeListener { _, _ ->
-            updateVisibility()
-            // Switch 状态改变时必须触发参数变更通知，这样状态才能被保存
+        holder.advancedHeader.setOnClickListener {
+            val isVisible = holder.advancedContainer.isVisible
+            holder.advancedContainer.isVisible = !isVisible
+            holder.expandArrow.animate().rotation(if (!isVisible) 180f else 0f).setDuration(200).start()
+            updateVisibility() // 需要更新策略Spinner的可见性
             onParametersChanged()
         }
 
@@ -120,8 +123,7 @@ class OCRModuleUIProvider : ModuleUIProvider {
             "target_text" to h.targetTextEdit.text.toString(),
             "language" to language,
             "search_strategy" to strategy,
-            // 保存 Switch 的状态
-            "show_advanced" to h.advancedSwitch.isChecked
+            "show_advanced" to h.advancedContainer.isVisible
         )
     }
 

@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:padding="16dp">
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/http_input_layout_url"
@@ -30,59 +31,95 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp" />
 
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/http_switch_advanced"
+    <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="高级选项" />
+        android:layout_marginBottom="8dp"/>
 
     <LinearLayout
-        android:id="@+id/http_advanced_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="查询参数"
-            android:textAppearance="?attr/textAppearanceTitleMedium" />
-        <include layout="@layout/partial_dictionary_editor" android:id="@+id/http_query_params_editor"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="请求头"
-            android:textAppearance="?attr/textAppearanceTitleMedium" />
-        <include layout="@layout/partial_dictionary_editor" android:id="@+id/http_headers_editor"/>
+        android:orientation="vertical">
 
         <LinearLayout
-            android:id="@+id/http_body_section_container"
+            android:id="@+id/layout_advanced_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="8dp"
+            android:paddingHorizontal="4dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/rounded_settings_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="高级选项 (参数/Body)"
+                android:textAppearance="?attr/textAppearanceLabelLarge" />
+
+            <ImageView
+                android:id="@+id/iv_expand_arrow"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/rounded_arrow_drop_down_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/http_advanced_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="查询参数"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+            <include layout="@layout/partial_dictionary_editor" android:id="@+id/http_query_params_editor"/>
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="请求体"
+                android:text="请求头"
                 android:textAppearance="?attr/textAppearanceTitleMedium" />
-            <Spinner
-                android:id="@+id/http_spinner_body_type"
+            <include layout="@layout/partial_dictionary_editor" android:id="@+id/http_headers_editor"/>
+
+            <LinearLayout
+                android:id="@+id/http_body_section_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
-            <FrameLayout
-                android:id="@+id/http_body_editor_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="请求体"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                <Spinner
+                    android:id="@+id/http_spinner_body_type"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" />
+                <FrameLayout
+                    android:id="@+id/http_body_editor_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
         </LinearLayout>
-
     </LinearLayout>
-
 </LinearLayout>

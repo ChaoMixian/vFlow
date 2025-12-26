@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -19,7 +20,6 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -38,8 +38,9 @@ class InvokeModuleUIProvider : ModuleUIProvider {
         val actionLayout: TextInputLayout = view.findViewById(R.id.til_action)
         val actionEdit: TextInputEditText = view.findViewById(R.id.et_action)
 
-        val advancedSwitch: MaterialSwitch = view.findViewById(R.id.switch_advanced)
+        val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
         val advancedContainer: LinearLayout = view.findViewById(R.id.container_advanced)
+        val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
 
         val packageEdit: TextInputEditText = view.findViewById(R.id.et_package)
         val classEdit: TextInputEditText = view.findViewById(R.id.et_class)
@@ -71,7 +72,7 @@ class InvokeModuleUIProvider : ModuleUIProvider {
         val holder = ViewHolder(view)
 
         // --- 恢复状态 ---
-        val mode = currentParameters["mode"] as? String ?: "链接(Uri)"
+        val mode = currentParameters["mode"] as? String ?: "链接/Uri"
         when (mode) {
             "Activity" -> holder.chipActivity.isChecked = true
             "Broadcast" -> holder.chipBroadcast.isChecked = true
@@ -87,7 +88,8 @@ class InvokeModuleUIProvider : ModuleUIProvider {
         holder.flagsEdit.setText(currentParameters["flags"] as? String ?: "")
 
         val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
-        holder.advancedSwitch.isChecked = showAdvanced
+        holder.advancedContainer.isVisible = showAdvanced
+        holder.expandArrow.rotation = if (showAdvanced) 180f else 0f
 
         // 初始化 Extras 适配器
         val currentExtras = (currentParameters["extras"] as? Map<*, *>)
@@ -100,11 +102,7 @@ class InvokeModuleUIProvider : ModuleUIProvider {
         }
         holder.extrasRecyclerView.adapter = holder.extrasAdapter
         holder.extrasRecyclerView.layoutManager = LinearLayoutManager(context)
-
-        // 确保 extrasAddButton 的点击监听器能更新 UI
-        holder.extrasAddButton.setOnClickListener {
-            holder.extrasAdapter?.addItem()
-        }
+        holder.extrasAddButton.setOnClickListener { holder.extrasAdapter?.addItem() }
 
         // --- UI 逻辑更新 ---
         fun updateUiVisibility() {
@@ -114,16 +112,11 @@ class InvokeModuleUIProvider : ModuleUIProvider {
                 holder.chipService.isChecked -> "Service"
                 else -> "链接/Uri"
             }
-
-            holder.advancedContainer.isVisible = holder.advancedSwitch.isChecked
-
-            // Uri 只有在 链接模式下 主要显示，但在 Activity 模式也可以在高级里用 (隐式Intent)
-            // 为了简洁，如果是链接模式，显示大 Uri 框，隐藏 Action 框 (或者设为选填)
             if (currentMode == "链接/Uri") {
                 holder.uriLayout.isVisible = true
-                holder.actionLayout.isVisible = false // 链接模式默认 ACTION_VIEW
+                holder.actionLayout.isVisible = false
             } else {
-                holder.uriLayout.isVisible = false // 其他模式主要靠 Action/Component
+                holder.uriLayout.isVisible = false
                 holder.actionLayout.isVisible = true
             }
         }
@@ -135,8 +128,10 @@ class InvokeModuleUIProvider : ModuleUIProvider {
             onParametersChanged()
         }
 
-        holder.advancedSwitch.setOnCheckedChangeListener { _, _ ->
-            updateUiVisibility()
+        holder.advancedHeader.setOnClickListener {
+            val isVisible = holder.advancedContainer.isVisible
+            holder.advancedContainer.isVisible = !isVisible
+            holder.expandArrow.animate().rotation(if (!isVisible) 180f else 0f).setDuration(200).start()
             onParametersChanged()
         }
 
@@ -172,7 +167,7 @@ class InvokeModuleUIProvider : ModuleUIProvider {
             "type" to h.typeEdit.text.toString(),
             "flags" to h.flagsEdit.text.toString(),
             "extras" to (h.extrasAdapter?.getItemsAsMap() ?: emptyMap<String, String>()),
-            "show_advanced" to h.advancedSwitch.isChecked
+            "show_advanced" to h.advancedContainer.isVisible
         )
     }
 }

@@ -78,6 +78,13 @@ class AgentModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val rawInstruction = step.parameters["instruction"]?.toString() ?: ""
+
+        // 如果指令复杂，只显示标题
+        if (VariableResolver.isComplex(rawInstruction)) {
+            return "AI Agent"
+        }
+
         val instructionPill = PillUtil.createPillFromParam(step.parameters["instruction"], getInputs().find { it.id == "instruction" })
         return PillUtil.buildSpannable(context, "AI Agent: ", instructionPill)
     }

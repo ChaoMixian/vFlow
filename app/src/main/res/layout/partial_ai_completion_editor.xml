@@ -78,74 +78,110 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/switch_advanced"
+    <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="高级设置" />
+        android:layout_marginBottom="8dp"/>
 
     <LinearLayout
-        android:id="@+id/container_advanced"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone"
-        tools:visibility="visible">
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_base_url"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="API Base URL">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_base_url"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textUri" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_system_prompt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="系统提示词 (System Prompt)">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_system_prompt"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minLines="2" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="随机性 (Temperature)"
-            android:textAppearance="?attr/textAppearanceBodyMedium" />
+        android:orientation="vertical">
 
         <LinearLayout
+            android:id="@+id/layout_advanced_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
-            <com.google.android.material.slider.Slider
-                android:id="@+id/slider_temperature"
+            android:orientation="horizontal"
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="8dp"
+            android:paddingHorizontal="4dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/rounded_settings_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:valueFrom="0.0"
-                android:valueTo="2.0"
-                android:stepSize="0.1"/>
-            <TextView
-                android:id="@+id/tv_temperature_value"
-                android:layout_width="48dp"
-                android:layout_height="wrap_content"
-                android:gravity="end"
-                tools:text="0.7"/>
+                android:text="高级设置 (URL/System)"
+                android:textAppearance="?attr/textAppearanceLabelLarge" />
+
+            <ImageView
+                android:id="@+id/iv_expand_arrow"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/rounded_arrow_drop_down_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/container_advanced"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_base_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="API Base URL">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_base_url"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_system_prompt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="系统提示词 (System Prompt)">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_system_prompt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minLines="2" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="随机性 (Temperature)"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <com.google.android.material.slider.Slider
+                    android:id="@+id/slider_temperature"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:valueFrom="0.0"
+                    android:valueTo="2.0"
+                    android:stepSize="0.1"/>
+                <TextView
+                    android:id="@+id/tv_temperature_value"
+                    android:layout_width="48dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    tools:text="0.7"/>
+            </LinearLayout>
+
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

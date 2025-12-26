@@ -74,6 +74,13 @@ class AutoGLMModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val rawInstruction = step.parameters["instruction"]?.toString() ?: ""
+
+        // 如果指令复杂，只显示标题，避免与预览框重复
+        if (VariableResolver.isComplex(rawInstruction)) {
+            return "AutoGLM 智能体"
+        }
+
         val instructionPill = PillUtil.createPillFromParam(step.parameters["instruction"], getInputs().find { it.id == "instruction" })
         return PillUtil.buildSpannable(context, "AutoGLM: ", instructionPill)
     }

@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.core.view.isVisible
+import androidx.core.view.isEmpty
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.InputDefinition
@@ -18,11 +19,9 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import androidx.core.view.isEmpty
 
 class ScreenOperationModuleUIProvider : ModuleUIProvider {
 
@@ -39,14 +38,14 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         val durationSlider: Slider = view.findViewById(R.id.slider_duration)
         val durationText: TextView = view.findViewById(R.id.tv_duration_value)
 
-        val advancedSwitch: MaterialSwitch = view.findViewById(R.id.switch_advanced_options)
+        val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
         val advancedContainer: LinearLayout = view.findViewById(R.id.container_advanced_options)
+        val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
         val modeSpinner: Spinner = view.findViewById(R.id.spinner_execution_mode)
 
         // 动态创建的输入框引用
         var startInputView: View? = null
         var endInputView: View? = null
-
         var allSteps: List<ActionStep>? = null
     }
 
@@ -100,7 +99,10 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         holder.durationText.text = "${duration.toInt()} ms"
 
         // 恢复高级选项
-        holder.advancedSwitch.isChecked = currentParameters["show_advanced"] as? Boolean ?: false
+        val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
+        holder.advancedContainer.isVisible = showAdvanced
+        holder.expandArrow.rotation = if (showAdvanced) 180f else 0f
+
         val executionMode = currentParameters["execution_mode"] as? String ?: "自动"
         val modeAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, module.executionModeOptions)
         modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -117,7 +119,6 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
 
             holder.endContainer.isVisible = (type == "滑动")
             holder.durationContainer.isVisible = (type == "滑动" || type == "长按")
-            holder.advancedContainer.isVisible = holder.advancedSwitch.isChecked
 
             val startLabel = if (type == "滑动") "滑动起点" else "目标位置"
             holder.startInputView?.findViewById<TextView>(R.id.input_name)?.text = startLabel
@@ -140,10 +141,14 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
             holder.durationText.text = "${value.toInt()} ms"
             onParametersChanged()
         }
-        holder.advancedSwitch.setOnCheckedChangeListener { _, _ ->
-            updateUiState()
+
+        holder.advancedHeader.setOnClickListener {
+            val isVisible = holder.advancedContainer.isVisible
+            holder.advancedContainer.isVisible = !isVisible
+            holder.expandArrow.animate().rotation(if (!isVisible) 180f else 0f).setDuration(200).start()
             onParametersChanged()
         }
+
         holder.modeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
                 if (holder.modeSpinner.tag != position) {
@@ -153,6 +158,7 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
             }
             override fun onNothingSelected(p0: AdapterView<*>?) {}
         }
+
         holder.modeSpinner.tag = holder.modeSpinner.selectedItemPosition
 
         return holder
@@ -170,8 +176,7 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         params["operation_type"] = type
         params["duration"] = h.durationSlider.value.toDouble()
         params["execution_mode"] = h.modeSpinner.selectedItem.toString()
-        params["show_advanced"] = h.advancedSwitch.isChecked
-
+        params["show_advanced"] = h.advancedContainer.isVisible
         readInputValue(h.startInputView)?.let { params["target"] = it }
         if (type == "滑动") {
             readInputValue(h.endInputView)?.let { params["target_end"] = it }
@@ -191,7 +196,7 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null)
         row.findViewById<TextView>(R.id.input_name).text = inputDef.name
 
-        val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+        val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
 
         magicButton.isVisible = inputDef.acceptsMagicVariable
@@ -226,7 +231,7 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
 
     private fun readInputValue(view: View?): String? {
         if (view == null) return null
-        val container = view.findViewById<FrameLayout>(R.id.input_value_container)
+        val container = view.findViewById<ViewGroup>(R.id.input_value_container)
         if (container.isEmpty()) return null
 
         val child = container.getChildAt(0)

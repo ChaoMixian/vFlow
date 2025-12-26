@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
@@ -23,7 +24,6 @@ import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
@@ -43,8 +43,9 @@ class AIModuleUIProvider : ModuleUIProvider {
         val modelEdit: TextInputEditText = view.findViewById(R.id.et_model)
         val promptContainer: FrameLayout = view.findViewById(R.id.container_prompt)
 
-        val advancedSwitch: MaterialSwitch = view.findViewById(R.id.switch_advanced)
+        val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
         val advancedContainer: LinearLayout = view.findViewById(R.id.container_advanced)
+        val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
 
         val baseUrlEdit: TextInputEditText = view.findViewById(R.id.et_base_url)
         val systemPromptEdit: TextInputEditText = view.findViewById(R.id.et_system_prompt)
@@ -98,8 +99,9 @@ class AIModuleUIProvider : ModuleUIProvider {
         holder.tempSlider.value = temp
         holder.tempText.text = String.format(Locale.US, "%.1f", temp)
 
-        holder.advancedSwitch.isChecked = currentParameters["show_advanced"] as? Boolean ?: false
-        holder.advancedContainer.isVisible = holder.advancedSwitch.isChecked
+        val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
+        holder.advancedContainer.isVisible = showAdvanced
+        holder.expandArrow.rotation = if (showAdvanced) 180f else 0f
 
         // 创建 Prompt 富文本编辑器
         val promptValue = currentParameters["prompt"] as? String ?: ""
@@ -125,8 +127,10 @@ class AIModuleUIProvider : ModuleUIProvider {
             onParametersChanged()
         }
 
-        holder.advancedSwitch.setOnCheckedChangeListener { _, isChecked ->
-            holder.advancedContainer.isVisible = isChecked
+        holder.advancedHeader.setOnClickListener {
+            val isVisible = holder.advancedContainer.isVisible
+            holder.advancedContainer.isVisible = !isVisible
+            holder.expandArrow.animate().rotation(if (!isVisible) 180f else 0f).setDuration(200).start()
             onParametersChanged()
         }
 
@@ -154,7 +158,7 @@ class AIModuleUIProvider : ModuleUIProvider {
         holder.promptContainer.removeAllViews()
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null)
         row.findViewById<TextView>(R.id.input_name).visibility = View.GONE // 隐藏左侧标签，因为上方已有标题
-        val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+        val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
 
         magicButton.setOnClickListener { onMagicReq?.invoke("prompt") }
@@ -191,7 +195,7 @@ class AIModuleUIProvider : ModuleUIProvider {
             "prompt" to (h.promptRichText?.getRawText() ?: ""),
             "system_prompt" to h.systemPromptEdit.text.toString(),
             "temperature" to h.tempSlider.value.toDouble(),
-            "show_advanced" to h.advancedSwitch.isChecked
+            "show_advanced" to h.advancedContainer.isVisible
         )
     }
 }

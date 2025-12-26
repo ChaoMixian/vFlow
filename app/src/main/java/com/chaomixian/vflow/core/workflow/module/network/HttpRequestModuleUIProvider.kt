@@ -16,7 +16,6 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -24,8 +23,11 @@ import com.google.android.material.textfield.TextInputLayout
 class HttpRequestViewHolder(view: View) : CustomEditorViewHolder(view) {
     val urlEditText: TextInputEditText = view.findViewById(R.id.http_edit_text_url)
     val methodSpinner: Spinner = view.findViewById(R.id.http_spinner_method)
-    val advancedSwitch: MaterialSwitch = view.findViewById(R.id.http_switch_advanced)
+
+    val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
     val advancedContainer: LinearLayout = view.findViewById(R.id.http_advanced_container)
+    val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
+
     val bodySectionContainer: LinearLayout = view.findViewById(R.id.http_body_section_container)
     val bodyTypeSpinner: Spinner = view.findViewById(R.id.http_spinner_body_type)
     val bodyEditorContainer: FrameLayout = view.findViewById(R.id.http_body_editor_container)
@@ -93,11 +95,17 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
         (currentParameters["body_type"] as? String)?.let { holder.bodyTypeSpinner.setSelection(module.bodyTypeOptions.indexOf(it)) }
         updateBodyEditor(context, holder, currentParameters["body_type"] as? String, currentParameters["body"])
 
-        // 设置监听器
-        holder.advancedSwitch.setOnCheckedChangeListener { _, isChecked ->
-            holder.advancedContainer.isVisible = isChecked
-            onParametersChanged()
+        // 高级选项默认为折叠状态 (HTTP 模块不持久化此状态)
+        holder.advancedContainer.isVisible = false
+        holder.expandArrow.rotation = 0f
+
+        holder.advancedHeader.setOnClickListener {
+            val isVisible = holder.advancedContainer.isVisible
+            holder.advancedContainer.isVisible = !isVisible
+            holder.expandArrow.animate().rotation(if (!isVisible) 180f else 0f).setDuration(200).start()
+            // 不调用 onParametersChanged，因为此状态不保存
         }
+
         holder.methodSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
                 val method = module.methodOptions[p2]

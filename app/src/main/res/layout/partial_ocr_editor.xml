@@ -54,49 +54,79 @@
     <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginVertical="16dp" />
-
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/switch_advanced_options"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="更多设置 (语言、策略)" />
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"/>
 
     <LinearLayout
-        android:id="@+id/container_advanced_options"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone"
-        tools:visibility="visible">
+        android:orientation="vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="识别语言"
-            android:textAppearance="?attr/textAppearanceLabelMedium" />
-
-        <Spinner
-            android:id="@+id/spinner_language"
+        <LinearLayout
+            android:id="@+id/layout_advanced_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="8dp"
+            android:paddingHorizontal="4dp">
 
-        <TextView
-            android:id="@+id/tv_strategy_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="查找策略"
-            android:textAppearance="?attr/textAppearanceLabelMedium" />
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/rounded_settings_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
 
-        <Spinner
-            android:id="@+id/spinner_strategy"
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="更多设置 (语言、策略)"
+                android:textAppearance="?attr/textAppearanceLabelLarge" />
+
+            <ImageView
+                android:id="@+id/iv_expand_arrow"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/rounded_arrow_drop_down_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/container_advanced_options"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" />
+            android:orientation="vertical"
+            android:visibility="gone">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="识别语言"
+                android:textAppearance="?attr/textAppearanceLabelMedium" />
+
+            <Spinner
+                android:id="@+id/spinner_language"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:id="@+id/tv_strategy_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="查找策略"
+                android:textAppearance="?attr/textAppearanceLabelMedium" />
+
+            <Spinner
+                android:id="@+id/spinner_strategy"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
     </LinearLayout>
-
 </LinearLayout>

@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
@@ -39,7 +38,7 @@ class DictionaryKVAdapter(
     /** ViewHolder 定义，缓存视图引用。 */
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val keyEditText: EditText = view.findViewById(R.id.edit_text_key)
-        val valueContainer: FrameLayout = view.findViewById(R.id.value_container)
+        val valueContainer: ViewGroup = view.findViewById(R.id.value_container)
         val deleteButton: ImageButton = view.findViewById(R.id.button_delete_kv)
         val magicButton: ImageButton = view.findViewById(R.id.button_magic_variable_for_value)
     }

@@ -14,6 +14,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -34,6 +35,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     private var customEditorHolder: CustomEditorViewHolder? = null
     private val currentParameters = mutableMapOf<String, Any?>()
 
+    // 引用新的容器视图
+    private var customUiCard: MaterialCardView? = null
+    private var customUiContainer: LinearLayout? = null
+    private var genericInputsCard: MaterialCardView? = null
+    private var genericInputsContainer: LinearLayout? = null
 
     companion object {
         /** 创建 ActionEditorSheet 实例。 */
@@ -78,8 +84,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.sheet_action_editor, container, false)
         val titleTextView = view.findViewById<TextView>(R.id.text_view_bottom_sheet_title)
-        val paramsContainer = view.findViewById<LinearLayout>(R.id.container_action_params)
         val saveButton = view.findViewById<Button>(R.id.button_save)
+
+        // 绑定新的视图容器
+        customUiCard = view.findViewById(R.id.card_custom_ui)
+        customUiContainer = view.findViewById(R.id.container_custom_ui)
+        genericInputsCard = view.findViewById(R.id.card_generic_inputs)
+        genericInputsContainer = view.findViewById(R.id.container_generic_inputs)
 
         // 设置标题
         val focusedInputDef = module.getInputs().find { it.id == focusedInputId }
@@ -89,7 +100,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             "编辑 ${module.metadata.name}"
         }
 
-        buildUi(paramsContainer)
+        buildUi()
 
         saveButton.setOnClickListener {
             readParametersFromUi()
@@ -108,12 +119,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         return view
     }
 
-
     /**
-     * 构建UI的逻辑。现在会检查uiProvider的类型，避免在RichTextUIProvider上调用createEditor。
+     * 构建UI的逻辑。
      */
-    private fun buildUi(container: LinearLayout) {
-        container.removeAllViews()
+    private fun buildUi() {
+        // 清空所有容器
+        customUiContainer?.removeAllViews()
+        genericInputsContainer?.removeAllViews()
         inputViews.clear()
         customEditorHolder = null
 
@@ -133,11 +145,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val uiProvider = module.uiProvider
         val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
 
-        // 只有当 uiProvider 存在且不是 RichTextUIProvider 时，才创建自定义编辑器
+        // 构建自定义 UI
         if (uiProvider != null && uiProvider !is RichTextUIProvider) {
             customEditorHolder = uiProvider.createEditor(
                 context = requireContext(),
-                parent = container,
+                parent = customUiContainer!!,
                 currentParameters = currentParameters,
                 onParametersChanged = { readParametersFromUi() },
                 onMagicVariableRequested = { inputId ->
@@ -147,17 +159,25 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 allSteps = allSteps,
                 onStartActivityForResult = onStartActivityForResult
             )
-            container.addView(customEditorHolder!!.view)
+            customUiContainer?.addView(customEditorHolder!!.view)
+            customUiCard?.isVisible = true
+        } else {
+            customUiCard?.isVisible = false
         }
 
-        // 为其余未被自定义UI处理的参数创建通用输入控件
+        // 构建通用参数列表
+        var hasGenericInputs = false
         inputsToShow.forEach { inputDef ->
             if (!handledInputIds.contains(inputDef.id) && !inputDef.isHidden) {
-                val inputView = createViewForInputDefinition(inputDef, container)
-                container.addView(inputView)
+                val inputView = createViewForInputDefinition(inputDef, genericInputsContainer!!)
+                genericInputsContainer?.addView(inputView)
                 inputViews[inputDef.id] = inputView
+                hasGenericInputs = true
             }
         }
+
+        // 只有当有通用参数时才显示卡片
+        genericInputsCard?.isVisible = hasGenericInputs
     }
 
     /**
@@ -166,7 +186,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     private fun createViewForInputDefinition(inputDef: InputDefinition, parent: ViewGroup): View {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, parent, false)
         row.findViewById<TextView>(R.id.input_name).text = inputDef.name
-        val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+        val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
         val currentValue = currentParameters[inputDef.id]
 
@@ -183,6 +203,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         if (inputDef.supportsRichText) {
             val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor, valueContainer, false)
             val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
+            richTextView.minHeight = (80 * resources.displayMetrics.density).toInt()
 
             // 设置初始文本，并将变量引用渲染成“药丸”
             richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
@@ -207,6 +228,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
         row.tag = inputDef.id
         return row
+    }
+
+    fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {
+        currentParameters.putAll(newParameters)
+        buildUi()
     }
 
     private fun getDisplayNameForVariableReference(variableReference: String): String {
@@ -251,7 +277,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 return@forEach
             }
 
-            val valueContainer = view.findViewById<FrameLayout>(R.id.input_value_container) ?: return@forEach
+            val valueContainer = view.findViewById<ViewGroup>(R.id.input_value_container) ?: return@forEach
             if (valueContainer.childCount == 0) return@forEach
 
             val staticView = valueContainer.getChildAt(0)
@@ -282,6 +308,10 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
     }
 
+    /**
+     * 更新输入框的变量。
+     * 现在会正确判断目标参数是 List 还是 Map，避免 List 数据丢失。
+     */
     fun updateInputWithVariable(inputId: String, variableReference: String) {
         val stepForUi = ActionStep(module.id, currentParameters)
         val inputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == inputId }
@@ -291,11 +321,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         // 尝试从通用输入视图中查找
         if (inputDef?.supportsRichText == true) {
             val view = inputViews[inputId]
-            richTextView = (view?.findViewById<FrameLayout>(R.id.input_value_container)?.getChildAt(0) as? ViewGroup)
+            richTextView = (view?.findViewById<ViewGroup>(R.id.input_value_container)?.getChildAt(0) as? ViewGroup)
                 ?.findViewById(R.id.rich_text_view)
         }
 
-        // [核心修复] 如果在通用视图中找不到，则尝试在自定义编辑器视图中查找
+        // 如果在通用视图中找不到，则尝试在自定义编辑器视图中查找
         if (richTextView == null && customEditorHolder != null) {
             richTextView = customEditorHolder?.view?.findViewWithTag<RichTextView>("rich_text_view_value")
             // 如果上面的找不到，再尝试用ID查找作为后备
@@ -310,44 +340,67 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             return // 直接操作视图后返回，避免重建UI
         }
 
-        // 原有的后备逻辑，用于处理非富文本输入
         if (inputId.contains('.')) {
             val parts = inputId.split('.', limit = 2)
             val mainInputId = parts[0]
             val subKey = parts[1]
-            val dict = (currentParameters[mainInputId] as? Map<*, *>)?.toMutableMap() ?: mutableMapOf()
-            dict[subKey] = variableReference
-            currentParameters[mainInputId] = dict
+
+            // 获取当前参数值
+            val currentValue = currentParameters[mainInputId]
+
+            if (currentValue is List<*>) {
+                // 如果当前是列表，则按索引更新列表
+                val mutableList = currentValue.toMutableList()
+                val index = subKey.toIntOrNull()
+                // 确保索引有效
+                if (index != null && index >= 0 && index < mutableList.size) {
+                    mutableList[index] = variableReference // 更新指定位置
+                    currentParameters[mainInputId] = mutableList
+                }
+            } else {
+                // 如果是字典或默认情况，按 Map 更新
+                val dict = (currentValue as? Map<*, *>)?.toMutableMap() ?: mutableMapOf()
+                dict[subKey] = variableReference
+                currentParameters[mainInputId] = dict
+            }
         } else {
             currentParameters[inputId] = variableReference
         }
-        // 只有在没有找到富文本框并修改了参数后，才重建UI
-        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
+        buildUi()
     }
 
-
-    fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {
-        currentParameters.putAll(newParameters)
-        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
-    }
-
-
-    /** 当用户清除变量连接时，恢复为默认值并重建UI。 */
+    /**
+     * 清除输入框的变量。
+     * 同样增加对 List 类型的支持。
+     */
     fun clearInputVariable(inputId: String) {
-        // 支持清除点分隔的嵌套参数
         if (inputId.contains('.')) {
             val parts = inputId.split('.', limit = 2)
             val mainInputId = parts[0]
             val subKey = parts[1]
-            val dict = (currentParameters[mainInputId] as? Map<*, *>)?.toMutableMap() ?: return
-            dict[subKey] = ""
-            currentParameters[mainInputId] = dict
+
+            val currentValue = currentParameters[mainInputId]
+
+            if (currentValue is List<*>) {
+                // [关键修复] 列表：清除指定索引的内容（置为空字符串）
+                val mutableList = currentValue.toMutableList()
+                val index = subKey.toIntOrNull()
+                if (index != null && index >= 0 && index < mutableList.size) {
+                    mutableList[index] = ""
+                    currentParameters[mainInputId] = mutableList
+                }
+            } else {
+                // 字典：清除指定 Key 的内容
+                val dict = (currentValue as? Map<*, *>)?.toMutableMap() ?: return
+                dict[subKey] = ""
+                currentParameters[mainInputId] = dict
+            }
         } else {
             val inputDef = module.getInputs().find { it.id == inputId } ?: return
             currentParameters[inputId] = inputDef.defaultValue
         }
         // 清除后重建UI
-        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
+        buildUi()
     }
 
     /**
@@ -369,9 +422,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         // 使用模块返回的参数集，完全更新编辑器内部的当前参数状态
         currentParameters.clear()
         currentParameters.putAll(newParametersFromServer)
-
         // 使用新的参数状态，重建整个UI
-        view?.findViewById<LinearLayout>(R.id.container_action_params)?.let { buildUi(it) }
+        buildUi()
     }
 
     private fun createBaseViewForInputType(inputDef: InputDefinition, currentValue: Any?): View {

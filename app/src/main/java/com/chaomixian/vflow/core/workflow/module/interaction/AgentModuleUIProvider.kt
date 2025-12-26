@@ -7,7 +7,6 @@ import android.text.Editable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
@@ -135,7 +134,7 @@ class AgentModuleUIProvider : ModuleUIProvider {
         holder.instructionContainer.removeAllViews()
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null)
         row.findViewById<TextView>(R.id.input_name).visibility = View.GONE
-        val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+        val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
 
         magicButton.setOnClickListener { onMagicReq?.invoke("instruction") }

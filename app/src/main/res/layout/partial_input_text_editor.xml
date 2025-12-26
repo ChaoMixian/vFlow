@@ -18,31 +18,68 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp" />
 
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/switch_advanced"
+    <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="更多设置 (输入模式)" />
+        android:layout_marginBottom="8dp"/>
 
     <LinearLayout
-        android:id="@+id/container_advanced"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone">
+        android:orientation="vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="执行模式"
-            android:textAppearance="?attr/textAppearanceLabelMedium" />
-
-        <Spinner
-            android:id="@+id/spinner_mode"
+        <LinearLayout
+            android:id="@+id/layout_advanced_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="8dp"
+            android:paddingHorizontal="4dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/rounded_settings_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="更多设置 (输入模式)"
+                android:textAppearance="?attr/textAppearanceLabelLarge" />
+
+            <ImageView
+                android:id="@+id/iv_expand_arrow"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/rounded_arrow_drop_down_24"
+                app:tint="?attr/colorOnSurfaceVariant" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/container_advanced"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="执行模式"
+                android:textAppearance="?attr/textAppearanceLabelMedium" />
+
+            <Spinner
+                android:id="@+id/spinner_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

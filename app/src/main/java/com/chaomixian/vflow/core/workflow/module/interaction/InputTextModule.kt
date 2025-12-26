@@ -81,8 +81,17 @@ class InputTextModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val textPill = PillUtil.createPillFromParam(step.parameters["text"], getInputs().find { it.id == "text" })
+        val rawText = step.parameters["text"]?.toString() ?: ""
         val mode = step.parameters["mode"] as? String ?: "自动"
+
+        // 如果内容复杂（包含变量或长文本），只返回简单标题，
+        // 详细内容将由 RichTextUIProvider 创建的预览视图在下方显示。
+        if (VariableResolver.isComplex(rawText)) {
+            return if (mode == "自动") "输入文本" else "使用 $mode 输入文本"
+        }
+
+        // 内容简单时，在摘要中直接显示药丸
+        val textPill = PillUtil.createPillFromParam(step.parameters["text"], getInputs().find { it.id == "text" })
         return if (mode == "自动") {
             PillUtil.buildSpannable(context, "输入文本 ", textPill)
         } else {

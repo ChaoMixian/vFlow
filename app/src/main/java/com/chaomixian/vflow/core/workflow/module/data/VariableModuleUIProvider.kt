@@ -16,6 +16,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.core.module.isMagicVariable
+import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.chaomixian.vflow.ui.workflow_editor.ListItemAdapter
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -43,7 +45,7 @@ class VariableModuleUIProvider(
     private val typeOptions: List<String>
 ) : ModuleUIProvider {
 
-    // [新增] 实例化内部需要用到的 UI 提供者
+    // 实例化内部需要用到的 UI 提供者
     private val richTextUIProvider = RichTextUIProvider("value")
     private val variableValueUIProvider = VariableValueUIProvider()
 
@@ -81,13 +83,15 @@ class VariableModuleUIProvider(
         allSteps: List<ActionStep>?,
         onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
-        // createEditor 的代码保持不变
+        // 添加 Padding 以统一视觉风格
+        val padding = (16 * context.resources.displayMetrics.density).toInt()
         val view = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
+            setPadding(padding, padding, padding, padding)
         }
 
         val typeSpinner = Spinner(context)
@@ -134,6 +138,13 @@ class VariableModuleUIProvider(
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as VariableEditorViewHolder
         val selectedType = h.typeSpinner.selectedItem.toString()
+
+        // 检查 valueContainer 的 tag，如果是变量引用字符串，直接返回该变量
+        val variableRef = h.valueContainer.tag as? String
+        if (!variableRef.isNullOrBlank()) {
+            return mapOf("type" to selectedType, "value" to variableRef)
+        }
+
         val value: Any? = when(selectedType) {
             "文本" -> {
                 val row = h.valueInputView as? ViewGroup
@@ -153,15 +164,32 @@ class VariableModuleUIProvider(
 
     private fun updateValueInputView(context: Context, holder: VariableEditorViewHolder, type: String, currentValue: Any?) {
         holder.valueContainer.removeAllViews()
+        holder.valueContainer.tag = null
         holder.dictionaryAdapter = null
         holder.listAdapter = null
+
+        // 检查是否为整个列表/字典赋值了变量
+        if (type != "文本" && currentValue is String && (currentValue.isMagicVariable() || currentValue.isNamedVariable())) {
+            val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
+            val pillText = pill.findViewById<TextView>(R.id.pill_text)
+            pillText.text = PillRenderer.getDisplayNameForVariableReference(currentValue, holder.allSteps ?: emptyList())
+
+            // 允许点击药丸重新选择（包括“清除”以恢复列表编辑）
+            pill.setOnClickListener {
+                holder.onMagicVariableRequested?.invoke("value")
+            }
+
+            holder.valueContainer.addView(pill)
+            holder.valueContainer.tag = currentValue // 标记当前显示的是变量
+            return
+        }
 
         val valueView: View = when (type) {
             "文本" -> {
                 val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, holder.valueContainer, false)
                 row.findViewById<TextView>(R.id.input_name).text = "值"
 
-                val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+                val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
                 val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
                 magicButton.isVisible = true
                 magicButton.setOnClickListener {

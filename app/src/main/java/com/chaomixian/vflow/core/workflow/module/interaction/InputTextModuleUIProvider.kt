@@ -8,8 +8,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -22,16 +22,16 @@ import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
-import com.google.android.material.materialswitch.MaterialSwitch
 
 class InputTextModuleUIProvider : ModuleUIProvider {
 
     private val richTextUIProvider = RichTextUIProvider("text")
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
-        val textContainer: FrameLayout = view.findViewById(R.id.container_text_input)
-        val advancedSwitch: MaterialSwitch = view.findViewById(R.id.switch_advanced)
+        val textContainer: ViewGroup = view.findViewById(R.id.container_text_input)
+        val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
         val advancedContainer: LinearLayout = view.findViewById(R.id.container_advanced)
+        val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
         val modeSpinner: Spinner = view.findViewById(R.id.spinner_mode)
 
         var richTextView: RichTextView? = null
@@ -72,15 +72,17 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         val currentMode = currentParameters["mode"] as? String ?: "自动"
         holder.modeSpinner.setSelection(modes.indexOf(currentMode).coerceAtLeast(0))
 
-        // 恢复开关状态
+        // 恢复展开状态
         val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
-        holder.advancedSwitch.isChecked = showAdvanced
         holder.advancedContainer.isVisible = showAdvanced
+        holder.expandArrow.rotation = if (showAdvanced) 180f else 0f
 
-        // 监听器
-        holder.advancedSwitch.setOnCheckedChangeListener { _, isChecked ->
-            holder.advancedContainer.isVisible = isChecked
-            onParametersChanged()
+        // 折叠/展开逻辑
+        holder.advancedHeader.setOnClickListener {
+            val isVisible = holder.advancedContainer.isVisible
+            holder.advancedContainer.isVisible = !isVisible
+            holder.expandArrow.animate().rotation(if (!isVisible) 180f else 0f).setDuration(200).start()
+            onParametersChanged() // 触发保存 show_advanced 状态
         }
 
         holder.modeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -92,7 +94,6 @@ class InputTextModuleUIProvider : ModuleUIProvider {
             }
             override fun onNothingSelected(p0: AdapterView<*>?) {}
         }
-        // 初始化 tag 防止第一次误触
         holder.modeSpinner.tag = holder.modeSpinner.selectedItemPosition
 
         return holder
@@ -104,7 +105,7 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         // 创建带有魔法变量按钮的容器
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null)
         row.findViewById<TextView>(R.id.input_name).visibility = View.GONE
-        val valueContainer = row.findViewById<FrameLayout>(R.id.input_value_container)
+        val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
 
         magicButton.setOnClickListener { onMagicReq?.invoke("text") }
@@ -129,7 +130,7 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         return mapOf(
             "text" to (h.richTextView?.getRawText() ?: ""),
             "mode" to h.modeSpinner.selectedItem.toString(),
-            "show_advanced" to h.advancedSwitch.isChecked
+            "show_advanced" to h.advancedContainer.isVisible
         )
     }
 }

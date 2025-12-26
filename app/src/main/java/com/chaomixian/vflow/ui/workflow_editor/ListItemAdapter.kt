@@ -4,8 +4,6 @@ package com.chaomixian.vflow.ui.workflow_editor
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.core.widget.doAfterTextChanged
@@ -47,7 +45,7 @@ class ListItemAdapter(
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val valueContainer: FrameLayout = view.findViewById(R.id.value_container)
+        val valueContainer: ViewGroup = view.findViewById(R.id.value_container)
         val deleteButton: ImageButton = view.findViewById(R.id.button_delete_item)
         val magicButton: ImageButton = view.findViewById(R.id.button_magic_variable_for_item)
     }
