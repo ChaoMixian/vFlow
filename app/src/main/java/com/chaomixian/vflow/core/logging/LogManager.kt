@@ -7,7 +7,6 @@ import com.chaomixian.vflow.ui.main.MainActivity
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.parcelize.Parcelize
-import java.util.Date
 import androidx.core.content.edit
 
 // 定义日志条目的数据结构
@@ -17,7 +16,8 @@ data class LogEntry(
     val workflowName: String,
     val timestamp: Long,
     val status: LogStatus,
-    val message: String? = null
+    val message: String? = null,
+    val detailedLog: String? = null
 ) : Parcelable
 
 // 定义日志状态的枚举
@@ -66,6 +66,11 @@ object LogManager {
     @Synchronized
     fun getRecentLogs(limit: Int): List<LogEntry> {
         return getLogs().take(limit)
+    }
+
+    @Synchronized
+    fun getAllLogs(): List<LogEntry> {
+        return getLogs()
     }
 
     private fun saveLogs(logs: List<LogEntry>) {

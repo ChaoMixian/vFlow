@@ -13,13 +13,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import androidx.core.view.setMargins
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.execution.ExecutionState
 import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.LogManager
@@ -30,11 +27,13 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.ui.main.LogViewerSheet
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.divider.MaterialDivider
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.collections.ArrayList
 
 class HomeFragment : Fragment() {
 
@@ -83,6 +82,12 @@ class HomeFragment : Fragment() {
         quickExecuteContainer = view.findViewById(R.id.container_quick_execute)
         recentLogsCard = view.findViewById(R.id.card_recent_logs)
         recentLogsContainer = view.findViewById(R.id.container_recent_logs)
+
+        // 点击最近日志卡片（空白处），打开完整日志抽屉
+        recentLogsCard.setOnClickListener {
+            val logViewer = LogViewerSheet()
+            logViewer.show(parentFragmentManager, "LogViewerSheet")
+        }
 
         lifecycleScope.launch {
             ExecutionStateBus.stateFlow.collectLatest { state ->
@@ -186,6 +191,12 @@ class HomeFragment : Fragment() {
                     iconView.setColorFilter(MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorError, 0))
                 }
             }
+
+            // 调用 LogViewerSheet 的静态方法，并传入 Context
+            itemView.setOnClickListener {
+                LogViewerSheet.showLogDetailDialog(requireContext(), log)
+            }
+
             recentLogsContainer.addView(itemView)
 
             if (index < logs.size - 1) {

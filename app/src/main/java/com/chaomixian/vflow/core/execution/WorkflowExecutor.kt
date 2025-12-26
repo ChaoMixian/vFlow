@@ -3,11 +3,8 @@ package com.chaomixian.vflow.core.execution
 
 import android.content.Context
 import android.os.Parcelable
-import android.util.Log
-import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.utils.StorageManager
-import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.services.ExecutionNotificationManager
@@ -16,9 +13,11 @@ import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.*
 import java.io.File
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
+import com.chaomixian.vflow.core.logging.DebugLogger as GlobalDebugLogger
 
 object WorkflowExecutor {
 
@@ -27,6 +26,52 @@ object WorkflowExecutor {
     private val runningWorkflows = ConcurrentHashMap<String, Job>()
     // 用于标记工作流是否被 Stop 信号正常终止
     private val stoppedWorkflows = ConcurrentHashMap<String, Boolean>()
+
+    // 用于存储每个正在运行的工作流的详细日志
+    private val executionLogs = ConcurrentHashMap<String, StringBuilder>()
+
+    // 用于在协程间传递当前 Root Workflow ID 的 ThreadLocal
+    private val currentRootWorkflowId = ThreadLocal<String>()
+
+    /**
+     * 本地 DebugLogger 代理对象。
+     * 它拦截所有的日志调用，转发给全局 Logger，同时记录到当前工作流的 executionLogs 中。
+     */
+    private object DebugLogger {
+        private val dateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+
+        fun d(tag: String, message: String, throwable: Throwable? = null) {
+            GlobalDebugLogger.d(tag, message, throwable)
+            appendToLog("D", tag, message, throwable)
+        }
+
+        fun i(tag: String, message: String, throwable: Throwable? = null) {
+            GlobalDebugLogger.i(tag, message, throwable)
+            appendToLog("I", tag, message, throwable)
+        }
+
+        fun w(tag: String, message: String, throwable: Throwable? = null) {
+            GlobalDebugLogger.w(tag, message, throwable)
+            appendToLog("W", tag, message, throwable)
+        }
+
+        fun e(tag: String, message: String, throwable: Throwable? = null) {
+            GlobalDebugLogger.e(tag, message, throwable)
+            appendToLog("E", tag, message, throwable)
+        }
+
+        private fun appendToLog(level: String, tag: String, message: String, throwable: Throwable?) {
+            // 从 ThreadLocal 中获取当前上下文的工作流 ID
+            val workflowId = currentRootWorkflowId.get() ?: return
+            val sb = executionLogs[workflowId] ?: return
+
+            val time = dateFormat.format(Date())
+            sb.append("[$time] $level/$tag: $message\n")
+            if (throwable != null) {
+                sb.append(throwable.stackTraceToString()).append("\n")
+            }
+        }
+    }
 
     /**
      * 检查一个工作流当前是否正在运行。
@@ -44,7 +89,8 @@ object WorkflowExecutor {
     fun stopExecution(workflowId: String) {
         runningWorkflows[workflowId]?.let {
             it.cancel() // 取消 Coroutine Job
-            DebugLogger.d("WorkflowExecutor", "工作流 '$workflowId' 已被用户手动停止。")
+            // 这里无法直接使用本地 DebugLogger 记录到日志，因为不在协程上下文中
+            GlobalDebugLogger.d("WorkflowExecutor", "工作流 '$workflowId' 已被用户手动停止。")
         }
     }
 
@@ -57,92 +103,109 @@ object WorkflowExecutor {
     fun execute(workflow: Workflow, context: Context, triggerData: Parcelable? = null) {
         // 如果工作流已在运行，则不允许重复执行
         if (isRunning(workflow.id)) {
-            DebugLogger.w("WorkflowExecutor", "工作流 '${workflow.name}' 已在运行，忽略新的执行请求。")
+            // 这里无法直接使用本地 DebugLogger 记录到日志，因为不在协程上下文中
+            GlobalDebugLogger.w("WorkflowExecutor", "工作流 '${workflow.name}' 已在运行，忽略新的执行请求。")
             return
         }
         // 重置停止标记
         stoppedWorkflows.remove(workflow.id)
 
+        // 初始化日志缓冲区
+        executionLogs[workflow.id] = StringBuilder().apply {
+            append("--- 开始执行: ${workflow.name} ---\n")
+            append("ID: ${workflow.id}\n")
+            if (triggerData != null) append("触发数据: $triggerData\n")
+        }
+
         val job = executorScope.launch {
-            // 广播开始执行的状态，初始索引为-1表示准备阶段
-            ExecutionStateBus.postState(ExecutionState.Running(workflow.id, -1))
-            DebugLogger.d("WorkflowExecutor", "开始执行主工作流: ${workflow.name} (ID: ${workflow.id})")
-            ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
+            // 将 workflow.id 注入到当前协程及其子协程的上下文中
+            // 这样，在此作用域内调用的所有本地 DebugLogger 方法都能通过 ThreadLocal 获取到 ID
+            withContext(currentRootWorkflowId.asContextElement(value = workflow.id)) {
 
-            // 创建本次执行的独立工作目录
-            val executionId = "${workflow.id}_${System.currentTimeMillis()}"
-            val workDir = File(StorageManager.tempDir, "exec_$executionId")
-            if (!workDir.exists()) workDir.mkdirs()
+                // 广播开始执行的状态，初始索引为-1表示准备阶段
+                ExecutionStateBus.postState(ExecutionState.Running(workflow.id, -1))
+                DebugLogger.d("WorkflowExecutor", "开始执行主工作流: ${workflow.name} (ID: ${workflow.id})")
+                ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
 
-            try {
-                // 创建并注册执行期间所需的服务
-                val services = ExecutionServices()
-                ServiceStateBus.getAccessibilityService()?.let { services.add(it) }
-                services.add(ExecutionUIService(context.applicationContext))
+                // 创建本次执行的独立工作目录
+                val executionId = "${workflow.id}_${System.currentTimeMillis()}"
+                val workDir = File(StorageManager.tempDir, "exec_$executionId")
+                if (!workDir.exists()) workDir.mkdirs()
 
-                // 创建初始执行上下文
-                val initialContext = ExecutionContext(
-                    applicationContext = context.applicationContext,
-                    variables = mutableMapOf(),
-                    magicVariables = mutableMapOf(),
-                    services = services,
-                    allSteps = workflow.steps,
-                    currentStepIndex = -1, // 初始索引
-                    stepOutputs = mutableMapOf(),
-                    loopStack = Stack(),
-                    triggerData = triggerData,
-                    namedVariables = ConcurrentHashMap(),
-                    workflowStack = Stack<String>().apply { push(workflow.id) }, // 初始化调用栈
-                    workDir = workDir
-                )
+                try {
+                    // 创建并注册执行期间所需的服务
+                    val services = ExecutionServices()
+                    ServiceStateBus.getAccessibilityService()?.let { services.add(it) }
+                    services.add(ExecutionUIService(context.applicationContext))
 
-                // 调用内部执行循环
-                executeWorkflowInternal(workflow, initialContext)
+                    // 创建初始执行上下文
+                    val initialContext = ExecutionContext(
+                        applicationContext = context.applicationContext,
+                        variables = mutableMapOf(),
+                        magicVariables = mutableMapOf(),
+                        services = services,
+                        allSteps = workflow.steps,
+                        currentStepIndex = -1, // 初始索引
+                        stepOutputs = mutableMapOf(),
+                        loopStack = Stack(),
+                        triggerData = triggerData,
+                        namedVariables = ConcurrentHashMap(),
+                        workflowStack = Stack<String>().apply { push(workflow.id) }, // 初始化调用栈
+                        workDir = workDir
+                    )
 
-                // 如果循环正常结束（没有break），则显示完成通知
-                ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Completed("执行完毕"))
+                    // 调用内部执行循环
+                    executeWorkflowInternal(workflow, initialContext)
 
-            } catch (e: CancellationException) {
-                DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 已被取消。")
-                ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("已停止"))
-            } catch (e: Exception) {
-                DebugLogger.e("WorkflowExecutor", "主工作流 '${workflow.name}' 执行时发生未捕获的异常。", e)
-                ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("执行异常"))
-            } finally {
-                // 捕获当前协程的取消状态，因为进入 withContext(NonCancellable) 后 isActive 将总是 true
-                val isCoroutineCancelled = !isActive
+                    // 如果循环正常结束（没有break），则显示完成通知
+                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Completed("执行完毕"))
 
-                // 使用 NonCancellable 上下文，确保即使协程被取消（如手动停止），清理和广播逻辑也能完整执行
-                withContext(NonCancellable) {
-                    // 执行结束后清理工作目录
-                    try {
-                        if (workDir.exists()) {
-                            workDir.deleteRecursively()
-                            DebugLogger.d("WorkflowExecutor", "已清理工作目录: ${workDir.absolutePath}")
+                } catch (e: CancellationException) {
+                    DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 已被取消。")
+                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("已停止"))
+                } catch (e: Exception) {
+                    DebugLogger.e("WorkflowExecutor", "主工作流 '${workflow.name}' 执行时发生未捕获的异常。", e)
+                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("执行异常"))
+                } finally {
+                    // 捕获当前协程的取消状态，因为进入 withContext(NonCancellable) 后 isActive 将总是 true
+                    val isCoroutineCancelled = !isActive
+
+                    // 使用 NonCancellable 上下文，确保即使协程被取消（如手动停止），清理和广播逻辑也能完整执行
+                    withContext(NonCancellable) {
+                        // 执行结束后清理工作目录
+                        try {
+                            if (workDir.exists()) {
+                                workDir.deleteRecursively()
+                                DebugLogger.d("WorkflowExecutor", "已清理工作目录")
+                            }
+                        } catch (e: Exception) {
+                            DebugLogger.w("WorkflowExecutor", "清理工作目录失败: ${e.message}")
                         }
-                    } catch (e: Exception) {
-                        DebugLogger.w("WorkflowExecutor", "清理工作目录失败: ${e.message}")
-                    }
 
-                    // 广播最终状态
-                    val wasStopped = stoppedWorkflows[workflow.id] == true
-                    // 如果协程不再活跃且不是因为“停止工作流”模块导致的，则视为手动取消
-                    val wasCancelled = isCoroutineCancelled && !wasStopped
+                        // 广播最终状态
+                        val wasStopped = stoppedWorkflows[workflow.id] == true
+                        // 如果协程不再活跃且不是因为“停止工作流”模块导致的，则视为手动取消
+                        val wasCancelled = isCoroutineCancelled && !wasStopped
 
-                    if (runningWorkflows.containsKey(workflow.id)) {
-                        runningWorkflows.remove(workflow.id)
-                        stoppedWorkflows.remove(workflow.id)
-                        if (wasCancelled) {
-                            ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id))
-                        } else {
-                            // 正常结束或Stop信号都视为Finished
-                            ExecutionStateBus.postState(ExecutionState.Finished(workflow.id))
+                        val fullLog = executionLogs[workflow.id]?.toString() ?: ""
+
+                        if (runningWorkflows.containsKey(workflow.id)) {
+                            runningWorkflows.remove(workflow.id)
+                            stoppedWorkflows.remove(workflow.id)
+                            executionLogs.remove(workflow.id)
+
+                            if (wasCancelled) {
+                                ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id, fullLog))
+                            } else {
+                                // 正常结束或Stop信号都视为Finished
+                                ExecutionStateBus.postState(ExecutionState.Finished(workflow.id, fullLog))
+                            }
+                            DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 执行完毕。")
                         }
-                        DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 执行完毕。")
+                        // 延迟后取消通知，给用户时间查看最终状态
+                        delay(3000)
+                        ExecutionNotificationManager.cancelNotification()
                     }
-                    // 延迟后取消通知，给用户时间查看最终状态
-                    delay(3000)
-                    ExecutionNotificationManager.cancelNotification()
                 }
             }
         }
@@ -268,7 +331,9 @@ object WorkflowExecutor {
                 }
             }
 
+            // 使用本地 DebugLogger，它会自动记录到 detailedLog
             DebugLogger.d("WorkflowExecutor", "[${workflow.name}][$pc] -> 执行: ${module.metadata.name}")
+
             val result = module.execute(executionContext) { progressUpdate ->
                 DebugLogger.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progressUpdate.message}")
                 // 在模块内部进度更新时，也刷新通知
@@ -290,22 +355,28 @@ object WorkflowExecutor {
                     // 仅当应用在前台或有悬浮窗权限时，弹窗才会显示（由 ExecutionUIService 处理）
                     try {
                         val uiService = initialContext.services.get(ExecutionUIService::class)
-                        if (uiService != null) {
-                            uiService.showError(
-                                workflowName = workflow.name,
-                                moduleName = "#${pc} ${module.metadata.name}",
-                                errorMessage = result.errorMessage
-                            )
-                        }
+                        uiService?.showError(
+                            workflowName = workflow.name,
+                            moduleName = "#${pc} ${module.metadata.name}",
+                            errorMessage = result.errorMessage
+                        )
                     } catch (e: Exception) {
                         DebugLogger.e("WorkflowExecutor", "显示错误弹窗失败", e)
                     }
 
+                    // 获取完整日志并广播失败状态
+                    val fullLog = executionLogs[initialContext.workflowStack.first()]?.toString() ?: ""
+
+                    runningWorkflows.remove(workflow.id)
+                    executionLogs.remove(workflow.id)
+                    stoppedWorkflows.remove(workflow.id)
+
                     // 广播失败状态和索引
-                    ExecutionStateBus.postState(ExecutionState.Failure(workflow.id, pc))
-                    break // 终止工作流
+                    ExecutionStateBus.postState(ExecutionState.Failure(workflow.id, pc, fullLog))
+                    return null
                 }
                 is ExecutionResult.Signal -> {
+                    DebugLogger.d("WorkflowExecutor", "信号: ${result.signal}")
                     when (val signal = result.signal) {
                         is ExecutionSignal.Jump -> {
                             pc = signal.pc

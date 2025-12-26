@@ -15,11 +15,11 @@ sealed class ExecutionState {
     /** 工作流正在运行。 stepIndex 用于UI高亮当前步骤 */
     data class Running(override val workflowId: String, val stepIndex: Int) : ExecutionState()
     /** 工作流已正常结束。 */
-    data class Finished(override val workflowId: String) : ExecutionState()
+    data class Finished(override val workflowId: String, val detailedLog: String) : ExecutionState()
     /** 工作流被用户或系统取消。 */
-    data class Cancelled(override val workflowId: String) : ExecutionState()
+    data class Cancelled(override val workflowId: String, val detailedLog: String) : ExecutionState()
     /** 工作流执行失败。 stepIndex 用于UI高亮失败的步骤 */
-    data class Failure(override val workflowId: String, val stepIndex: Int) : ExecutionState()
+    data class Failure(override val workflowId: String, val stepIndex: Int, val detailedLog: String) : ExecutionState()
 }
 
 /**

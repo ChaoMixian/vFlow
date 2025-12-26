@@ -31,7 +31,8 @@ object ExecutionLogger {
                                     workflowName = workflow.name,
                                     timestamp = System.currentTimeMillis(),
                                     status = LogStatus.SUCCESS,
-                                    message = "执行完毕"
+                                    message = "执行完毕",
+                                    detailedLog = state.detailedLog
                                 )
                             )
                         }
@@ -45,7 +46,8 @@ object ExecutionLogger {
                                     workflowName = workflow.name,
                                     timestamp = System.currentTimeMillis(),
                                     status = LogStatus.CANCELLED,
-                                    message = "执行已停止"
+                                    message = "执行已停止",
+                                    detailedLog = state.detailedLog
                                 )
                             )
                         }
@@ -64,7 +66,8 @@ object ExecutionLogger {
                                     timestamp = System.currentTimeMillis(),
                                     status = LogStatus.FAILURE,
                                     // 在日志消息中包含失败的步骤和模块名称
-                                    message = "在步骤 #${state.stepIndex} (${moduleName}) 执行失败"
+                                    message = "在步骤 #${state.stepIndex} (${moduleName}) 执行失败",
+                                    detailedLog = state.detailedLog
                                 )
                             )
                         }
