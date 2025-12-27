@@ -4,6 +4,7 @@ package com.chaomixian.vflow.ui.workflow_editor
 import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -165,19 +166,148 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             customUiCard?.isVisible = false
         }
 
-        // 构建通用参数列表
-        var hasGenericInputs = false
+        // 构建通用参数列表 (分离普通参数和折叠参数)
+        val normalInputs = mutableListOf<InputDefinition>()
+        val foldedInputs = mutableListOf<InputDefinition>()
+
         inputsToShow.forEach { inputDef ->
             if (!handledInputIds.contains(inputDef.id) && !inputDef.isHidden) {
-                val inputView = createViewForInputDefinition(inputDef, genericInputsContainer!!)
-                genericInputsContainer?.addView(inputView)
-                inputViews[inputDef.id] = inputView
-                hasGenericInputs = true
+                if (inputDef.isFolded) {
+                    foldedInputs.add(inputDef)
+                } else {
+                    normalInputs.add(inputDef)
+                }
             }
         }
 
-        // 只有当有通用参数时才显示卡片
-        genericInputsCard?.isVisible = hasGenericInputs
+        // 添加普通参数
+        normalInputs.forEach { inputDef ->
+            val inputView = createViewForInputDefinition(inputDef, genericInputsContainer!!)
+            genericInputsContainer?.addView(inputView)
+            inputViews[inputDef.id] = inputView
+        }
+
+        // 如果有折叠参数，创建“更多设置”区域
+        if (foldedInputs.isNotEmpty()) {
+            // 创建分隔线
+            if (normalInputs.isNotEmpty()) {
+                val divider = View(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        (1 * resources.displayMetrics.density).toInt()
+                    ).apply {
+                        setMargins(0, 32, 0, 16)
+                    }
+                    setBackgroundColor(requireContext().getColor(android.R.color.darker_gray))
+                    alpha = 0.2f
+                }
+                genericInputsContainer?.addView(divider)
+            }
+
+            // 创建折叠容器结构
+            val advancedSection = createAdvancedSection(foldedInputs)
+            genericInputsContainer?.addView(advancedSection)
+        }
+
+        // 只有当有通用参数（普通或折叠）时才显示卡片
+        genericInputsCard?.isVisible = normalInputs.isNotEmpty() || foldedInputs.isNotEmpty()
+    }
+
+    /**
+     * 动态创建“更多设置”折叠区域。
+     */
+    private fun createAdvancedSection(inputs: List<InputDefinition>): View {
+        val context = requireContext()
+        val density = resources.displayMetrics.density
+
+        // 根容器
+        val rootLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+
+        // 标题栏 (点击区域)
+        val headerLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            // 使用系统可点击背景
+            val attrs = intArrayOf(android.R.attr.selectableItemBackground)
+            val typedArray = context.obtainStyledAttributes(attrs)
+            background = typedArray.getDrawable(0)
+            typedArray.recycle()
+
+            setPadding(
+                (12 * density).toInt(),
+                (12 * density).toInt(),
+                (12 * density).toInt(),
+                (12 * density).toInt()
+            )
+        }
+
+        // 图标
+        val icon = ImageView(context).apply {
+            setImageResource(R.drawable.rounded_settings_24)
+            layoutParams = LinearLayout.LayoutParams((20 * density).toInt(), (20 * density).toInt())
+            setColorFilter(requireContext().getColor(com.google.android.material.R.color.design_default_color_on_secondary)) // 简单处理颜色，最好用主题色
+            alpha = 0.7f
+        }
+
+        // 文字
+        val title = TextView(context).apply {
+            text = "更多设置" // 也可以根据模块 metadata 传参，或者固定
+            textSize = 16f
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = (12 * density).toInt()
+            }
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+
+        // 箭头
+        val arrow = ImageView(context).apply {
+            setImageResource(R.drawable.rounded_arrow_drop_down_24)
+            layoutParams = LinearLayout.LayoutParams((24 * density).toInt(), (24 * density).toInt())
+            alpha = 0.7f
+        }
+
+        headerLayout.addView(icon)
+        headerLayout.addView(title)
+        headerLayout.addView(arrow)
+
+        // 内容容器 (默认隐藏)
+        val contentLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            setPadding(0, (8 * density).toInt(), 0, 0)
+        }
+
+        // 填充参数到内容容器
+        inputs.forEach { inputDef ->
+            val inputView = createViewForInputDefinition(inputDef, contentLayout)
+            contentLayout.addView(inputView)
+            // 注册到 inputViews，这样 readParametersFromUi 就能自动读取它们
+            inputViews[inputDef.id] = inputView
+        }
+
+        // 设置点击事件 (内联 ExpandableSectionHelper 逻辑)
+        var isExpanded = false
+        // isExpanded = currentParameters["_ui_expanded_${inputs.first().id}"] == true
+
+        contentLayout.isVisible = isExpanded
+        arrow.rotation = if (isExpanded) 180f else 0f
+
+        headerLayout.setOnClickListener {
+            isExpanded = !isExpanded
+            contentLayout.isVisible = isExpanded
+            arrow.animate()
+                .rotation(if (isExpanded) 180f else 0f)
+                .setDuration(200)
+                .start()
+            // currentParameters["_ui_expanded_${inputs.first().id}"] = isExpanded
+        }
+
+        rootLayout.addView(headerLayout)
+        rootLayout.addView(contentLayout)
+        return rootLayout
     }
 
     /**
@@ -382,7 +512,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             val currentValue = currentParameters[mainInputId]
 
             if (currentValue is List<*>) {
-                // [关键修复] 列表：清除指定索引的内容（置为空字符串）
+                // 列表：清除指定索引的内容（置为空字符串）
                 val mutableList = currentValue.toMutableList()
                 val index = subKey.toIntOrNull()
                 if (index != null && index >= 0 && index < mutableList.size) {

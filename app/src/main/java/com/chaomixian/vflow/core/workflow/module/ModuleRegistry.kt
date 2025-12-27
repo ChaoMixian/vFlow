@@ -85,6 +85,7 @@ object ModuleRegistry {
         register(OCRModule())
         register(AgentModule())
         register(AutoGLMModule())
+        register(FindTextUntilModule())
 
         // 逻辑控制
         register(IfModule())
@@ -150,7 +151,7 @@ object ModuleRegistry {
         register(GeminiAssistantModule())
 
         // Snippet 模板
-        register(FindTextUntilModule())
+        register(FindTextUntilSnippet())
 
         isCoreInitialized = true
     }
