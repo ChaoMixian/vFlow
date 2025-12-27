@@ -62,7 +62,7 @@ interface ModuleUIProvider {
      * @param currentParameters 当前步骤已保存的参数值。
      * @param onParametersChanged 当参数发生变化时需要调用的回调函数。
      * @param onMagicVariableRequested 当自定义UI需要请求魔法变量选择器时调用的回调。
-     * @param allSteps [新增] 整个工作流的所有步骤列表，用于上下文分析。
+     * @param allSteps 整个工作流的所有步骤列表，用于上下文分析。
      * @param onStartActivityForResult 一个回调函数，允许编辑器视图请求启动一个新的Activity并接收其结果。
      * @return 持有自定义编辑器视图的 CustomEditorViewHolder 实例。
      */

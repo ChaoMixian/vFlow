@@ -15,8 +15,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
-        android:paddingBottom="8dp"
+        android:paddingBottom="16dp"
         android:text="选择一个动作"
+        android:textStyle="bold"
         android:textAppearance="?attr/textAppearanceTitleLarge" />
 
     <androidx.appcompat.widget.SearchView

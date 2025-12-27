@@ -76,7 +76,7 @@ object WorkflowAiGenerator {
         var currentCategory = ""
 
         for (module in allModules) {
-            if (module.id.startsWith("vflow.ai")) continue
+            // if (module.id.startsWith("vflow.ai")) continue
 
             // 阻止 AI 使用模板/Snippet，因为它们不是原子操作
             if (module.metadata.category == "模板" || module.id.contains("snippet")) continue

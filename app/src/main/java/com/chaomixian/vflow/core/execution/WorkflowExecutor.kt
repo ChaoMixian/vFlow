@@ -5,12 +5,14 @@ import android.content.Context
 import android.os.Parcelable
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.utils.StorageManager
+import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ExecutionNotificationState
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ServiceStateBus
+import com.chaomixian.vflow.ui.workflow_editor.ActionEditorSheet
 import kotlinx.coroutines.*
 import java.io.File
 import java.text.SimpleDateFormat
@@ -334,13 +336,42 @@ object WorkflowExecutor {
             // 使用本地 DebugLogger，它会自动记录到 detailedLog
             DebugLogger.d("WorkflowExecutor", "[${workflow.name}][$pc] -> 执行: ${module.metadata.name}")
 
-            val result = module.execute(executionContext) { progressUpdate ->
-                DebugLogger.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progressUpdate.message}")
-                // 在模块内部进度更新时，也刷新通知
-                ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(progress, progressUpdate.message))
+            // --- 错误处理与重试逻辑 ---
+            val errorPolicy = step.parameters[ActionEditorSheet.KEY_ERROR_POLICY] as? String ?: ActionEditorSheet.POLICY_STOP
+            val retryCount = (step.parameters[ActionEditorSheet.KEY_RETRY_COUNT] as? Number)?.toInt() ?: 3
+            val retryInterval = (step.parameters[ActionEditorSheet.KEY_RETRY_INTERVAL] as? Number)?.toLong() ?: 1000L
+
+            var attempt = 0
+            var finalResult: ExecutionResult? = null
+
+            while (attempt <= retryCount || errorPolicy != ActionEditorSheet.POLICY_RETRY) {
+                if (attempt > 0) {
+                    DebugLogger.w("WorkflowExecutor", "步骤执行失败，正在进行第 $attempt 次重试 (等待 ${retryInterval}ms)...")
+                    // 在模块内部进度更新时，也刷新通知
+                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(progress, "重试 ($attempt/$retryCount): ${module.metadata.name}"))
+                    delay(retryInterval)
+                }
+
+                finalResult = module.execute(executionContext) { progressUpdate ->
+                    DebugLogger.d("WorkflowExecutor", "[进度] ${module.metadata.name}: ${progressUpdate.message}")
+                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(progress, progressUpdate.message))
+                }
+
+                if (finalResult is ExecutionResult.Success || finalResult is ExecutionResult.Signal) {
+                    break // 成功，跳出重试循环
+                }
+
+                // 只有策略是 RETRY 且是 Failure 时才继续循环
+                if (errorPolicy == ActionEditorSheet.POLICY_RETRY && finalResult is ExecutionResult.Failure) {
+                    attempt++
+                    if (attempt > retryCount) break
+                } else {
+                    break // 不是 RETRY 策略，直接处理结果
+                }
             }
 
-            when (result) {
+            // --- 结果处理 ---
+            when (val result = finalResult) {
                 is ExecutionResult.Success -> {
                     if (result.outputs.isNotEmpty()) {
                         stepOutputs[step.id] = result.outputs
@@ -349,31 +380,48 @@ object WorkflowExecutor {
                 }
                 is ExecutionResult.Failure -> {
                     DebugLogger.e("WorkflowExecutor", "模块执行失败: ${result.errorTitle} - ${result.errorMessage}")
-                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("失败: ${result.errorMessage}"))
 
-                    // 尝试获取 UI 服务并显示错误弹窗
-                    // 仅当应用在前台或有悬浮窗权限时，弹窗才会显示（由 ExecutionUIService 处理）
-                    try {
-                        val uiService = initialContext.services.get(ExecutionUIService::class)
-                        uiService?.showError(
-                            workflowName = workflow.name,
-                            moduleName = "#${pc} ${module.metadata.name}",
-                            errorMessage = result.errorMessage
+                    if (errorPolicy == ActionEditorSheet.POLICY_SKIP) {
+                        DebugLogger.w("WorkflowExecutor", "根据策略，跳过错误继续执行。")
+
+                        // 生成该模块所有输出变量的默认空值
+                        val defaultOutputs = generateDefaultOutputs(module, step)
+                        // 添加错误元数据
+                        val skipOutputs = defaultOutputs + mapOf(
+                            "error" to TextVariable(result.errorMessage),
+                            "success" to BooleanVariable(false)
                         )
-                    } catch (e: Exception) {
-                        DebugLogger.e("WorkflowExecutor", "显示错误弹窗失败", e)
+                        stepOutputs[step.id] = skipOutputs
+
+                        pc++ // 继续下一步
+                    } else {
+                        // POLICY_STOP (默认) 或 重试耗尽
+                        ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("失败: ${result.errorMessage}"))
+
+                        // 尝试获取 UI 服务并显示错误弹窗
+                        // 仅当应用在前台或有悬浮窗权限时，弹窗才会显示（由 ExecutionUIService 处理）
+                        try {
+                            val uiService = initialContext.services.get(ExecutionUIService::class)
+                            uiService?.showError(
+                                workflowName = workflow.name,
+                                moduleName = "#${pc} ${module.metadata.name}",
+                                errorMessage = result.errorMessage
+                            )
+                        } catch (e: Exception) {
+                            DebugLogger.e("WorkflowExecutor", "显示错误弹窗失败", e)
+                        }
+
+                        // 获取完整日志并广播失败状态
+                        val fullLog = executionLogs[initialContext.workflowStack.first()]?.toString() ?: ""
+
+                        runningWorkflows.remove(workflow.id)
+                        executionLogs.remove(workflow.id)
+                        stoppedWorkflows.remove(workflow.id)
+
+                        // 广播失败状态和索引
+                        ExecutionStateBus.postState(ExecutionState.Failure(workflow.id, pc, fullLog))
+                        return null
                     }
-
-                    // 获取完整日志并广播失败状态
-                    val fullLog = executionLogs[initialContext.workflowStack.first()]?.toString() ?: ""
-
-                    runningWorkflows.remove(workflow.id)
-                    executionLogs.remove(workflow.id)
-                    stoppedWorkflows.remove(workflow.id)
-
-                    // 广播失败状态和索引
-                    ExecutionStateBus.postState(ExecutionState.Failure(workflow.id, pc, fullLog))
-                    return null
                 }
                 is ExecutionResult.Signal -> {
                     DebugLogger.d("WorkflowExecutor", "信号: ${result.signal}")
@@ -441,8 +489,40 @@ object WorkflowExecutor {
                         }
                     }
                 }
+                null -> {
+                    // 理论不应发生
+                    pc++
+                }
             }
         }
         return returnValue // 返回子工作流的结果
+    }
+
+    /**
+     * 为跳过的模块生成默认的空输出值。
+     * 避免魔法变量在解析时因找不到值而回退到原始字符串。
+     */
+    private fun generateDefaultOutputs(module: ActionModule, step: ActionStep): Map<String, Any> {
+        val outputs = mutableMapOf<String, Any>()
+        try {
+            // 获取模块定义的所有输出
+            val outputDefs = module.getOutputs(step)
+            for (def in outputDefs) {
+                // 根据类型生成安全的空值
+                val emptyValue = when (def.typeName) {
+                    TextVariable.TYPE_NAME -> TextVariable("")
+                    NumberVariable.TYPE_NAME -> NumberVariable(0.0)
+                    BooleanVariable.TYPE_NAME -> BooleanVariable(false)
+                    ListVariable.TYPE_NAME -> ListVariable(emptyList())
+                    DictionaryVariable.TYPE_NAME -> DictionaryVariable(emptyMap())
+                    ImageVariable.TYPE_NAME -> ImageVariable("") // 空 URI
+                    else -> TextVariable("") // 默认为空文本
+                }
+                outputs[def.id] = emptyValue
+            }
+        } catch (e: Exception) {
+            DebugLogger.w("WorkflowExecutor", "生成默认输出时出错: ${e.message}")
+        }
+        return outputs
     }
 }
