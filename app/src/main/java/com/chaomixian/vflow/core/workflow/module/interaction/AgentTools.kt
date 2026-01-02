@@ -3,12 +3,16 @@ package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.app.ActivityOptions
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Path
 import android.graphics.Rect
+import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
+import androidx.annotation.RequiresApi
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.BooleanVariable
@@ -34,6 +38,103 @@ class AgentTools(private val context: ExecutionContext) {
     private val appContext = context.applicationContext
     private val TAG = "AgentTools"
 
+    // 获取目标显示 ID，默认为 0 (主屏幕)
+    private val targetDisplayId: Int
+        get() = (context.variables["_target_display_id"] as? Number)?.toInt() ?: 0
+
+    // 辅助方法：构建 shell 命令的 display 参数
+    private fun getDisplayOption(): String {
+        val id = targetDisplayId
+        return if (id > 0) "-d $id" else ""
+    }
+
+    /**
+     * 启动应用。
+     * 增强版：支持指定 Display ID，确保后台启动。
+     */
+    suspend fun launchApp(appNameOrPackage: String): String {
+        val pm = appContext.packageManager
+        var targetPackage = appNameOrPackage.trim()
+
+        // 1. 智能提取包名
+        val packageRegex = Regex("[\\(（]([a-zA-Z0-9_\\.]+)[\\)）]")
+        val match = packageRegex.find(targetPackage)
+        if (match != null) {
+            val extracted = match.groupValues[1]
+            if (extracted.contains(".")) {
+                targetPackage = extracted
+            }
+        }
+
+        // 2. 如果是纯名称，搜索包名
+        if (!targetPackage.contains(".")) {
+            val packages = pm.getInstalledPackages(0)
+            val matchApp = packages.find { pkg ->
+                val label = pkg.applicationInfo?.let { pm.getApplicationLabel(it).toString() } ?: ""
+                label.equals(targetPackage, ignoreCase = true) || label.contains(targetPackage, ignoreCase = true)
+            }
+            if (matchApp != null) {
+                targetPackage = matchApp.packageName
+            } else {
+                return "Failed: 未找到名称包含 '$appNameOrPackage' 的应用。"
+            }
+        }
+
+        // 3. 准备启动
+        // 如果是在虚拟屏幕，且应用可能已经在主屏运行，先强制停止它，
+        // 这样可以确保它在新的 Display 上冷启动，避免 Android 只是将主屏的 Activity 提到前台。
+        if (targetDisplayId > 0 && ShellManager.isShizukuActive(appContext)) {
+            // 简单的防冲突策略：先杀后启
+            DebugLogger.d(TAG, "为了在虚拟屏幕启动，正在停止主屏可能存在的实例: $targetPackage")
+            ShellManager.execShellCommand(appContext, "am force-stop $targetPackage", ShellManager.ShellMode.AUTO)
+            delay(500) // 等待停止
+        }
+
+        val launchIntent = pm.getLaunchIntentForPackage(targetPackage)
+        if (launchIntent == null) return "Failed: 无法获取启动意图 ($targetPackage)。"
+
+        // --- 策略 A: Shell 启动 (最可靠，支持 --display) ---
+        if (ShellManager.isShizukuActive(appContext) || ShellManager.isRootAvailable()) {
+            val component = launchIntent.component?.flattenToShortString()
+            if (component != null) {
+                // -W: 等待启动完成
+                // --display <id>: 指定屏幕
+                // -f 0x10000000: FLAG_ACTIVITY_NEW_TASK
+                val displayFlag = if (targetDisplayId > 0) "--display $targetDisplayId" else ""
+                val cmd = "am start -W $displayFlag -n $component -f 0x10000000"
+
+                DebugLogger.d(TAG, "执行 Shell 启动命令: $cmd")
+                val result = ShellManager.execShellCommand(appContext, cmd, ShellManager.ShellMode.AUTO)
+
+                if (!result.startsWith("Error")) {
+                    return "Success: Shell Launched ($targetPackage) on display $targetDisplayId."
+                }
+                DebugLogger.w(TAG, "Shell 启动失败: $result，回退到 Java API")
+            }
+        }
+
+        // --- 策略 B: Java API 启动 (回退方案) ---
+        try {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+            // [关键] 使用 ActivityOptions 指定目标屏幕
+            val optionsBundle = if (targetDisplayId > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                DebugLogger.d(TAG, "使用 ActivityOptions 指定目标屏幕: $targetDisplayId")
+                val options = ActivityOptions.makeBasic()
+                options.launchDisplayId = targetDisplayId
+                options.toBundle()
+            } else {
+                null
+            }
+
+            appContext.startActivity(launchIntent, optionsBundle)
+            return "Success: Java API Launched ($targetPackage)."
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "Java API 启动失败", e)
+            return "Failed: Launch exception: ${e.message}"
+        }
+    }
+
     /**
      * 主动等待一段时间。
      * 当 AI 发现正在生成内容或加载时，应调用此工具而不是盲目操作。
@@ -50,7 +151,7 @@ class AgentTools(private val context: ExecutionContext) {
      * 这是 AI 基于视觉判断后的首选操作方式。
      */
     suspend fun clickPoint(x: Int, y: Int): String {
-        DebugLogger.d(TAG, "Agent请求点击坐标: ($x, $y)")
+        DebugLogger.d(TAG, "Agent请求点击坐标: ($x, $y) Display: $targetDisplayId")
         if (clickCoordinates(x, y)) {
             return "Success: Tapped at ($x, $y)."
         }
@@ -61,7 +162,17 @@ class AgentTools(private val context: ExecutionContext) {
      * 长按指定坐标
      */
     suspend fun longPress(x: Int, y: Int, durationMs: Long = 1000): String {
-        DebugLogger.d(TAG, "Agent请求长按坐标: ($x, $y), 时长: $durationMs")
+        DebugLogger.d(TAG, "Agent请求长按坐标: ($x, $y), 时长: $durationMs Display: $targetDisplayId")
+
+        // 虚拟屏幕强制走 Shell
+        if (targetDisplayId > 0) {
+            if (ShellManager.isShizukuActive(appContext)) {
+                val result = ShellManager.execShellCommand(appContext, "input ${getDisplayOption()} swipe $x $y $x $y $durationMs", ShellManager.ShellMode.AUTO)
+                if (!result.startsWith("Error")) return "Success: Long Pressed (Shell/Virtual) at ($x, $y)."
+            }
+            return "Failed: Virtual display requires Shizuku/Root."
+        }
+
         val service = ServiceStateBus.getAccessibilityService()
         if (service != null) {
             val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
@@ -88,7 +199,18 @@ class AgentTools(private val context: ExecutionContext) {
      * 双击指定坐标
      */
     suspend fun doubleTap(x: Int, y: Int): String {
-        DebugLogger.d(TAG, "Agent请求双击坐标: ($x, $y)")
+        DebugLogger.d(TAG, "Agent请求双击坐标: ($x, $y) Display: $targetDisplayId")
+
+        // 虚拟屏幕强制走 Shell
+        if (targetDisplayId > 0) {
+            if (ShellManager.isShizukuActive(appContext)) {
+                val res1 = ShellManager.execShellCommand(appContext, "input ${getDisplayOption()} tap $x $y", ShellManager.ShellMode.AUTO)
+                val res2 = ShellManager.execShellCommand(appContext, "input ${getDisplayOption()} tap $x $y", ShellManager.ShellMode.AUTO)
+                if (!res1.startsWith("Error") && !res2.startsWith("Error")) return "Success: Double Tapped (Shell/Virtual) at ($x, $y)."
+            }
+            return "Failed: Virtual display requires Shizuku/Root."
+        }
+
         val service = ServiceStateBus.getAccessibilityService()
         if (service != null) {
             val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
@@ -125,12 +247,14 @@ class AgentTools(private val context: ExecutionContext) {
      * 2. 全局模糊扫描 (处理文本细微差异)
      * 3. OCR 视觉查找 (最终兜底，专门对付微信/游戏等非标准UI)
      */
+    @RequiresApi(Build.VERSION_CODES.R)
     suspend fun clickElement(target: String): String {
-        DebugLogger.d(TAG, "Agent请求点击元素(文本/ID): $target")
+        DebugLogger.d(TAG, "Agent请求点击元素(文本/ID): $target Display: $targetDisplayId")
         val service = ServiceStateBus.getAccessibilityService()
 
-        // 1. 尝试无障碍查找 (如果服务可用)
-        if (service != null) {
+        // 虚拟屏幕暂不支持无障碍查找（除非遍历 Windows，这里简化为直接走 OCR 或 失败）
+        // 如果是主屏幕 (targetDisplayId == 0)，则尝试无障碍
+        if (targetDisplayId == 0 && service != null) {
             val root = service.rootInActiveWindow
             if (root != null) {
                 // 1.1 快速查找
@@ -162,10 +286,30 @@ class AgentTools(private val context: ExecutionContext) {
                     if (!result.startsWith("Failed")) return result
                 }
             }
+        } else if (targetDisplayId > 0 && service != null) {
+            // 尝试在虚拟屏幕上查找 (如果支持多窗口检索)
+            val windows = service.windows
+            val targetWindow = windows.find { it.displayId == targetDisplayId }
+            val root = targetWindow?.root
+            if (root != null) {
+                // 复用上面的查找逻辑
+                var bestNode: AccessibilityNodeInfo? = null
+                val textNodes = root.findAccessibilityNodeInfosByText(target)
+                if (!textNodes.isNullOrEmpty()) bestNode = textNodes.find { it.isVisibleToUser }
+
+                if (bestNode != null) {
+                    val rect = Rect()
+                    bestNode.getBoundsInScreen(rect)
+                    // 使用坐标点击，因为 action_click 可能无法跨屏
+                    if (clickCoordinates(rect.centerX(), rect.centerY())) {
+                        return "Success: 在虚拟屏幕找到并点击了 '$target'。"
+                    }
+                }
+            }
         }
 
         // --- 阶段 2: OCR 视觉查找 (无障碍失效时回落) ---
-        DebugLogger.w(TAG, "无障碍查找失败，启动 OCR 视觉定位: $target")
+        DebugLogger.w(TAG, "无障碍查找失败(或处于虚拟屏幕)，启动 OCR 视觉定位: $target")
         if (clickByOCR(target)) {
             return "Success: 无障碍树中未找到，但通过 OCR 视觉识别并点击了 '$target'。"
         }
@@ -176,6 +320,7 @@ class AgentTools(private val context: ExecutionContext) {
     /**
      * 等待元素消失。
      */
+    @RequiresApi(Build.VERSION_CODES.R)
     suspend fun waitForElementToDisappear(target: String, timeoutMillis: Long = 30000): String {
         DebugLogger.d(TAG, "开始等待元素消失: $target, 超时: ${timeoutMillis}ms")
         val service = ServiceStateBus.getAccessibilityService()
@@ -186,7 +331,13 @@ class AgentTools(private val context: ExecutionContext) {
 
         val result = withTimeoutOrNull(timeoutMillis) {
             while (true) {
-                val root = service.rootInActiveWindow
+                // 如果是虚拟屏幕，尝试获取对应窗口
+                val root = if (targetDisplayId > 0) {
+                    service.windows.find { it.displayId == targetDisplayId }?.root
+                } else {
+                    service.rootInActiveWindow
+                }
+
                 if (root == null) {
                     delay(500)
                     continue
@@ -351,6 +502,16 @@ class AgentTools(private val context: ExecutionContext) {
     }
 
     suspend fun clickCoordinates(x: Int, y: Int): Boolean {
+        // 如果是虚拟屏幕，优先使用 Shell input
+        if (targetDisplayId > 0) {
+            if (ShellManager.isShizukuActive(appContext)) {
+                val cmd = "input ${getDisplayOption()} tap $x $y"
+                val result = ShellManager.execShellCommand(appContext, cmd, ShellManager.ShellMode.AUTO)
+                return !result.startsWith("Error")
+            }
+            return false
+        }
+
         val service = ServiceStateBus.getAccessibilityService()
         if (service != null) {
             val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
@@ -384,6 +545,18 @@ class AgentTools(private val context: ExecutionContext) {
      * 如果失败回落到 剪贴板 + KEYCODE_PASTE (解决乱码问题)
      */
     suspend fun inputText(text: String): String {
+        // 如果是虚拟屏幕，强制使用 Shell input text (不完全支持中文，除非用 IME 广播)
+        if (targetDisplayId > 0) {
+            if (ShellManager.isShizukuActive(appContext)) {
+                // 虚拟屏幕输入简单文本
+                val safeText = text.replace(" ", "%s").replace("\"", "\\\"")
+                val cmd = "input ${getDisplayOption()} text \"$safeText\""
+                val result = ShellManager.execShellCommand(appContext, cmd, ShellManager.ShellMode.AUTO)
+                return if (!result.startsWith("Error")) "Success: Shell input to virtual display." else "Failed"
+            }
+            return "Failed: Virtual display input requires Shizuku."
+        }
+
         // 1. 无障碍直接输入
         val service = ServiceStateBus.getAccessibilityService()
         if (service != null) {
@@ -423,7 +596,6 @@ class AgentTools(private val context: ExecutionContext) {
     }
 
     suspend fun scroll(direction: String): String {
-        val service = ServiceStateBus.getAccessibilityService() ?: return "Error: 服务未运行"
         val displayMetrics = appContext.resources.displayMetrics
         val cx = (displayMetrics.widthPixels / 2).toFloat()
         val h = displayMetrics.heightPixels.toFloat()
@@ -442,6 +614,25 @@ class AgentTools(private val context: ExecutionContext) {
             "left" -> { path.moveTo(w * 0.2f, cy); path.lineTo(w * 0.8f, cy) }
             else -> return "Error: 未知方向"
         }
+
+        // 虚拟屏幕强制走 Shell
+        if (targetDisplayId > 0) {
+            if (ShellManager.isShizukuActive(appContext)) {
+                val (sx, sy, ex, ey) = when (direction.lowercase()) {
+                    "down" -> listOf(startX, h * 0.8f, startX, h * 0.2f)
+                    "up" -> listOf(startX, h * 0.2f, startX, h * 0.8f)
+                    "right" -> listOf(w * 0.8f, cy, w * 0.2f, cy)
+                    "left" -> listOf(w * 0.2f, cy, w * 0.8f, cy)
+                    else -> listOf(0f,0f,0f,0f)
+                }
+                val cmd = "input ${getDisplayOption()} swipe ${sx.toInt()} ${sy.toInt()} ${ex.toInt()} ${ey.toInt()} 300"
+                val result = ShellManager.execShellCommand(appContext, cmd, ShellManager.ShellMode.AUTO)
+                return if (!result.startsWith("Error")) "Success: Scrolled (Shell/Virtual)." else "Failed"
+            }
+            return "Failed: Virtual display requires Shizuku."
+        }
+
+        val service = ServiceStateBus.getAccessibilityService() ?: return "Error: 服务未运行。"
         val gesture = GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0, 300)).build()
         val deferred = CompletableDeferred<Boolean>()
         service.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
@@ -451,60 +642,20 @@ class AgentTools(private val context: ExecutionContext) {
         return if (deferred.await()) "Success: 向 $direction 滚动完成。" else "Failed: 滚动被取消。"
     }
 
-    /**
-     * 启动应用。
-     * 支持输入：
-     * 1. 包名 (com.tencent.mm)
-     * 2. 应用名 (微信)
-     * 3. 混合格式 (微信 (com.tencent.mm) 或 Apple Music（com.apple.android.music）) -> 自动提取包名
-     */
-    suspend fun launchApp(appNameOrPackage: String): String {
-        val pm = appContext.packageManager
-        var targetPackage = appNameOrPackage.trim()
-
-        // 智能提取包名
-        // 正则匹配括号内的内容：支持英文括号 () 和中文括号 （）
-        // 假设包名至少包含一个点号 '.' 且不包含空格
-        val packageRegex = Regex("[\\(（]([a-zA-Z0-9_\\.]+)[\\)）]")
-        val match = packageRegex.find(targetPackage)
-
-        if (match != null) {
-            val extracted = match.groupValues[1]
-            // 双重确认提取到的是个像包名的东西
-            if (extracted.contains(".")) {
-                DebugLogger.d(TAG, "从 '$targetPackage' 提取到包名: $extracted")
-                targetPackage = extracted
-            }
-        }
-
-        // 如果不包含点号，说明是纯应用名，需要去搜索
-        if (!targetPackage.contains(".")) {
-            val packages = pm.getInstalledPackages(0)
-            val matchApp = packages.find { pkg ->
-                val label = pkg.applicationInfo?.let { pm.getApplicationLabel(it).toString() } ?: ""
-                label.equals(targetPackage, ignoreCase = true) || label.contains(targetPackage, ignoreCase = true)
-            }
-
-            if (matchApp != null) {
-                targetPackage = matchApp.packageName
-                DebugLogger.d(TAG, "根据名称 '$appNameOrPackage' 找到包名: $targetPackage")
-            } else {
-                return "Failed: 未找到名称包含 '$appNameOrPackage' 的应用。"
-            }
-        }
-
-        // 尝试启动
-        val intent = pm.getLaunchIntentForPackage(targetPackage)
-        if (intent != null) {
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            appContext.startActivity(intent)
-            return "Success: 已启动应用 ($targetPackage)。"
-        }
-
-        return "Failed: 无法启动应用 ($targetPackage)。可能未安装或没有启动入口。"
-    }
-
     suspend fun pressKey(action: String): String {
+        // 虚拟屏幕按键
+        if (targetDisplayId > 0 && ShellManager.isShizukuActive(appContext)) {
+            val keyCode = when(action.lowercase()) {
+                "back" -> "4"
+                "home" -> "3"
+                "recents" -> "187"
+                else -> return "Error: Unknown key"
+            }
+            val cmd = "input ${getDisplayOption()} keyevent $keyCode"
+            val result = ShellManager.execShellCommand(appContext, cmd, ShellManager.ShellMode.AUTO)
+            return if (!result.startsWith("Error")) "Success: Press Key ($action) on Virtual." else "Failed"
+        }
+
         val service = ServiceStateBus.getAccessibilityService() ?: return "Error: 服务未运行。"
         val key = when(action.lowercase()) {
             "back" -> AccessibilityService.GLOBAL_ACTION_BACK
@@ -517,7 +668,16 @@ class AgentTools(private val context: ExecutionContext) {
     }
 
     suspend fun swipe(startX: Int, startY: Int, endX: Int, endY: Int, duration: Long = 300): String {
-        DebugLogger.d(TAG, "Agent请求滑动: ($startX, $startY) -> ($endX, $endY)")
+        DebugLogger.d(TAG, "Agent请求滑动: ($startX, $startY) -> ($endX, $endY) Display: $targetDisplayId")
+
+        // 虚拟屏幕强制走 Shell
+        if (targetDisplayId > 0) {
+            if (ShellManager.isShizukuActive(appContext)) {
+                val result = ShellManager.execShellCommand(appContext, "input ${getDisplayOption()} swipe $startX $startY $endX $endY $duration", ShellManager.ShellMode.AUTO)
+                if (!result.startsWith("Error")) return "Success: Swiped (Shell/Virtual) from ($startX, $startY) to ($endX, $endY)."
+            }
+            return "Failed: Virtual display swipe requires Shizuku."
+        }
 
         val service = ServiceStateBus.getAccessibilityService()
         if (service != null) {

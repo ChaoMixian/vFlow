@@ -1,23 +1,27 @@
 // 文件: main/java/com/chaomixian/vflow/services/ShizukuUserService.kt
 package com.chaomixian.vflow.services
 
+import android.content.Context
+import android.hardware.display.DisplayManager
+import android.hardware.display.VirtualDisplay
 import android.os.IBinder
-import android.util.Log
+import android.view.Surface
 import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.*
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Shizuku 用户服务。
- * 重要：这个类不能继承 Service！
- * UserService 需要是一个普通的类，被 Shizuku 框架托管。
+ * 负责执行 Shell 命令和管理虚拟屏幕。
  */
-class ShizukuUserService : IShizukuUserService.Stub() {
+class ShizukuUserService(private val context: Context) : IShizukuUserService.Stub() {
 
     // 为服务本身创建一个独立的协程作用域
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var watcherJob: Job? = null // 用于持有守护任务的引用
+    private val virtualDisplays = ConcurrentHashMap<Int, VirtualDisplay>()
 
     companion object {
         private const val TAG = "vFlowShellService"
@@ -28,8 +32,12 @@ class ShizukuUserService : IShizukuUserService.Stub() {
     }
 
     override fun destroy() {
-        DebugLogger.d(TAG, "收到 destroy 请求 (Shizuku 标准方法)")
-        serviceScope.cancel() // [新增] 销毁时取消所有协程
+        DebugLogger.d(TAG, "收到 destroy 请求")
+        virtualDisplays.values.forEach {
+            try { it.release() } catch (e: Exception) {}
+        }
+        virtualDisplays.clear()
+        serviceScope.cancel() // 销毁时取消所有协程
         System.exit(0)
     }
 
@@ -131,6 +139,64 @@ class ShizukuUserService : IShizukuUserService.Stub() {
             watcherJob?.cancel()
         }
         watcherJob = null
+    }
+
+    /**
+     * 创建虚拟屏幕
+     * 调整 Flags 以解决后台应用跳回主屏的问题。
+     */
+    override fun createVirtualDisplay(surface: Surface?, width: Int, height: Int, dpi: Int): Int {
+        if (surface == null) {
+            DebugLogger.e(TAG, "创建虚拟屏幕失败: Surface 为空")
+            return -1
+        }
+
+        return try {
+            val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+
+            // Flag 组合优化：
+            // VIRTUAL_DISPLAY_FLAG_PUBLIC (1): 允许其他应用显示。
+            // VIRTUAL_DISPLAY_FLAG_DESTROY_CONTENT_ON_REMOVAL (64): 屏幕销毁时，关闭上面的应用（防止跳回主屏）。
+            // VIRTUAL_DISPLAY_FLAG_TRUSTED (1024): 标记为受信任屏幕，允许处理触摸和窗口焦点（防止应用因环境检测跳回主屏）。
+
+            // 注意：FLAG_TRUSTED (1024) 是隐藏 API，但在 Shell 权限下传值通常有效。
+            // 如果 1024 导致崩溃（极少见），可以尝试只用 1 | 64。
+            val flags = 1 or 64 or 1024
+
+            val virtualDisplay = displayManager.createVirtualDisplay(
+                "vFlow-Headless",
+                width,
+                height,
+                dpi,
+                surface,
+                flags
+            )
+
+            if (virtualDisplay != null) {
+                val displayId = virtualDisplay.display.displayId
+                virtualDisplays[displayId] = virtualDisplay
+                DebugLogger.i(TAG, "已创建虚拟屏幕 ID: $displayId (Flags: $flags)")
+                displayId
+            } else {
+                DebugLogger.e(TAG, "虚拟屏幕创建返回 null")
+                -1
+            }
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "创建虚拟屏幕异常", e)
+            -1
+        }
+    }
+
+    override fun destroyVirtualDisplay(displayId: Int) {
+        val display = virtualDisplays.remove(displayId)
+        if (display != null) {
+            try {
+                display.release()
+                DebugLogger.i(TAG, "已销毁虚拟屏幕 ID: $displayId")
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "销毁虚拟屏幕异常", e)
+            }
+        }
     }
 
     /**

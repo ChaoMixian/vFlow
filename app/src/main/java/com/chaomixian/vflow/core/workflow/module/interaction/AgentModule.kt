@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/interaction/AgentModule.kt
 package com.chaomixian.vflow.core.workflow.module.interaction
 
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.util.DisplayMetrics
 import android.view.WindowManager
@@ -10,6 +11,7 @@ import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.utils.VirtualDisplayManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -69,6 +71,7 @@ class AgentModule : BaseModule() {
         InputDefinition("model", "模型", ParameterType.STRING, "glm-4.6v-flash"),
         InputDefinition("instruction", "指令", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
         InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 15.0),
+        InputDefinition("display_mode", "执行环境", ParameterType.ENUM, "主屏幕", options = listOf("主屏幕", "虚拟屏幕 (后台)"), isHidden = false),
         InputDefinition("tools", "工具配置", ParameterType.ANY, isHidden = true)
     )
 
@@ -79,14 +82,16 @@ class AgentModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val rawInstruction = step.parameters["instruction"]?.toString() ?: ""
+        val displayMode = step.parameters["display_mode"] as? String ?: "主屏幕"
+        val prefix = if (displayMode == "虚拟屏幕 (后台)") "[后台] " else ""
 
         // 如果指令复杂，只显示标题
         if (VariableResolver.isComplex(rawInstruction)) {
-            return "AI Agent"
+            return "${prefix}AI Agent"
         }
 
         val instructionPill = PillUtil.createPillFromParam(step.parameters["instruction"], getInputs().find { it.id == "instruction" })
-        return PillUtil.buildSpannable(context, "AI Agent: ", instructionPill)
+        return PillUtil.buildSpannable(context, "${prefix}AI Agent: ", instructionPill)
     }
 
     // 定义工具 Schema
@@ -115,8 +120,25 @@ class AgentModule : BaseModule() {
         val model = context.variables["model"] as? String ?: "glm-4.6v-flash"
         val instruction = VariableResolver.resolve(context.variables["instruction"]?.toString() ?: "", context)
         val maxSteps = (context.variables["max_steps"] as? Number)?.toInt() ?: 15
+        val displayMode = context.variables["display_mode"] as? String ?: "主屏幕"
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
+
+        // 虚拟屏幕逻辑
+        var targetDisplayId = 0
+        if (displayMode == "虚拟屏幕 (后台)") {
+            if (!ShellManager.isShizukuActive(context.applicationContext)) {
+                return ExecutionResult.Failure("权限不足", "使用虚拟屏幕需要 Shizuku 权限。")
+            }
+            onProgress(ProgressUpdate("正在创建虚拟屏幕..."))
+            targetDisplayId = VirtualDisplayManager.startHeadlessSession()
+            if (targetDisplayId < 0) {
+                return ExecutionResult.Failure("环境错误", "虚拟屏幕创建失败。")
+            }
+            // 将 displayId 注入到变量中，供 AgentTools 和 AgentUtils 使用
+            context.variables["_target_display_id"] = targetDisplayId
+            DebugLogger.i("AgentModule", "Agent 将运行在 Display ID: $targetDisplayId")
+        }
 
         // 初始化悬浮窗
         val overlayManager = AgentOverlayManager(context.applicationContext)
@@ -250,6 +272,20 @@ class AgentModule : BaseModule() {
             var repeatCount = 0
             var noToolCallCount = 0
 
+            val windowManager = context.applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val displayMetrics = DisplayMetrics()
+            windowManager.defaultDisplay.getRealMetrics(displayMetrics)
+            // 默认主屏尺寸
+            var screenWidth = displayMetrics.widthPixels
+            var screenHeight = displayMetrics.heightPixels
+
+            // 如果使用虚拟屏幕，尺寸可能不同 (VirtualDisplayManager 默认为 1080x2400)
+            if (targetDisplayId > 0) {
+                screenWidth = 1080
+                screenHeight = 2400
+                overlayManager.hideForScreenshot() // 隐藏悬浮窗
+            }
+
             // --- 主循环 ---
             while (currentStep < maxSteps) {
                 // 在每一步开始前，检查是否暂停或被取消
@@ -265,21 +301,20 @@ class AgentModule : BaseModule() {
 
                 // --- 感知 ---
 
-                // 隐藏悬浮窗
-                overlayManager.hideForScreenshot()
+                // 隐藏悬浮窗 (如果是主屏幕操作才需要)
+                if (targetDisplayId == 0) {
+                    overlayManager.hideForScreenshot()
+                }
 
+                // 传入 targetDisplayId，captureScreen 会自动处理虚拟屏幕截取
                 val screenshotResult = AgentUtils.captureScreen(context.applicationContext, context)
 
-                val uiHierarchy = AgentUtils.dumpHierarchy(context.applicationContext)
+                // 传入 targetDisplayId 获取 UI 结构
+                val uiHierarchy = AgentUtils.dumpHierarchy(context.applicationContext, targetDisplayId)
 
-                // 恢复悬浮窗
-                overlayManager.restoreAfterScreenshot()
-
-                val windowManager = context.applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                val displayMetrics = DisplayMetrics()
-                windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-                val screenWidth = displayMetrics.widthPixels
-                val screenHeight = displayMetrics.heightPixels
+                if (targetDisplayId == 0) {
+                    overlayManager.restoreAfterScreenshot()
+                }
 
                 val contentParts = JSONArray()
                 val stepsLeft = maxSteps - currentStep
@@ -393,7 +428,6 @@ class AgentModule : BaseModule() {
                             }
                             overlayManager.updateStatus(null, actionDisplay)
 
-                            // 行动前最后一次检查暂停，方便用户拦截操作
                             try { overlayManager.awaitState() } catch (e: CancellationException) { return ExecutionResult.Failure("任务取消", "用户手动停止了任务。") }
 
                             // 死循环检测
@@ -485,6 +519,13 @@ class AgentModule : BaseModule() {
             ))
 
         } finally {
+            // 销毁前清理虚拟屏幕上的应用
+            val targetDisplayId = context.variables["_target_display_id"] as? Int ?: 0
+            if (targetDisplayId > 0) {
+                AgentUtils.killTopAppOnDisplay(context.applicationContext, targetDisplayId)
+                DebugLogger.i(TAG, "释放虚拟屏幕...")
+                VirtualDisplayManager.release()
+            }
             // 关闭悬浮窗
             withContext(NonCancellable) {
                 withContext(Dispatchers.Main) {

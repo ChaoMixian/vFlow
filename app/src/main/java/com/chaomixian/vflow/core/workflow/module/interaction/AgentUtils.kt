@@ -12,10 +12,14 @@ import android.util.DisplayMetrics
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.app.usage.UsageStatsManager
+import android.os.Build
+import android.view.accessibility.AccessibilityWindowInfo
+import androidx.annotation.RequiresApi
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.utils.VirtualDisplayManager
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.services.ShellManager
@@ -40,6 +44,43 @@ object AgentUtils {
         context: Context,
         execContext: com.chaomixian.vflow.core.execution.ExecutionContext
     ): ScreenshotResult {
+        // 检查是否有目标显示 ID
+        val displayId = (execContext.variables["_target_display_id"] as? Number)?.toInt() ?: 0
+
+        // 针对虚拟屏幕的处理逻辑 (ID > 0)
+        if (displayId > 0) {
+            // 优先尝试：从 VirtualDisplayManager 内存抓取 (最快)
+            if (displayId == VirtualDisplayManager.getCurrentDisplayId()) {
+                val bitmap = VirtualDisplayManager.captureCurrentFrame()
+                if (bitmap != null) {
+                    // 转 Base64
+                    val output = ByteArrayOutputStream()
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, output) // 80质量足够AI识别
+                    val base64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+                    val width = bitmap.width
+                    val height = bitmap.height
+                    bitmap.recycle()
+
+                    // 虚拟路径，仅作标识
+                    return ScreenshotResult(base64, "memory://virtual_display", width, height)
+                } else {
+                    DebugLogger.w(TAG, "虚拟屏幕 (ID: $displayId) 内存帧为空，准备回退到 Shell...")
+                }
+            }
+
+            // 回退方案：使用 Shell screencap 指定 Display ID (较慢但稳)
+            // 显式指定 -d displayId
+            val shellResult = captureShellScreenshot(context, execContext.workDir, displayId)
+            if (shellResult != null) {
+                return shellResult
+            }
+
+            // 3. 如果都失败了，返回空结果，而不是去截主屏
+            DebugLogger.e(TAG, "无法获取虚拟屏幕 (ID: $displayId) 的截图。")
+            return ScreenshotResult(null, null, 0, 0)
+        }
+
+        // 主屏幕处理逻辑 (ID == 0)
         val captureModule = ModuleRegistry.getModule("vflow.system.capture_screen")
         if (captureModule == null) {
             DebugLogger.e(TAG, "未找到截屏模块")
@@ -62,13 +103,54 @@ object AgentUtils {
     }
 
     /**
+     * 使用 Shell screencap 命令截取指定 Display 的屏幕
+     */
+    private suspend fun captureShellScreenshot(context: Context, workDir: java.io.File, displayId: Int): ScreenshotResult? {
+        val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss_SSS", java.util.Locale.getDefault()).format(java.util.Date())
+        val fileName = "screenshot_vd_${displayId}_$timestamp.png"
+        val cacheFile = java.io.File(workDir, fileName)
+        val path = cacheFile.absolutePath
+
+        // [关键] 显式指定 -d displayId，确保截取的是后台虚拟屏幕
+        val command = "screencap -d $displayId -p \"$path\""
+
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                ShellManager.execShellCommand(context, command, ShellManager.ShellMode.AUTO)
+                if (cacheFile.exists() && cacheFile.length() > 0) {
+                    val uri = Uri.fromFile(cacheFile)
+                    val (base64, width, height) = imageUriToBase64(context, uri)
+                    ScreenshotResult(base64, path, width, height)
+                } else {
+                    DebugLogger.w(TAG, "Shell 截图未能生成文件 (Display $displayId)")
+                    null
+                }
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "Shell 截图异常", e)
+                null
+            }
+        }
+    }
+
+    /**
      * 提取并精简当前屏幕的 UI 树结构。
      * 增加了严格的可见性过滤，防止 AI 看到屏幕外或被遮挡的内容。
+     * 增加 displayId 参数以支持多屏幕。
      */
-    fun dumpHierarchy(context: Context): String {
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun dumpHierarchy(context: Context, displayId: Int = 0): String {
         val service = ServiceStateBus.getAccessibilityService()
-        val root = service?.rootInActiveWindow ?: return "UI Hierarchy unavailable"
 
+        // 尝试根据 displayId 获取对应的根节点
+        val root = if (displayId > 0) {
+            service?.windows?.find { it.displayId == displayId }?.root
+        } else {
+            service?.rootInActiveWindow
+        }
+
+        if (root == null) return "UI Hierarchy unavailable (Service not running or window not found)"
+
+        // 仅供参考的屏幕尺寸（如果是虚拟屏幕，可能需要从别处获取，暂使用默认显示器尺寸）
         val metrics = DisplayMetrics()
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         wm.defaultDisplay.getRealMetrics(metrics)
@@ -240,11 +322,13 @@ object AgentUtils {
      * 1. 优先使用 Shell (dumpsys window) 获取精确的 Activity 名。
      * 2. 如果失败，回退到 AccessibilityService 获取包名。
      */
-    suspend fun getCurrentUIInfo(context: Context): String {
+    @RequiresApi(Build.VERSION_CODES.R)
+    suspend fun getCurrentUIInfo(context: Context, displayId: Int = 0): String {
         // 尝试 Shell (Shizuku / Root) 获取 Activity
         if (ShellManager.isShizukuActive(context) || ShellManager.isRootAvailable()) {
             try {
-                // 命令：获取当前焦点窗口
+                // 如果是虚拟屏幕，dumpsys 可能需要更复杂的 grep，或者假设焦点正确
+                // 暂时使用全局 mCurrentFocus，它通常跟随用户或者最新活动的 display
                 val result = ShellManager.execShellCommand(context, "dumpsys window | grep mCurrentFocus", ShellManager.ShellMode.AUTO)
 
                 // 常见输出格式：
@@ -272,7 +356,7 @@ object AgentUtils {
         // 尝试无障碍服务 (仅获取包名)
         val service = ServiceStateBus.getAccessibilityService()
         if (service != null) {
-            val root = service.rootInActiveWindow
+            val root = if(displayId > 0) service.windows.find { it.displayId == displayId }?.root else service.rootInActiveWindow
             if (root != null) {
                 val pkg = root.packageName?.toString()
                 if (!pkg.isNullOrBlank()) {
@@ -282,5 +366,65 @@ object AgentUtils {
         }
 
         return "Unknown UI"
+    }
+
+    /**
+     * 在指定屏幕上强制停止顶层应用。
+     * 用于在销毁虚拟屏幕前清理现场，防止应用跳回主屏幕。
+     */
+    suspend fun killTopAppOnDisplay(context: Context, displayId: Int) {
+        if (displayId <= 0) return
+
+        DebugLogger.i(TAG, "正在清理虚拟屏幕 (ID: $displayId) 的应用...")
+        val foundPackages = mutableSetOf<String>()
+
+        // 1. 尝试无障碍服务 (轻量级)
+        val service = ServiceStateBus.getAccessibilityService()
+        if (service != null) {
+            try {
+                // 查找该显示器上的所有应用窗口
+                val targetWindows = service.windows.filter {
+                    it.displayId == displayId && it.type == AccessibilityWindowInfo.TYPE_APPLICATION
+                }
+                targetWindows.mapNotNull { it.root?.packageName?.toString() }.forEach { foundPackages.add(it) }
+            } catch (e: Exception) {
+                DebugLogger.w(TAG, "无障碍获取窗口失败: ${e.message}")
+            }
+        }
+
+        // 2. 如果无障碍没找到，或者应用不可交互，尝试 Shell Dumpsys (更底层，更可靠)
+        if (foundPackages.isEmpty()) {
+            if (ShellManager.isShizukuActive(context) || ShellManager.isRootAvailable()) {
+                DebugLogger.i(TAG, "无障碍未检测到应用，尝试 Shell Dumpsys 深度查找...")
+                try {
+                    // 查询 Activity 栈信息，并过滤出指定 Display ID 的部分
+                    // grep 参数 -A 50 表示显示匹配行后的 50 行，通常包含了该 Display 下的 Task 和 Activity 信息
+                    val cmd = "dumpsys activity activities | grep -A 50 \"Display #$displayId\" | grep \"ActivityRecord{\""
+                    val output = ShellManager.execShellCommand(context, cmd, ShellManager.ShellMode.AUTO)
+
+                    // 正则提取包名：ActivityRecord{... com.package.name/...}
+                    val regex = Regex("ActivityRecord\\{[^ ]+ [^ ]+ ([^/ ]+)/")
+                    regex.findAll(output).forEach { matchResult ->
+                        val pkg = matchResult.groupValues[1]
+                        DebugLogger.d(TAG, "通过 Dumpsys 发现应用: $pkg")
+                        foundPackages.add(pkg)
+                    }
+                } catch (e: Exception) {
+                    DebugLogger.e(TAG, "Shell 查找应用失败", e)
+                }
+            }
+        }
+
+        if (foundPackages.isNotEmpty()) {
+            foundPackages.forEach { pkg ->
+                // 过滤掉系统UI、vFlow自身、以及桌面Launcher (防止杀掉桌面导致黑屏/闪屏)
+                if (pkg != "com.android.systemui" && pkg != context.packageName && !pkg.contains("launcher", ignoreCase = true)) {
+                    DebugLogger.w(TAG, "检测到残留应用: $pkg，正在强制停止...")
+                    ShellManager.execShellCommand(context, "am force-stop $pkg", ShellManager.ShellMode.AUTO)
+                }
+            }
+        } else {
+            DebugLogger.w(TAG, "未在虚拟屏幕检测到活动应用，跳过清理。")
+        }
     }
 }

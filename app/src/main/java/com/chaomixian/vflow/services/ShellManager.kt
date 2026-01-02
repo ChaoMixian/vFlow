@@ -6,9 +6,11 @@ import android.content.Context
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
+import android.view.Surface
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.core.logging.LogManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -161,6 +163,36 @@ object ShellManager {
     }
 
     /**
+     * 创建虚拟屏幕 (仅 Shizuku 模式)
+     */
+    suspend fun createVirtualDisplay(surface: Surface, width: Int, height: Int, dpi: Int): Int {
+        val context = LogManager.applicationContext
+        if (!isShizukuActive(context)) return -1
+
+        val service = getService(context) ?: return -1
+        return try {
+            service.createVirtualDisplay(surface, width, height, dpi)
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "调用 createVirtualDisplay 失败", e)
+            -1
+        }
+    }
+
+    /**
+     * 销毁虚拟屏幕
+     */
+    suspend fun destroyVirtualDisplay(displayId: Int) {
+        if (displayId == -1) return
+        val context = LogManager.applicationContext
+        val service = getService(context) ?: return
+        try {
+            service.destroyVirtualDisplay(displayId)
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "调用 destroyVirtualDisplay 失败", e)
+        }
+    }
+
+    /**
      * 执行一条 Shell 命令。
      * @param context 上下文
      * @param command 要执行的命令
@@ -253,7 +285,7 @@ object ShellManager {
      * @return 返回操作是否成功。
      */
     suspend fun enableAccessibilityService(context: Context): Boolean {
-        val serviceName = "${context.packageName}/${AccessibilityService::class.java.name}"
+        val serviceName = "${context.packageName}/${com.chaomixian.vflow.services.AccessibilityService::class.java.name}"
         // 1. 读取当前已启用的服务列表
         val currentServices = execShellCommand(context, "settings get secure enabled_accessibility_services")
         if (currentServices.startsWith("Error:")) {
@@ -293,7 +325,7 @@ object ShellManager {
      * @return 返回操作是否成功。
      */
     suspend fun disableAccessibilityService(context: Context): Boolean {
-        val serviceName = "${context.packageName}/${AccessibilityService::class.java.name}"
+        val serviceName = "${context.packageName}/${com.chaomixian.vflow.services.AccessibilityService::class.java.name}"
         // 1. 读取当前服务列表
         val currentServices = execShellCommand(context, "settings get secure enabled_accessibility_services")
         if (currentServices.startsWith("Error:") || currentServices == "null" || currentServices.isBlank()) {

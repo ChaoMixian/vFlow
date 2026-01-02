@@ -22,7 +22,7 @@ import androidx.core.net.toUri
 
 object PermissionManager {
 
-    // --- 权限定义 (保持不变) ---
+    // --- 权限定义 ---
     val ACCESSIBILITY = Permission(
         id = "vflow.permission.ACCESSIBILITY_SERVICE",
         name = "无障碍服务",

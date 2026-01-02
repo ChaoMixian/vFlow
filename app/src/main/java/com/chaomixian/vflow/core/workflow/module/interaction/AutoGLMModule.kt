@@ -1,3 +1,4 @@
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/interaction/AutoGLMModule.kt
 package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.content.Context
@@ -9,6 +10,7 @@ import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.utils.VirtualDisplayManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -65,7 +67,8 @@ class AutoGLMModule : BaseModule() {
         InputDefinition("api_key", "API Key", ParameterType.STRING, ""),
         InputDefinition("model", "模型", ParameterType.STRING, "autoglm-phone"),
         InputDefinition("instruction", "指令", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 30.0)
+        InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 30.0),
+        InputDefinition("display_mode", "执行环境", ParameterType.ENUM, "主屏幕", options = listOf("主屏幕", "虚拟屏幕 (后台)"), isHidden = false)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -75,14 +78,16 @@ class AutoGLMModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val rawInstruction = step.parameters["instruction"]?.toString() ?: ""
+        val displayMode = step.parameters["display_mode"] as? String ?: "主屏幕"
+        val prefix = if (displayMode == "虚拟屏幕 (后台)") "[后台] " else ""
 
         // 如果指令复杂，只显示标题，避免与预览框重复
         if (VariableResolver.isComplex(rawInstruction)) {
-            return "AutoGLM 智能体"
+            return "${prefix}AutoGLM 智能体"
         }
 
         val instructionPill = PillUtil.createPillFromParam(step.parameters["instruction"], getInputs().find { it.id == "instruction" })
-        return PillUtil.buildSpannable(context, "AutoGLM: ", instructionPill)
+        return PillUtil.buildSpannable(context, "${prefix}AutoGLM: ", instructionPill)
     }
 
     override suspend fun execute(
@@ -94,8 +99,24 @@ class AutoGLMModule : BaseModule() {
         val model = context.variables["model"] as? String ?: "autoglm-phone"
         val instruction = VariableResolver.resolve(context.variables["instruction"]?.toString() ?: "", context)
         val maxSteps = (context.variables["max_steps"] as? Number)?.toInt() ?: 30
+        val displayMode = context.variables["display_mode"] as? String ?: "主屏幕"
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
+
+        // 虚拟屏幕逻辑
+        var targetDisplayId = 0
+        if (displayMode == "虚拟屏幕 (后台)") {
+            if (!ShellManager.isShizukuActive(context.applicationContext)) {
+                return ExecutionResult.Failure("权限不足", "使用虚拟屏幕需要 Shizuku 权限。")
+            }
+            onProgress(ProgressUpdate("正在创建虚拟屏幕..."))
+            targetDisplayId = VirtualDisplayManager.startHeadlessSession()
+            if (targetDisplayId < 0) {
+                return ExecutionResult.Failure("环境错误", "虚拟屏幕创建失败。")
+            }
+            context.variables["_target_display_id"] = targetDisplayId
+            DebugLogger.i("AutoGLM", "AutoGLM 将运行在 Display ID: $targetDisplayId")
+        }
 
         val overlayManager = AgentOverlayManager(context.applicationContext)
         withContext(Dispatchers.Main) { overlayManager.show() }
@@ -193,8 +214,16 @@ class AutoGLMModule : BaseModule() {
             val windowManager = context.applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             val displayMetrics = DisplayMetrics()
             windowManager.defaultDisplay.getRealMetrics(displayMetrics)
-            val screenWidth = displayMetrics.widthPixels
-            val screenHeight = displayMetrics.heightPixels
+            // 默认主屏尺寸
+            var screenWidth = displayMetrics.widthPixels
+            var screenHeight = displayMetrics.heightPixels
+
+            // 如果使用虚拟屏幕，尺寸可能不同 (VirtualDisplayManager 默认为 1080x2400)
+            if (targetDisplayId > 0) {
+                screenWidth = 1080
+                screenHeight = 2400
+                overlayManager.hideForScreenshot() // 隐藏悬浮窗
+            }
 
             while (currentStep < maxSteps) {
                 try { overlayManager.awaitState() } catch (e: CancellationException) { return ExecutionResult.Failure("任务取消", "用户手动停止了任务。") }
@@ -202,11 +231,20 @@ class AutoGLMModule : BaseModule() {
                 overlayManager.updateStatus("分析屏幕...", "准备截屏")
                 onProgress(ProgressUpdate("步骤 ${currentStep + 1}/$maxSteps: 观察中..."))
 
-                overlayManager.hideForScreenshot()
+                // 主屏幕才需要隐藏悬浮窗
+                if (targetDisplayId == 0) {
+                    overlayManager.hideForScreenshot()
+                }
+
                 val screenshotResult = AgentUtils.captureScreen(context.applicationContext, context)
-                val currentUI = AgentUtils.getCurrentUIInfo(context.applicationContext)
+
+                // 获取 UI 结构时传入 displayId
+                val currentUI = AgentUtils.getCurrentUIInfo(context.applicationContext, targetDisplayId)
                 DebugLogger.d("AutoGLM", "Step ${currentStep + 1} Context: $currentUI")
-                overlayManager.restoreAfterScreenshot()
+
+                if (targetDisplayId == 0) {
+                    overlayManager.restoreAfterScreenshot()
+                }
 
                 val contentParts = JSONArray()
                 contentParts.put(JSONObject().apply {
@@ -434,6 +472,17 @@ class AutoGLMModule : BaseModule() {
             ))
 
         } finally {
+            // 销毁前清理虚拟屏幕上的应用
+            val targetDisplayId = context.variables["_target_display_id"] as? Int ?: 0
+            if (targetDisplayId > 0) {
+                // 先杀应用，防止跳回主屏
+                AgentUtils.killTopAppOnDisplay(context.applicationContext, targetDisplayId)
+                // 再释放屏幕
+                DebugLogger.i("AutoGLM", "释放虚拟屏幕...")
+                VirtualDisplayManager.release()
+            }
+
+            // 关闭悬浮窗
             withContext(NonCancellable) { withContext(Dispatchers.Main) { overlayManager.dismiss() } }
         }
     }

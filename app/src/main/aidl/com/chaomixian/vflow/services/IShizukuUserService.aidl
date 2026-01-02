@@ -1,6 +1,8 @@
 // 文件路径: src/main/aidl/com/chaomixian/vflow/services/IShizukuUserService.aidl
 package com.chaomixian.vflow.services;
 
+import android.view.Surface;
+
 /**
  * 定义了 Shizuku Shell 服务的接口。
  * 使用与 vClick 完全一致的、带显式事务码的旧式定义，以确保最大兼容性。
@@ -31,4 +33,15 @@ interface IShizukuUserService {
      * 停止守护任务。
      */
     void stopWatcher() = 4;
+
+    /**
+     * 创建一个虚拟屏幕。
+     * @return 返回虚拟屏幕的 displayId，如果失败则返回 -1。
+     */
+    int createVirtualDisplay(in Surface surface, int width, int height, int dpi) = 5;
+
+    /**
+     * 销毁一个虚拟屏幕。
+     */
+    void destroyVirtualDisplay(int displayId) = 6;
 }
