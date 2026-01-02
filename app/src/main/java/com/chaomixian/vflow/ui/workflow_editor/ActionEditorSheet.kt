@@ -38,20 +38,18 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     private var customEditorHolder: CustomEditorViewHolder? = null
     private val currentParameters = mutableMapOf<String, Any?>()
 
-    // 引用新的容器视图
+    // 引用容器视图
     private var customUiCard: MaterialCardView? = null
     private var customUiContainer: LinearLayout? = null
     private var genericInputsCard: MaterialCardView? = null
     private var genericInputsContainer: LinearLayout? = null
 
-    // 异常处理 UI 组件引用
+    // 异常处理 UI 组件
     private var errorSettingsContent: LinearLayout? = null
     private var errorPolicyGroup: RadioGroup? = null
     private var retryOptionsContainer: LinearLayout? = null
     private var retryCountSlider: Slider? = null
-    private var retryCountText: TextView? = null
     private var retryIntervalSlider: Slider? = null
-    private var retryIntervalText: TextView? = null
 
     companion object {
         // 异常处理策略相关的常量 Key
@@ -163,9 +161,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val context = requireContext()
         errorSettingsContent?.removeAllViews()
 
-        val radioGroup = RadioGroup(context).apply {
-            orientation = RadioGroup.VERTICAL
-        }
+        val radioGroup = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
         val rbStop = RadioButton(context).apply { text = "执行失败时：停止工作流 (默认)"; tag = POLICY_STOP }
         val rbSkip = RadioButton(context).apply { text = "执行失败时：跳过此步骤继续"; tag = POLICY_SKIP }
         val rbRetry = RadioButton(context).apply { text = "执行失败时：尝试重试"; tag = POLICY_RETRY }
@@ -174,7 +170,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         radioGroup.addView(rbSkip)
         radioGroup.addView(rbRetry)
 
-        // 2. Retry Options Container
         val retryContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 16, 0, 0)
@@ -261,21 +256,16 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         retryContainer.isVisible = (currentPolicy == POLICY_RETRY)
 
         sliderRetryCount.value = currentRetryCount
-        tvRetryCountVal.text = "${currentRetryCount.toInt()} 次"
         sliderRetryInterval.value = currentRetryInterval
+        tvRetryCountVal.text = "${currentRetryCount.toInt()} 次"
         tvRetryIntervalVal.text = "${currentRetryInterval.toLong()} ms"
 
         // 监听器
         radioGroup.setOnCheckedChangeListener { _, checkedId ->
-            val isRetry = checkedId == rbRetry.id
-            retryContainer.isVisible = isRetry
+            retryContainer.isVisible = (checkedId == rbRetry.id)
         }
-        sliderRetryCount.addOnChangeListener { _, value, _ ->
-            tvRetryCountVal.text = "${value.toInt()} 次"
-        }
-        sliderRetryInterval.addOnChangeListener { _, value, _ ->
-            tvRetryIntervalVal.text = "${value.toLong()} ms"
-        }
+        sliderRetryCount.addOnChangeListener { _, value, _ -> tvRetryCountVal.text = "${value.toInt()} 次" }
+        sliderRetryInterval.addOnChangeListener { _, value, _ -> tvRetryIntervalVal.text = "${value.toLong()} ms" }
 
         // 保存引用
         this.errorPolicyGroup = radioGroup
@@ -435,7 +425,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val icon = ImageView(context).apply {
             setImageResource(R.drawable.rounded_settings_24)
             layoutParams = LinearLayout.LayoutParams((20 * density).toInt(), (20 * density).toInt())
-            setColorFilter(requireContext().getColor(com.google.android.material.R.color.design_default_color_on_secondary)) // 简单处理颜色
+            setColorFilter(requireContext().getColor(com.google.android.material.R.color.design_default_color_on_secondary))
             alpha = 0.7f
         }
 
@@ -521,7 +511,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
             // 设置初始文本，并将变量引用渲染成“药丸”
             richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
-                PillUtil.createPillDrawable(requireContext(), getDisplayNameForVariableReference(variableRef))
+                // 使用 PillRenderer 的逻辑，支持属性解析
+                val name = PillRenderer.getDisplayNameForVariableReference(variableRef, allSteps ?: emptyList())
+                PillUtil.createPillDrawable(requireContext(), name)
             }
 
             valueContainer.addView(richEditorLayout)
@@ -529,7 +521,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         } else if (isVariableReference(currentValue)) {
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
             val pillText = pill.findViewById<TextView>(R.id.pill_text)
-            pillText.text = getDisplayNameForVariableReference(currentValue as String)
+            // 使用 PillRenderer 的逻辑，支持属性解析
+            pillText.text = PillRenderer.getDisplayNameForVariableReference(currentValue as String, allSteps ?: emptyList())
             pill.setOnClickListener {
                 readParametersFromUi()
                 onMagicVariableRequested?.invoke(inputDef.id)
@@ -547,29 +540,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {
         currentParameters.putAll(newParameters)
         buildUi()
-    }
-
-    private fun getDisplayNameForVariableReference(variableReference: String): String {
-        if (variableReference.isNamedVariable()) {
-            return variableReference.removeSurrounding("[[", "]]")
-        }
-        if (variableReference.isMagicVariable()) {
-            val parts = variableReference.removeSurrounding("{{", "}}").split('.')
-            val sourceStepId = parts.getOrNull(0)
-            val sourceOutputId = parts.getOrNull(1)
-            if (sourceStepId != null && sourceOutputId != null) {
-                val sourceStep = allSteps?.find { it.id == sourceStepId }
-                if (sourceStep != null) {
-                    val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId)
-                    val outputDef = sourceModule?.getOutputs(sourceStep)?.find { it.id == sourceOutputId }
-                    if (outputDef != null) {
-                        return outputDef.name
-                    }
-                }
-            }
-            return sourceOutputId ?: variableReference
-        }
-        return variableReference
     }
 
     private fun isVariableReference(value: Any?): Boolean {
@@ -648,7 +618,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         if (richTextView != null) {
-            val drawable = PillUtil.createPillDrawable(requireContext(), getDisplayNameForVariableReference(variableReference))
+            // 使用 PillRenderer 确保插入的药丸显示正确属性名
+            val displayName = PillRenderer.getDisplayNameForVariableReference(variableReference, allSteps ?: emptyList())
+            val drawable = PillUtil.createPillDrawable(requireContext(), displayName)
             richTextView.insertVariablePill(variableReference, drawable)
             return // 直接操作视图后返回，避免重建UI
         }

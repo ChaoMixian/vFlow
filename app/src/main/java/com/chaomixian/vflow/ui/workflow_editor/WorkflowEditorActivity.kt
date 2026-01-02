@@ -545,6 +545,7 @@ class WorkflowEditorActivity : BaseActivity() {
         for (i in 0 until editingStepPosition) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId) ?: continue
+            // 跳过循环头本身，避免引用自己
             if (module.id == LOOP_START_ID || module.id == FOREACH_START_ID) continue
 
             val outputs = module.getOutputs(step).filter { outputDef ->
@@ -558,14 +559,15 @@ class WorkflowEditorActivity : BaseActivity() {
                     MagicVariableItem(
                         variableReference = "{{${step.id}.${outputDef.id}}}",
                         variableName = outputDef.name,
-                        originDescription = "(${outputDef.typeName.split('.').last()})" // 简化类型显示
+                        originDescription = "(${outputDef.typeName.split('.').last()})",
+                        typeId = outputDef.typeName
                     )
                 }
                 groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
             }
         }
 
-        // --- 动态添加循环变量 (如果适用) ---
+        // --- 动态添加循环变量 ---
         val enclosingLoopStep = findEnclosingLoopStartStep(editingStepPosition, LOOP_PAIRING_ID)
         if (enclosingLoopStep != null) {
             val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId) as? LoopModule
@@ -575,7 +577,8 @@ class WorkflowEditorActivity : BaseActivity() {
                     MagicVariableItem(
                         variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
                         variableName = outputDef.name,
-                        originDescription = "(${outputDef.typeName.split('.').last()})"
+                        originDescription = "(${outputDef.typeName.split('.').last()})",
+                        typeId = outputDef.typeName
                     )
                 }
                 groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
@@ -591,7 +594,8 @@ class WorkflowEditorActivity : BaseActivity() {
                     MagicVariableItem(
                         variableReference = "{{${enclosingForEachStep.id}.${outputDef.id}}}",
                         variableName = outputDef.name,
-                        originDescription = if (outputDef.typeName == "vflow.type.any") "" else "(${outputDef.typeName.split('.').last()})"
+                        originDescription = if (outputDef.typeName == "vflow.type.any") "" else "(${outputDef.typeName.split('.').last()})",
+                        typeId = outputDef.typeName
                     )
                 }
                 groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
