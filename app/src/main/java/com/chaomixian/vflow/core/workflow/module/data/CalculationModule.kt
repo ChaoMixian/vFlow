@@ -8,6 +8,8 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.core.module.NumberVariable
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 /**
  * 计算模块，用于执行两个数字之间的基本数学运算。
@@ -42,7 +44,7 @@ class CalculationModule : BaseModule() {
             id = "operator",
             name = "符号",
             staticType = ParameterType.ENUM,
-            options = listOf("+", "-", "*", "/"),
+            options = listOf("+", "-", "*", "/", "%"),
             defaultValue = "+",
             acceptsMagicVariable = false
         ),
@@ -79,8 +81,8 @@ class CalculationModule : BaseModule() {
         val operator = context.variables["operator"] as? String ?: "+"
         val operand2Value = context.magicVariables["operand2"] ?: context.variables["operand2"]
 
-        val num1 = convertToDouble(operand1Value)
-        val num2 = convertToDouble(operand2Value)
+        val num1 = convertToBigDecimal(operand1Value)
+        val num2 = convertToBigDecimal(operand2Value)
 
         if (num1 == null) {
             return ExecutionResult.Failure("输入错误", "数字1无法解析: '${operand1Value?.toString() ?: "null"}'")
@@ -89,29 +91,39 @@ class CalculationModule : BaseModule() {
             return ExecutionResult.Failure("输入错误", "数字2无法解析: '${operand2Value?.toString() ?: "null"}'")
         }
 
-        val resultValue: Double = when (operator) {
-            "+" -> num1 + num2
-            "-" -> num1 - num2
-            "*" -> num1 * num2
+        val resultValue: BigDecimal = when (operator) {
+            "+" -> num1.add(num2)
+            "-" -> num1.subtract(num2)
+            "*" -> num1.multiply(num2)
             "/" -> {
-                if (num2 == 0.0) {
+                if (num2.compareTo(BigDecimal.ZERO) == 0) {
                     return ExecutionResult.Failure("计算错误", "除数不能为零。")
                 }
-                num1 / num2
+                try {
+                    num1.divide(num2, 2, RoundingMode.HALF_UP)
+                } catch (e: ArithmeticException) {
+                    return ExecutionResult.Failure("计算错误", "除法计算时发生错误: ${'$'}{e.message}")
+                }
             }
-            else -> return ExecutionResult.Failure("计算错误", "无效的运算符: '${operator}'.")
+            "%" -> {
+                if (num2.compareTo(BigDecimal.ZERO) == 0) {
+                    return ExecutionResult.Failure("计算错误", "除数不能为零。")
+                }
+                num1.remainder(num2)
+            }
+            else -> return ExecutionResult.Failure("计算错误", "无效的运算符: '${'$'}{operator}'.")
         }
-        return ExecutionResult.Success(mapOf("result" to NumberVariable(resultValue)))
+        return ExecutionResult.Success(mapOf("result" to NumberVariable(resultValue.toDouble())))
     }
 
     /**
-     * 将任意类型的值转换为 Double?。
+     * 将任意类型的值转换为 BigDecimal?。
      */
-    private fun convertToDouble(value: Any?): Double? {
+    private fun convertToBigDecimal(value: Any?): BigDecimal? {
         return when (value) {
-            is NumberVariable -> value.value
-            is Number -> value.toDouble()
-            is String -> value.toDoubleOrNull()
+            is NumberVariable -> value.value.toBigDecimal()
+            is Number -> value.toString().toBigDecimalOrNull()
+            is String -> value.toBigDecimalOrNull()
             else -> null
         }
     }
