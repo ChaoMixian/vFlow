@@ -106,6 +106,7 @@ object ModuleRegistry {
 
         // 数据
         register(CreateVariableModule())
+        register(RandomVariableModule())
         register(ModifyVariableModule())
         register(GetVariableModule())
         register(CalculationModule())
