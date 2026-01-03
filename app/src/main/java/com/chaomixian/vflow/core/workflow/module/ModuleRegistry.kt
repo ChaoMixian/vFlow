@@ -106,10 +106,12 @@ object ModuleRegistry {
 
         // 数据
         register(CreateVariableModule())
+        register(RandomVariableModule())
         register(ModifyVariableModule())
         register(GetVariableModule())
         register(CalculationModule())
         register(TextProcessingModule())
+        register(Base64EncodeOrDecodeModule())
 
         // 文件
         register(ImportImageModule())
