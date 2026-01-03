@@ -111,6 +111,7 @@ object ModuleRegistry {
         register(GetVariableModule())
         register(CalculationModule())
         register(TextProcessingModule())
+        register(Base64EncodeOrDecodeModule())
 
         // 文件
         register(ImportImageModule())
