@@ -86,6 +86,7 @@ object ModuleRegistry {
         register(AgentModule())
         register(AutoGLMModule())
         register(FindTextUntilModule())
+        register(FindImageModule())
 
         // 逻辑控制
         register(IfModule())
@@ -139,6 +140,8 @@ object ModuleRegistry {
         register(WifiModule())
         register(BluetoothModule())
         register(BrightnessModule())
+        register(WakeScreenModule())
+        register(SleepScreenModule())
         register(ReadSmsModule())
         register(FindNotificationModule())
         register(RemoveNotificationModule())
