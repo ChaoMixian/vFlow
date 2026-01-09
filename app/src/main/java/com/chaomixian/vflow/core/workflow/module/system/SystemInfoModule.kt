@@ -12,7 +12,7 @@ import android.os.Build
 class SystemInfoModule : BaseModule() {
 
     // 模块的唯一标识符
-    override val id = "vflow.system.getsysteminfo"
+    override val id = "vflow.system.systeminfo"
 
     // 模块的元数据，定义其在编辑器中的显示名称、描述、图标和分类
     override val metadata: ActionMetadata = ActionMetadata(
@@ -30,7 +30,7 @@ class SystemInfoModule : BaseModule() {
             id = "infotype",
             name = "信息类型",
             staticType = ParameterType.ENUM,
-            options = listOf("型号", "制造商", "系统版本"),
+            options = listOf("型号", "制造商", "安卓版本"),
             defaultValue = "型号",
             acceptsMagicVariable = false
         )
@@ -58,10 +58,10 @@ class SystemInfoModule : BaseModule() {
         val resultValue: String = when (context.variables["infotype"]) {
             "型号" -> Build.MODEL
             "制造商" -> Build.MANUFACTURER
-            "系统版本" -> Build.VERSION.RELEASE
-            else -> return ExecutionResult.Failure("获取失败", "无效的类型")
+            "安卓版本" -> Build.VERSION.RELEASE
+            else -> return ExecutionResult.Failure("获取失败", "无效的值")
         }
-        return ExecutionResult.Success(mapOf("result" to resultValue))
+        return ExecutionResult.Success(mapOf("sysinfo" to resultValue))
     }
 
     /**
@@ -82,13 +82,12 @@ class SystemInfoModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
 
-        val pillInfotype = PillUtil.createPillFromParam(
+        val pillInfoType = PillUtil.createPillFromParam(
             step.parameters["infotype"],
             inputs.find { it.id == "infotype" },
             isModuleOption = true
         )
 
-
-        return PillUtil.buildSpannable(context,"获取信息 ",pillInfotype)
+        return PillUtil.buildSpannable(context,"获取 ",pillInfoType)
     }
 }
