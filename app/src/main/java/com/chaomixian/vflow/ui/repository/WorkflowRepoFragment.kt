@@ -10,9 +10,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.data.repository.api.RepositoryApiClient
 import com.chaomixian.vflow.databinding.FragmentWorkflowRepoBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 /**
  * 工作流仓库Fragment
@@ -41,13 +44,14 @@ class WorkflowRepoFragment : Fragment() {
         workflowManager = WorkflowManager(requireContext())
 
         setupRecyclerView()
+        setupSwipeRefresh()
         loadWorkflows()
     }
 
     private fun setupRecyclerView() {
         adapter = WorkflowRepoAdapter(
             onDownloadClick = { repoWorkflow ->
-                downloadWorkflow(repoWorkflow)
+                showDownloadConfirmDialog(repoWorkflow)
             }
         )
 
@@ -57,14 +61,20 @@ class WorkflowRepoFragment : Fragment() {
         }
     }
 
+    private fun setupSwipeRefresh() {
+        binding.swipeRefresh.setOnRefreshListener {
+            loadWorkflows()
+        }
+    }
+
     private fun loadWorkflows() {
-        binding.progressBar.visibility = View.VISIBLE
+        binding.swipeRefresh.isRefreshing = true
         binding.textError.visibility = View.GONE
 
         lifecycleScope.launch {
             val result = RepositoryApiClient.fetchIndex()
 
-            binding.progressBar.visibility = View.GONE
+            binding.swipeRefresh.isRefreshing = false
 
             result.onSuccess { index ->
                 if (index.workflows.isEmpty()) {
@@ -81,6 +91,17 @@ class WorkflowRepoFragment : Fragment() {
         }
     }
 
+    private fun showDownloadConfirmDialog(repoWorkflow: com.chaomixian.vflow.data.repository.model.RepoWorkflow) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("下载工作流")
+            .setMessage("确定要下载 '${repoWorkflow.name}' 吗？\n\n${repoWorkflow.description}")
+            .setPositiveButton("下载") { _, _ ->
+                downloadWorkflow(repoWorkflow)
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
     private fun downloadWorkflow(repoWorkflow: com.chaomixian.vflow.data.repository.model.RepoWorkflow) {
         lifecycleScope.launch {
             Toast.makeText(requireContext(), "正在下载: ${repoWorkflow.name}", Toast.LENGTH_SHORT).show()
@@ -88,13 +109,48 @@ class WorkflowRepoFragment : Fragment() {
             val result = RepositoryApiClient.downloadWorkflow(repoWorkflow.download_url)
 
             result.onSuccess { workflow ->
-                // 保存工作流
-                workflowManager.saveWorkflow(workflow)
-                Toast.makeText(requireContext(), "下载成功: ${workflow.name}", Toast.LENGTH_SHORT).show()
+                handleDownloadedWorkflow(workflow)
             }.onFailure { error ->
                 Toast.makeText(requireContext(), "下载失败: ${error.message}", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun handleDownloadedWorkflow(workflow: Workflow) {
+        // 检查是否已存在相同ID的工作流
+        val existingWorkflow = workflowManager.getWorkflow(workflow.id)
+
+        if (existingWorkflow == null) {
+            // 无冲突，直接保存
+            workflowManager.saveWorkflow(workflow)
+            Toast.makeText(requireContext(), "下载成功: ${workflow.name}", Toast.LENGTH_SHORT).show()
+        } else {
+            // 存在冲突，显示对话框
+            showConflictDialog(workflow, existingWorkflow)
+        }
+    }
+
+    private fun showConflictDialog(toImport: Workflow, existing: Workflow) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("工作流冲突")
+            .setMessage("已存在一个名为 '${existing.name}' 的工作流 (ID: ${existing.id.substring(0, 8)}...)。您想如何处理来自仓库的 '${toImport.name}'?")
+            .setPositiveButton("保留两者") { _, _ ->
+                // 保留两者，导入的重命名
+                val newWorkflow = toImport.copy(
+                    id = UUID.randomUUID().toString(),
+                    name = "${toImport.name} (仓库)"
+                )
+                workflowManager.saveWorkflow(newWorkflow)
+                Toast.makeText(requireContext(), "'${toImport.name}' 已作为副本下载", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("替换") { _, _ ->
+                // 替换现有
+                workflowManager.saveWorkflow(toImport)
+                Toast.makeText(requireContext(), "'${toImport.name}' 已被替换", Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("跳过", null)
+            .setCancelable(false)
+            .show()
     }
 
     override fun onDestroyView() {

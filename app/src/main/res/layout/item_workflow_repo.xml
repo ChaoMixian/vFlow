@@ -1,18 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardElevation="2dp"
-    app:cardCornerRadius="8dp">
+    app:cardElevation="1dp"
+    app:strokeWidth="0dp"
+    app:cardCornerRadius="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
+
+        <TextView
+            android:id="@+id/textWorkflowName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            tools:text="Hello vFlow" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/textWorkflowAuthor"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="作者: ChaoMixian" />
+
+            <TextView
+                android:id="@+id/textWorkflowTags"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:layout_marginTop="2dp"
+                android:textColor="?attr/colorPrimary"
+                tools:text="Tags: toast, 测试" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textWorkflowDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="16sp"
+            android:lineHeight="24sp"
+            android:textColor="?attr/colorOnSurface"
+            android:alpha="0.8"
+            tools:text="用于vFlow-Repos测试的工作流" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="?attr/colorOnSurface"
+            android:alpha="0.2"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -27,22 +82,19 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/textWorkflowName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
-                    tools:text="Hello vFlow" />
-
-                <TextView
                     android:id="@+id/textWorkflowVersion"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     tools:text="v1.0.0" />
+                <TextView
+                    android:id="@+id/textWorkflowID"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:text="ID: hello-vflow" />
 
             </LinearLayout>
 
@@ -52,39 +104,11 @@
                 android:layout_height="wrap_content"
                 android:text="下载"
                 android:textSize="14sp"
+                android:paddingTop="4dp"
                 app:icon="@drawable/rounded_download_24"
                 style="@style/Widget.Material3.Button.TonalButton" />
 
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/textWorkflowDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textSize="14sp"
-            android:textColor="?attr/colorOnSurface"
-            tools:text="用于vFlow-Repos测试的工作流" />
-
-        <TextView
-            android:id="@+id/textWorkflowAuthor"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textSize="12sp"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            tools:text="作者: ChaoMixian" />
-
-        <TextView
-            android:id="@+id/textWorkflowTags"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textSize="12sp"
-            android:textColor="?attr/colorPrimary"
-            android:visibility="gone"
-            tools:text="toast, 测试"
-            tools:visibility="visible" />
 
     </LinearLayout>
 

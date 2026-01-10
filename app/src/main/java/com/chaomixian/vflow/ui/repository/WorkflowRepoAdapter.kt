@@ -40,10 +40,11 @@ class WorkflowRepoAdapter(
                 textWorkflowDescription.text = workflow.description
                 textWorkflowAuthor.text = "作者: ${workflow.author}"
                 textWorkflowVersion.text = "v${workflow.version}"
+                textWorkflowID.text = "ID: ${workflow.id}"
 
                 // 显示标签
                 if (workflow.tags.isNotEmpty()) {
-                    textWorkflowTags.text = workflow.tags.joinToString(", ")
+                    textWorkflowTags.text = "Tags: ${workflow.tags.joinToString(", ")}"
                     textWorkflowTags.visibility = android.view.View.VISIBLE
                 } else {
                     textWorkflowTags.visibility = android.view.View.GONE

@@ -80,7 +80,7 @@ vFlow 的核心是其高度解耦的模块化架构。
 4.  推送到你的分支 (`git push origin feature/AmazingFeature`)。
 5.  创建一个 **Pull Request**。
 
-### 开发一个新模块
+### 💻 开发一个新模块
 
 vFlow 最常见的贡献方式就是添加新的模块。步骤如下：
 
@@ -91,6 +91,10 @@ vFlow 最常见的贡献方式就是添加新的模块。步骤如下：
 5.  就是这样！你的模块现在应该会自动出现在动作选择器中并可以正常使用了。
 
 [开发指南](docs/CONTRIBUTION.md)
+
+## 🌟来颗 Star
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ChaoMixian/vFlow&type=date&legend=top-left)](https://www.star-history.com/#ChaoMixian/vFlow&type=date&legend=top-left)
 
 ## 📄 许可证
 
