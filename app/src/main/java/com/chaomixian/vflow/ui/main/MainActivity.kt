@@ -47,6 +47,15 @@ class MainActivity : BaseActivity() {
     /** Activity 创建时的初始化。 */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 检查首次运行
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean("is_first_run", true)) {
+            startActivity(Intent(this, com.chaomixian.vflow.ui.onboarding.OnboardingActivity::class.java))
+            finish()
+            return
+        }
+
         ModuleRegistry.initialize() // 初始化模块注册表
         ModuleManager.loadModules(this, true) // 初始化用户模块管理器
         TriggerHandlerRegistry.initialize() // 初始化触发器处理器注册表
