@@ -4,6 +4,8 @@ package com.chaomixian.vflow.core.execution
 import android.content.Context
 import android.os.Parcelable
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObjectFactory
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -152,7 +154,7 @@ object WorkflowExecutor {
                         loopStack = Stack(),
                         triggerData = triggerData,
                         namedVariables = ConcurrentHashMap(),
-                        workflowStack = Stack<String>().apply { push(workflow.id) }, // 初始化调用栈
+                        workflowStack = Stack<String>().apply { push(workflow.id) },
                         workDir = workDir
                     )
 
@@ -251,7 +253,7 @@ object WorkflowExecutor {
         var pc = 0 // 程序计数器
         var returnValue: Any? = null // 用于存储子工作流的返回值
 
-        while (pc < workflow.steps.size && coroutineContext.isActive) { // 检查 coroutine 是否仍然 active
+        while (pc < workflow.steps.size && coroutineContext.isActive) {
             val step = workflow.steps[pc]
             val module = ModuleRegistry.getModule(step.moduleId)
             if (module == null) {
@@ -311,22 +313,59 @@ object WorkflowExecutor {
             step.parameters.forEach { (key, value) ->
                 if (value is String) {
                     when {
-                        // 1. 解析魔法变量 ({{...}})
+                        // 1. 魔法变量 ({{...}})
                         value.isMagicVariable() -> {
-                            val parts = value.removeSurrounding("{{", "}}").split('.')
+                            val content = value.removeSurrounding("{{", "}}")
+                            val parts = content.split('.')
                             val sourceStepId = parts.getOrNull(0)
                             val sourceOutputId = parts.getOrNull(1)
+
                             if (sourceStepId != null && sourceOutputId != null) {
-                                stepOutputs[sourceStepId]?.get(sourceOutputId)?.let {
-                                    executionContext.magicVariables[key] = it
+                                val rootObj = stepOutputs[sourceStepId]?.get(sourceOutputId)
+                                if (rootObj != null) {
+                                    if (parts.size > 2) {
+                                        // 有属性访问 (path长度 > 2)，启用 VObject 系统
+                                        // 递归获取属性值
+                                        var currentVObj = VObjectFactory.from(rootObj)
+                                        for (i in 2 until parts.size) {
+                                            val propName = parts[i]
+                                            val nextVObj = currentVObj.getProperty(propName)
+                                            currentVObj = nextVObj ?: VNull
+                                        }
+                                        // 存入 raw 值 (例如 Double, String)
+                                        if (currentVObj.raw != null) {
+                                            executionContext.magicVariables[key] = currentVObj.raw!!
+                                        }
+                                    } else {
+                                        // 无属性访问，直接引用原始对象 (保留 ImageVariable 类型，适配旧模块)
+                                        executionContext.magicVariables[key] = rootObj
+                                    }
                                 }
                             }
                         }
-                        // 2. 解析命名变量 ([[...]])
+
+                        // 2. 命名变量 ([[...]])
                         value.isNamedVariable() -> {
-                            val varName = value.removeSurrounding("[[", "]]")
+                            val content = value.removeSurrounding("[[", "]]")
+                            val parts = content.split('.')
+                            val varName = parts[0]
+
                             if (namedVariables.containsKey(varName)) {
-                                executionContext.magicVariables[key] = namedVariables[varName]
+                                val rootObj = namedVariables[varName]
+                                if (parts.size > 1) {
+                                    // 命名变量属性访问
+                                    var currentVObj = VObjectFactory.from(rootObj)
+                                    for (i in 1 until parts.size) {
+                                        val propName = parts[i]
+                                        val nextVObj = currentVObj.getProperty(propName)
+                                        currentVObj = nextVObj ?: VNull
+                                    }
+                                    if (currentVObj.raw != null) {
+                                        executionContext.magicVariables[key] = currentVObj.raw!!
+                                    }
+                                } else {
+                                    executionContext.magicVariables[key] = rootObj
+                                }
                             }
                         }
                     }
