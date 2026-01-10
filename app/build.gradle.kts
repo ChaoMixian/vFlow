@@ -13,8 +13,8 @@ android {
         applicationId = "com.chaomixian.vflow"
         minSdk = 29
         targetSdk = 36
-        versionCode = 20
-        versionName = "1.3.4"
+        versionCode = 21
+        versionName = "1.3.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -66,6 +66,9 @@ dependencies {
     // 导航库
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
+
+    // Compose Navigation
+    implementation("androidx.navigation:navigation-compose:2.7.7")
 
     // JSON 解析库，用于保存和读取工作流
     implementation("com.google.code.gson:gson:2.13.2")

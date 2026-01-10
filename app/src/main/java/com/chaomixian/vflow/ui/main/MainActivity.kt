@@ -81,7 +81,7 @@ class MainActivity : BaseActivity() {
 
         // 配置 AppBar，定义顶级导航目标
         val appBarConfiguration = AppBarConfiguration(
-            setOf(R.id.navigation_home, R.id.navigation_workflows, R.id.navigation_modules, R.id.navigation_settings)
+            setOf(R.id.navigation_home, R.id.navigation_workflows, R.id.navigation_modules, R.id.navigation_repository, R.id.navigation_settings)
         )
         setupActionBarWithNavController(navController, appBarConfiguration) // 将 Toolbar 与 NavController 集成
         navView.setupWithNavController(navController) // 将 BottomNavigationView 与 NavController 集成
