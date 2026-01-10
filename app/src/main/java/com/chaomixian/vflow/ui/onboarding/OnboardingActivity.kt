@@ -3,6 +3,7 @@ package com.chaomixian.vflow.ui.onboarding
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -12,7 +13,6 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,19 +37,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.edit
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.common.BaseActivity
@@ -101,12 +102,51 @@ class OnboardingActivity : BaseActivity() {
     }
 }
 
+// --- 数据模型 ---
+data class OnboardingPageData(
+    val title: String,
+    val description: String,
+    val imageRes: Int,
+    val isPermissionPage: Boolean = false
+)
+
 // --- 主要屏幕 UI ---
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(onFinish: () -> Unit) {
-    val pagerState = rememberPagerState(pageCount = { 5 }) // 5页: 欢迎 -> 概念 -> Shell -> 权限 -> 完成
+    val pages = remember {
+        listOf(
+            OnboardingPageData(
+                "欢迎使用 vFlow",
+                "vFlow 是一款强大的自动化工具，帮助您自动执行重复的手机操作，解放双手。",
+                R.mipmap.ic_launcher_round
+            ),
+            OnboardingPageData(
+                "核心概念",
+                "了解 vFlow 的核心构建概念。",
+                R.drawable.ic_workflows
+            ),
+            OnboardingPageData(
+                "Shell 增强",
+                "配置 Shizuku 或 Root 权限，解锁模拟物理按键、后台截图等高级功能。", // 占位描述，实际由 ShellConfigPage 渲染
+                R.drawable.rounded_terminal_24
+            ),
+            OnboardingPageData(
+                "必要的权限",
+                "为了模拟操作和感知屏幕，vFlow 需要无障碍等核心权限。", // 占位描述，实际由 PermissionsPage 渲染
+                R.drawable.ic_shield,
+                isPermissionPage = true
+            ),
+            OnboardingPageData(
+                "准备就绪",
+                "我们为您准备了一个简单的“Hello World”工作流。点击开始，开启您的自动化之旅！",
+                R.drawable.rounded_play_arrow_24
+            )
+        )
+    }
+
+    val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -133,8 +173,10 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             userScrollEnabled = false // 禁止滑动，强制通过交互进入下一页
         ) { pageIndex ->
             when (pageIndex) {
-                0 -> WelcomePage()
-                1 -> ConceptPage()
+                0 -> OnboardingPageContent(page = pages[pageIndex], onRequestPermissions = {})
+                1 -> ConceptsPage(
+                    onNext = { scope.launch { pagerState.animateScrollToPage(2) } }
+                )
                 2 -> ShellConfigPage(
                     onNext = { scope.launch { pagerState.animateScrollToPage(3) } }
                 )
@@ -145,9 +187,9 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             }
         }
 
-        // 底部导航栏
+        // 底部导航栏 (仅在非特定页面显示通用导航)
         AnimatedVisibility(
-            visible = pagerState.currentPage in listOf(0, 1),
+            visible = pagerState.currentPage == 0,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
@@ -163,7 +205,10 @@ fun OnboardingScreen(onFinish: () -> Unit) {
 // --- 各个页面组件 ---
 
 @Composable
-fun WelcomePage() {
+fun OnboardingPageContent(
+    page: OnboardingPageData,
+    onRequestPermissions: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -171,53 +216,59 @@ fun WelcomePage() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_workflows),
-            contentDescription = null,
+        AndroidView(
             modifier = Modifier
                 .size(120.dp)
-                .padding(bottom = 32.dp),
-            contentScale = ContentScale.Fit
+                .padding(bottom = 48.dp),
+            factory = { context ->
+                ImageView(context).apply {
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    // 消除可能的默认背景色影响
+                    background = null
+                }
+            },
+            update = { imageView ->
+                // 在这里设置资源，确保翻页时更新图标
+                imageView.setImageResource(page.imageRes)
+            }
         )
+
         Text(
-            text = "欢迎来到 vFlow",
-            style = MaterialTheme.typography.displaySmall,
+            text = page.title,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(modifier = Modifier.height( 16.dp))
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
-            text = "强大的安卓自动化工具\n自动处理繁琐的手机操作",
+            text = page.description,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = 28.sp
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 @Composable
-fun ConceptPage() {
+fun ConceptsPage(onNext: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_workflows),
-            contentDescription = null,
-            modifier = Modifier
-                .size(100.dp)
-                .padding(bottom = 32.dp)
-        )
+        Spacer(modifier = Modifier.height(32.dp))
+
         Text(
             text = "工作流与模块",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         ConceptItem(
             icon = Icons.Rounded.Polymer,
@@ -230,29 +281,56 @@ fun ConceptPage() {
             title = "工作流 (Workflow)",
             desc = "将模块拼接在一起，形成完整的自动化任务脚本。"
         )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Button(
+            onClick = onNext,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("继续")
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(Icons.Default.ChevronRight, null)
+        }
     }
 }
 
 @Composable
-fun ConceptItem(icon: ImageVector, title: String, desc: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(28.dp)
+fun ConceptItem(
+    icon: ImageVector,
+    title: String,
+    desc: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
         )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = desc, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = desc,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -261,16 +339,12 @@ fun ConceptItem(icon: ImageVector, title: String, desc: String) {
 fun ShellConfigPage(onNext: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE) }
-    val scope = rememberCoroutineScope() // 获取协程作用域
+    val scope = rememberCoroutineScope()
 
     var selectedMode by remember { mutableStateOf("none") } // none, shizuku, root
     var isVerified by remember { mutableStateOf(false) }
     var autoEnableAcc by remember { mutableStateOf(false) }
     var forceKeepAlive by remember { mutableStateOf(false) }
-
-    // 动画状态
-    val transitionState = remember { MutableTransitionState(false) }
-    transitionState.targetState = true
 
     Column(
         modifier = Modifier
@@ -305,14 +379,14 @@ fun ShellConfigPage(onNext: () -> Unit) {
         // 选项卡片
         ModeSelectionCard(
             title = "Shizuku (推荐)",
-            desc = "无需 Root，更安全。需预先激活 Shizuku。",
+            desc = "配合 Shizuku 使用，需预先激活 Shizuku。",
             isSelected = selectedMode == "shizuku",
             onClick = { selectedMode = "shizuku"; isVerified = false }
         )
         Spacer(modifier = Modifier.height(8.dp))
         ModeSelectionCard(
             title = "Root 权限",
-            desc = "直接获取最高权限，功能最完整。",
+            desc = "获取最高权限，仍然推荐激活 Shizuku 使用。",
             isSelected = selectedMode == "root",
             onClick = { selectedMode = "root"; isVerified = false }
         )
@@ -380,6 +454,7 @@ fun ShellConfigPage(onNext: () -> Unit) {
                                 }
                             }
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
             }
@@ -397,7 +472,8 @@ fun ShellConfigPage(onNext: () -> Unit) {
                     putBoolean("autoEnableAccessibility", autoEnableAcc)
                     putBoolean("forceKeepAliveEnabled", forceKeepAlive)
                 }
-                // 如果开启了选项，在协程中执行
+
+                // 使用 scope.launch 包裹挂起函数
                 scope.launch {
                     if (isVerified) {
                         if (autoEnableAcc) ShellManager.enableAccessibilityService(context)
@@ -425,13 +501,12 @@ fun ModeSelectionCard(title: String, desc: String, isSelected: Boolean, onClick:
     OutlinedCard(
         onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth()
-            .border(borderWidth, borderColor, RoundedCornerShape(12.dp)),
+            .fillMaxWidth(),
         colors = CardDefaults.outlinedCardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface
         ),
-        // 添加 BorderStroke 避免编译错误，虽然我们在 modifier 中用了 border
-        border = BorderStroke(if (isSelected) 0.dp else 1.dp, MaterialTheme.colorScheme.outlineVariant)
+        // 添加 BorderStroke
+        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) borderColor else MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -457,7 +532,7 @@ fun PermissionsPage(onNext: () -> Unit) {
         PermissionManager.ACCESSIBILITY,
         PermissionManager.OVERLAY,
         PermissionManager.NOTIFICATIONS,
-        PermissionManager.IGNORE_BATTERY_OPTIMIZATIONS, // 后台保活关键
+        PermissionManager.IGNORE_BATTERY_OPTIMIZATIONS,
         PermissionManager.STORAGE
     )
 
@@ -501,6 +576,7 @@ fun PermissionsPage(onNext: () -> Unit) {
         ) {
             if (permissionsGranted) {
                 Text("全部就绪，继续")
+                Spacer(modifier = Modifier.width(8.dp))
                 Icon(Icons.Default.Check, null)
             } else {
                 Text("请先授予所有权限")
@@ -627,12 +703,17 @@ fun BottomNavigation(pagerState: PagerState, onNext: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             repeat(pagerState.pageCount) { index ->
                 val isSelected = pagerState.currentPage == index
-                val width by animateFloatAsState(if (isSelected) 24f else 8f, label = "indicatorWidth")
+                val widthFloat by animateFloatAsState(
+                    targetValue = if (isSelected) 24f else 8f,
+                    label = "indicatorWidth"
+                )
+
                 val color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+
                 Box(
                     modifier = Modifier
                         .height(8.dp)
-                        .width(width.dp)
+                        .width(widthFloat.dp)
                         .clip(CircleShape)
                         .background(color)
                 )
