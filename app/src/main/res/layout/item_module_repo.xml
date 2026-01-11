@@ -16,14 +16,39 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:id="@+id/textWorkflowName"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorOnSurface"
-            tools:text="Hello vFlow" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/textModuleName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                tools:text="Hello World 模块" />
+
+            <TextView
+                android:id="@+id/textModuleCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/shape_variable_pill"
+                android:backgroundTint="?attr/colorPrimaryContainer"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnPrimaryContainer"
+                tools:text="用户脚本" />
+
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -32,7 +57,7 @@
             android:layout_marginTop="4dp">
 
             <TextView
-                android:id="@+id/textWorkflowAuthor"
+                android:id="@+id/textModuleAuthor"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
@@ -41,17 +66,17 @@
                 tools:text="作者: ChaoMixian" />
 
             <TextView
-                android:id="@+id/textWorkflowTags"
+                android:id="@+id/textModulePermissions"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
                 android:layout_marginTop="2dp"
-                android:textColor="?attr/colorPrimary"
-                tools:text="Tags: toast, 测试" />
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="权限: 1 项" />
         </LinearLayout>
 
         <TextView
-            android:id="@+id/textWorkflowDescription"
+            android:id="@+id/textModuleDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -59,7 +84,7 @@
             android:lineHeight="24sp"
             android:textColor="?attr/colorOnSurface"
             android:alpha="0.8"
-            tools:text="用于vFlow-Repos测试的工作流" />
+            tools:text="弹出一个 Toast" />
 
         <View
             android:layout_width="match_parent"
@@ -82,19 +107,20 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/textWorkflowVersion"
+                    android:id="@+id/textModuleVersion"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     tools:text="v1.0.0" />
+
                 <TextView
-                    android:id="@+id/textWorkflowID"
+                    android:id="@+id/textModuleID"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurfaceVariant"
-                    tools:text="ID: hello-vflow" />
+                    tools:text="ID: user.custom.hello" />
 
             </LinearLayout>
 

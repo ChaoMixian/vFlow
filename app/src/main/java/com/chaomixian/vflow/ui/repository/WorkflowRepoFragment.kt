@@ -72,7 +72,7 @@ class WorkflowRepoFragment : Fragment() {
         binding.textError.visibility = View.GONE
 
         lifecycleScope.launch {
-            val result = RepositoryApiClient.fetchIndex()
+            val result = RepositoryApiClient.fetchWorkflowIndex()
 
             binding.swipeRefresh.isRefreshing = false
 
