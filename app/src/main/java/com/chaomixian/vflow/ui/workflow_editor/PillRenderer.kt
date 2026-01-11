@@ -22,7 +22,7 @@ object PillRenderer {
     private data class SourceInfo(val outputName: String, val color: Int, val propertyName: String? = null)
 
     // 截断辅助函数
-    private fun truncate(text: String, maxLength: Int = 8): String {
+    private fun truncate(text: String, maxLength: Int = 11): String {
         return if (text.length > maxLength) {
             text.take(maxLength) + "..."
         } else {
@@ -153,8 +153,9 @@ object PillRenderer {
                         ?: ContextCompat.getColor(context, R.color.static_pill_color)
                 }
                 else -> {
-                    // 其他静态值 (如数字)，不进行截断
-                    pillText = " $reference "
+                    // 其他静态值
+                    val truncatedText = truncate(reference)
+                    pillText = " $truncatedText "
                     color = ContextCompat.getColor(context, R.color.static_pill_color)
                 }
             }
