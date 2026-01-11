@@ -223,6 +223,12 @@
             android:label="按键测试器"
             android:theme="@style/Theme.vFlow" />
 
+        <activity
+            android:name=".ui.changelog.ChangelogActivity"
+            android:exported="false"
+            android:label="版本历史"
+            android:theme="@style/Theme.vFlow" />
+
     </application>
 
 </manifest>

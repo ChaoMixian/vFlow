@@ -15,10 +15,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.data.update.UpdateChecker
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.ShellDiagnostic
+import com.chaomixian.vflow.ui.changelog.ChangelogActivity
 import com.chaomixian.vflow.ui.settings.KeyTesterActivity
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -37,6 +39,10 @@ import java.util.*
  * 提供应用相关的设置选项，如动态颜色和权限管理入口。
  */
 class SettingsFragment : Fragment() {
+
+    private var iconClickCount = 0  // 图标点击计数器
+    private var lastClickTime = 0L
+    private var updateInfo: com.chaomixian.vflow.data.update.UpdateInfo? = null
 
     // 新增一个 ActivityResultLauncher 用于处理文件导出
     private val exportLogsLauncher =
@@ -60,6 +66,9 @@ class SettingsFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_settings, container, false)
         val prefs = requireActivity().getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+
+        // 检查更新
+        checkForUpdates(view)
 
         // 动态颜色开关逻辑
         val dynamicColorSwitch = view.findViewById<MaterialSwitch>(R.id.switch_dynamic_color)
@@ -227,12 +236,13 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * 显示“关于”对话框的方法
+     * 显示"关于"对话框的方法
      */
     private fun showAboutDialog() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_about, null)
         val versionTextView = dialogView.findViewById<TextView>(R.id.text_version)
         val githubButton = dialogView.findViewById<Button>(R.id.button_github)
+        val appIcon = dialogView.findViewById<android.widget.ImageView>(R.id.app_icon)
 
         // 动态获取版本名
         try {
@@ -241,6 +251,24 @@ class SettingsFragment : Fragment() {
         } catch (e: PackageManager.NameNotFoundException) {
             e.printStackTrace()
             versionTextView.visibility = View.GONE
+        }
+
+        // 图标点击彩蛋 - 连续点击5次打开版本时间线
+        appIcon.setOnClickListener {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastClickTime < 2000) {  // 2秒内的点击才计数
+                iconClickCount++
+                lastClickTime = currentTime  // 更新最后点击时间
+                if (iconClickCount >= 5) {
+                    // 打开版本时间线
+                    val intent = Intent(requireContext(), ChangelogActivity::class.java)
+                    startActivity(intent)
+                    iconClickCount = 0  // 重置计数
+                }
+            } else {
+                iconClickCount = 1  // 超过时间间隔，重新计数
+                lastClickTime = currentTime  // 更新最后点击时间
+            }
         }
 
         val dialog = MaterialAlertDialogBuilder(requireContext())
@@ -255,5 +283,47 @@ class SettingsFragment : Fragment() {
         }
 
         dialog.show()
+    }
+
+    /**
+     * 检查更新
+     */
+    private fun checkForUpdates(view: View) {
+        lifecycleScope.launch {
+            try {
+                val pInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
+                val currentVersion = pInfo.versionName ?: "1.0.0"
+
+                val result = UpdateChecker.checkUpdate(currentVersion)
+
+                result.onSuccess { info ->
+                    if (info.hasUpdate) {
+                        updateInfo = info
+                        showUpdateCard(view, info)
+                    }
+                }
+            } catch (e: Exception) {
+                // 忽略更新检查失败
+            }
+        }
+    }
+
+    /**
+     * 显示更新卡片
+     */
+    private fun showUpdateCard(view: View, info: com.chaomixian.vflow.data.update.UpdateInfo) {
+        val updateCard = view.findViewById<MaterialCardView>(R.id.card_update_available)
+        updateCard.visibility = View.VISIBLE
+
+        val textUpdateVersion = view.findViewById<TextView>(R.id.text_update_version)
+        val buttonUpdate = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_update)
+
+        textUpdateVersion.text = "发现新版本 v${info.latestVersion}"
+
+        buttonUpdate.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW,
+                "https://github.com/ChaoMixian/vFlow/releases".toUri())
+            startActivity(intent)
+        }
     }
 }
