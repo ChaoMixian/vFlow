@@ -21,6 +21,15 @@ import kotlin.math.roundToInt
 object PillRenderer {
     private data class SourceInfo(val outputName: String, val color: Int, val propertyName: String? = null)
 
+    // 截断辅助函数
+    private fun truncate(text: String, maxLength: Int = 8): String {
+        return if (text.length > maxLength) {
+            text.take(maxLength) + "..."
+        } else {
+            text
+        }
+    }
+
     private fun findSourceInfo(context: Context, variableRef: String, allSteps: List<ActionStep>): SourceInfo? {
         if (!variableRef.isMagicVariable()) return null
 
@@ -109,7 +118,7 @@ object PillRenderer {
         spannable.getSpans(0, spannable.length, PillUtil.ParameterPillSpan::class.java).reversed().forEach { span ->
             val start = spannable.getSpanStart(span)
             val end = spannable.getSpanEnd(span)
-            val reference = spannable.substring(start, end).trim()
+            val reference = spannable.substring(start, end).trim() // 获取不带前后空格的原始引用
 
             val isVariable = reference.isMagicVariable()
             val isNamedVariable = reference.isNamedVariable()
@@ -123,24 +132,29 @@ object PillRenderer {
             when {
                 isNamedVariable -> {
                     val displayName = getDisplayNameForVariableReference(reference, allSteps)
-                    pillText = " $displayName "
+                    val truncatedName = truncate(displayName)
+                    pillText = " $truncatedName "
                     color = ContextCompat.getColor(context, PillUtil.getCategoryColor("数据"))
                 }
                 isVariable -> {
                     val sourceInfo = findSourceInfo(context, reference, allSteps)
                     val baseName = sourceInfo?.outputName ?: "变量"
                     val displayName = if (sourceInfo?.propertyName != null) "$baseName 的 ${sourceInfo.propertyName}" else baseName
+                    val truncatedName = truncate(displayName)
 
-                    pillText = " $displayName "
+                    pillText = " $truncatedName "
                     color = sourceInfo?.color ?: ContextCompat.getColor(context, R.color.variable_pill_color)
                 }
                 isModuleOption -> {
-                    pillText = spannable.subSequence(start, end)
+                    // 对于选项，reference 即为显示值，也需要截断
+                    val truncatedText = truncate(reference)
+                    pillText = " $truncatedText "
                     color = module?.let { ContextCompat.getColor(context, PillUtil.getCategoryColor(it.metadata.category)) }
                         ?: ContextCompat.getColor(context, R.color.static_pill_color)
                 }
                 else -> {
-                    pillText = spannable.subSequence(start, end)
+                    // 其他静态值 (如数字)，不进行截断
+                    pillText = " $reference "
                     color = ContextCompat.getColor(context, R.color.static_pill_color)
                 }
             }
@@ -169,6 +183,7 @@ object PillRenderer {
             if (variableRef != null) {
                 // 使用统一的名称解析逻辑
                 val displayName = getDisplayNameForVariableReference(variableRef, allSteps)
+                val truncatedName = truncate(displayName)
 
                 val color = when {
                     variableRef.isMagicVariable() -> findSourceInfo(context, variableRef, allSteps)?.color ?: ContextCompat.getColor(context, R.color.variable_pill_color)
@@ -179,7 +194,7 @@ object PillRenderer {
                 // 紧凑模式渲染，前后留白由 insertVariablePill 或 render 逻辑控制，这里为富文本预览添加小间距
                 spannable.append(" ")
                 val start = spannable.length
-                val pillTextWithPadding = " $displayName "
+                val pillTextWithPadding = " $truncatedName "
                 spannable.append(pillTextWithPadding)
                 val end = spannable.length
                 spannable.setSpan(RoundedBackgroundSpan(context, color, true), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
