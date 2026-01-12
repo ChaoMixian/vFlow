@@ -121,11 +121,68 @@ jobs:
           done
 
       # 4. 上传构建产物 (Artifact)
-      - name: Upload Artifacts
+      # 上传 Release - universe
+      - name: Upload Release universe
         uses: actions/upload-artifact@v4
         with:
-          name: vFlow-Build-${{ github.sha }}
-          path: final_apks/*
+          name: vFlow-Release-universe-${{ github.sha }}
+          path: final_apks/*_Release_universe.apk
+          retention-days: 90
+
+      # 上传 Release - arm64-v8a
+      - name: Upload Release arm64-v8a
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Release-arm64-v8a-${{ github.sha }}
+          path: final_apks/*_Release_arm64-v8a.apk
+          retention-days: 90
+
+      # 上传 Release - armeabi-v7a
+      - name: Upload Release armeabi-v7a
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Release-armeabi-v7a-${{ github.sha }}
+          path: final_apks/*_Release_armeabi-v7a.apk
+          retention-days: 90
+
+      # 上传 Release - x86
+      - name: Upload Release x86
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Release-x86-${{ github.sha }}
+          path: final_apks/*_Release_x86*.apk
+          retention-days: 90
+
+      # 上传 Debug - universe
+      - name: Upload Debug universe
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Debug-universe-${{ github.sha }}
+          path: final_apks/*_Debug_universe.apk
+          retention-days: 90
+
+      # 上传 Debug - arm64-v8a
+      - name: Upload Debug arm64-v8a
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Debug-arm64-v8a-${{ github.sha }}
+          path: final_apks/*_Debug_arm64-v8a.apk
+          retention-days: 90
+
+      # 上传 Debug - armeabi-v7a
+      - name: Upload Debug armeabi-v7a
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Debug-armeabi-v7a-${{ github.sha }}
+          path: final_apks/*_Debug_armeabi-v7a.apk
+          retention-days: 90
+
+      # 上传 Debug - x86
+      - name: Upload Debug x86
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Debug-x86-${{ github.sha }}
+          path: final_apks/*_Debug_x86*.apk
           retention-days: 90
 
       # 5. 生成 Release 说明 (仅 Tag)
@@ -133,7 +190,13 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         id: release_notes
         run: |
-          # 获取上一个 Tag
+          # 1. 生成自定义标题 (例如: vFlow_136)
+          TAG_NAME=${{ github.ref_name }}
+          # 提取纯数字 (v1.3.6 -> 136)
+          VERSION_CODE=$(echo $TAG_NAME | sed 's/[^0-9]//g')
+          echo "RELEASE_TITLE=vFlow_${VERSION_CODE}" >> $GITHUB_ENV
+
+          # 2. 获取上一个 Tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           
           if [ -z "$PREV_TAG" ]; then
@@ -144,8 +207,9 @@ jobs:
             LOGS=$(git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD)
           fi
           
-          # 将日志写入文件（处理多行内容）
+          # 3. 将日志写入环境文件
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          echo "### What's Changed" >> $GITHUB_ENV
           echo "$LOGS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
@@ -155,6 +219,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: final_apks/*
+          name: ${{ env.RELEASE_TITLE }}
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
