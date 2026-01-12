@@ -211,6 +211,7 @@ jobs:
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
           echo "### What's Changed" >> $GITHUB_ENV
           echo "$LOGS" >> $GITHUB_ENV
+          echo "# 有问题可以加Q群：758795233" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       # 6. 发布 Release (仅 Tag)
