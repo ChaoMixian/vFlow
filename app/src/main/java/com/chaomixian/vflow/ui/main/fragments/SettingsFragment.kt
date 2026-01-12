@@ -20,6 +20,7 @@ import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.ShellDiagnostic
+import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.changelog.ChangelogActivity
 import com.chaomixian.vflow.ui.settings.KeyTesterActivity
 import com.google.android.material.card.MaterialCardView
@@ -83,6 +84,18 @@ class SettingsFragment : Fragment() {
         progressNotificationSwitch.isChecked = prefs.getBoolean("progressNotificationEnabled", true) // 默认开启
         progressNotificationSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean("progressNotificationEnabled", isChecked) }
+        }
+
+        // 后台服务通知开关逻辑
+        val bgServiceNotificationSwitch = view.findViewById<MaterialSwitch>(R.id.switch_background_service_notification)
+        bgServiceNotificationSwitch.isChecked = prefs.getBoolean("backgroundServiceNotificationEnabled", true)
+        bgServiceNotificationSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean("backgroundServiceNotificationEnabled", isChecked) }
+            // 通知服务更新状态
+            val intent = Intent(requireContext(), TriggerService::class.java).apply {
+                action = TriggerService.ACTION_UPDATE_NOTIFICATION
+            }
+            requireContext().startService(intent)
         }
 
         // 强制保活开关逻辑

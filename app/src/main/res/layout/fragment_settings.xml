@@ -126,6 +126,20 @@
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_background_service_notification"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="显示后台服务通知" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="在状态栏显示后台常驻通知。关闭此项可能会导致后台服务被系统杀掉，影响触发器稳定性。"
+                    android:textAppearance="?attr/textAppearanceBodySmall" />
+
+
+                <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_force_keep_alive"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
