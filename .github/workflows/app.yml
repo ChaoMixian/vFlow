@@ -1,0 +1,57 @@
+name: Android Debug Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Rename APK
+        id: rename_apk
+        run: |
+          # 查找生成的 APK 文件
+          APK_PATH=$(find . -type f -name "*-debug.apk" | head -n 1)
+          
+          if [ -z "$APK_PATH" ]; then
+            echo "Error: Debug APK not found!"
+            exit 1
+          fi
+
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          SAFE_BRANCH_NAME=$(echo ${{ github.ref_name }} | sed 's/[^a-zA-Z0-9._-]/-/g')
+          NEW_FILENAME="vFlow_${SAFE_BRANCH_NAME}_${SHORT_SHA}.apk"
+          
+          echo "Renaming $APK_PATH to $NEW_FILENAME"
+          mv "$APK_PATH" "$NEW_FILENAME"
+          
+          # 输出变量供下一步使用
+          echo "apk_path=$NEW_FILENAME" >> $GITHUB_OUTPUT
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rename_apk.outputs.apk_path }}
+          path: ${{ steps.rename_apk.outputs.apk_path }}
+          compression-level: 9
+          retention-days: 90
