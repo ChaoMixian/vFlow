@@ -133,6 +133,7 @@ object ModuleRegistry {
         register(ToastModule())
         register(LuaModule())
         register(LaunchAppModule())
+        register(CloseAppModule())
         register(GetClipboardModule())
         register(SetClipboardModule())
         register(ShareModule())
