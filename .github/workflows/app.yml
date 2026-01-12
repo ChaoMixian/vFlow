@@ -34,7 +34,7 @@ jobs:
 
       # 1. 恢复签名文件 (仅在 Secrets 存在时执行，防止 Fork 仓库报错)
       - name: Decode Keystore
-        if: ${{ secrets.KEYSTORE != '' }}
+        if: secrets.KEYSTORE != ''
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/key.jks
           echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" > signing.properties
