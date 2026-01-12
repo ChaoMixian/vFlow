@@ -6,11 +6,13 @@ package com.chaomixian.vflow.core.workflow.module.system
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
+import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 
 /**
  * “快速查看”模块。
@@ -22,12 +24,15 @@ class QuickViewModule : BaseModule() {
     override val metadata = ActionMetadata(
         name = "快速查看",
         description = "在悬浮窗中显示文本、数字、图片等各种类型的内容。",
-        iconRes = R.drawable.rounded_preview_24, // 使用新创建的图标
-        category = "应用与系统" // 更新分类
+        iconRes = R.drawable.rounded_preview_24,
+        category = "应用与系统"
     )
 
     // 此模块需要悬浮窗权限才能显示UI
     override val requiredPermissions = listOf(PermissionManager.OVERLAY)
+
+    // 使用 RichTextUIProvider 提供富文本预览
+    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("content")
 
     /**
      * 定义模块的输入参数。
@@ -38,7 +43,8 @@ class QuickViewModule : BaseModule() {
             name = "内容",
             staticType = ParameterType.ANY, // 接受任何类型的输入
             defaultValue = "",
-            acceptsMagicVariable = true // 主要用于接收魔法变量
+            acceptsMagicVariable = true,
+            supportsRichText = true
         )
     )
 
@@ -53,6 +59,15 @@ class QuickViewModule : BaseModule() {
      * 生成模块摘要。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val rawContent = step.parameters["content"]?.toString() ?: ""
+
+        // 检查内容是否为复杂内容（包含变量或其他文本的组合）
+        if (VariableResolver.isComplex(rawContent)) {
+            // 复杂内容：只显示模块名称，详细内容由 UIProvider 在预览中显示
+            return metadata.name
+        }
+
+        // 简单内容：显示完整的摘要（带药丸）
         val contentPill = PillUtil.createPillFromParam(
             step.parameters["content"],
             getInputs().find { it.id == "content" }
