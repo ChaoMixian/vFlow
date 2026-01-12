@@ -7,6 +7,7 @@ package com.chaomixian.vflow.ui.app_picker
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
@@ -105,26 +106,46 @@ class AppPickerActivity : BaseActivity() {
     /**
      * 异步加载设备上的应用列表。
      * 使用协程在IO线程执行耗时的应用查询操作，避免阻塞主线程。
+     * 在 Android 11+ 上，使用 queryIntentActivities() 以绕过包可见性限制。
      */
     private fun loadApps() {
         // 创建一个在IO线程池中运行的协程
         CoroutineScope(Dispatchers.IO).launch {
             val pm = packageManager
-            // 获取已安装应用
-            val packages = pm.getInstalledApplications(0)
 
-            // 过滤、映射和排序应用列表
-            val appList = packages
-                // 仅显示有启动入口的应用
-                .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
-                .map { appInfo ->
-                    AppInfo(
-                        appName = appInfo.loadLabel(pm).toString(), // 应用名称
-                        packageName = appInfo.packageName,         // 应用包名
-                        icon = appInfo.loadIcon(pm)                  // 应用图标
-                    )
+            // 使用 Intent 查询所有可启动的应用
+            // 这种方法在 Android 11+ 上更可靠，因为它使用 <queries> 声明
+            val mainIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+
+            // 使用 MATCH_ALL 标志来获取所有匹配的应用（包括导出的）
+            val resolveInfos = pm.queryIntentActivities(
+                mainIntent,
+                PackageManager.MATCH_ALL or PackageManager.GET_RESOLVED_FILTER
+            )
+
+            // 使用 Set 去重（同一个应用可能有多个 LAUNCHER Activity）
+            val uniquePackages = mutableMapOf<String, ResolveInfo>()
+
+            for (resolveInfo in resolveInfos) {
+                val packageName = resolveInfo.activityInfo.packageName
+
+                // 只保留每个包的第一个 ResolveInfo
+                if (!uniquePackages.containsKey(packageName)) {
+                    uniquePackages[packageName] = resolveInfo
                 }
-                .sortedBy { it.appName.lowercase(Locale.getDefault()) }
+            }
+
+            // 转换为 AppInfo 列表
+            val appList = uniquePackages.values.map { resolveInfo ->
+                val appInfo = resolveInfo.activityInfo.applicationInfo
+                AppInfo(
+                    appName = appInfo.loadLabel(pm).toString(),
+                    packageName = appInfo.packageName,
+                    icon = appInfo.loadIcon(pm)
+                )
+            }.sortedBy { it.appName.lowercase(Locale.getDefault()) }
 
             // 切换回主线程来更新UI
             withContext(Dispatchers.Main) {

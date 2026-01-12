@@ -43,9 +43,18 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
     <queries>
+        <!-- 查询所有带启动入口的应用 -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
+        <!-- 查询所有应用（用于显示完整应用列表） -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
+        <!-- 查询所有可启动的 Activity -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
         </intent>
     </queries>
 
