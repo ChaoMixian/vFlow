@@ -185,18 +185,48 @@ jobs:
           path: final_apks/*_Debug_x86*.apk
           retention-days: 90
 
-      # 5. 生成 Release 说明 (仅 Tag)
+      # 5. 生成 Release 说明 (包含下载表格和更新日志)
       - name: Generate Release Notes
         if: startsWith(github.ref, 'refs/tags/')
         id: release_notes
         run: |
-          # 1. 生成自定义标题 (例如: vFlow_136)
+          # 1. 基础变量计算
           TAG_NAME=${{ github.ref_name }}
           # 提取纯数字 (v1.3.6 -> 136)
           VERSION_CODE=$(echo $TAG_NAME | sed 's/[^0-9]//g')
+          # 设置 Release 标题变量
           echo "RELEASE_TITLE=vFlow_${VERSION_CODE}" >> $GITHUB_ENV
+          
+          # 2. 构建下载链接的基础 URL
+          # 格式: https://github.com/USER/REPO/releases/download/TAG/FILENAME
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/$TAG_NAME"
+          
+          # 定义文件名 (必须与 Step 3 中的重命名逻辑完全一致)
+          FILE_UNI="vFlow_${VERSION_CODE}_Release_universe.apk"
+          FILE_ARM64="vFlow_${VERSION_CODE}_Release_arm64-v8a.apk"
+          FILE_ARMV7="vFlow_${VERSION_CODE}_Release_armeabi-v7a.apk"
+          FILE_X86_64="vFlow_${VERSION_CODE}_Release_x86_64.apk"
+          FILE_DEBUG="vFlow_${VERSION_CODE}_Debug_universe.apk"
 
-          # 2. 获取上一个 Tag
+          # 3. 构建 Markdown 表格
+          # 使用 EOF 块来构建多行字符串
+          DOWNLOAD_TABLE=$(cat <<EOF
+          ## 📥 下载地址 (Downloads)
+
+          > **🎉 如果你不清楚这些，请直接下载第一行的 "Universal" 版本。**
+
+          | 版本 (Type) | 架构 (Arch) | 说明 (Description) | 下载 (Link) |
+          | :--- | :--- | :--- | :--- |
+          | **Release** | **Universal** | 🌟 **推荐**。包含所有架构，兼容性最好，安装无忧。 | [**点击下载**]($BASE_URL/$FILE_UNI) |
+          | Release | arm64-v8a | ⚡️ **现代手机**。体积较小，适用于近5年的主流安卓机。 | [点击下载]($BASE_URL/$FILE_ARM64) |
+          | Release | armeabi-v7a | 📱 **老旧手机**。适用于较老的设备或特殊机型。 | [点击下载]($BASE_URL/$FILE_ARMV7) |
+          | Release | x86_64 | 💻 **模拟器**。适用于PC上的安卓模拟器。 | [点击下载]($BASE_URL/$FILE_X86_64) |
+          | Debug | Universal | 🐞 **调试版**。包含调试日志，未混淆，用于排查 Bug。 | [点击下载]($BASE_URL/$FILE_DEBUG) |
+          
+          EOF
+          )
+
+          # 4. 获取 Git Commit 日志 (更新日志)
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           
           if [ -z "$PREV_TAG" ]; then
@@ -207,11 +237,13 @@ jobs:
             LOGS=$(git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD)
           fi
           
-          # 3. 将日志写入环境文件
+          # 5. 组合最终内容并写入环境变量
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
-          echo "### What's Changed" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "## 📝 更新日志 (Changelog)" >> $GITHUB_ENV
           echo "$LOGS" >> $GITHUB_ENV
-          echo "# 有问题可以加Q群：758795233" >> $GITHUB_ENV
+          echo "$DOWNLOAD_TABLE" >> $GITHUB_ENV
+          echo "## 有问题可以加Q群：758795233" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       # 6. 发布 Release (仅 Tag)

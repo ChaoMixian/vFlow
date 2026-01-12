@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -19,6 +22,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = file("../key.jks")
+            val signingPropsFile = file("../signing.properties")
+
+            if (keystoreFile.exists() && signingPropsFile.exists()) {
+                val props = Properties()
+                props.load(FileInputStream(signingPropsFile))
+
+                storeFile = keystoreFile
+                storePassword = props.getProperty("KEYSTORE_PASSWORD")
+                keyAlias = props.getProperty("KEYSTORE_ALIAS")
+                keyPassword = props.getProperty("KEY_PASSWORD")
+            } else {
+                println("⚠️ Release 签名文件未找到")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -27,6 +49,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (file("../signing.properties").exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                println("⚠️ signing.properties 未找到")
+            }
         }
     }
     compileOptions {
