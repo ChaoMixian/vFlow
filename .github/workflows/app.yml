@@ -1,19 +1,24 @@
-name: Android Debug Build
+name: Android CI/CD
 
 on:
   push:
-  pull_request:
+    tags:
+      - 'v*'  # 推送 v1.3.6 等 tag 时触发
+    branches:
+      - '**'  # 推送任意分支时触发
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build APKs
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # 允许创建 Release
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # 必须设为 0，否则无法获取 commit log 生成更新日志
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -21,37 +26,125 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # 使用官方 Gradle Action，自带构建缓存功能
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: wrapper
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
-
-      - name: Rename APK
-        id: rename_apk
+      # 1. 恢复签名文件 (仅在 Secrets 存在时执行，防止 Fork 仓库报错)
+      - name: Decode Keystore
+        if: ${{ secrets.KEYSTORE != '' }}
         run: |
-          # 查找生成的 APK 文件
-          APK_PATH=$(find . -type f -name "*-debug.apk" | head -n 1)
+          echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/key.jks
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" > signing.properties
+          echo "KEYSTORE_ALIAS=${{ secrets.KEYSTORE_ALIAS }}" >> signing.properties
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> signing.properties
+
+      # 2. 执行编译 (同时生成 Debug 和 Release，包含所有架构)
+      - name: Build with Gradle
+        run: ./gradlew assembleDebug assembleRelease
+
+      # 3. 核心步骤：重命名 APK
+      - name: Rename APKs
+        id: rename_apks
+        run: |
+          # 准备变量
+          DATE_STR=$(date +'%Y%m%d')
+          COMMIT_HASH=$(echo ${{ github.sha }} | cut -c1-8)
+          IS_TAG=${{ startsWith(github.ref, 'refs/tags/') }}
           
-          if [ -z "$APK_PATH" ]; then
-            echo "Error: Debug APK not found!"
-            exit 1
+          # 如果是 Tag (v1.3.6)，提取数字版本号 (136)
+          if [ "$IS_TAG" = "true" ]; then
+            TAG_NAME=${{ github.ref_name }}
+            VERSION_STR=$(echo $TAG_NAME | sed 's/[^0-9]//g') # 提取纯数字
+            echo "Building Release for Tag: $TAG_NAME (Version Code: $VERSION_STR)"
+          else
+            echo "Building for Commit: $COMMIT_HASH"
           fi
 
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          SAFE_BRANCH_NAME=$(echo ${{ github.ref_name }} | sed 's/[^a-zA-Z0-9._-]/-/g')
-          NEW_FILENAME="vFlow_${SAFE_BRANCH_NAME}_${SHORT_SHA}.apk"
-          
-          echo "Renaming $APK_PATH to $NEW_FILENAME"
-          mv "$APK_PATH" "$NEW_FILENAME"
-          
-          # 输出变量供下一步使用
-          echo "apk_path=$NEW_FILENAME" >> $GITHUB_OUTPUT
+          # 创建输出目录
+          mkdir -p final_apks
 
-      - name: Upload Artifact
+          # 遍历所有生成的 APK 文件
+          # 排除中间文件，只找 outputs 目录下的 apk
+          find . -name "*.apk" -path "*/build/outputs/apk/*" | while read apk_file; do
+            echo "Processing: $apk_file"
+          
+            # 判断构建类型 (Debug / Release)
+            if [[ "$apk_file" == *"release"* ]]; then
+              BUILD_TYPE="Release"
+            else
+              BUILD_TYPE="Debug"
+            fi
+          
+            # 判断架构 (universal, arm64-v8a, etc...)
+            if [[ "$apk_file" == *"universal"* ]]; then
+              ARCH="universe"
+            elif [[ "$apk_file" == *"arm64-v8a"* ]]; then
+              ARCH="arm64-v8a"
+            elif [[ "$apk_file" == *"armeabi-v7a"* ]]; then
+              ARCH="armeabi-v7a"
+            elif [[ "$apk_file" == *"x86_64"* ]]; then
+              ARCH="x86_64"
+            elif [[ "$apk_file" == *"x86"* ]]; then
+              ARCH="x86"
+            else
+              # 如果没有 split，通常就是 universal
+              ARCH="universe"
+            fi
+          
+            # 拼接新文件名
+            if [ "$IS_TAG" = "true" ]; then
+              # 格式: vFlow_136_Release_universe.apk
+              NEW_NAME="vFlow_${VERSION_STR}_${BUILD_TYPE}_${ARCH}.apk"
+            else
+              # 格式: vFlow_20260113_c13bb95d_Release_universe.apk
+              NEW_NAME="vFlow_${DATE_STR}_${COMMIT_HASH}_${BUILD_TYPE}_${ARCH}.apk"
+            fi
+          
+            # 移动并重命名
+            cp "$apk_file" "final_apks/$NEW_NAME"
+            echo "Renamed to: $NEW_NAME"
+          done
+
+      # 4. 上传构建产物 (Artifact)
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.rename_apk.outputs.apk_path }}
-          path: ${{ steps.rename_apk.outputs.apk_path }}
-          compression-level: 9
+          name: vFlow-Build-${{ github.sha }}
+          path: final_apks/*
           retention-days: 90
+
+      # 5. 生成 Release 说明 (仅 Tag)
+      - name: Generate Release Notes
+        if: startsWith(github.ref, 'refs/tags/')
+        id: release_notes
+        run: |
+          # 获取上一个 Tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found. Using all commits."
+            LOGS=$(git log --pretty=format:"* %s (%h)")
+          else
+            echo "Generating notes from $PREV_TAG to ${{ github.ref_name }}"
+            LOGS=$(git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD)
+          fi
+          
+          # 将日志写入文件（处理多行内容）
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          echo "$LOGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      # 6. 发布 Release (仅 Tag)
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: final_apks/*
+          body: ${{ env.RELEASE_BODY }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
