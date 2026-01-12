@@ -34,12 +34,24 @@ jobs:
 
       # 1. 恢复签名文件 (仅在 Secrets 存在时执行，防止 Fork 仓库报错)
       - name: Decode Keystore
-        if: secrets.KEYSTORE != ''
+        env:
+          ENCODED_KEYSTORE: ${{ secrets.KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/key.jks
-          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" > signing.properties
-          echo "KEYSTORE_ALIAS=${{ secrets.KEYSTORE_ALIAS }}" >> signing.properties
-          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> signing.properties
+          if [ -n "$ENCODED_KEYSTORE" ]; then
+            echo "Decoding Keystore..."
+            # 生成到根目录
+            echo "$ENCODED_KEYSTORE" | base64 --decode > key.jks
+          
+            # 生成配置文件到根目录
+            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" > signing.properties
+            echo "KEYSTORE_ALIAS=$KEYSTORE_ALIAS" >> signing.properties
+            echo "KEY_PASSWORD=$KEY_PASSWORD" >> signing.properties
+          else
+            echo "Warning: secrets.KEYSTORE is not defined. Skipping signing configuration."
+          fi
 
       # 2. 执行编译 (同时生成 Debug 和 Release，包含所有架构)
       - name: Build with Gradle
