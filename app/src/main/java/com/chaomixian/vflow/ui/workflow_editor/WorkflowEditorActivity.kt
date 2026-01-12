@@ -652,6 +652,10 @@ class WorkflowEditorActivity : BaseActivity() {
                     }
                 }
             },
+            // 双击复制的回调实现
+            onDuplicateClick = { position ->
+                duplicateStepOrBlock(position)
+            },
             onParameterPillClick = { position, parameterId ->
                 handleParameterPillClick(position, parameterId)
             },
@@ -667,6 +671,38 @@ class WorkflowEditorActivity : BaseActivity() {
             layoutManager = LinearLayoutManager(this@WorkflowEditorActivity)
             adapter = actionStepAdapter
         }
+    }
+
+    /**
+     * 复制单个步骤或整个积木块
+     */
+    private fun duplicateStepOrBlock(position: Int) {
+        if (position !in actionSteps.indices) return
+
+        // 禁止复制触发器。
+        if (position == 0) {
+            Toast.makeText(this, "触发器无法复制", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 使用现有的逻辑找到块的范围
+        val (blockStart, blockEnd) = findBlockRangeInList(actionSteps, position)
+
+        // 创建副本列表
+        val stepsToDuplicate = actionSteps.subList(blockStart, blockEnd + 1).map { step ->
+            // 必须为副本生成新的 UUID，否则会导致变量引用混乱和 DiffUtil 错误
+            step.copy(id = UUID.randomUUID().toString())
+        }
+
+        // 插入到原块的后面
+        val insertPosition = blockEnd + 1
+        actionSteps.addAll(insertPosition, stepsToDuplicate)
+
+        recalculateAndNotify()
+        Toast.makeText(this, "已复制 ${stepsToDuplicate.size} 个步骤", Toast.LENGTH_SHORT).show()
+
+        // 滚动到新复制的位置
+        recyclerView.smoothScrollToPosition(insertPosition)
     }
 
     /**

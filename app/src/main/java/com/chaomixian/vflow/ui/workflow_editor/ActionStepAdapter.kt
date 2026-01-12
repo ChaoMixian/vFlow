@@ -6,6 +6,8 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -33,6 +35,7 @@ class ActionStepAdapter(
     private val actionSteps: MutableList<ActionStep>,
     private val onEditClick: (position: Int, inputId: String?) -> Unit,
     private val onDeleteClick: (position: Int) -> Unit,
+    private val onDuplicateClick: (position: Int) -> Unit, // 新增：双击复制回调
     private val onParameterPillClick: (position: Int, parameterId: String) -> Unit,
     private val onStartActivityForResult: (position: Int, Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit
 ) : RecyclerView.Adapter<ActionStepAdapter.ActionStepViewHolder>() {
@@ -63,6 +66,10 @@ class ActionStepAdapter(
         private val indentSpace: Space = itemView.findViewById(R.id.indent_space)
         private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container)
         private val categoryColorBar: View = itemView.findViewById(R.id.category_color_bar)
+
+        // 用于处理点击事件的 Handler
+        private val handler = Handler(Looper.getMainLooper())
+        private var clickCount = 0
 
         fun bind(step: ActionStep, position: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
@@ -123,9 +130,27 @@ class ActionStepAdapter(
             deleteButton.setOnClickListener {
                 if(adapterPosition != RecyclerView.NO_POSITION) onDeleteClick(adapterPosition)
             }
+
+            // --- 实现单击编辑、双击复制逻辑 ---
             itemView.setOnClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    onEditClick(adapterPosition, null)
+                clickCount++
+                if (clickCount == 1) {
+                    // 第一次点击，延迟 250ms 执行，等待可能的第二次点击
+                    handler.postDelayed({
+                        if (clickCount == 1) {
+                            // 确认是单击 -> 编辑
+                            if (adapterPosition != RecyclerView.NO_POSITION) {
+                                onEditClick(adapterPosition, null)
+                            }
+                        }
+                        clickCount = 0 // 重置
+                    }, 250)
+                } else if (clickCount == 2) {
+                    // 第二次点击 -> 双击 -> 复制
+                    clickCount = 0 // 重置
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        onDuplicateClick(adapterPosition)
+                    }
                 }
             }
 
