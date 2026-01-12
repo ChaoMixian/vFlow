@@ -11,19 +11,20 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
+import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleUIProvider
+import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
+import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 
 // ViewHolder 用于缓存视图引用
 class HttpRequestViewHolder(view: View) : CustomEditorViewHolder(view) {
-    val urlEditText: RichTextView = view.findViewById(R.id.http_edit_text_url)
-    val urlMagicButton: ImageButton = view.findViewById(R.id.btn_url_magic)
-
     val methodSpinner: Spinner = view.findViewById(R.id.http_spinner_method)
 
     val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
@@ -57,9 +58,30 @@ class HttpRequestViewHolder(view: View) : CustomEditorViewHolder(view) {
 
 class HttpRequestModuleUIProvider : ModuleUIProvider {
 
-    override fun getHandledInputIds(): Set<String> = setOf("url", "method", "headers", "query_params", "body_type", "body", "timeout", "show_advanced")
+    // URL 不在这里处理，让它使用标准控件
+    override fun getHandledInputIds(): Set<String> = setOf("method", "headers", "query_params", "body_type", "body", "show_advanced")
 
-    override fun createPreview(context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>, onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?): View? = null
+    override fun createPreview(
+        context: Context,
+        parent: ViewGroup,
+        step: ActionStep,
+        allSteps: List<ActionStep>,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): View? {
+        // 为复杂的 URL 创建富文本预览框
+        val rawUrl = step.parameters["url"]?.toString() ?: ""
+        if (VariableResolver.isComplex(rawUrl)) {
+            val inflater = LayoutInflater.from(context)
+            val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
+            val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
+
+            val spannable = PillRenderer.renderRichTextToSpannable(context, rawUrl, allSteps)
+            textView.text = spannable
+
+            return previewView
+        }
+        return null
+    }
 
     override fun createEditor(
         context: Context,
@@ -75,15 +97,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
         holder.allSteps = allSteps
         val module = HttpRequestModule()
 
-        // 初始化 URL
-        val urlValue = currentParameters["url"] as? String ?: ""
-        holder.urlEditText.setRichText(urlValue) { variableRef ->
-            PillUtil.createPillDrawable(context, PillRenderer.getDisplayNameForVariableReference(variableRef, allSteps ?: emptyList()))
-        }
-        // 绑定 URL 变量按钮
-        holder.urlMagicButton.setOnClickListener {
-            onMagicVariableRequested?.invoke("url")
-        }
+        // URL 由标准控件处理，不在自定义UI中创建
 
         // 初始化 Method Spinner
         holder.methodSpinner.adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, module.methodOptions).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
@@ -161,14 +175,15 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as HttpRequestViewHolder
+
+        // URL 由标准控件处理，不在这里读取
+
         val body = when(h.bodyTypeSpinner.selectedItem.toString()) {
             "JSON", "表单" -> h.bodyAdapter?.getItemsAsMap()
             "原始文本" -> h.rawBodyRichTextView?.getRawText()
             else -> null
         }
         return mapOf(
-            // 使用 getRawText() 读取 URL
-            "url" to h.urlEditText.getRawText(),
             "method" to h.methodSpinner.selectedItem.toString(),
             "headers" to (h.headersAdapter?.getItemsAsMap() ?: emptyMap<String, String>()),
             "query_params" to (h.queryParamsAdapter?.getItemsAsMap() ?: emptyMap<String, String>()),

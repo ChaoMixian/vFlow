@@ -176,77 +176,37 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             visibility = View.GONE
         }
 
-        // --- 重试次数 (标题行：标签 + 数值) ---
-        val countHeader = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        // 标签 (占据左侧空间)
-        val tvRetryCount = TextView(context).apply {
-            text = "重试次数"
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        // 数值 (靠右显示)
-        val tvRetryCountVal = TextView(context).apply {
-            text = "3 次"
-            gravity = Gravity.END
-        }
-        countHeader.addView(tvRetryCount)
-        countHeader.addView(tvRetryCountVal)
-
-        // Slider
-        val sliderRetryCount = Slider(context).apply {
-            valueFrom = 1f
-            valueTo = 10f
-            stepSize = 1f
-        }
-
-        retryContainer.addView(countHeader)
-        retryContainer.addView(sliderRetryCount)
-
-
-        // --- 重试间隔 ---
-        val intervalHeader = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 24 // 增加间距区分上下两个滑块
-            }
-        }
-
-        // 标签
-        val tvRetryInterval = TextView(context).apply {
-            text = "重试间隔 (毫秒)"
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        // 数值
-        val tvRetryIntervalVal = TextView(context).apply {
-            text = "1000 ms"
-            gravity = Gravity.END
-        }
-        intervalHeader.addView(tvRetryInterval)
-        intervalHeader.addView(tvRetryIntervalVal)
-
-        // Slider
-        val sliderRetryInterval = Slider(context).apply {
-            valueFrom = 100f
-            valueTo = 5000f
-            stepSize = 100f
-        }
-
-        retryContainer.addView(intervalHeader)
-        retryContainer.addView(sliderRetryInterval)
-
         // 恢复状态
         val currentPolicy = currentParameters[KEY_ERROR_POLICY] as? String ?: POLICY_STOP
         val currentRetryCount = (currentParameters[KEY_RETRY_COUNT] as? Number)?.toFloat() ?: 3f
         val currentRetryInterval = (currentParameters[KEY_RETRY_INTERVAL] as? Number)?.toFloat() ?: 1000f
+
+        // --- 重试次数 ---
+        val sliderRetryCount = StandardControlFactory.createSliderWithLabel(
+            context = context,
+            label = "重试次数",
+            valueFrom = 1f,
+            valueTo = 10f,
+            stepSize = 1f,
+            currentValue = currentRetryCount,
+            valueFormatter = { "${it.toInt()} 次" }
+        )
+        retryContainer.addView(sliderRetryCount)
+
+        // --- 重试间隔 ---
+        val sliderRetryInterval = StandardControlFactory.createSliderWithLabel(
+            context = context,
+            label = "重试间隔 (毫秒)",
+            valueFrom = 100f,
+            valueTo = 5000f,
+            stepSize = 100f,
+            currentValue = currentRetryInterval,
+            valueFormatter = { "${it.toLong()} ms" }
+        ).apply {
+            // 增加间距区分上下两个滑块
+            (layoutParams as LinearLayout.LayoutParams).topMargin = (24 * resources.displayMetrics.density).toInt()
+        }
+        retryContainer.addView(sliderRetryInterval)
 
         when (currentPolicy) {
             POLICY_SKIP -> rbSkip.isChecked = true
@@ -255,23 +215,20 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
         retryContainer.isVisible = (currentPolicy == POLICY_RETRY)
 
-        sliderRetryCount.value = currentRetryCount
-        sliderRetryInterval.value = currentRetryInterval
-        tvRetryCountVal.text = "${currentRetryCount.toInt()} 次"
-        tvRetryIntervalVal.text = "${currentRetryInterval.toLong()} ms"
+        // 获取滑块引用
+        val sliderRetryCountView = sliderRetryCount.getChildAt(1) as Slider
+        val sliderRetryIntervalView = sliderRetryInterval.getChildAt(1) as Slider
 
         // 监听器
         radioGroup.setOnCheckedChangeListener { _, checkedId ->
             retryContainer.isVisible = (checkedId == rbRetry.id)
         }
-        sliderRetryCount.addOnChangeListener { _, value, _ -> tvRetryCountVal.text = "${value.toInt()} 次" }
-        sliderRetryInterval.addOnChangeListener { _, value, _ -> tvRetryIntervalVal.text = "${value.toLong()} ms" }
 
         // 保存引用
         this.errorPolicyGroup = radioGroup
         this.retryOptionsContainer = retryContainer
-        this.retryCountSlider = sliderRetryCount
-        this.retryIntervalSlider = sliderRetryInterval
+        this.retryCountSlider = sliderRetryCountView
+        this.retryIntervalSlider = sliderRetryIntervalView
 
         errorSettingsContent?.addView(radioGroup)
         errorSettingsContent?.addView(retryContainer)
@@ -488,53 +445,16 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
      * 为输入参数创建视图。现在会加载不带工具栏的富文本编辑器。
      */
     private fun createViewForInputDefinition(inputDef: InputDefinition, parent: ViewGroup): View {
-        val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, parent, false)
-        row.findViewById<TextView>(R.id.input_name).text = inputDef.name
-        val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
-        val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
-        val currentValue = currentParameters[inputDef.id]
-
-        // 同时检查是否接受魔法变量和命名变量
-        magicButton.isVisible = inputDef.acceptsMagicVariable || inputDef.acceptsNamedVariable
-        magicButton.setOnClickListener {
-            readParametersFromUi()
-            onMagicVariableRequested?.invoke(inputDef.id)
-        }
-
-        valueContainer.removeAllViews()
-
-        // 情况一：输入框支持富文本
-        if (inputDef.supportsRichText) {
-            val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor, valueContainer, false)
-            val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
-            richTextView.minHeight = (80 * resources.displayMetrics.density).toInt()
-
-            // 设置初始文本，并将变量引用渲染成“药丸”
-            richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
-                // 使用 PillRenderer 的逻辑，支持属性解析
-                val name = PillRenderer.getDisplayNameForVariableReference(variableRef, allSteps ?: emptyList())
-                PillUtil.createPillDrawable(requireContext(), name)
-            }
-
-            valueContainer.addView(richEditorLayout)
-            // 情况二：不支持富文本，但当前值是一个变量引用
-        } else if (isVariableReference(currentValue)) {
-            val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
-            val pillText = pill.findViewById<TextView>(R.id.pill_text)
-            // 使用 PillRenderer 的逻辑，支持属性解析
-            pillText.text = PillRenderer.getDisplayNameForVariableReference(currentValue as String, allSteps ?: emptyList())
-            pill.setOnClickListener {
+        return StandardControlFactory.createParameterInputRow(
+            context = requireContext(),
+            inputDef = inputDef,
+            currentValue = currentParameters[inputDef.id],
+            allSteps = allSteps,
+            onMagicVariableRequested = { inputId ->
                 readParametersFromUi()
-                onMagicVariableRequested?.invoke(inputDef.id)
+                this.onMagicVariableRequested?.invoke(inputId)
             }
-            valueContainer.addView(pill)
-            // 情况三：不支持富文本，且当前值是静态值
-        } else {
-            val staticInputView = createBaseViewForInputType(inputDef, currentValue)
-            valueContainer.addView(staticInputView)
-        }
-        row.tag = inputDef.id
-        return row
+        )
     }
 
     fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {
@@ -543,8 +463,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
     private fun isVariableReference(value: Any?): Boolean {
-        if (value !is String) return false
-        return value.isMagicVariable() || value.isNamedVariable()
+        return StandardControlFactory.isVariableReference(value)
     }
 
     private fun readParametersFromUi() {
@@ -566,15 +485,10 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
             val staticView = valueContainer.getChildAt(0)
 
-            val value: Any? = if (inputDef?.supportsRichText == true && staticView is ViewGroup) {
-                staticView.findViewById<RichTextView>(R.id.rich_text_view)?.getRawText()
+            val value: Any? = if (inputDef != null) {
+                StandardControlFactory.readValueFromInputRow(view, inputDef)
             } else {
-                when(staticView) {
-                    is TextInputLayout -> staticView.editText?.text?.toString()
-                    is SwitchCompat -> staticView.isChecked
-                    is Spinner -> staticView.selectedItem?.toString()
-                    else -> null
-                }
+                null
             }
 
             if (value != null) {
@@ -610,8 +524,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
         // 如果在通用视图中找不到，则尝试在自定义编辑器视图中查找
         if (richTextView == null && customEditorHolder != null) {
-            richTextView = customEditorHolder?.view?.findViewWithTag<RichTextView>("rich_text_view_value")
-            // 如果上面的找不到，再尝试用ID查找作为后备
+            // 首先尝试用 inputId 作为 tag 查找（标准控件使用的方式）
+            richTextView = customEditorHolder?.view?.findViewWithTag<RichTextView>(inputId)
+            // 如果找不到，尝试旧的方式
+            if (richTextView == null) {
+                richTextView = customEditorHolder?.view?.findViewWithTag<RichTextView>("rich_text_view_value")
+            }
+            // 最后尝试用ID查找作为后备
             if (richTextView == null) {
                 richTextView = customEditorHolder?.view?.findViewById(R.id.rich_text_view)
             }
@@ -711,27 +630,19 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
     private fun createBaseViewForInputType(inputDef: InputDefinition, currentValue: Any?): View {
-        return when (inputDef.staticType) {
-            ParameterType.BOOLEAN -> SwitchCompat(requireContext()).apply {
-                isChecked = currentValue as? Boolean ?: (inputDef.defaultValue as? Boolean ?: false)
-                // 添加监听器以触发参数更新流程
-                setOnCheckedChangeListener { _, isChecked ->
+        val view = StandardControlFactory.createBaseViewForInputType(requireContext(), inputDef, currentValue)
+
+        // 添加参数变更监听器
+        when (view) {
+            is SwitchCompat -> {
+                view.setOnCheckedChangeListener { _, isChecked ->
                     parameterUpdated(inputDef.id, isChecked)
                 }
             }
-            ParameterType.ENUM -> Spinner(requireContext()).apply {
-                adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, inputDef.options).also {
-                    it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                }
-                val currentEnum = currentValue as? String ?: inputDef.defaultValue as? String
-                val selectionIndex = inputDef.options.indexOf(currentEnum)
-                if (selectionIndex != -1) setSelection(selectionIndex)
-
-                // 修改监听器以调用新的参数更新流程
-                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            is Spinner -> {
+                view.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
                         val selectedValue = inputDef.options.getOrNull(position)
-                        // 仅当选项实际发生变化时才触发更新，避免不必要地重建UI
                         if (currentParameters[inputDef.id] != selectedValue) {
                             parameterUpdated(inputDef.id, selectedValue)
                         }
@@ -739,22 +650,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                     override fun onNothingSelected(p0: AdapterView<*>?) {}
                 }
             }
-            else -> TextInputLayout(requireContext()).apply { // 默认是文本或数字输入
-                hint = "值" // 将提示文本放在 TextInputLayout 上
-                val editText = TextInputEditText(context).apply {
-                    val valueToDisplay = when (currentValue) {
-                        is Number -> if (currentValue.toDouble() == currentValue.toLong().toDouble()) currentValue.toLong().toString() else currentValue.toString()
-                        else -> currentValue?.toString() ?: ""
-                    }
-                    setText(valueToDisplay)
-                    inputType = if (inputDef.staticType == ParameterType.NUMBER) {
-                        InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
-                    } else {
-                        InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE //允许多行输入
-                    }
-                }
-                addView(editText)
-            }
         }
+
+        return view
     }
 }

@@ -57,6 +57,15 @@ class HttpRequestModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val method = step.parameters["method"] as? String ?: "GET"
+        val rawUrl = step.parameters["url"]?.toString() ?: ""
+
+        // 检查 URL 是否为复杂内容（包含变量或其他文本的组合）
+        if (VariableResolver.isComplex(rawUrl)) {
+            // 复杂内容：只显示方法和模块名称，详细内容由 UIProvider 在预览中显示
+            return PillUtil.buildSpannable(context, method, " ", metadata.name)
+        }
+
+        // 简单内容：显示完整的摘要（带药丸）
         val urlPill = PillUtil.createPillFromParam(step.parameters["url"], getInputs().find { it.id == "url" })
         return PillUtil.buildSpannable(context, method, " ", urlPill)
     }

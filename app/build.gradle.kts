@@ -13,8 +13,8 @@ android {
         applicationId = "com.chaomixian.vflow"
         minSdk = 29
         targetSdk = 36
-        versionCode = 21
-        versionName = "1.3.5"
+        versionCode = 22
+        versionName = "1.3.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,7 +55,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
-    // 扩展图标库 (可选)
+    // 扩展图标库
     implementation("androidx.compose.material:material-icons-extended")
 
     // 核心 UI 库
@@ -95,7 +95,6 @@ dependencies {
 
     // Google ML Kit 文本识别库 (中文和英文)
     implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
-    implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")

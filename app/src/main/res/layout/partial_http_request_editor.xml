@@ -6,44 +6,9 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="top">
-
-        <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/http_input_layout_url"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:hint="URL">
-
-        <com.chaomixian.vflow.ui.workflow_editor.RichTextView
-            android:id="@+id/http_edit_text_url"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textUri"/>
-    </com.google.android.material.textfield.TextInputLayout>
-
-        <ImageButton
-            android:id="@+id/btn_url_magic"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="4dp"
-            android:layout_marginTop="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="选择变量"
-            android:src="@drawable/rounded_dataset_24"
-            app:tint="?attr/colorPrimary" />
-
-    </LinearLayout>
-
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
         android:text="请求方法"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
     <Spinner
