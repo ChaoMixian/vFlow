@@ -241,6 +241,13 @@ class SettingsFragment : Fragment() {
             startActivity(intent)
         }
 
+        // 启动Core管理
+        val CoreManagementButton = view.findViewById<Button>(R.id.button_core_management)
+        CoreManagementButton.setOnClickListener {
+            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.CoreManagementActivity::class.java)
+            startActivity(intent)
+        }
+
         view.findViewById<MaterialCardView>(R.id.card_about).setOnClickListener {
             showAboutDialog()
         }

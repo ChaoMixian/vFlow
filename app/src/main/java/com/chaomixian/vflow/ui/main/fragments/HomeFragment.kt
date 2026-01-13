@@ -27,10 +27,12 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.home.LogViewerSheet
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.divider.MaterialDivider
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.collections.ArrayList
@@ -40,6 +42,12 @@ class HomeFragment : Fragment() {
     private lateinit var workflowManager: WorkflowManager
     private lateinit var totalWorkflowsText: TextView
     private lateinit var autoWorkflowsText: TextView
+
+    // vFlow Core 状态卡片视图
+    private lateinit var coreStatusCard: MaterialCardView
+    private lateinit var coreModeText: TextView
+    private lateinit var coreStatusText: TextView
+    private lateinit var coreBackgroundIcon: ImageView
 
     // 权限健康检查卡片视图
     private lateinit var permissionHealthTitle: TextView
@@ -65,6 +73,9 @@ class HomeFragment : Fragment() {
         pendingWorkflow = null
     }
 
+    // Core 状态自动刷新
+    private var coreStatusRefreshJob: kotlinx.coroutines.Job? = null
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -75,6 +86,13 @@ class HomeFragment : Fragment() {
         // 初始化视图
         totalWorkflowsText = view.findViewById(R.id.text_total_workflows)
         autoWorkflowsText = view.findViewById(R.id.text_auto_workflows)
+
+        // Core 卡片视图绑定
+        coreStatusCard = view.findViewById(R.id.card_core_status)
+        coreModeText = view.findViewById(R.id.text_core_mode)
+        coreStatusText = view.findViewById(R.id.text_core_status)
+        coreBackgroundIcon = view.findViewById(R.id.icon_core_background)
+
         permissionHealthTitle = view.findViewById(R.id.text_permission_health_title)
         permissionHealthDesc = view.findViewById(R.id.text_permission_health_desc)
         permissionHealthCard = view.findViewById(R.id.card_permission_health)
@@ -101,9 +119,20 @@ class HomeFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         updateStatistics()
+        updateCoreStatus()
         updatePermissionHealthCheck()
         updateQuickExecuteCard()
         updateRecentLogs()
+
+        // 启动Core状态自动刷新
+        startCoreStatusAutoRefresh()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 停止Core状态自动刷新
+        coreStatusRefreshJob?.cancel()
+        coreStatusRefreshJob = null
     }
 
     private fun updateStatistics() {
@@ -114,8 +143,67 @@ class HomeFragment : Fragment() {
         }
         val autoCount = autoWorkflows.size
         val enabledAutoCount = autoWorkflows.count { it.isEnabled }
+
+        // 更新统计数字
         totalWorkflowsText.text = totalCount.toString()
         autoWorkflowsText.text = "$enabledAutoCount / $autoCount"
+    }
+
+    /**
+     * 更新 vFlow Core 状态卡片
+     */
+    private fun updateCoreStatus() {
+        val privilegeMode = VFlowCoreBridge.privilegeMode
+        val isConnected = VFlowCoreBridge.isConnected
+        val context = requireContext()
+
+        // 设置模式文本 (Mode)
+        val modeString = when (privilegeMode) {
+            VFlowCoreBridge.PrivilegeMode.ROOT -> "Root"
+            VFlowCoreBridge.PrivilegeMode.SHELL -> "Shell (ADB)"
+            VFlowCoreBridge.PrivilegeMode.NONE -> "无权限"
+        }
+        coreModeText.text = "模式：$modeString"
+
+        // 根据连接状态设置视觉样式 (颜色和图标)
+        if (isConnected) {
+            // 获取颜色属性
+            val bgColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, 0)
+            val contentColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnPrimaryContainer, 0)
+
+            // 设置卡片背景和所有文字颜色
+            coreStatusCard.setCardBackgroundColor(bgColor)
+            coreStatusText.text = "工作中"
+            coreStatusText.setTextColor(contentColor)
+            coreModeText.setTextColor(contentColor)
+
+            // 设置大图标：对勾
+            coreBackgroundIcon.setImageResource(R.drawable.rounded_check_circle_24)
+            coreBackgroundIcon.setColorFilter(contentColor)
+
+        } else {
+            // 未运行/停止状态
+
+            // 使用 ErrorContainer 颜色来表示停止或警告
+            val bgColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorErrorContainer, 0)
+            val contentColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnErrorContainer, 0)
+
+            // 设置卡片背景和所有文字颜色
+            coreStatusCard.setCardBackgroundColor(bgColor)
+            coreStatusText.text = "已停止"
+            coreStatusText.setTextColor(contentColor)
+            coreModeText.setTextColor(contentColor)
+
+            // 设置大图标：取消/叉号
+            coreBackgroundIcon.setImageResource(R.drawable.rounded_cancel_24)
+            coreBackgroundIcon.setColorFilter(contentColor)
+        }
+
+        // 点击卡片跳转到 Core 管理页面
+        coreStatusCard.setOnClickListener {
+            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.CoreManagementActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     /**
@@ -282,6 +370,36 @@ class HomeFragment : Fragment() {
                 iconView.setImageResource(R.drawable.rounded_pause_24)
             } else {
                 iconView.setImageResource(R.drawable.ic_play_arrow)
+            }
+        }
+    }
+
+    /**
+     * 启动Core状态自动刷新
+     * 如果Core当前未连接，会在前8秒内每500ms检查一次状态，
+     * 检测到连接成功后更新UI并停止轮询
+     */
+    private fun startCoreStatusAutoRefresh() {
+        // 取消之前的任务
+        coreStatusRefreshJob?.cancel()
+
+        // 只有Core未连接时才需要自动刷新
+        if (VFlowCoreBridge.isConnected) {
+            return
+        }
+
+        coreStatusRefreshJob = lifecycleScope.launch {
+            // 最多检查16次（16 * 500ms = 8秒）
+            repeat(16) {
+                delay(500)
+
+                // 重新ping并检查状态
+                if (VFlowCoreBridge.ping() && VFlowCoreBridge.isConnected) {
+                    // Core已连接，更新UI
+                    updateCoreStatus()
+                    // 停止轮询
+                    return@launch
+                }
             }
         }
     }

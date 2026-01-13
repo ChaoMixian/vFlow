@@ -28,6 +28,7 @@ import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
+import com.chaomixian.vflow.services.CoreManagementService
 
 /**
  * 应用的主 Activity。
@@ -65,6 +66,10 @@ class MainActivity : BaseActivity() {
         DebugLogger.initialize(applicationContext) // 初始化调试日志记录器
         // 应用启动时，立即发起 Shizuku 预连接
         ShellManager.proactiveConnect(applicationContext)
+        // 启动 Server 管理服务
+        startService(Intent(this, CoreManagementService::class.java).apply {
+            action = CoreManagementService.ACTION_START_CORE
+        })
         // 启动后台触发器服务
         startService(Intent(this, TriggerService::class.java))
 

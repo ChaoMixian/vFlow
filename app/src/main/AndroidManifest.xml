@@ -176,6 +176,10 @@
                 android:resource="@xml/method" />
         </service>
 
+        <service
+            android:name=".services.CoreManagementService"
+            android:exported="false" />
+
         <receiver
             android:name=".services.BootReceiver"
             android:exported="true">
@@ -230,6 +234,12 @@
             android:name=".ui.settings.KeyTesterActivity"
             android:exported="false"
             android:label="按键测试器"
+            android:theme="@style/Theme.vFlow" />
+
+        <activity
+            android:name=".ui.settings.CoreManagementActivity"
+            android:exported="false"
+            android:label="Server 管理"
             android:theme="@style/Theme.vFlow" />
 
         <activity

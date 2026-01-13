@@ -334,6 +334,14 @@
                         android:text="按键测试器" />
                 </LinearLayout>
 
+                <Button
+                    android:id="@+id/button_core_management"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="vFlow Core 管理" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

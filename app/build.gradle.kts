@@ -16,8 +16,8 @@ android {
         applicationId = "com.chaomixian.vflow"
         minSdk = 29
         targetSdk = 36
-        versionCode = 22
-        versionName = "1.3.6"
+        versionCode = 23
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -135,4 +135,10 @@ dependencies {
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
+}
+
+afterEvaluate {
+    tasks.named("preBuild").configure {
+        dependsOn(":core:buildDex")
+    }
 }
