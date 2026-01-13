@@ -13,3 +13,18 @@
 .externalNativeBuild
 .cxx
 local.properties
+*.jks
+
+# Kotlin compilation cache and errors
+.kotlin/
+
+# IDE specific files
+.idea/kotlinc.xml
+.idea/compiler.xml
+.idea/gradle.xml
+
+# Claude Code settings
+.claude/
+
+# Release builds and modules
+/release/

@@ -11,6 +11,7 @@ navigationFragmentKtx = "2.9.3"
 navigationUiKtx = "2.9.3"
 scenecore = "1.0.0-alpha06"
 materialVersion = "1.13.0"
+jetbrainsKotlinJvm = "2.0.21"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -27,4 +28,5 @@ google-material = { group = "com.google.android.material", name = "material", ve
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
 

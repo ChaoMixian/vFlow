@@ -13,6 +13,60 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- 更新卡片 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_update_available"
+            style="?attr/materialCardViewFilledStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            app:strokeColor="?attr/colorPrimary"
+            app:strokeWidth="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/rounded_arrow_upload_ready_24"
+                        app:tint="?attr/colorPrimary" />
+
+                    <TextView
+                        android:id="@+id/text_update_version"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface"
+                        tools:text="发现新版本 v1.4.0" />
+
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_update"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="前往下载" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
         <com.google.android.material.card.MaterialCardView
             style="?attr/materialCardViewFilledStyle"
             android:layout_width="match_parent"
@@ -70,6 +124,20 @@
                     android:layout_marginTop="4dp"
                     android:text="@string/settings_switch_progress_notification_desc"
                     android:textAppearance="?attr/textAppearanceBodySmall" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_background_service_notification"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="显示后台服务通知" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="在状态栏显示后台常驻通知。关闭此项可能会导致后台服务被系统杀掉，影响触发器稳定性。"
+                    android:textAppearance="?attr/textAppearanceBodySmall" />
+
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_force_keep_alive"
@@ -265,6 +333,14 @@
                         android:layout_marginStart="8dp"
                         android:text="按键测试器" />
                 </LinearLayout>
+
+                <Button
+                    android:id="@+id/button_core_management"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="vFlow Core 管理" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

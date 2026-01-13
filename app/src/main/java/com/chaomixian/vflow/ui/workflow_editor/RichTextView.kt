@@ -1,6 +1,4 @@
 // 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/RichTextView.kt
-// 描述: [已修改] 移除了在变量药丸前后自动添加空格的逻辑，实现紧凑拼接。
-
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
@@ -11,17 +9,18 @@ import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.ImageSpan
 import android.util.AttributeSet
-import androidx.appcompat.widget.AppCompatEditText
+import com.google.android.material.textfield.TextInputEditText // 关键引用
 import java.util.regex.Pattern
 
 /**
  * 实现一个支持文本和“变量药丸”混合输入的自定义 EditText。
+ * 继承 TextInputEditText 并使用正确的 Material 样式属性。
  */
 class RichTextView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = android.R.attr.editTextStyle
-) : AppCompatEditText(context, attrs, defStyleAttr) {
+    defStyleAttr: Int = com.google.android.material.R.attr.editTextStyle
+) : TextInputEditText(context, attrs, defStyleAttr) {
 
     private val variablePattern = Pattern.compile("(\\{\\{.*?\\}\\}|\\[\\[.*?\\]\\])")
 

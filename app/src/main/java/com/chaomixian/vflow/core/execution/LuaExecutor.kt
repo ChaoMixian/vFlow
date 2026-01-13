@@ -6,6 +6,7 @@ import com.chaomixian.vflow.core.module.*
 import kotlinx.coroutines.runBlocking
 import org.luaj.vm2.*
 import org.luaj.vm2.lib.OneArgFunction
+import org.luaj.vm2.lib.jse.CoerceJavaToLua
 import org.luaj.vm2.lib.jse.JsePlatform
 
 /**
@@ -27,6 +28,12 @@ class LuaExecutor(private val executionContext: ExecutionContext) {
     fun execute(script: String, inputs: MutableMap<String, Any?>): Map<String, Any?> {
         // 创建标准的 Lua 环境
         val globals = JsePlatform.standardGlobals()
+
+        // 注入上下文
+        // 脚本需要 Context 才能访问系统服务 (如剪贴板、WiFi、文件等)
+        // CoerceJavaToLua.coerce 把 Java 对象包装成 Lua 可调用的 Userdata
+        val contextLua = CoerceJavaToLua.coerce(executionContext.applicationContext)
+        globals.set("context", contextLua)
 
         // 注入变量代理 (Direct Memory Access)
         // 'inputs': 当前脚本的输入参数，读写直接修改传入的 map

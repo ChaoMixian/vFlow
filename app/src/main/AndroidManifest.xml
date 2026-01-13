@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:shizuku="http://schemas.android.com/apk/res-auto">
 
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -39,9 +43,18 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
     <queries>
+        <!-- 查询所有带启动入口的应用 -->
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
+        <!-- 查询所有应用（用于显示完整应用列表） -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
+        <!-- 查询所有可启动的 Activity -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
         </intent>
     </queries>
 
@@ -56,6 +69,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.vFlow"
         android:requestLegacyExternalStorage="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="31">
 
         <activity
@@ -117,6 +131,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.vFlow" />
+
         <service
             android:name=".services.TriggerService"
             android:exported="true" android:permission="android.permission.FOREGROUND_SERVICE"
@@ -156,6 +175,10 @@
                 android:name="android.view.im"
                 android:resource="@xml/method" />
         </service>
+
+        <service
+            android:name=".services.CoreManagementService"
+            android:exported="false" />
 
         <receiver
             android:name=".services.BootReceiver"
@@ -211,6 +234,18 @@
             android:name=".ui.settings.KeyTesterActivity"
             android:exported="false"
             android:label="按键测试器"
+            android:theme="@style/Theme.vFlow" />
+
+        <activity
+            android:name=".ui.settings.CoreManagementActivity"
+            android:exported="false"
+            android:label="Server 管理"
+            android:theme="@style/Theme.vFlow" />
+
+        <activity
+            android:name=".ui.changelog.ChangelogActivity"
+            android:exported="false"
+            android:label="版本历史"
             android:theme="@style/Theme.vFlow" />
 
     </application>

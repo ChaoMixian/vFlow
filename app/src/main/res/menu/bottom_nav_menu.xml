@@ -16,6 +16,11 @@
         android:title="模块" />
 
     <item
+        android:id="@+id/navigation_repository"
+        android:icon="@drawable/rounded_cloud_24"
+        android:title="仓库" />
+
+    <item
         android:id="@+id/navigation_settings"
         android:icon="@drawable/ic_settings"
         android:title="@string/title_settings" />

@@ -6,23 +6,9 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/http_input_layout_url"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="URL">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/http_edit_text_url"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textUri"/>
-    </com.google.android.material.textfield.TextInputLayout>
-
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
         android:text="请求方法"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
     <Spinner

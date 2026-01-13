@@ -10,6 +10,7 @@
     android:paddingHorizontal="24dp">
 
     <ImageView
+        android:id="@+id/app_icon"
         android:layout_width="64dp"
         android:layout_height="64dp"
         android:src="@mipmap/ic_launcher_round"

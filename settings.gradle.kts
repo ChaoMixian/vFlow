@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "vFlow"
 include(":app")
- 
+include(":core")

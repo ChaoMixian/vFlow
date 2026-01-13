@@ -28,6 +28,7 @@ import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
+import com.chaomixian.vflow.services.CoreManagementService
 
 /**
  * 应用的主 Activity。
@@ -47,6 +48,15 @@ class MainActivity : BaseActivity() {
     /** Activity 创建时的初始化。 */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 检查首次运行
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean("is_first_run", true)) {
+            startActivity(Intent(this, com.chaomixian.vflow.ui.onboarding.OnboardingActivity::class.java))
+            finish()
+            return
+        }
+
         ModuleRegistry.initialize() // 初始化模块注册表
         ModuleManager.loadModules(this, true) // 初始化用户模块管理器
         TriggerHandlerRegistry.initialize() // 初始化触发器处理器注册表
@@ -56,6 +66,10 @@ class MainActivity : BaseActivity() {
         DebugLogger.initialize(applicationContext) // 初始化调试日志记录器
         // 应用启动时，立即发起 Shizuku 预连接
         ShellManager.proactiveConnect(applicationContext)
+        // 启动 Server 管理服务
+        startService(Intent(this, CoreManagementService::class.java).apply {
+            action = CoreManagementService.ACTION_START_CORE
+        })
         // 启动后台触发器服务
         startService(Intent(this, TriggerService::class.java))
 
@@ -72,7 +86,7 @@ class MainActivity : BaseActivity() {
 
         // 配置 AppBar，定义顶级导航目标
         val appBarConfiguration = AppBarConfiguration(
-            setOf(R.id.navigation_home, R.id.navigation_workflows, R.id.navigation_modules, R.id.navigation_settings)
+            setOf(R.id.navigation_home, R.id.navigation_workflows, R.id.navigation_modules, R.id.navigation_repository, R.id.navigation_settings)
         )
         setupActionBarWithNavController(navController, appBarConfiguration) // 将 Toolbar 与 NavController 集成
         navView.setupWithNavController(navController) // 将 BottomNavigationView 与 NavController 集成

@@ -1,7 +1,11 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.parcelize")
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
 }
 
 android {
@@ -12,19 +16,44 @@ android {
         applicationId = "com.chaomixian.vflow"
         minSdk = 29
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.3.3"
+        versionCode = 23
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = file("../key.jks")
+            val signingPropsFile = file("../signing.properties")
+
+            if (keystoreFile.exists() && signingPropsFile.exists()) {
+                val props = Properties()
+                props.load(FileInputStream(signingPropsFile))
+
+                storeFile = keystoreFile
+                storePassword = props.getProperty("KEYSTORE_PASSWORD")
+                keyAlias = props.getProperty("KEYSTORE_ALIAS")
+                keyPassword = props.getProperty("KEY_PASSWORD")
+            } else {
+                println("⚠️ Release 签名文件未找到")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (file("../signing.properties").exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                println("⚠️ signing.properties 未找到")
+            }
         }
     }
     compileOptions {
@@ -38,10 +67,33 @@ android {
     buildFeatures {
         viewBinding = true
         aidl = true           // 启用aidl
+        compose = true
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
     }
 }
 
 dependencies {
+
+    val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    implementation("androidx.activity:activity-compose:1.12.2")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+
+    // 扩展图标库
+    implementation("androidx.compose.material:material-icons-extended")
 
     // 核心 UI 库
     implementation("androidx.core:core-ktx:1.17.0")
@@ -49,8 +101,12 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
 
     // 导航库
-    implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
-    implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
+    implementation("androidx.navigation:navigation-fragment-ktx:2.9.6")
+    implementation("androidx.navigation:navigation-ui-ktx:2.9.6")
+    implementation("androidx.navigation:navigation-compose:2.9.6")
+
+    // SwipeRefreshLayout
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
 
     // JSON 解析库，用于保存和读取工作流
     implementation("com.google.code.gson:gson:2.13.2")
@@ -64,7 +120,7 @@ dependencies {
     implementation(libs.androidx.scenecore)
 
     // 图像处理
-    implementation("io.coil-kt:coil:2.6.0")
+    implementation("io.coil-kt:coil:2.7.0")
 
     // 测试库
     testImplementation("junit:junit:4.13.2")
@@ -76,8 +132,13 @@ dependencies {
 
     // Google ML Kit 文本识别库 (中文和英文)
     implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
-    implementation("com.google.mlkit:text-recognition-devanagari:16.0.0")
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
+}
+
+afterEvaluate {
+    tasks.named("preBuild").configure {
+        dependsOn(":core:buildDex")
+    }
 }

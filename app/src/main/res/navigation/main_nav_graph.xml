@@ -24,6 +24,12 @@
         tools:layout="@layout/fragment_module_management" />
 
     <fragment
+        android:id="@+id/navigation_repository"
+        android:name="com.chaomixian.vflow.ui.repository.RepositoryFragment"
+        android:label="仓库"
+        tools:layout="@layout/fragment_repository" />
+
+    <fragment
         android:id="@+id/navigation_settings"
         android:name="com.chaomixian.vflow.ui.main.fragments.SettingsFragment"
         android:label="@string/title_settings"

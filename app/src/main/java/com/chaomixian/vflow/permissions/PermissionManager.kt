@@ -17,12 +17,43 @@ import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.AccessibilityService
 import com.chaomixian.vflow.services.ShellManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.DataOutputStream
 import androidx.core.net.toUri
+import com.chaomixian.vflow.services.VFlowCoreBridge
+import com.chaomixian.vflow.core.logging.DebugLogger
 
 object PermissionManager {
 
     // --- 权限定义 ---
+    /**
+     * vFlow Core 服务权限。
+     * 只要 Core 服务正在运行（无论是通过 Shizuku 还是 Root 启动），此权限即视为满足。
+     * 适用于：模拟点击、按键输入、普通 Shell 命令等。
+     */
+    val CORE = Permission(
+        id = "vflow.permission.CORE",
+        name = "vFlow Core 服务",
+        description = "vFlow 的核心后台服务，用于执行模拟点击、系统操作等高级功能。可以通过 Shizuku 或 Root 启动。",
+        type = PermissionType.SPECIAL
+    )
+
+    /**
+     * vFlow Core Root 权限。
+     * 要求 Core 服务必须以 Root 身份运行。
+     * 适用于：修改系统文件、高级系统设置等必须 Root 才能执行的操作。
+     */
+    val CORE_ROOT = Permission(
+        id = "vflow.permission.CORE_ROOT",
+        name = "vFlow Core (Root)",
+        description = "需要 vFlow Core 以 Root 权限运行才能使用的功能。",
+        type = PermissionType.SPECIAL
+    )
+
+
     val ACCESSIBILITY = Permission(
         id = "vflow.permission.ACCESSIBILITY_SERVICE",
         name = "无障碍服务",
@@ -138,6 +169,7 @@ object PermissionManager {
 
     // 所有已知特殊权限的列表，用于 UI 展示和快速查找
     val allKnownPermissions = listOf(
+        CORE, CORE_ROOT,
         ACCESSIBILITY, NOTIFICATIONS, OVERLAY, NOTIFICATION_LISTENER_SERVICE,
         STORAGE, SMS, BLUETOOTH, WRITE_SETTINGS, LOCATION, SHIZUKU,
         IGNORE_BATTERY_OPTIMIZATIONS, EXACT_ALARM, ROOT, USAGE_STATS
@@ -286,8 +318,53 @@ object PermissionManager {
             Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
     }
 
+    /** vFlow Core 策略 (Shell 或 Root 均可) */
+    private val coreStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean {
+            // 快速检查，不阻塞 UI
+            val isRunning = VFlowCoreBridge.ping()
+            if (!isRunning) {
+                DebugLogger.d("PermissionManager", "CORE 权限检查：vFlowCore 未运行")
+            }
+            return isRunning
+        }
+        override fun createRequestIntent(context: Context, permission: Permission): Intent? {
+            // 跳转到 Core 管理页面
+            val intent = Intent(context, com.chaomixian.vflow.ui.settings.CoreManagementActivity::class.java)
+            // 添加标志，指示应该自动启动 Core
+            intent.putExtra("auto_start", true)
+            return intent
+        }
+    }
+
+    /** vFlow Core Root 策略 (必须 Root) */
+    private val coreRootStrategy = object : PermissionStrategy {
+        override fun isGranted(context: Context, permission: Permission): Boolean {
+            // 快速检查 Core 是否运行
+            if (!VFlowCoreBridge.ping()) {
+                DebugLogger.d("PermissionManager", "CORE_ROOT 权限检查失败：vFlowCore 未运行")
+                return false
+            }
+
+            // 检查权限模式是否为 ROOT
+            val isRoot = VFlowCoreBridge.privilegeMode == VFlowCoreBridge.PrivilegeMode.ROOT
+            if (!isRoot) {
+                DebugLogger.d("PermissionManager", "CORE_ROOT 权限检查失败：不是 ROOT 模式，当前模式: ${VFlowCoreBridge.privilegeMode}")
+            }
+            return isRoot
+        }
+        override fun createRequestIntent(context: Context, permission: Permission): Intent? {
+            // 跳转到 Core 管理页面
+            val intent = Intent(context, com.chaomixian.vflow.ui.settings.CoreManagementActivity::class.java)
+            intent.putExtra("auto_start", true)
+            return intent
+        }
+    }
+
     // 策略映射表
     private val strategies = mapOf(
+        CORE.id to coreStrategy,
+        CORE_ROOT.id to coreRootStrategy,
         ACCESSIBILITY.id to accessibilityStrategy,
         OVERLAY.id to overlayStrategy,
         WRITE_SETTINGS.id to writeSettingsStrategy,
@@ -335,7 +412,7 @@ object PermissionManager {
     fun getAllRegisteredPermissions(): List<Permission> {
         return (ModuleRegistry.getAllModules()
             .map { it.getRequiredPermissions(null) }
-            .flatten() + IGNORE_BATTERY_OPTIMIZATIONS + STORAGE)
+            .flatten() + CORE + CORE_ROOT + IGNORE_BATTERY_OPTIMIZATIONS + STORAGE)
             .distinct()
     }
 
