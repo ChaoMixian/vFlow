@@ -50,10 +50,17 @@ class CoreManagementService : Service() {
         serviceScope.launch {
             isStarting = true
             try {
-                // 检查是否已经在运行
+                // 如果已经在运行，先停止旧进程，便于调试
                 if (VFlowCoreBridge.ping()) {
-                    DebugLogger.d(TAG, "vFlowCore 已在运行，无需启动")
-                    return@launch
+                    DebugLogger.d(TAG, "检测到旧的 vFlowCore 正在运行，先停止...")
+                    stopvFlowCoreProcess()
+                    delay(1500) // 等待进程完全退出并释放 DEX 文件
+
+                    // 确认进程已退出
+                    if (VFlowCoreBridge.ping()) {
+                        DebugLogger.w(TAG, "进程仍未退出，强制等待...")
+                        delay(1000)
+                    }
                 }
 
                 DebugLogger.i(TAG, "正在部署并启动 vFlowCore...")
@@ -78,11 +85,12 @@ class CoreManagementService : Service() {
                 val logFile = File(StorageManager.logsDir, "server_process.log")
 
                 // 构建启动命令
-                // 使用 export 设置 CLASSPATH，然后用 nohup 启动
+                // 使用 sh -c 确保 CLASSPATH 正确传递
                 val classpath = dexFile.absolutePath
                 val logPath = logFile.absolutePath
 
-                val fullCmd = "export CLASSPATH=\"$classpath\"; nohup app_process /system/bin $CORE_CLASS > \"$logPath\" 2>&1 &"
+                // 使用 sh -c 'export CLASSPATH=...; exec ...' 确保 CLASSPATH 在子进程中生效
+                val fullCmd = "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS' > \"$logPath\" 2>&1 &"
 
                 // 执行命令
                 DebugLogger.d(TAG, "执行启动命令: $fullCmd")
@@ -112,8 +120,17 @@ class CoreManagementService : Service() {
     private fun stopvFlowCoreProcess() {
         serviceScope.launch {
             DebugLogger.i(TAG, "正在停止 vFlowCore...")
-            val cmd = "pkill -f $CORE_CLASS"
-            ShellManager.execShellCommand(applicationContext, cmd, ShellManager.ShellMode.AUTO)
+            // 优先使用优雅退出
+            if (VFlowCoreBridge.shutdown()) {
+                DebugLogger.i(TAG, "vFlowCore 已收到退出指令")
+                // 等待进程退出
+                delay(1000)
+            } else {
+                // 如果优雅退出失败（比如进程未响应），使用强制杀死
+                DebugLogger.w(TAG, "优雅退出失败，使用强制终止")
+                val cmd = "pkill -f $CORE_CLASS"
+                ShellManager.execShellCommand(applicationContext, cmd, ShellManager.ShellMode.AUTO)
+            }
         }
     }
 

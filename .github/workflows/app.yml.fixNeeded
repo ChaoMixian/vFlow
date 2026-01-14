@@ -1,3 +1,4 @@
+# 需要修复签名问题，暂时禁用
 name: Android CI/CD
 
 on:

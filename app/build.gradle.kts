@@ -138,7 +138,13 @@ dependencies {
 }
 
 afterEvaluate {
+    // 确保 core 模块变化时重建 DEX
     tasks.named("preBuild").configure {
+        dependsOn(":core:buildDex")
+    }
+
+    // 让 mergeDebugAssets 依赖 buildDex，确保 assets 最新
+    tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
         dependsOn(":core:buildDex")
     }
 }

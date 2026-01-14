@@ -1,8 +1,8 @@
 // 文件: server/src/main/java/com/chaomixian/vflow/server/wrappers/IClipboardWrapper.kt
-package com.chaomixian.vflow.server.wrappers
+package com.chaomixian.vflow.server.wrappers.shell
 
-import android.content.ClipData
-import com.chaomixian.vflow.server.common.ServiceWrapper
+import com.chaomixian.vflow.server.wrappers.ServiceWrapper
+import org.json.JSONObject
 import java.lang.reflect.Method
 
 class IClipboardWrapper : ServiceWrapper("clipboard", "android.content.IClipboard\$Stub") {
@@ -33,12 +33,32 @@ class IClipboardWrapper : ServiceWrapper("clipboard", "android.content.IClipboar
         }
     }
 
-    fun setClipboard(text: String): Boolean {
+    override fun handle(method: String, params: JSONObject): JSONObject {
+        val result = JSONObject()
+        when (method) {
+            "setClipboard" -> {
+                val success = setClipboard(params.getString("text"))
+                result.put("success", success)
+                if (!success) result.put("error", "Failed to set clipboard")
+            }
+            "getClipboard" -> {
+                result.put("text", getClipboard())
+                result.put("success", true)
+            }
+            else -> {
+                result.put("success", false)
+                result.put("error", "Unknown method: $method")
+            }
+        }
+        return result
+    }
+
+    private fun setClipboard(text: String): Boolean {
         if (serviceInterface == null || setPrimaryClipMethod == null || newPlainTextMethod == null) return false
         return try {
             val clipData = newPlainTextMethod!!.invoke(null, "vFlow", text)
 
-            // 动态参数适配逻辑 (从之前的 SystemManagerWrapper 迁移过来)
+            // 动态参数适配逻辑
             val method = setPrimaryClipMethod!!
             val args = arrayOfNulls<Any>(method.parameterTypes.size)
             var stringArgCount = 0
@@ -59,10 +79,9 @@ class IClipboardWrapper : ServiceWrapper("clipboard", "android.content.IClipboar
         }
     }
 
-    fun getClipboard(): String {
+    private fun getClipboard(): String {
         if (serviceInterface == null || getPrimaryClipMethod == null) return ""
         return try {
-            // 动态参数适配
             val method = getPrimaryClipMethod!!
             val args = arrayOfNulls<Any>(method.parameterTypes.size)
             var stringArgCount = 0

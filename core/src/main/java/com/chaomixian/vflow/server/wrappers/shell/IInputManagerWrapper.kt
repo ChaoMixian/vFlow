@@ -1,12 +1,13 @@
 // 文件: server/src/main/java/com/chaomixian/vflow/server/wrappers/IInputManagerWrapper.kt
-package com.chaomixian.vflow.server.wrappers
+package com.chaomixian.vflow.server.wrappers.shell
 
 import android.os.SystemClock
 import android.view.InputEvent
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.KeyCharacterMap
-import com.chaomixian.vflow.server.common.ServiceWrapper
+import com.chaomixian.vflow.server.wrappers.ServiceWrapper
+import org.json.JSONObject
 import java.lang.reflect.Method
 
 class IInputManagerWrapper : ServiceWrapper("input", "android.hardware.input.IInputManager\$Stub") {
@@ -18,11 +19,41 @@ class IInputManagerWrapper : ServiceWrapper("input", "android.hardware.input.IIn
 
     override fun onServiceConnected(service: Any) {
         // 查找 injectInputEvent 方法
-        // 签名通常是: injectInputEvent(InputEvent event, int mode)
         val methods = service.javaClass.methods
         injectInputEventMethod = methods.find {
             it.name == "injectInputEvent" && it.parameterTypes.size >= 2
         }
+    }
+
+    override fun handle(method: String, params: JSONObject): JSONObject {
+        val result = JSONObject()
+        when (method) {
+            "tap" -> {
+                tap(params.getInt("x").toFloat(), params.getInt("y").toFloat())
+                result.put("success", true)
+            }
+            "swipe" -> {
+                swipe(
+                    params.getInt("x1").toFloat(), params.getInt("y1").toFloat(),
+                    params.getInt("x2").toFloat(), params.getInt("y2").toFloat(),
+                    params.optLong("duration", 300)
+                )
+                result.put("success", true)
+            }
+            "key" -> {
+                key(params.getInt("code"))
+                result.put("success", true)
+            }
+            "inputText" -> {
+                inputText(params.getString("text"))
+                result.put("success", true)
+            }
+            else -> {
+                result.put("success", false)
+                result.put("error", "Unknown method: $method")
+            }
+        }
+        return result
     }
 
     private fun inject(event: InputEvent): Boolean {

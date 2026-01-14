@@ -1,5 +1,4 @@
-// 文件: server/src/main/java/com/chaomixian/vflow/server/utils/ReflectionUtils.kt
-package com.chaomixian.vflow.server.utils
+package com.chaomixian.vflow.server.common.utils
 
 import java.lang.reflect.Method
 

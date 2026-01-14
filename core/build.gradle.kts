@@ -68,6 +68,11 @@ tasks.register<Exec>("buildDex") {
     val tempDexDir = layout.buildDirectory.dir("dex").get().asFile
     // 最终目标目录 (App 模块的 assets)
     val appAssetsDir = rootProject.file("app/src/main/assets")
+    val targetDex = File(appAssetsDir, "vFlowCore.dex")
+
+    // 声明输入输出，让 Gradle 能正确追踪变化
+    inputs.file(inputJar)
+    outputs.file(targetDex)
 
     // 确保目录存在
     doFirst {
@@ -87,7 +92,6 @@ tasks.register<Exec>("buildDex") {
     // 任务执行完后，将 classes.dex 移动并重命名为 vFlowCore.dex
     doLast {
         val generatedDex = File(tempDexDir, "classes.dex")
-        val targetDex = File(appAssetsDir, "vFlowCore.dex")
 
         if (generatedDex.exists()) {
             if (targetDex.exists()) {
@@ -95,6 +99,7 @@ tasks.register<Exec>("buildDex") {
             }
             generatedDex.copyTo(targetDex)
             println("✅ Server Dex 构建成功并已复制到: ${targetDex.absolutePath}")
+            println("📊 DEX 大小: ${targetDex.length() / 1024} KB")
 
             // 清理临时文件
             // generatedDex.delete()

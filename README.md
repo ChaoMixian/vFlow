@@ -8,6 +8,21 @@
 
 项目完全采用 Kotlin 编写，并遵循现代 Android 开发实践。其核心架构（模块注册表、动态 UI 生成器、类型安全的执行上下文）被精心设计，不仅保证了当前功能的稳定性，也为未来添加更多、更强大的自动化模块提供了无限可能。无论你是希望解放双手的普通用户，还是寻求灵感和实践的开发者，vFlow 都欢迎你的探索和贡献。
 
+## 📸 应用截图
+
+<table>
+  <tr>
+    <td><img src="docs/home_fragment.png" width="200"></td>
+    <td><img src="docs/workflow_editor.png" width="200"></td>
+    <td><img src="docs/module_fragment.png" width="200"></td>
+  </tr>
+  <tr>
+    <td align="center">首页</td>
+    <td align="center">工作流编辑</td>
+    <td align="center">模块管理器</td>
+  </tr>
+</table>
+
 ## 🚀 主要特性
 
 - **可视化流程编辑器**: 通过拖拽和点击，像搭积木一样构建你的自动化流程。
@@ -19,24 +34,9 @@
 - **现代 UI 设计**: 基于 Material 3 和动态取色，提供美观且个性化的用户界面。
 - **导入与导出**: 轻松备份、恢复和分享你的工作流。
 
-## 📸 应用截图
-
-<table>
-  <tr>
-    <td><img src="docs/screenshot1.jpg" width="200"></td>
-    <td><img src="docs/screenshot2.jpg" width="200"></td>
-    <td><img src="docs/screenshot3.jpg" width="200"></td>
-  </tr>
-  <tr>
-    <td align="center">工作流列表</td>
-    <td align="center">流程编辑器</td>
-    <td align="center">模块选择器</td>
-  </tr>
-</table>
-
 ## 🛠️ 技术架构概览
 
-vFlow 的核心是其高度解耦的模块化架构。
+vFlow App 的核心是其高度解耦的模块化架构。
 
 1.  **模块 (Module)**
 
@@ -59,6 +59,10 @@ vFlow 的核心是其高度解耦的模块化架构。
     - 负责按顺序执行工作流中的每一个步骤。
     - 为每个步骤创建包含上下文信息（如魔法变量值、服务实例）的 `ExecutionContext`。
     - 处理模块返回的不同结果，如成功、失败，或跳转、循环等流程控制信号。
+
+vFlow Core 采用 Master-Worker 多进程架构，基于 TCP Socket 通信与自定义 JSON-RPC 协议，将指令动态路由至 Shell 或 Root 权限的子进程执行，实现了严格的权限隔离与高效的系统服务管控。
+
+![vFlow Core Architecture](docs/vFlow_Core_Architecture.png)
 
 ## 📦 如何构建
 

@@ -346,4 +346,15 @@ object VFlowCoreBridge {
             .put("params", JSONObject().put("package", packageName))
         return sendRaw(req)?.optBoolean("success") ?: false
     }
+
+    // System Control APIs
+    /**
+     * 请求 vFlowCore 优雅退出
+     */
+    fun shutdown(): Boolean {
+        val req = JSONObject()
+            .put("target", "system")
+            .put("method", "exit")
+        return sendRaw(req)?.optBoolean("success") ?: false
+    }
 }
