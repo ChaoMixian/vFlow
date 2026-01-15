@@ -2,6 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/menu_favorite_float"
+        android:icon="@drawable/rounded_branding_watermark_24"
+        android:title="收藏工作流快速控制"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/menu_more_options"
         android:icon="@drawable/ic_more_vert"
         android:title="更多选项"

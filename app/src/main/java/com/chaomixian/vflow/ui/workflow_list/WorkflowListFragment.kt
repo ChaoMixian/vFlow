@@ -5,8 +5,10 @@ package com.chaomixian.vflow.ui.workflow_list
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.provider.Settings
 import android.view.*
 import android.widget.CheckBox
 import android.widget.Toast
@@ -26,6 +28,7 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.ShortcutHelper
+import com.chaomixian.vflow.ui.float.WorkflowsFloatPanelService
 import com.chaomixian.vflow.ui.workflow_editor.WorkflowEditorActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -61,6 +64,17 @@ class WorkflowListFragment : Fragment() {
             pendingWorkflow?.let { executeWorkflow(it) } // 权限获取成功后执行待处理工作流
         }
         pendingWorkflow = null
+    }
+
+    // 悬浮窗权限请求 launcher
+    private val overlayPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (checkOverlayPermission()) {
+            showFavoriteWorkflowsFloat()
+        } else {
+            Toast.makeText(requireContext(), "需要悬浮窗权限才能显示快速控制面板", Toast.LENGTH_LONG).show()
+        }
     }
 
     private val exportSingleLauncher =
@@ -184,6 +198,10 @@ class WorkflowListFragment : Fragment() {
     /** 处理选项菜单项点击事件。 */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.menu_favorite_float -> {
+                handleFavoriteFloatClick()
+                true
+            }
             R.id.menu_backup_workflows -> {
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                 backupLauncher.launch("vflow_backup_${timestamp}.json") // 启动备份文件创建流程
@@ -195,6 +213,58 @@ class WorkflowListFragment : Fragment() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    /**
+     * 处理收藏工作流悬浮窗按钮点击
+     */
+    private fun handleFavoriteFloatClick() {
+        if (checkOverlayPermission()) {
+            showFavoriteWorkflowsFloat()
+        } else {
+            requestOverlayPermission()
+        }
+    }
+
+    /**
+     * 检查是否有悬浮窗权限
+     */
+    private fun checkOverlayPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(requireContext())
+        } else {
+            true
+        }
+    }
+
+    /**
+     * 请求悬浮窗权限
+     */
+    private fun requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("需要悬浮窗权限")
+                .setMessage("为了显示收藏工作流的快速控制面板，需要授予悬浮窗权限。")
+                .setPositiveButton("去设置") { _, _ ->
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${requireContext().packageName}")
+                    )
+                    overlayPermissionLauncher.launch(intent)
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        }
+    }
+
+    /**
+     * 显示工作流悬浮面板
+     */
+    private fun showFavoriteWorkflowsFloat() {
+        val intent = Intent(requireContext(), WorkflowsFloatPanelService::class.java).apply {
+            action = WorkflowsFloatPanelService.ACTION_SHOW
+        }
+        requireContext().startService(intent)
     }
 
     /**

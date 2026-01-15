@@ -180,6 +180,10 @@
             android:name=".services.CoreManagementService"
             android:exported="false" />
 
+        <service
+            android:name=".ui.float.WorkflowsFloatPanelService"
+            android:exported="true" />
+
         <receiver
             android:name=".services.BootReceiver"
             android:exported="true">
