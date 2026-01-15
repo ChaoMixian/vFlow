@@ -27,8 +27,11 @@ class OnUiEventModule : BaseBlockModule() {
     override val pairingId = ON_EVENT_PAIRING
 
     override fun getInputs() = listOf(
-        // 这里接受组件的 ID (魔法变量)
-        InputDefinition("target_id", "目标组件", ParameterType.STRING, "", acceptsMagicVariable = true)
+        // 只接受 VUiComponent 对象本身（不接受属性）
+        InputDefinition("target_id", "目标组件", ParameterType.ANY, "",
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf("vflow.type.uicomponent")
+        )
     )
 
     override fun getOutputs(step: ActionStep?) = listOf(
@@ -42,16 +45,14 @@ class OnUiEventModule : BaseBlockModule() {
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         // 获取当前事件
         val event = context.namedVariables[KEY_CURRENT_EVENT] as? UiEvent
-            ?: return ExecutionResult.Failure("环境错误", "此模块必须放在“显示界面”块内部。")
+            ?: return ExecutionResult.Failure("环境错误", "此模块必须放在\"显示界面\"块内部。")
 
-        // 获取目标 ID (需要从 TextVariable 对象中提取 value)
-        val targetId = when (val obj = context.magicVariables["target_id"]) {
-            is com.chaomixian.vflow.core.module.TextVariable -> obj.value
-            else -> context.variables["target_id"]?.toString() ?: ""
-        }
+        // 获取目标组件（必须是 VUiComponent 对象）
+        val targetComponent = context.magicVariables["target_id"] as? com.chaomixian.vflow.core.types.complex.VUiComponent
+            ?: return ExecutionResult.Failure("参数错误", "目标组件必须是 UI 组件对象")
 
         // 判断事件是否匹配目标组件
-        if (event.elementId == targetId) {
+        if (event.elementId == targetComponent.getId()) {
             // 匹配成功，注入事件值
             val outputs = mapOf("value" to (event.value ?: ""))
             return ExecutionResult.Success(outputs)
