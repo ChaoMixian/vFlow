@@ -8,6 +8,7 @@ import android.os.Build
 import android.util.DisplayMetrics
 import android.view.ContextThemeWrapper
 import android.view.Gravity
+import com.chaomixian.vflow.ui.common.ThemeUtils
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.LinearInterpolator
@@ -53,8 +54,8 @@ class AgentOverlayManager(private val context: Context) {
     fun show() {
         if (borderRoot != null) return
 
-        // 创建带有应用主题的 ContextWrapper
-        val themedContext = ContextThemeWrapper(context, R.style.Theme_vFlow)
+        // 创建带有应用主题的 ContextWrapper（根据用户设置选择动态取色或默认主题）
+        val themedContext = ThemeUtils.createThemedContext(context)
 
         // 初始化边框窗口 (Border)
         borderRoot = FrameLayout(themedContext).apply {

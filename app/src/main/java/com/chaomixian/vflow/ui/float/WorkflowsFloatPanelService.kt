@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.view.ContextThemeWrapper
+import com.chaomixian.vflow.ui.common.ThemeUtils
 
 /**
  * 工作流快速控制悬浮面板服务
@@ -82,8 +83,8 @@ class WorkflowsFloatPanelService : Service() {
     private fun showFloatWindow() {
         if (floatView != null) return // 已经显示
 
-        // 创建带主题的 Context
-        val themedContext = ContextThemeWrapper(this, R.style.Theme_vFlow)
+        // 创建带主题的 Context（根据用户设置选择动态取色或默认主题）
+        val themedContext = ThemeUtils.createThemedContext(this)
 
         // 创建悬浮窗视图
         floatView = LayoutInflater.from(themedContext).inflate(R.layout.workflows_float_panel, null)

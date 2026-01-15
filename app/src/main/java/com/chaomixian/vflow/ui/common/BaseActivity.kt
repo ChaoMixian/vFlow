@@ -26,12 +26,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
     /** 根据用户偏好设置应用动态主题或默认主题。 */
     private fun applyDynamicTheme() {
-        val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-        val useDynamicColor = prefs.getBoolean("dynamicColorEnabled", false)
-        if (useDynamicColor) {
-            setTheme(R.style.Theme_vFlow_Dynamic) // 应用动态颜色主题
-        } else {
-            setTheme(R.style.Theme_vFlow) // 应用默认主题
-        }
+        val themeResId = ThemeUtils.getThemeResId(this)
+        setTheme(themeResId)
     }
 }

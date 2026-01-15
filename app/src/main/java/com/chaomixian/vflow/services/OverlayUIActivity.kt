@@ -333,12 +333,7 @@ class OverlayUIActivity : AppCompatActivity() {
     }
 
     private fun applyDynamicTheme() {
-        val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-        val useDynamicColor = prefs.getBoolean("dynamicColorEnabled", false)
-        if (useDynamicColor) {
-            setTheme(R.style.Theme_vFlow_Transparent_Dynamic)
-        } else {
-            setTheme(R.style.Theme_vFlow_Transparent_Default)
-        }
+        val themeResId = ThemeUtils.getThemeResId(this, transparent = true)
+        setTheme(themeResId)
     }
 }
