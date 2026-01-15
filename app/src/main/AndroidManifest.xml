@@ -136,6 +136,13 @@
             android:exported="false"
             android:theme="@style/Theme.vFlow" />
 
+        <activity
+            android:name=".ui.common.DynamicUiActivity"
+            android:label="用户界面"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.vFlow" />
+
         <service
             android:name=".services.TriggerService"
             android:exported="true" android:permission="android.permission.FOREGROUND_SERVICE"

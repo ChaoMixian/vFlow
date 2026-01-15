@@ -68,6 +68,16 @@ object VTypeRegistry {
         VPropertyDef("height", "高度", NUMBER)
     ))
 
+    val UI_COMPONENT = SimpleVType("vflow.type.uicomponent", "UI组件", ANY, listOf(
+        VPropertyDef("id", "组件ID", STRING),
+        VPropertyDef("type", "类型", STRING),
+        VPropertyDef("label", "标签", STRING),
+        VPropertyDef("value", "值", ANY),
+        VPropertyDef("placeholder", "占位符", STRING),
+        VPropertyDef("required", "必填", BOOLEAN),
+        VPropertyDef("triggerEvent", "触发事件", BOOLEAN)
+    ))
+
     val COORDINATE = SimpleVType("vflow.type.coordinate", "坐标", ANY, listOf(
         VPropertyDef("x", "X 坐标", NUMBER),
         VPropertyDef("y", "Y 坐标", NUMBER)
@@ -94,6 +104,7 @@ object VTypeRegistry {
             DATE.id -> DATE
             TIME.id -> TIME
             UI_ELEMENT.id -> UI_ELEMENT
+            UI_COMPONENT.id -> UI_COMPONENT
             COORDINATE.id -> COORDINATE
             NOTIFICATION.id -> NOTIFICATION
             else -> ANY

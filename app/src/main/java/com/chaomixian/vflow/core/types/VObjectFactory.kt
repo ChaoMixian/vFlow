@@ -7,6 +7,7 @@ import com.chaomixian.vflow.core.types.complex.*
 import com.chaomixian.vflow.core.workflow.module.interaction.Coordinate
 import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
+import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 
 /**
  * 工厂类：负责将任意对象包装为 VObject。
@@ -45,6 +46,7 @@ object VObjectFactory {
             is ScreenElement -> VScreenElement(value)
             is Coordinate -> VCoordinate(value)
             is NotificationObject -> VNotification(value)
+            is UiElement -> VUiComponent(value, null)
 
             // --- 集合类型 ---
             is Collection<*> -> fromCollection(value)

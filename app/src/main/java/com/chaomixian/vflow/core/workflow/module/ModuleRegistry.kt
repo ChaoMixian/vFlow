@@ -13,6 +13,8 @@ import com.chaomixian.vflow.core.workflow.module.shizuku.*
 import com.chaomixian.vflow.core.workflow.module.system.*
 import com.chaomixian.vflow.core.workflow.module.triggers.*
 import com.chaomixian.vflow.core.workflow.module.snippet.*
+import com.chaomixian.vflow.core.workflow.module.ui.blocks.*
+import com.chaomixian.vflow.core.workflow.module.ui.components.*
 
 object ModuleRegistry {
     private val modules = mutableMapOf<String, ActionModule>()
@@ -43,6 +45,7 @@ object ModuleRegistry {
                     "应用与系统" -> 6
                     "Shizuku" -> 7
                     "模板" -> 8
+                    "UI 组件" -> 9
                     else -> 99
                 }
             })
@@ -158,6 +161,26 @@ object ModuleRegistry {
 
         // Snippet 模板
         register(FindTextUntilSnippet())
+
+        // UI 组件模块
+        // 容器块 (Activity / 悬浮窗 / 对话框)
+        register(CreateActivityModule())
+        register(ShowActivityModule())
+        register(EndActivityModule())
+
+
+        // UI 组件 (文本 / 输入 / 按钮 / 开关)
+        register(UiTextModule())
+        register(UiInputModule())
+        register(UiButtonModule())
+        register(UiSwitchModule())
+
+        // 交互逻辑 (事件监听 / 更新 / 关闭 / 获取值)
+        register(OnUiEventModule())
+        register(EndOnUiEventModule())
+        register(UpdateUiComponentModule())
+        register(GetComponentValueModule())
+        register(ExitActivityModule())
 
         isCoreInitialized = true
     }
