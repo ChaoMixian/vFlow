@@ -4,7 +4,10 @@ package com.chaomixian.vflow.core.workflow.module.system
 import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.media.ImageReader
 import android.media.projection.MediaProjectionManager
@@ -36,6 +39,7 @@ import java.util.*
 class CaptureScreenModule : BaseModule() {
 
     override val id = "vflow.system.capture_screen"
+    override val uiProvider = CaptureScreenModuleUIProvider()
     override val metadata = ActionMetadata(
         name = "截屏",
         description = "捕获当前屏幕内容。",
@@ -58,6 +62,13 @@ class CaptureScreenModule : BaseModule() {
             defaultValue = "自动",
             options = modeOptions,
             acceptsMagicVariable = false
+        ),
+        InputDefinition(
+            id = "region",
+            name = "区域 (可选)",
+            staticType = ParameterType.STRING,
+            defaultValue = "",
+            acceptsMagicVariable = false
         )
     )
 
@@ -79,6 +90,7 @@ class CaptureScreenModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val mode = context.variables["mode"] as? String ?: "自动"
+        val regionStr = context.variables["region"] as? String ?: ""
         val appContext = context.applicationContext
 
         onProgress(ProgressUpdate("准备截屏 (模式: $mode)..."))
@@ -90,10 +102,116 @@ class CaptureScreenModule : BaseModule() {
         }
 
         if (imageUri != null) {
-            onProgress(ProgressUpdate("截屏成功"))
-            return ExecutionResult.Success(mapOf("image" to ImageVariable(imageUri.toString())))
+            // 如果指定了区域，裁剪图片
+            val finalUri = if (regionStr.isNotEmpty()) {
+                val region = parseRegion(regionStr)
+                if (region != null) {
+                    onProgress(ProgressUpdate("裁剪区域: $regionStr"))
+                    cropImageRegion(appContext, context.workDir, imageUri, region)
+                } else {
+                    imageUri
+                }
+            } else {
+                imageUri
+            }
+
+            if (finalUri != null) {
+                onProgress(ProgressUpdate("截屏成功"))
+                return ExecutionResult.Success(mapOf("image" to ImageVariable(finalUri.toString())))
+            } else {
+                return ExecutionResult.Failure("裁剪失败", "无法裁剪图片")
+            }
         } else {
             return ExecutionResult.Failure("截屏失败", "无法获取屏幕图像，请检查权限或重试")
+        }
+    }
+
+    /**
+     * 解析区域字符串
+     * 格式: "left,top,right,bottom" 或 "left,top,width,height" (百分比或像素值)
+     */
+    private fun parseRegion(regionStr: String): Rect? {
+        return try {
+            val parts = regionStr.split(",")
+            if (parts.size == 4) {
+                val values = parts.map { it.trim().toFloat() }
+                // 暂时只支持像素值：left,top,right,bottom
+                Rect(
+                    values[0].toInt(),
+                    values[1].toInt(),
+                    values[2].toInt(),
+                    values[3].toInt()
+                )
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            DebugLogger.e("CaptureScreenModule", "解析区域失败: $regionStr", e)
+            null
+        }
+    }
+
+    /**
+     * 裁剪图片的指定区域
+     */
+    private suspend fun cropImageRegion(
+        context: Context,
+        workDir: File,
+        imageUri: Uri,
+        region: Rect
+    ): Uri? {
+        return withContext(Dispatchers.IO) {
+            try {
+                // 从 URI 加载图片
+                val inputStream = context.contentResolver.openInputStream(imageUri)
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+
+                if (bitmap == null) {
+                    DebugLogger.e("CaptureScreenModule", "无法加载图片: $imageUri")
+                    return@withContext null
+                }
+
+                // 确保区域在图片范围内
+                val safeRegion = Rect(
+                    region.left.coerceIn(0, bitmap.width),
+                    region.top.coerceIn(0, bitmap.height),
+                    region.right.coerceIn(0, bitmap.width),
+                    region.bottom.coerceIn(0, bitmap.height)
+                )
+
+                if (safeRegion.width() <= 0 || safeRegion.height() <= 0) {
+                    DebugLogger.e("CaptureScreenModule", "无效的区域: $safeRegion")
+                    bitmap.recycle()
+                    return@withContext null
+                }
+
+                // 裁剪图片
+                val cropped = Bitmap.createBitmap(
+                    bitmap,
+                    safeRegion.left,
+                    safeRegion.top,
+                    safeRegion.width(),
+                    safeRegion.height()
+                )
+
+                // 保存裁剪后的图片
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
+                val outputFile = File(workDir, "screenshot_cropped_$timestamp.png")
+                FileOutputStream(outputFile).use { fos ->
+                    cropped.compress(Bitmap.CompressFormat.PNG, 100, fos)
+                }
+
+                bitmap.recycle()
+                if (cropped != bitmap) {
+                    cropped.recycle()
+                }
+
+                Uri.fromFile(outputFile)
+            } catch (e: Exception) {
+                DebugLogger.e("CaptureScreenModule", "裁剪图片失败", e)
+                null
+            }
         }
     }
 
