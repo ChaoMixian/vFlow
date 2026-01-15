@@ -39,7 +39,7 @@ class UiButtonModule : BaseUiComponentModule() {
     override fun getInputs() = listOf(
         InputDefinition("key", "ID (事件源)", ParameterType.STRING, "btn1", acceptsMagicVariable = false),
         InputDefinition("text", "按钮文字", ParameterType.STRING, "确定", acceptsMagicVariable = true),
-        InputDefinition("trigger_event", "仅触发事件 (不关闭窗口)", ParameterType.BOOLEAN, false)
+        InputDefinition("trigger_event", "仅触发事件 (不关闭窗口)", ParameterType.BOOLEAN, true)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
@@ -48,7 +48,7 @@ class UiButtonModule : BaseUiComponentModule() {
     override fun createUiElement(context: ExecutionContext, step: ActionStep): UiElement {
         val text = VariableResolver.resolve(step.parameters["text"]?.toString() ?: "", context)
         val key = step.parameters["key"]?.toString()?.takeIf { it.isNotEmpty() } ?: "btn_${System.currentTimeMillis()}"
-        val trigger = step.parameters["trigger_event"] as? Boolean ?: false
+        val trigger = step.parameters["trigger_event"] as? Boolean ?: true
 
         return UiElement(id = key, type = UiElementType.BUTTON, label = text, defaultValue = "", placeholder = "", isRequired = false, triggerEvent = trigger)
     }

@@ -167,6 +167,9 @@ object ModuleRegistry {
         register(CreateActivityModule())
         register(ShowActivityModule())
         register(EndActivityModule())
+        register(CreateFloatWindowModule())
+        register(ShowFloatWindowModule())
+        register(EndFloatWindowModule())
 
 
         // UI 组件 (文本 / 输入 / 按钮 / 开关)

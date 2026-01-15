@@ -36,7 +36,7 @@ class UiSwitchModule : BaseUiComponentModule() {
         InputDefinition("key", "ID (变量名)", ParameterType.STRING, "switch1", acceptsMagicVariable = false),
         InputDefinition("label", "标签", ParameterType.STRING, "选项", acceptsMagicVariable = true),
         InputDefinition("default_value", "默认开启", ParameterType.BOOLEAN, false),
-        InputDefinition("trigger_event", "切换时触发事件", ParameterType.BOOLEAN, false)
+        InputDefinition("trigger_event", "切换时触发事件", ParameterType.BOOLEAN, true)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
@@ -46,7 +46,7 @@ class UiSwitchModule : BaseUiComponentModule() {
         val label = VariableResolver.resolve(step.parameters["label"]?.toString() ?: "", context)
         val defaultVal = step.parameters["default_value"] as? Boolean ?: false
         val key = step.parameters["key"]?.toString()?.takeIf { it.isNotEmpty() } ?: "switch_${System.currentTimeMillis()}"
-        val trigger = step.parameters["trigger_event"] as? Boolean ?: false
+        val trigger = step.parameters["trigger_event"] as? Boolean ?: true
 
         return UiElement(id = key, type = UiElementType.SWITCH, label = label, defaultValue = defaultVal.toString(), placeholder = "", isRequired = false, triggerEvent = trigger)
     }

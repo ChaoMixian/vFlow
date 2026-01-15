@@ -27,7 +27,6 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  * - id: 组件的唯一标识符
  *
  * 注意：
- * - 组件值可通过 [[component_value.$key]] 或"获取组件值"模块获取
  * - 启用 trigger_event 后，每次输入都会触发事件
  */
 class UiInputModule : BaseUiComponentModule() {
@@ -39,7 +38,7 @@ class UiInputModule : BaseUiComponentModule() {
         InputDefinition("label", "标签", ParameterType.STRING, "请输入", acceptsMagicVariable = true),
         InputDefinition("hint", "提示词", ParameterType.STRING, "", acceptsMagicVariable = true),
         InputDefinition("default_value", "默认值", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("trigger_event", "输入时触发事件", ParameterType.BOOLEAN, false)
+        InputDefinition("trigger_event", "输入时触发事件", ParameterType.BOOLEAN, true)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
@@ -50,7 +49,7 @@ class UiInputModule : BaseUiComponentModule() {
         val defaultVal = VariableResolver.resolve(step.parameters["default_value"]?.toString() ?: "", context)
         val hint = VariableResolver.resolve(step.parameters["hint"]?.toString() ?: "", context)
         val key = step.parameters["key"]?.toString()?.takeIf { it.isNotEmpty() } ?: "input_${System.currentTimeMillis()}"
-        val trigger = step.parameters["trigger_event"] as? Boolean ?: false
+        val trigger = step.parameters["trigger_event"] as? Boolean ?: true
 
         return UiElement(id = key, type = UiElementType.INPUT, label = label, defaultValue = defaultVal, placeholder = hint, isRequired = false, triggerEvent = trigger)
     }

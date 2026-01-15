@@ -191,6 +191,10 @@
             android:name=".ui.float.WorkflowsFloatPanelService"
             android:exported="true" />
 
+        <service
+            android:name=".ui.float.DynamicFloatWindowService"
+            android:exported="false" />
+
         <receiver
             android:name=".services.BootReceiver"
             android:exported="true">
