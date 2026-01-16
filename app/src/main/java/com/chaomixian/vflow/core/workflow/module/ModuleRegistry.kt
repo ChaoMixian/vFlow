@@ -151,6 +151,7 @@ object ModuleRegistry {
         register(RemoveNotificationModule())
         register(GetAppUsageStatsModule())
         register(InvokeModule())
+        register(SystemInfoModule())
 
         // Shizuku 模块
         register(ShellCommandModule())
