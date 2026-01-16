@@ -43,8 +43,9 @@ class HttpRequestModule : BaseModule() {
         InputDefinition("headers", "请求头", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true),
         InputDefinition("query_params", "查询参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true),
         InputDefinition("body_type", "请求体类型", ParameterType.ENUM, "无", options = bodyTypeOptions, acceptsMagicVariable = false),
-        InputDefinition("body", "请求体", ParameterType.ANY, acceptsMagicVariable = true, supportsRichText = true), // 原始文本支持富文本
-        InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
+        InputDefinition("body", "请求体", ParameterType.ANY, acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
+        InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -56,6 +57,15 @@ class HttpRequestModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val method = step.parameters["method"] as? String ?: "GET"
+        val rawUrl = step.parameters["url"]?.toString() ?: ""
+
+        // 检查 URL 是否为复杂内容（包含变量或其他文本的组合）
+        if (VariableResolver.isComplex(rawUrl)) {
+            // 复杂内容：只显示方法和模块名称，详细内容由 UIProvider 在预览中显示
+            return PillUtil.buildSpannable(context, method, " ", metadata.name)
+        }
+
+        // 简单内容：显示完整的摘要（带药丸）
         val urlPill = PillUtil.createPillFromParam(step.parameters["url"], getInputs().find { it.id == "url" })
         return PillUtil.buildSpannable(context, method, " ", urlPill)
     }
@@ -75,25 +85,43 @@ class HttpRequestModule : BaseModule() {
 
                 val method = context.variables["method"] as? String ?: "GET"
 
+                // 解析 Headers (支持变量)
                 @Suppress("UNCHECKED_CAST")
-                val headers = (context.magicVariables["headers"] as? DictionaryVariable)?.value
+                val rawHeaders = (context.magicVariables["headers"] as? DictionaryVariable)?.value
                     ?: (context.variables["headers"] as? Map<String, Any?>)
                     ?: emptyMap()
+                val headers = resolveMap(rawHeaders, context)
 
+                // 解析 Query Params (支持变量)
                 @Suppress("UNCHECKED_CAST")
-                val queryParams = (context.magicVariables["query_params"] as? DictionaryVariable)?.value
+                val rawQueryParams = (context.magicVariables["query_params"] as? DictionaryVariable)?.value
                     ?: (context.variables["query_params"] as? Map<String, Any?>)
                     ?: emptyMap()
+                val queryParams = resolveMap(rawQueryParams, context)
 
+                // 解析 Body
                 val bodyType = context.variables["body_type"] as? String ?: "无"
                 val bodyDataRaw = context.variables["body"]
-                // 对于 Body，我们需要区分处理
-                val bodyData = if (bodyType == "原始文本") {
-                    // 如果是原始文本，支持富文本解析
-                    VariableResolver.resolve(bodyDataRaw?.toString() ?: "", context)
-                } else {
-                    // 如果是 JSON 或表单 (Map)，或者直接连接了变量
-                    context.magicVariables["body"] ?: bodyDataRaw
+
+                val bodyData: Any? = when (bodyType) {
+                    "原始文本" -> {
+                        // 如果是原始文本，直接解析富文本字符串
+                        VariableResolver.resolve(bodyDataRaw?.toString() ?: "", context)
+                    }
+                    "JSON", "表单" -> {
+                        // 如果是 Map，先尝试获取魔法变量（如果有），否则使用静态 Map 并解析其中的值
+                        val mapData = (context.magicVariables["body"] as? DictionaryVariable)?.value
+                            ?: (bodyDataRaw as? Map<*, *>)
+
+                        if (mapData is Map<*, *>) {
+                            // 递归解析 Map 中的值
+                            @Suppress("UNCHECKED_CAST")
+                            resolveMap(mapData as Map<String, Any?>, context)
+                        } else {
+                            mapData
+                        }
+                    }
+                    else -> context.magicVariables["body"] ?: bodyDataRaw
                 }
 
                 val timeout = ((context.magicVariables["timeout"] as? NumberVariable)?.value
@@ -105,7 +133,7 @@ class HttpRequestModule : BaseModule() {
                     .build()
 
                 val httpUrlBuilder = urlString.toHttpUrlOrNull()?.newBuilder() ?: return@withContext ExecutionResult.Failure("URL格式错误", "无法解析URL: $urlString")
-                queryParams.forEach { (key, value) -> httpUrlBuilder.addQueryParameter(key, value.toString()) }
+                queryParams.forEach { (key, value) -> httpUrlBuilder.addQueryParameter(key, value) }
                 val finalUrl = httpUrlBuilder.build()
 
                 val requestBody = when {
@@ -114,7 +142,7 @@ class HttpRequestModule : BaseModule() {
                 }
 
                 val requestBuilder = Request.Builder().url(finalUrl)
-                headers.forEach { (key, value) -> requestBuilder.addHeader(key, value.toString()) }
+                headers.forEach { (key, value) -> requestBuilder.addHeader(key, value) }
                 requestBuilder.method(method, requestBody)
 
                 onProgress(ProgressUpdate("正在发送 $method 请求到 $finalUrl"))
@@ -138,6 +166,20 @@ class HttpRequestModule : BaseModule() {
             } catch (e: Exception) {
                 ExecutionResult.Failure("执行失败", e.localizedMessage ?: "发生未知错误")
             }
+        }
+    }
+
+    /**
+     * 辅助函数：遍历 Map 中的值，如果是字符串则尝试解析变量。
+     */
+    private fun resolveMap(map: Map<String, Any?>, context: ExecutionContext): Map<String, String> {
+        return map.entries.associate { (key, value) ->
+            val resolvedValue = if (value is String) {
+                VariableResolver.resolve(value, context)
+            } else {
+                value?.toString() ?: ""
+            }
+            key to resolvedValue
         }
     }
 

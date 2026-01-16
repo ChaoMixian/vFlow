@@ -50,6 +50,8 @@ class TriggerService : Service() {
         const val ACTION_WORKFLOW_REMOVED = "com.chaomixian.vflow.ACTION_WORKFLOW_REMOVED"
         const val EXTRA_WORKFLOW = "extra_workflow"
         const val EXTRA_OLD_WORKFLOW = "extra_old_workflow"
+        // 新增的通知更新 Action
+        const val ACTION_UPDATE_NOTIFICATION = "com.chaomixian.vflow.ACTION_UPDATE_NOTIFICATION"
     }
 
     override fun onCreate() {
@@ -119,10 +121,15 @@ class TriggerService : Service() {
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, createNotification())
+        // 确保无论什么 Action，都先检查并正确设置前台状态
+        updateForegroundState()
 
         // 处理来自 TriggerServiceProxy 的精确指令
         when (intent?.action) {
+            ACTION_UPDATE_NOTIFICATION -> {
+                // updateForegroundState 已在上面被调用
+                DebugLogger.d(TAG, "收到通知设置更新请求，状态已刷新。")
+            }
             ACTION_WORKFLOW_CHANGED -> {
                 val newWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_WORKFLOW)
                 val oldWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_OLD_WORKFLOW)
@@ -143,6 +150,30 @@ class TriggerService : Service() {
         }
 
         return START_STICKY
+    }
+
+    /**
+     * 更新服务的前台状态。
+     * 1. 始终先调用 startForeground，以满足 startForegroundService 的契约（防止 ANR/Crash）。
+     * 2. 如果用户关闭了通知，则立即调用 stopForeground(REMOVE) 将其降级为后台服务。
+     */
+    private fun updateForegroundState() {
+        val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+        val showNotification = prefs.getBoolean("backgroundServiceNotificationEnabled", true)
+
+        // 必须先调用一次 startForeground 确保满足 Android 8+ 的 startForegroundService 要求
+        startForeground(NOTIFICATION_ID, createNotification())
+
+        if (!showNotification) {
+            // 用户选择隐藏通知 -> 降级为后台服务
+            // 这样做会移除通知，但服务仍然运行（容易被杀）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        }
     }
 
     /**

@@ -61,15 +61,28 @@ class CreateVariableModule : BaseModule() {
             }
         }
 
-        // 走到这里，说明要么不是文本类型，要么内容很简单（单个变量或纯文本）。
-        // 这种情况下，RichTextUIProvider 会返回 null，所以我们需要在这里提供详细摘要。
+        // 如果是字典或列表，且不是单纯的变量引用
+        // 此时 VariableValueUIProvider 会显示详细预览列表，摘要中隐藏 value pill 以防重复
+        if ((type == "字典" || type == "列表") && !rawText.isMagicVariable() && !rawText.isNamedVariable()) {
+            return buildSimpleSummary(context, name, type)
+        }
 
+        // 其他情况（简单文本、数字、布尔、或直接引用变量的字典/列表），摘要中显示完整值
         val valuePill = PillUtil.createPillFromParam(value, getInputs().find { it.id == "value" })
         return if (name.isNullOrBlank()) {
             PillUtil.buildSpannable(context, "创建匿名 ", type, " 为 ", valuePill)
         } else {
             val namePill = PillUtil.Pill("[[$name]]", "variableName")
             PillUtil.buildSpannable(context, "创建变量 ", namePill, " (", type, ") 为 ", valuePill)
+        }
+    }
+
+    private fun buildSimpleSummary(context: Context, name: String?, type: String): CharSequence {
+        return if (name.isNullOrBlank()) {
+            "创建 匿名变量 ($type)"
+        } else {
+            val namePill = PillUtil.Pill("[[$name]]", "variableName")
+            PillUtil.buildSpannable(context, "创建变量 ", namePill, " ($type)")
         }
     }
 

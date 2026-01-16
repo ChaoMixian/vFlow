@@ -34,43 +34,59 @@ object VariableResolver {
         return textWithoutVariable.isNotEmpty()
     }
 
+//    /**
+//     * 解析富文本。
+//     */
+//    fun resolve(rawText: String, context: ExecutionContext): String {
+//        if (rawText.isEmpty()) return ""
+//
+//        val matcher = VARIABLE_PATTERN.matcher(rawText)
+//        val result = StringBuffer()
+//
+//        while (matcher.find()) {
+//            val variableRef = matcher.group(1)
+//            var replacement = ""
+//
+//            if (variableRef != null) {
+//                val valueObj = resolveValue(variableRef, context)
+//                replacement = valueObj?.let { convertToString(it) } ?: ""
+//            }
+//
+//            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement))
+//        }
+//        matcher.appendTail(result)
+//        return result.toString()
+//    }
+//
+//    fun resolveValue(variableRef: String, context: ExecutionContext): Any? {
+//        if (variableRef.isMagicVariable()) {
+//            val parts = variableRef.removeSurrounding("{{", "}}").split('.')
+//            val sourceStepId = parts.getOrNull(0)
+//            val sourceOutputId = parts.getOrNull(1)
+//            if (sourceStepId != null && sourceOutputId != null) {
+//                return context.stepOutputs[sourceStepId]?.get(sourceOutputId)
+//            }
+//        } else if (variableRef.isNamedVariable()) {
+//            val varName = variableRef.removeSurrounding("[[", "]]")
+//            return context.namedVariables[varName]
+//        }
+//        return null
+//    }
+
     /**
-     * 解析富文本。
+     * 解析字符串中的变量。
+     * 委托给 V2 引擎，支持 {{image.width}} 等高级语法。
      */
-    fun resolve(rawText: String, context: ExecutionContext): String {
-        if (rawText.isEmpty()) return ""
-
-        val matcher = VARIABLE_PATTERN.matcher(rawText)
-        val result = StringBuffer()
-
-        while (matcher.find()) {
-            val variableRef = matcher.group(1)
-            var replacement = ""
-
-            if (variableRef != null) {
-                val valueObj = resolveValue(variableRef, context)
-                replacement = valueObj?.let { convertToString(it) } ?: ""
-            }
-
-            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement))
-        }
-        matcher.appendTail(result)
-        return result.toString()
+    fun resolve(text: String, context: ExecutionContext): String {
+        return VariableResolverV2.resolve(text, context)
     }
 
-    fun resolveValue(variableRef: String, context: ExecutionContext): Any? {
-        if (variableRef.isMagicVariable()) {
-            val parts = variableRef.removeSurrounding("{{", "}}").split('.')
-            val sourceStepId = parts.getOrNull(0)
-            val sourceOutputId = parts.getOrNull(1)
-            if (sourceStepId != null && sourceOutputId != null) {
-                return context.stepOutputs[sourceStepId]?.get(sourceOutputId)
-            }
-        } else if (variableRef.isNamedVariable()) {
-            val varName = variableRef.removeSurrounding("[[", "]]")
-            return context.namedVariables[varName]
-        }
-        return null
+    /**
+     * 解析变量并获取原始对象 (例如获取 Bitmap 而不是 String)。
+     * 委托给 V2 引擎。
+     */
+    fun resolveValue(text: String, context: ExecutionContext): Any? {
+        return VariableResolverV2.resolveValue(text, context)
     }
 
     private fun convertToString(value: Any): String {

@@ -1,0 +1,260 @@
+name: Android CI/CD
+
+on:
+  push:
+    tags:
+      - 'v*'  # 推送 v1.3.6 等 tag 时触发
+    branches:
+      - '**'  # 推送任意分支时触发
+
+jobs:
+  build:
+    name: Build APKs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 允许创建 Release
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 必须设为 0，否则无法获取 commit log 生成更新日志
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 使用官方 Gradle Action，自带构建缓存功能
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: wrapper
+
+      # 1. 恢复签名文件 (仅在 Secrets 存在时执行，防止 Fork 仓库报错)
+      - name: Decode Keystore
+        env:
+          ENCODED_KEYSTORE: ${{ secrets.KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$ENCODED_KEYSTORE" ]; then
+            echo "Decoding Keystore..."
+            # 生成到根目录
+            echo "$ENCODED_KEYSTORE" | base64 --decode > key.jks
+          
+            # 生成配置文件到根目录
+            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" > signing.properties
+            echo "KEYSTORE_ALIAS=$KEYSTORE_ALIAS" >> signing.properties
+            echo "KEY_PASSWORD=$KEY_PASSWORD" >> signing.properties
+          else
+            echo "Warning: secrets.KEYSTORE is not defined. Skipping signing configuration."
+          fi
+
+      # 2. 执行编译 (同时生成 Debug 和 Release，包含所有架构)
+      - name: Build with Gradle
+        run: ./gradlew assembleDebug assembleRelease
+
+      # 3. 核心步骤：重命名 APK
+      - name: Rename APKs
+        id: rename_apks
+        run: |
+          # 准备变量
+          DATE_STR=$(date +'%Y%m%d')
+          COMMIT_HASH=$(echo ${{ github.sha }} | cut -c1-8)
+          IS_TAG=${{ startsWith(github.ref, 'refs/tags/') }}
+          
+          # 如果是 Tag (v1.3.6)，提取数字版本号 (136)
+          if [ "$IS_TAG" = "true" ]; then
+            TAG_NAME=${{ github.ref_name }}
+            VERSION_STR=$(echo $TAG_NAME | sed 's/[^0-9]//g') # 提取纯数字
+            echo "Building Release for Tag: $TAG_NAME (Version Code: $VERSION_STR)"
+          else
+            echo "Building for Commit: $COMMIT_HASH"
+          fi
+
+          # 创建输出目录
+          mkdir -p final_apks
+
+          # 遍历所有生成的 APK 文件
+          # 排除中间文件，只找 outputs 目录下的 apk
+          find . -name "*.apk" -path "*/build/outputs/apk/*" | while read apk_file; do
+            echo "Processing: $apk_file"
+          
+            # 判断构建类型 (Debug / Release)
+            if [[ "$apk_file" == *"release"* ]]; then
+              BUILD_TYPE="Release"
+            else
+              BUILD_TYPE="Debug"
+            fi
+          
+            # 判断架构 (universal, arm64-v8a, etc...)
+            if [[ "$apk_file" == *"universal"* ]]; then
+              ARCH="universe"
+            elif [[ "$apk_file" == *"arm64-v8a"* ]]; then
+              ARCH="arm64-v8a"
+            elif [[ "$apk_file" == *"armeabi-v7a"* ]]; then
+              ARCH="armeabi-v7a"
+            elif [[ "$apk_file" == *"x86_64"* ]]; then
+              ARCH="x86_64"
+            elif [[ "$apk_file" == *"x86"* ]]; then
+              ARCH="x86"
+            else
+              # 如果没有 split，通常就是 universal
+              ARCH="universe"
+            fi
+          
+            # 拼接新文件名
+            if [ "$IS_TAG" = "true" ]; then
+              # 格式: vFlow_136_Release_universe.apk
+              NEW_NAME="vFlow_${VERSION_STR}_${BUILD_TYPE}_${ARCH}.apk"
+            else
+              # 格式: vFlow_20260113_c13bb95d_Release_universe.apk
+              NEW_NAME="vFlow_${DATE_STR}_${COMMIT_HASH}_${BUILD_TYPE}_${ARCH}.apk"
+            fi
+          
+            # 移动并重命名
+            cp "$apk_file" "final_apks/$NEW_NAME"
+            echo "Renamed to: $NEW_NAME"
+          done
+
+      # 4. 上传构建产物 (Artifact)
+      # 上传 Release - universe
+      - name: Upload Release universe
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Release-universe-${{ github.sha }}
+          path: final_apks/*_Release_universe.apk
+          retention-days: 90
+
+      # 上传 Release - arm64-v8a
+      - name: Upload Release arm64-v8a
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Release-arm64-v8a-${{ github.sha }}
+          path: final_apks/*_Release_arm64-v8a.apk
+          retention-days: 90
+
+      # 上传 Release - armeabi-v7a
+      - name: Upload Release armeabi-v7a
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Release-armeabi-v7a-${{ github.sha }}
+          path: final_apks/*_Release_armeabi-v7a.apk
+          retention-days: 90
+
+      # 上传 Release - x86
+      - name: Upload Release x86
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Release-x86-${{ github.sha }}
+          path: final_apks/*_Release_x86*.apk
+          retention-days: 90
+
+      # 上传 Debug - universe
+      - name: Upload Debug universe
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Debug-universe-${{ github.sha }}
+          path: final_apks/*_Debug_universe.apk
+          retention-days: 90
+
+      # 上传 Debug - arm64-v8a
+      - name: Upload Debug arm64-v8a
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Debug-arm64-v8a-${{ github.sha }}
+          path: final_apks/*_Debug_arm64-v8a.apk
+          retention-days: 90
+
+      # 上传 Debug - armeabi-v7a
+      - name: Upload Debug armeabi-v7a
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Debug-armeabi-v7a-${{ github.sha }}
+          path: final_apks/*_Debug_armeabi-v7a.apk
+          retention-days: 90
+
+      # 上传 Debug - x86
+      - name: Upload Debug x86
+        uses: actions/upload-artifact@v4
+        with:
+          name: vFlow-Debug-x86-${{ github.sha }}
+          path: final_apks/*_Debug_x86*.apk
+          retention-days: 90
+
+      # 5. 生成 Release 说明 (包含下载表格和更新日志)
+      - name: Generate Release Notes
+        if: startsWith(github.ref, 'refs/tags/')
+        id: release_notes
+        run: |
+          # 1. 基础变量计算
+          TAG_NAME=${{ github.ref_name }}
+          # 提取纯数字 (v1.3.6 -> 136)
+          VERSION_CODE=$(echo $TAG_NAME | sed 's/[^0-9]//g')
+          # 设置 Release 标题变量
+          echo "RELEASE_TITLE=vFlow_${VERSION_CODE}" >> $GITHUB_ENV
+          
+          # 2. 构建下载链接的基础 URL
+          # 格式: https://github.com/USER/REPO/releases/download/TAG/FILENAME
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/$TAG_NAME"
+          
+          # 定义文件名 (必须与 Step 3 中的重命名逻辑完全一致)
+          FILE_UNI="vFlow_${VERSION_CODE}_Release_universe.apk"
+          FILE_ARM64="vFlow_${VERSION_CODE}_Release_arm64-v8a.apk"
+          FILE_ARMV7="vFlow_${VERSION_CODE}_Release_armeabi-v7a.apk"
+          FILE_X86_64="vFlow_${VERSION_CODE}_Release_x86_64.apk"
+          FILE_DEBUG="vFlow_${VERSION_CODE}_Debug_universe.apk"
+
+          # 3. 构建 Markdown 表格
+          # 使用 EOF 块来构建多行字符串
+          DOWNLOAD_TABLE=$(cat <<EOF
+          ## 📥 下载地址 (Downloads)
+
+          > **🎉 如果你不清楚这些，请直接下载第一行的 "Universal" 版本。**
+
+          | 版本 (Type) | 架构 (Arch) | 说明 (Description) | 下载 (Link) |
+          | :--- | :--- | :--- | :--- |
+          | **Release** | **Universal** | 🌟 **推荐**。包含所有架构，兼容性最好，安装无忧。 | [**点击下载**]($BASE_URL/$FILE_UNI) |
+          | Release | arm64-v8a | ⚡️ **现代手机**。体积较小，适用于近5年的主流安卓机。 | [点击下载]($BASE_URL/$FILE_ARM64) |
+          | Release | armeabi-v7a | 📱 **老旧手机**。适用于较老的设备或特殊机型。 | [点击下载]($BASE_URL/$FILE_ARMV7) |
+          | Release | x86_64 | 💻 **模拟器**。适用于PC上的安卓模拟器。 | [点击下载]($BASE_URL/$FILE_X86_64) |
+          | Debug | Universal | 🐞 **调试版**。包含调试日志，未混淆，用于排查 Bug。 | [点击下载]($BASE_URL/$FILE_DEBUG) |
+          
+          EOF
+          )
+
+          # 4. 获取 Git Commit 日志 (更新日志)
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found. Using all commits."
+            LOGS=$(git log --pretty=format:"* %s (%h)")
+          else
+            echo "Generating notes from $PREV_TAG to ${{ github.ref_name }}"
+            LOGS=$(git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD)
+          fi
+          
+          # 5. 组合最终内容并写入环境变量
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "## 📝 更新日志 (Changelog)" >> $GITHUB_ENV
+          echo "$LOGS" >> $GITHUB_ENV
+          echo "$DOWNLOAD_TABLE" >> $GITHUB_ENV
+          echo "## 有问题可以加Q群：758795233" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      # 6. 发布 Release (仅 Tag)
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: final_apks/*
+          name: ${{ env.RELEASE_TITLE }}
+          body: ${{ env.RELEASE_BODY }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -56,14 +56,27 @@ object WorkflowAiGenerator {
             1. **Loop Indices Start at 1**: When using `Loop` ("vflow.logic.loop.start") or `ForEach` ("vflow.logic.foreach.start"), the output variables `loop_index` and `index` **start counting from 1** (1-based), NOT 0. Do not add +1 manually if the user asks for the "first" item.
             2. **Block Structure**: Every "Start" module (e.g., `If`, `Loop`, `ForEach`, `While`) **MUST** be closed by its corresponding "End" module (e.g., `EndIf`, `EndLoop`, `EndForEach`, `EndWhile`) later in the steps array.
             3. **Input Text**: The `Input Text` module types into the *currently focused* field. Therefore, it is almost always preceded by a `Click` action on the target input field to ensure focus.
-            4. **Magic Variables**: To use the output of a PREVIOUS step as input, use the syntax `{{STEP_ID.OUTPUT_ID}}`.
-               - Example: Step A (id: "uuid_a") has output "result". Step B uses it as `{{uuid_a.result}}`.
-            
+            4. **Magic Variables & Property Access**:
+               - Basic syntax: `{{STEP_ID.OUTPUT_ID}}` - Use the output of a previous step.
+               - Property access: `{{STEP_ID.OUTPUT_ID.PROPERTY}}` - Access a property of a variable.
+               - **Available Properties by Type**:
+                 * **Image (图片)**: `.width` (宽度), `.height` (高度), `.path` (文件路径), `.size` (文件大小), `.name` (文件名)
+                 * **List (列表)**: `.count` (数量), `.first` (第一项), `.last` (最后一项), `.random` (随机一项)
+                 * **Dictionary (字典)**: `.count` (数量), `.keys` (所有键), `.values` (所有值)
+                 * **Number (数字)**: `.int` (整数部分), `.round` (四舍五入), `.abs` (绝对值)
+                 * **String (文本)**: `.length` (长度), `.uppercase` (大写), `.lowercase` (小写), `.trim` (去空格)
+                 * **Screen Element (界面元素)**: `.text` (文本内容), `.center_x` (中心X), `.center_y` (中心Y), `.width` (宽度), `.height` (高度)
+                 * **Coordinate (坐标)**: `.x` (X坐标), `.y` (Y坐标)
+               - **Example**:
+                 * Step A (ID: "step_find_img") finds an image, outputs "element".
+                 * Step B clicks the image: use `"target": "{{step_find_img.element.center_x}}", "{{step_find_img.element.center_y}}"`
+                 * Step C gets image width: use `"value": "{{step_find_img.element.width}}"`
+
             Example:
             Step 1 (ID: "step_A"): Finds text, outputs "first_result".
             Step 2: Clicks the element found in Step 1.
             Parameter "target" in Step 2 should be: `{{step_A.first_result}}`
-            
+
             ### Available Modules (Module Definitions)
             You must ONLY use the modules listed below. Pay attention to `moduleId`, `Inputs` (key names and types), and `Outputs` (for referencing).
             
