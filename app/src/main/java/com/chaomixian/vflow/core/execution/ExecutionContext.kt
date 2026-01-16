@@ -50,4 +50,50 @@ data class ExecutionContext(
     val namedVariables: MutableMap<String, Any?>,
     val workflowStack: Stack<String> = Stack(),
     val workDir: File
-)
+) {
+    /**
+     * 获取变量值，自动递归解析变量引用。
+     * 优先从 magicVariables 获取，然后从 variables 获取。
+     *
+     * 这个方法统一处理变量解析逻辑，避免在各个模块中重复代码。
+     *
+     * @param key 变量名
+     * @return 解析后的值，如果变量不存在则返回 null
+     */
+    fun getVariable(key: String): Any? {
+        // 优先从 magicVariables 获取（已解析的魔法变量）
+        val value = magicVariables[key] ?: variables[key]
+
+        // 如果是字符串且包含变量引用，递归解析
+        // 这解决了字典值是变量引用时需要递归解析的问题
+        return when (value) {
+            is String -> {
+                if (VariableResolver.hasVariableReference(value)) {
+                    VariableResolver.resolve(value, this)
+                } else {
+                    value
+                }
+            }
+            else -> value
+        }
+    }
+
+    /**
+     * 获取变量值作为字符串，自动处理类型转换。
+     *
+     * @param key 变量名
+     * @param defaultValue 默认值（当变量不存在时返回）
+     * @return 字符串形式的变量值
+     */
+    fun getVariableAsString(key: String, defaultValue: String = ""): String {
+        val value = getVariable(key)
+        return when (value) {
+            is String -> value
+            is com.chaomixian.vflow.core.module.TextVariable -> value.value
+            is com.chaomixian.vflow.core.module.NumberVariable -> value.value.toString()
+            is com.chaomixian.vflow.core.module.BooleanVariable -> value.value.toString()
+            null -> defaultValue
+            else -> value.toString()
+        }
+    }
+}

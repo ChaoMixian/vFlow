@@ -3,11 +3,15 @@ package com.chaomixian.vflow.ui.workflow_editor
 
 import android.animation.Animator
 import android.animation.AnimatorInflater
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -275,9 +279,79 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     /**
+     * 创建执行高亮动画（代码方式，避免 Android 13 的 AnimatorInflater bug）
+     */
+    private fun createExecutionHighlightAnimator(target: MaterialCardView): Animator {
+        val colorSurface = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, 0)
+        val colorSurfaceContainerHigh = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, 0)
+
+        val colorAnimator = ValueAnimator.ofArgb(colorSurface, colorSurfaceContainerHigh).apply {
+            duration = 700
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            addUpdateListener { animation ->
+                target.setCardBackgroundColor(animation.animatedValue as Int)
+            }
+        }
+
+        val alphaAnimator = ObjectAnimator.ofFloat(target, View.ALPHA, 1.0f, 0.7f).apply {
+            duration = 700
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        val scaleXAnimator = ObjectAnimator.ofFloat(target, View.SCALE_X, 1.0f, 1.02f).apply {
+            duration = 700
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        val scaleYAnimator = ObjectAnimator.ofFloat(target, View.SCALE_Y, 1.0f, 1.02f).apply {
+            duration = 700
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        return AnimatorSet().apply {
+            playTogether(colorAnimator, alphaAnimator, scaleXAnimator, scaleYAnimator)
+        }
+    }
+
+    /**
+     * 创建执行错误动画（代码方式，避免 Android 13 的 AnimatorInflater bug）
+     */
+    private fun createExecutionErrorAnimator(target: MaterialCardView): Animator {
+        val colorSurface = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, 0)
+        val colorErrorContainer = MaterialColors.getColor(this, com.google.android.material.R.attr.colorErrorContainer, 0)
+
+        val colorAnimator = ValueAnimator.ofArgb(colorSurface, colorErrorContainer).apply {
+            duration = 200
+            repeatCount = 2
+            repeatMode = ValueAnimator.REVERSE
+            addUpdateListener { animation ->
+                target.setCardBackgroundColor(animation.animatedValue as Int)
+            }
+        }
+
+        val translationXAnimator = ObjectAnimator.ofFloat(target, View.TRANSLATION_X, -10f, 10f).apply {
+            duration = 50
+            repeatCount = 5
+            repeatMode = ValueAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+
+        return AnimatorSet().apply {
+            playTogether(colorAnimator, translationXAnimator)
+        }
+    }
+
+    /**
      * 使用 LinearSmoothScroller 实现更平滑的滚动，并在滚动结束后应用动画。
      * @param stepIndex 目标步骤的索引。
-     * @param animatorRes 要应用的动画资源ID。
+     * @param animatorRes 要应用的动画资源ID（已弃用参数，保留兼容性）。
      * @param isError 是否为错误高亮。
      */
     private fun smoothScrollToPositionAndHighlight(stepIndex: Int, animatorRes: Int, isError: Boolean = false) {
@@ -296,8 +370,12 @@ class WorkflowEditorActivity : BaseActivity() {
                     currentlyExecutingViewHolder = viewHolder
                     // 动画的目标始终是卡片视图
                     val cardView = viewHolder.itemView.findViewById<MaterialCardView>(R.id.step_card_view)
-                    executionAnimator = AnimatorInflater.loadAnimator(this@WorkflowEditorActivity, animatorRes).apply {
-                        setTarget(cardView)
+                    // 使用代码创建动画，避免 Android 13 的 AnimatorInflater bug
+                    executionAnimator = if (isError) {
+                        createExecutionErrorAnimator(cardView)
+                    } else {
+                        createExecutionHighlightAnimator(cardView)
+                    }.apply {
                         start()
                     }
                 }
@@ -370,12 +448,17 @@ class WorkflowEditorActivity : BaseActivity() {
             .filter { it.moduleId == CreateVariableModule().id }
             .forEach { step ->
                 val varName = step.parameters["variableName"] as? String
-                val varType = step.parameters["type"] as? String ?: "未知"
+                val varType = step.parameters["type"] as? String ?: "文本"
                 if (!varName.isNullOrBlank()) {
+                    // 使用统一的 VariableType 枚举获取 typeId，消除硬编码映射
+                    val typeEnum = com.chaomixian.vflow.core.execution.VariableType.fromDisplayName(varType)
+                    val typeId = typeEnum?.typeId ?: "vflow.type.any"
+
                     availableNamedVariables[varName] = MagicVariableItem(
-                        variableReference = "[[$varName]]", // 使用新的引用格式
+                        variableReference = "[[$varName]]",
                         variableName = varName,
-                        originDescription = "命名变量 ($varType)"
+                        originDescription = "命名变量 ($varType)",
+                        typeId = typeId
                     )
                 }
             }

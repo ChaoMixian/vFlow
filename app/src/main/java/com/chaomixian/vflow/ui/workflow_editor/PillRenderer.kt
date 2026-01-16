@@ -30,80 +30,71 @@ object PillRenderer {
         }
     }
 
+    /**
+     * 查找变量信息（颜色、名称、属性等）
+     * 使用统一的 VariableInfo 类，消除重复逻辑
+     */
     private fun findSourceInfo(context: Context, variableRef: String, allSteps: List<ActionStep>): SourceInfo? {
-        if (!variableRef.isMagicVariable()) return null
+        val varInfo = com.chaomixian.vflow.core.execution.VariableInfo.fromReference(variableRef, allSteps)
+            ?: return null
 
-        // 解析路径：{{stepId.outputId.prop1...}}
-        val content = variableRef.removeSurrounding("{{", "}}")
-        val parts = content.split('.')
-        val sourceStepId = parts.getOrNull(0)
-        val sourceOutputId = parts.getOrNull(1)
-
-        if (sourceStepId == null || sourceOutputId == null) return null
-
-        val sourceStep = allSteps.find { it.id == sourceStepId }
-        val sourceModule = sourceStep?.let { ModuleRegistry.getModule(it.moduleId) } ?: return null
-        val sourceOutput = sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId } ?: return null
-
-        val sourceColor = ContextCompat.getColor(context, PillUtil.getCategoryColor(sourceModule.metadata.category))
-
-        // 尝试解析属性名 (例如 "width")
-        var propDisplay: String? = null
-        if (parts.size > 2) {
-            val propName = parts[2]
-            val type = VTypeRegistry.getType(sourceOutput.typeName)
-            val propDef = type.properties.find { it.name == propName }
-            propDisplay = propDef?.displayName ?: propName
+        // 获取模块颜色
+        val sourceStep = if (varInfo.sourceStepId != null) {
+            allSteps.find { it.id == varInfo.sourceStepId }
+        } else null
+        val sourceModule = sourceStep?.let { ModuleRegistry.getModule(it.moduleId) }
+        val color = if (sourceModule != null) {
+            ContextCompat.getColor(context, PillUtil.getCategoryColor(sourceModule.metadata.category))
+        } else {
+            ContextCompat.getColor(context, R.color.variable_pill_color)
         }
 
-        return SourceInfo(outputName = sourceOutput.name, color = sourceColor, propertyName = propDisplay)
+        // 解析属性（如果有）
+        val propertyName = when {
+            variableRef.isNamedVariable() -> {
+                val content = variableRef.removeSurrounding("[[", "]]")
+                val parts = content.split('.')
+                if (parts.size > 1) varInfo.getPropertyDisplayName(parts[1]) else null
+            }
+            variableRef.isMagicVariable() -> {
+                val content = variableRef.removeSurrounding("{{", "}}")
+                val parts = content.split('.')
+                if (parts.size > 2) varInfo.getPropertyDisplayName(parts[2]) else null
+            }
+            else -> null
+        }
+
+        return SourceInfo(outputName = varInfo.sourceName, color = color, propertyName = propertyName)
     }
 
     /**
      * 获取变量引用的显示名称。
-     * 修复：现在支持解析属性（如 "图片 的 宽度"）。
+     * 使用简单的 split('.') 解析
      */
     fun getDisplayNameForVariableReference(variableReference: String, allSteps: List<ActionStep>): String {
-        // 1. 处理命名变量 [[var]] 或 [[var.prop]]
-        if (variableReference.isNamedVariable()) {
-            val content = variableReference.removeSurrounding("[[", "]]")
-            if (content.contains('.')) {
+        val varInfo = com.chaomixian.vflow.core.execution.VariableInfo.fromReference(variableReference, allSteps)
+            ?: return variableReference
+
+        val propName = when {
+            variableReference.isNamedVariable() -> {
+                val content = variableReference.removeSurrounding("[[", "]]")
                 val parts = content.split('.')
-                return "${parts[0]} 的 ${parts[1]}" // 简单显示属性
+                if (parts.size > 1) parts[1] else null
             }
-            return content
+            variableReference.isMagicVariable() -> {
+                val content = variableReference.removeSurrounding("{{", "}}")
+                val parts = content.split('.')
+                if (parts.size > 2) parts[2] else null
+            }
+            else -> null
         }
 
-        // 2. 处理魔法变量 {{step.out}} 或 {{step.out.prop}}
-        if (variableReference.isMagicVariable()) {
-            val content = variableReference.removeSurrounding("{{", "}}")
-            val parts = content.split('.')
-            val sourceStepId = parts.getOrNull(0)
-            val sourceOutputId = parts.getOrNull(1)
-
-            if (sourceStepId != null && sourceOutputId != null) {
-                val sourceStep = allSteps.find { it.id == sourceStepId }
-                if (sourceStep != null) {
-                    val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId)
-                    val outputDef = sourceModule?.getOutputs(sourceStep)?.find { it.id == sourceOutputId }
-                    if (outputDef != null) {
-                        var name = outputDef.name
-                        // 如果有属性部分，追加显示名称
-                        if (parts.size > 2) {
-                            val propName = parts[2]
-                            val type = VTypeRegistry.getType(outputDef.typeName)
-                            val propDef = type.properties.find { it.name == propName }
-                            val propDisplay = propDef?.displayName ?: propName
-                            name += " 的 $propDisplay"
-                        }
-                        return name
-                    }
-                }
-            }
-            // 降级显示
-            return if (parts.size > 2) "$sourceOutputId.${parts[2]}" else sourceOutputId ?: variableReference
+        return if (propName != null) {
+            val propDisplay = varInfo.getPropertyDisplayName(propName)
+            "${varInfo.sourceName} 的 $propDisplay"
+        } else {
+            varInfo.sourceName
         }
-        return variableReference
     }
 
     fun renderPills(
@@ -130,13 +121,8 @@ object PillRenderer {
             val pillText: CharSequence
 
             when {
-                isNamedVariable -> {
-                    val displayName = getDisplayNameForVariableReference(reference, allSteps)
-                    val truncatedName = truncate(displayName)
-                    pillText = " $truncatedName "
-                    color = ContextCompat.getColor(context, PillUtil.getCategoryColor("数据"))
-                }
-                isVariable -> {
+                isNamedVariable || isVariable -> {
+                    // 统一处理：命名变量和魔法变量都使用 findSourceInfo
                     val sourceInfo = findSourceInfo(context, reference, allSteps)
                     val baseName = sourceInfo?.outputName ?: "变量"
                     val displayName = if (sourceInfo?.propertyName != null) "$baseName 的 ${sourceInfo.propertyName}" else baseName
@@ -186,11 +172,9 @@ object PillRenderer {
                 val displayName = getDisplayNameForVariableReference(variableRef, allSteps)
                 val truncatedName = truncate(displayName)
 
-                val color = when {
-                    variableRef.isMagicVariable() -> findSourceInfo(context, variableRef, allSteps)?.color ?: ContextCompat.getColor(context, R.color.variable_pill_color)
-                    variableRef.isNamedVariable() -> ContextCompat.getColor(context, PillUtil.getCategoryColor("数据"))
-                    else -> ContextCompat.getColor(context, R.color.static_pill_color)
-                }
+                // 统一获取颜色：命名变量和魔法变量都使用 findSourceInfo
+                val color = findSourceInfo(context, variableRef, allSteps)?.color
+                    ?: ContextCompat.getColor(context, R.color.variable_pill_color)
 
                 // 紧凑模式渲染，前后留白由 insertVariablePill 或 render 逻辑控制，这里为富文本预览添加小间距
                 spannable.append(" ")

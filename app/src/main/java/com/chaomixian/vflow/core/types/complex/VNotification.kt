@@ -1,15 +1,20 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/complex/VNotification.kt
 package com.chaomixian.vflow.core.types.complex
 
-import com.chaomixian.vflow.core.types.BaseVObject
-import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
 
-class VNotification(val notification: NotificationObject) : BaseVObject() {
+/**
+ * 通知类型的 VObject 实现
+ * 使用属性注册表管理属性，消除了重复的 when 语句
+ */
+class VNotification(val notification: NotificationObject) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.NOTIFICATION
     override val raw: Any = notification
+    override val propertyRegistry = Companion.registry
 
     override fun asString(): String = "${notification.title}: ${notification.content}"
 
@@ -17,13 +22,21 @@ class VNotification(val notification: NotificationObject) : BaseVObject() {
 
     override fun asBoolean(): Boolean = true
 
-    override fun getProperty(propertyName: String): VObject? {
-        return when (propertyName.lowercase()) {
-            "title", "标题" -> VString(notification.title)
-            "content", "内容" -> VString(notification.content)
-            "package", "包名" -> VString(notification.packageName)
-            "id" -> VString(notification.id)
-            else -> super.getProperty(propertyName)
+    companion object {
+        // 属性注册表：所有 VNotification 实例共享
+        private val registry = PropertyRegistry().apply {
+            register("title", "标题", getter = { host ->
+                VString((host as VNotification).notification.title)
+            })
+            register("content", "内容", getter = { host ->
+                VString((host as VNotification).notification.content)
+            })
+            register("package", "包名", getter = { host ->
+                VString((host as VNotification).notification.packageName)
+            })
+            register("id", getter = { host ->
+                VString((host as VNotification).notification.id)
+            })
         }
     }
 }

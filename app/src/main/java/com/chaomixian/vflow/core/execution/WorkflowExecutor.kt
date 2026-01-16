@@ -368,6 +368,13 @@ object WorkflowExecutor {
                                 }
                             }
                         }
+
+                        // 3. 混合情况：包含变量引用的普通字符串 (如 "静态文本{{uuid.success}}")
+                        VariableResolver.isComplex(value) -> {
+                            // 使用 VariableResolverV2 解析混合字符串
+                            val resolved = VariableResolver.resolve(value, executionContext)
+                            executionContext.magicVariables[key] = resolved
+                        }
                     }
                 }
             }

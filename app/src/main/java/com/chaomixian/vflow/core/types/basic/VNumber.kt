@@ -1,13 +1,18 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/basic/VNumber.kt
 package com.chaomixian.vflow.core.types.basic
 
-import com.chaomixian.vflow.core.types.BaseVObject
-import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 import kotlin.math.roundToInt
 
-class VNumber(override val raw: Double) : BaseVObject() {
+/**
+ * 数字类型的 VObject 实现
+ * 使用属性注册表管理属性，消除了重复的 when 语句
+ */
+class VNumber(override val raw: Double) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.NUMBER
+    override val propertyRegistry = Companion.registry
 
     override fun asString(): String {
         // 如果是整数（无小数部分），去掉小数点显示
@@ -22,12 +27,21 @@ class VNumber(override val raw: Double) : BaseVObject() {
 
     override fun asBoolean(): Boolean = raw != 0.0
 
-    override fun getProperty(propertyName: String): VObject? {
-        return when (propertyName.lowercase()) {
-            "int", "整数" -> VNumber(raw.toInt().toDouble())
-            "round", "四舍五入" -> VNumber(raw.roundToInt().toDouble())
-            "abs", "绝对值" -> VNumber(Math.abs(raw))
-            else -> super.getProperty(propertyName)
+    companion object {
+        // 属性注册表：所有 VNumber 实例共享
+        private val registry = PropertyRegistry().apply {
+            register("int", "整数", getter = { host ->
+                VNumber((host as VNumber).raw.toInt().toDouble())
+            })
+            register("round", "四舍五入", getter = { host ->
+                VNumber((host as VNumber).raw.roundToInt().toDouble())
+            })
+            register("abs", "绝对值", getter = { host ->
+                VNumber(Math.abs((host as VNumber).raw))
+            })
+            register("length", "len", "长度", getter = { host ->
+                VNumber((host as VNumber).raw.toLong().toString().length.toDouble())
+            })
         }
     }
 }

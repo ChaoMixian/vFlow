@@ -123,19 +123,36 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
             onSelection?.invoke(item)
             dismiss()
         } else {
-            val options = mutableListOf<String>()
-            options.add("使用 ${item.variableName} 本身")
-            properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
+            // 特殊处理：字典和列表类型
+            when (item.typeId) {
+                "vflow.type.dictionary" -> showDictionaryOptionsDialog(item, properties)
+                "vflow.type.list" -> showListOptionsDialog(item, properties)
+                else -> showPropertySelectionDialog(item, properties)
+            }
+        }
+    }
 
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("选择 ${item.variableName} 的属性")
-                .setItems(options.toTypedArray()) { _, which ->
-                    if (which == 0) {
+    /**
+     * 显示字典选项对话框（内置属性 + 指定键）
+     */
+    private fun showDictionaryOptionsDialog(item: MagicVariableItem, properties: List<com.chaomixian.vflow.core.types.VPropertyDef>) {
+        val options = mutableListOf<String>()
+        options.add("使用 ${item.variableName} 本身")
+        properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
+        options.add("选择指定键的值...")  // 添加选项
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("字典: ${item.variableName}")
+            .setItems(options.toTypedArray()) { _, which ->
+                when {
+                    which == 0 -> {
                         onSelection?.invoke(item)
-                    } else {
+                        dismiss()
+                    }
+                    which <= properties.size -> {
+                        // 选择内置属性
                         val prop = properties[which - 1]
                         val oldRef = item.variableReference
-                        // 智能拼接属性
                         val newRef = when {
                             oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
                                 oldRef.removeSuffix("}}") + ".${prop.name}}}"
@@ -145,17 +162,179 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                             }
                             else -> oldRef
                         }
-
                         val newItem = item.copy(
                             variableReference = newRef,
                             variableName = "${item.variableName} 的 ${prop.displayName}"
                         )
                         onSelection?.invoke(newItem)
+                        dismiss()
                     }
+                    else -> {
+                        // 选择指定键
+                        showDictionaryKeyInput(item)
+                    }
+                }
+            }
+            .show()
+    }
+
+    /**
+     * 显示字典键输入对话框
+     */
+    private fun showDictionaryKeyInput(item: MagicVariableItem) {
+        val context = requireContext()
+        val editText = android.widget.EditText(context)
+        editText.hint = "输入键名（区分大小写）"
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle("输入字典键名")
+            .setView(editText)
+            .setPositiveButton("确定") { _, _ ->
+                val key = editText.text.toString().trim()
+                if (key.isNotEmpty()) {
+                    val oldRef = item.variableReference
+                    val newRef = when {
+                        oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
+                            oldRef.removeSuffix("}}") + ".$key}}"
+                        }
+                        oldRef.startsWith("[[") && oldRef.endsWith("]]") -> {
+                            oldRef.removeSuffix("]]") + ".$key]]"
+                        }
+                        else -> oldRef
+                    }
+
+                    val newItem = item.copy(
+                        variableReference = newRef,
+                        variableName = "${item.variableName}.$key"
+                    )
+                    onSelection?.invoke(newItem)
                     dismiss()
                 }
-                .show()
-        }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /**
+     * 显示列表选项对话框（内置属性 + 指定索引）
+     */
+    private fun showListOptionsDialog(item: MagicVariableItem, properties: List<com.chaomixian.vflow.core.types.VPropertyDef>) {
+        val options = mutableListOf<String>()
+        options.add("使用 ${item.variableName} 本身")
+        properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
+        options.add("选择指定索引的值...")  // 添加选项
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("列表: ${item.variableName}")
+            .setItems(options.toTypedArray()) { _, which ->
+                when {
+                    which == 0 -> {
+                        onSelection?.invoke(item)
+                        dismiss()
+                    }
+                    which <= properties.size -> {
+                        // 选择内置属性
+                        val prop = properties[which - 1]
+                        val oldRef = item.variableReference
+                        val newRef = when {
+                            oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
+                                oldRef.removeSuffix("}}") + ".${prop.name}}}"
+                            }
+                            oldRef.startsWith("[[") && oldRef.endsWith("]]") -> {
+                                oldRef.removeSuffix("]]") + ".${prop.name}]]"
+                            }
+                            else -> oldRef
+                        }
+                        val newItem = item.copy(
+                            variableReference = newRef,
+                            variableName = "${item.variableName} 的 ${prop.displayName}"
+                        )
+                        onSelection?.invoke(newItem)
+                        dismiss()
+                    }
+                    else -> {
+                        // 选择指定索引
+                        showListIndexInput(item)
+                    }
+                }
+            }
+            .show()
+    }
+
+    /**
+     * 显示列表索引输入对话框
+     */
+    private fun showListIndexInput(item: MagicVariableItem) {
+        val context = requireContext()
+        val editText = android.widget.EditText(context)
+        // 不设置 inputType，允许输入负号
+        editText.hint = "例如: 0, 1, 2, -1, -2"
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle("输入列表索引")
+            .setView(editText)
+            .setPositiveButton("确定") { _, _ ->
+                val indexText = editText.text.toString().trim()
+                if (indexText.isNotEmpty()) {
+                    val oldRef = item.variableReference
+                    val newRef = when {
+                        oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
+                            oldRef.removeSuffix("}}") + ".$indexText}}"
+                        }
+                        oldRef.startsWith("[[") && oldRef.endsWith("]]") -> {
+                            oldRef.removeSuffix("]]") + ".$indexText]]"
+                        }
+                        else -> oldRef
+                    }
+
+                    val newItem = item.copy(
+                        variableReference = newRef,
+                        variableName = "${item.variableName}.$indexText"
+                    )
+                    onSelection?.invoke(newItem)
+                    dismiss()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /**
+     * 显示标准属性选择对话框（用于非字典/列表类型）
+     */
+    private fun showPropertySelectionDialog(item: MagicVariableItem, properties: List<com.chaomixian.vflow.core.types.VPropertyDef>) {
+        val options = mutableListOf<String>()
+        options.add("使用 ${item.variableName} 本身")
+        properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("选择 ${item.variableName} 的属性")
+            .setItems(options.toTypedArray()) { _, which ->
+                if (which == 0) {
+                    onSelection?.invoke(item)
+                } else {
+                    val prop = properties[which - 1]
+                    val oldRef = item.variableReference
+                    // 智能拼接属性
+                    val newRef = when {
+                        oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
+                            oldRef.removeSuffix("}}") + ".${prop.name}}}"
+                        }
+                        oldRef.startsWith("[[") && oldRef.endsWith("]]") -> {
+                            oldRef.removeSuffix("]]") + ".${prop.name}]]"
+                        }
+                        else -> oldRef
+                    }
+
+                    val newItem = item.copy(
+                        variableReference = newRef,
+                        variableName = "${item.variableName} 的 ${prop.displayName}"
+                    )
+                    onSelection?.invoke(newItem)
+                }
+                dismiss()
+            }
+            .show()
     }
 }
 

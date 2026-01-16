@@ -1,12 +1,17 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/basic/VBoolean.kt
 package com.chaomixian.vflow.core.types.basic
 
-import com.chaomixian.vflow.core.types.BaseVObject
-import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 
-class VBoolean(override val raw: Boolean) : BaseVObject() {
+/**
+ * 布尔类型的 VObject 实现
+ * 使用属性注册表管理属性，消除了重复的 when 语句
+ */
+class VBoolean(override val raw: Boolean) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.BOOLEAN
+    override val propertyRegistry = Companion.registry
 
     override fun asString(): String = raw.toString()
 
@@ -14,10 +19,12 @@ class VBoolean(override val raw: Boolean) : BaseVObject() {
 
     override fun asBoolean(): Boolean = raw
 
-    override fun getProperty(propertyName: String): VObject? {
-        return when (propertyName.lowercase()) {
-            "not", "非", "反转" -> VBoolean(!raw)
-            else -> super.getProperty(propertyName)
+    companion object {
+        // 属性注册表：所有 VBoolean 实例共享
+        private val registry = PropertyRegistry().apply {
+            register("not", "非", "反转", "invert", getter = { host ->
+                VBoolean(!(host as VBoolean).raw)
+            })
         }
     }
 }

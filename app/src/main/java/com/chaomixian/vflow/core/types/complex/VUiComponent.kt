@@ -1,12 +1,12 @@
 // 文件: java/com/chaomixian/vflow/core/types/complex/VUiComponent.kt
 package com.chaomixian.vflow.core.types.complex
 
-import com.chaomixian.vflow.core.types.BaseVObject
-import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 
 /**
@@ -25,14 +25,17 @@ import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
  * - .placeholder: 占位符文本
  * - .required: 是否必填
  * - .triggerEvent: 是否触发事件
+ *
+ * 使用属性注册表管理属性，消除了重复的 when 语句
  */
 class VUiComponent(
     val element: UiElement,
     val currentValue: Any? = null
-) : BaseVObject() {
+) : EnhancedBaseVObject() {
 
     override val type = VTypeRegistry.UI_COMPONENT
     override val raw: Any = element
+    override val propertyRegistry = Companion.registry
 
     override fun asString(): String = when (element.type) {
         com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.TEXT -> element.label
@@ -45,50 +48,56 @@ class VUiComponent(
 
     override fun asBoolean(): Boolean = true
 
-    /**
-     * 属性访问
-     *
-     * 示例：
-     * - {{button.id}} -> "btn1"
-     * - {{button.type}} -> "button"
-     * - {{input.value}} -> "用户输入的文本"
-     */
-    override fun getProperty(propertyName: String): VObject? {
-        return when (propertyName.lowercase()) {
+    companion object {
+        // 属性注册表：所有 VUiComponent 实例共享
+        private val registry = PropertyRegistry().apply {
             // 基本属性
-            "id" -> VString(element.id)
-            "type" -> VString(element.type.name.lowercase())
-            "label" -> VString(element.label)
+            register("id", getter = { host ->
+                VString((host as VUiComponent).element.id)
+            })
+            register("type", "类型", getter = { host ->
+                VString((host as VUiComponent).element.type.name.lowercase())
+            })
+            register("label", "标签", getter = { host ->
+                VString((host as VUiComponent).element.label)
+            })
 
-            // 值相关
-            "value", "text" -> when (currentValue) {
-                null -> VString(element.defaultValue)
-                else -> VString(currentValue.toString())
-            }
-            "defaultvalue", "default" -> VString(element.defaultValue)
-            "placeholder" -> VString(element.placeholder)
+            // 值相关（需要特殊处理currentValue）
+            register("value", "text", "值", "内容", getter = { host ->
+                val component = host as VUiComponent
+                when (component.currentValue) {
+                    null -> VString(component.element.defaultValue)
+                    else -> VString(component.currentValue.toString())
+                }
+            })
+            register("defaultvalue", "default", "默认值", getter = { host ->
+                VString((host as VUiComponent).element.defaultValue)
+            })
+            register("placeholder", "占位符", getter = { host ->
+                VString((host as VUiComponent).element.placeholder)
+            })
 
             // 布尔属性
-            "required" -> VBoolean(element.isRequired)
-            "trigger_event", "triggerevent" -> VBoolean(element.triggerEvent)
+            register("required", getter = { host ->
+                VBoolean((host as VUiComponent).element.isRequired)
+            })
+            register("trigger_event", "triggerevent", getter = { host ->
+                VBoolean((host as VUiComponent).element.triggerEvent)
+            })
 
             // 类型判断
-            "istext" -> VBoolean(element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.TEXT)
-            "isbutton" -> VBoolean(element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.BUTTON)
-            "isinput" -> VBoolean(element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.INPUT)
-            "isswitch" -> VBoolean(element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.SWITCH)
-
-            // 中文别名
-            "类型" -> VString(element.type.name.lowercase())
-            "标签" -> VString(element.label)
-            "值", "内容" -> when (currentValue) {
-                null -> VString(element.defaultValue)
-                else -> VString(currentValue.toString())
-            }
-            "默认值" -> VString(element.defaultValue)
-            "占位符" -> VString(element.placeholder)
-
-            else -> null
+            register("istext", getter = { host ->
+                VBoolean((host as VUiComponent).element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.TEXT)
+            })
+            register("isbutton", getter = { host ->
+                VBoolean((host as VUiComponent).element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.BUTTON)
+            })
+            register("isinput", getter = { host ->
+                VBoolean((host as VUiComponent).element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.INPUT)
+            })
+            register("isswitch", getter = { host ->
+                VBoolean((host as VUiComponent).element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.SWITCH)
+            })
         }
     }
 

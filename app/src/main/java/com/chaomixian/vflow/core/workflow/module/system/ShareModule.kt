@@ -32,7 +32,8 @@ class ShareModule : BaseModule() {
             staticType = ParameterType.ANY,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, ImageVariable.TYPE_NAME) // 接受文本和图片
+            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, ImageVariable.TYPE_NAME), // 接受文本和图片
+            supportsRichText = true  // 支持混合变量
         )
     )
 
@@ -64,8 +65,21 @@ class ShareModule : BaseModule() {
         val uiService = context.services.get(ExecutionUIService::class)
             ?: return ExecutionResult.Failure("服务缺失", "无法获取UI服务来执行分享操作。")
 
-        // 获取要分享的内容
-        val content = context.magicVariables["content"] ?: context.variables["content"]
+        // 特殊处理：图片变量需要保留原始类型，不能解析
+        // 先检查原始值是否为图片
+        val rawContent = context.magicVariables["content"] ?: context.variables["content"]
+
+        val content = when (rawContent) {
+            is ImageVariable -> rawContent  // 图片变量直接使用，不解析
+            is TextVariable -> {
+                // TextVariable 需要获取其值并解析（因为值可能包含变量引用）
+                context.getVariableAsString("content")
+            }
+            else -> {
+                // 其他类型使用统一的变量访问方法
+                context.getVariable("content")
+            }
+        }
 
         if (content == null || (content is String && content.isEmpty())) {
             return ExecutionResult.Failure("内容为空", "没有可分享的内容。")

@@ -1,15 +1,20 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/complex/VTime.kt
 package com.chaomixian.vflow.core.types.complex
 
-import com.chaomixian.vflow.core.types.BaseVObject
-import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
-import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VNull
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 
-class VTime(val timeString: String) : BaseVObject() {
+/**
+ * 时间类型的 VObject 实现
+ * 使用属性注册表管理属性，消除了重复的 when 语句
+ */
+class VTime(val timeString: String) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.TIME
     override val raw: Any = timeString
+    override val propertyRegistry = Companion.registry
 
     // 格式 HH:mm
     private val parts by lazy {
@@ -25,11 +30,15 @@ class VTime(val timeString: String) : BaseVObject() {
 
     override fun asBoolean(): Boolean = true
 
-    override fun getProperty(propertyName: String): VObject? {
-        return when (propertyName.lowercase()) {
-            "hour", "时" -> parts?.first?.let { VNumber(it.toDouble()) }
-            "minute", "分" -> parts?.second?.let { VNumber(it.toDouble()) }
-            else -> super.getProperty(propertyName)
+    companion object {
+        // 属性注册表：所有 VTime 实例共享
+        private val registry = PropertyRegistry().apply {
+            register("hour", "时", getter = { host ->
+                (host as VTime).parts?.first?.let { VNumber(it.toDouble()) } ?: VNull
+            })
+            register("minute", "分", getter = { host ->
+                (host as VTime).parts?.second?.let { VNumber(it.toDouble()) } ?: VNull
+            })
         }
     }
 }

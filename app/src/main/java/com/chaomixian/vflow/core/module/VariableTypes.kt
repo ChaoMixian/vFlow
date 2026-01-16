@@ -15,8 +15,8 @@ import kotlinx.parcelize.RawValue
 @Parcelize
 data class TextVariable(val value: String) : Parcelable {
     companion object {
-        /** 文本变量的唯一类型标识符。 */
-        const val TYPE_NAME = "vflow.type.text"
+        /** 文本变量的唯一类型标识符。与 VTypeRegistry.STRING 保持一致 */
+        const val TYPE_NAME = "vflow.type.string"
     }
 }
 
@@ -27,7 +27,7 @@ data class TextVariable(val value: String) : Parcelable {
 @Parcelize
 data class NumberVariable(val value: Double) : Parcelable {
     companion object {
-        /** 数字变量的唯一类型标识符。 */
+        /** 数字变量的唯一类型标识符。与 VTypeRegistry.NUMBER 保持一致 */
         const val TYPE_NAME = "vflow.type.number"
     }
 }
@@ -39,7 +39,7 @@ data class NumberVariable(val value: Double) : Parcelable {
 @Parcelize
 data class BooleanVariable(val value: Boolean) : Parcelable {
     companion object {
-        /** 布尔变量的唯一类型标识符。 */
+        /** 布尔变量的唯一类型标识符。与 VTypeRegistry.BOOLEAN 保持一致 */
         const val TYPE_NAME = "vflow.type.boolean"
     }
 }
@@ -51,7 +51,7 @@ data class BooleanVariable(val value: Boolean) : Parcelable {
 @Parcelize
 data class ListVariable(val value: @RawValue List<Any?>) : Parcelable {
     companion object {
-        /** 列表变量的唯一类型标识符。 */
+        /** 列表变量的唯一类型标识符。与 VTypeRegistry.LIST 保持一致 */
         const val TYPE_NAME = "vflow.type.list"
     }
 }
@@ -63,7 +63,7 @@ data class ListVariable(val value: @RawValue List<Any?>) : Parcelable {
 @Parcelize
 data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelable {
     companion object {
-        /** 字典变量的唯一类型标识符。 */
+        /** 字典变量的唯一类型标识符。与 VTypeRegistry.DICTIONARY 保持一致 */
         const val TYPE_NAME = "vflow.type.dictionary"
     }
 }
@@ -75,7 +75,7 @@ data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelab
 @Parcelize
 data class ImageVariable(val uri: String) : Parcelable {
     companion object {
-        /** 图像变量的唯一类型标识符。 */
+        /** 图像变量的唯一类型标识符。与 VTypeRegistry.IMAGE 保持一致 */
         const val TYPE_NAME = "vflow.type.image"
     }
 }
@@ -87,7 +87,7 @@ data class ImageVariable(val uri: String) : Parcelable {
 @Parcelize
 data class TimeVariable(val value: String) : Parcelable {
     companion object {
-        /** 时间变量的唯一类型标识符。 */
+        /** 时间变量的唯一类型标识符。与 VTypeRegistry.TIME 保持一致 */
         const val TYPE_NAME = "vflow.type.time"
     }
 }
@@ -99,7 +99,7 @@ data class TimeVariable(val value: String) : Parcelable {
 @Parcelize
 data class DateVariable(val value: String) : Parcelable {
     companion object {
-        /** 日期变量的唯一类型标识符。 */
+        /** 日期变量的唯一类型标识符。与 VTypeRegistry.DATE 保持一致 */
         const val TYPE_NAME = "vflow.type.date"
     }
 }

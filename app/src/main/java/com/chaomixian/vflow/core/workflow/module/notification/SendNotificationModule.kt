@@ -21,7 +21,7 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 /**
- * “发送通知”模块。
+ * "发送通知"模块。
  * 在系统通知栏中显示一个自定义通知。
  */
 class SendNotificationModule : BaseModule() {
@@ -49,7 +49,8 @@ class SendNotificationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "vFlow 通知",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.Companion.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(TextVariable.Companion.TYPE_NAME),
+            supportsRichText = true  // 支持混合变量
         ),
         InputDefinition(
             id = "message",
@@ -57,7 +58,8 @@ class SendNotificationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "这是一条来自 vFlow 的消息。",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.Companion.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(TextVariable.Companion.TYPE_NAME),
+            supportsRichText = true  // 支持混合变量
         )
     )
 
@@ -88,10 +90,9 @@ class SendNotificationModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val title = (context.magicVariables["title"] as? TextVariable)?.value
-            ?: context.variables["title"] as? String ?: "vFlow 通知"
-        val message = (context.magicVariables["message"] as? TextVariable)?.value
-            ?: context.variables["message"] as? String ?: ""
+        // 使用统一的变量访问方法，自动处理递归解析和类型转换
+        val title = context.getVariableAsString("title", "vFlow 通知")
+        val message = context.getVariableAsString("message", "这是一条来自 vFlow 的消息。")
 
         val appContext = context.applicationContext
         val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

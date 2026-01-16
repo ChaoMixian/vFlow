@@ -1,16 +1,20 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/complex/VCoordinate.kt
 package com.chaomixian.vflow.core.types.complex
 
-import com.chaomixian.vflow.core.types.BaseVObject
-import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
-import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 import com.chaomixian.vflow.core.workflow.module.interaction.Coordinate
 
-class VCoordinate(val coordinate: Coordinate) : BaseVObject() {
+/**
+ * 坐标类型的 VObject 实现
+ * 使用属性注册表管理属性，消除了重复的 when 语句
+ */
+class VCoordinate(val coordinate: Coordinate) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.COORDINATE
     override val raw: Any = coordinate
+    override val propertyRegistry = Companion.registry
 
     override fun asString(): String = "${coordinate.x},${coordinate.y}"
 
@@ -18,11 +22,15 @@ class VCoordinate(val coordinate: Coordinate) : BaseVObject() {
 
     override fun asBoolean(): Boolean = true
 
-    override fun getProperty(propertyName: String): VObject? {
-        return when (propertyName.lowercase()) {
-            "x" -> VNumber(coordinate.x.toDouble())
-            "y" -> VNumber(coordinate.y.toDouble())
-            else -> super.getProperty(propertyName)
+    companion object {
+        // 属性注册表：所有 VCoordinate 实例共享
+        private val registry = PropertyRegistry().apply {
+            register("x", getter = { host ->
+                VNumber((host as VCoordinate).coordinate.x.toDouble())
+            })
+            register("y", getter = { host ->
+                VNumber((host as VCoordinate).coordinate.y.toDouble())
+            })
         }
     }
 }

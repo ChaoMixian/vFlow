@@ -1,12 +1,17 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/basic/VString.kt
 package com.chaomixian.vflow.core.types.basic
 
-import com.chaomixian.vflow.core.types.BaseVObject
-import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 
-class VString(override val raw: String) : BaseVObject() {
+/**
+ * 文本类型的 VObject 实现
+ * 使用属性注册表管理属性，消除了重复的 when 语句
+ */
+class VString(override val raw: String) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.STRING
+    override val propertyRegistry = Companion.registry
 
     override fun asString(): String = raw
 
@@ -16,14 +21,24 @@ class VString(override val raw: String) : BaseVObject() {
     override fun asBoolean(): Boolean =
         raw.isNotEmpty() && !raw.equals("false", ignoreCase = true) && raw != "0"
 
-    override fun getProperty(propertyName: String): VObject? {
-        return when (propertyName.lowercase()) {
-            "length", "长度", "count" -> VNumber(raw.length.toDouble())
-            "uppercase", "大写" -> VString(raw.uppercase())
-            "lowercase", "小写" -> VString(raw.lowercase())
-            "trim", "去空格" -> VString(raw.trim())
-            "isempty", "为空" -> VBoolean(raw.isEmpty())
-            else -> super.getProperty(propertyName)
+    companion object {
+        // 属性注册表：所有 VString 实例共享
+        private val registry = PropertyRegistry().apply {
+            register("length", "len", "长度", "count", getter = { host ->
+                VNumber((host as VString).raw.length.toDouble())
+            })
+            register("uppercase", "大写", "upper", getter = { host ->
+                VString((host as VString).raw.uppercase())
+            })
+            register("lowercase", "小写", "lower", getter = { host ->
+                VString((host as VString).raw.lowercase())
+            })
+            register("trim", "去空格", "trimmed", getter = { host ->
+                VString((host as VString).raw.trim())
+            })
+            register("isempty", "为空", "empty", getter = { host ->
+                VBoolean((host as VString).raw.isEmpty())
+            })
         }
     }
 }

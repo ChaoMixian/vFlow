@@ -9,7 +9,8 @@ object VTypeRegistry {
         VPropertyDef("length", "长度", ANY),
         VPropertyDef("uppercase", "大写", ANY),
         VPropertyDef("lowercase", "小写", ANY),
-        VPropertyDef("trim", "去空格", ANY)
+        VPropertyDef("trim", "去空格", ANY),
+        VPropertyDef("isempty", "是否为空", ANY)
     ))
 
     val NUMBER = SimpleVType("vflow.type.number", "数字", ANY, listOf(
@@ -29,6 +30,7 @@ object VTypeRegistry {
         VPropertyDef("count", "数量", NUMBER),
         VPropertyDef("first", "第一项", ANY),
         VPropertyDef("last", "最后一项", ANY),
+        VPropertyDef("isempty", "是否为空", ANY),
         VPropertyDef("random", "随机一项", ANY)
     ))
 
@@ -43,6 +45,7 @@ object VTypeRegistry {
         VPropertyDef("width", "宽度", NUMBER),
         VPropertyDef("height", "高度", NUMBER),
         VPropertyDef("path", "文件路径", STRING),
+        VPropertyDef("uri", "URI地址", STRING),
         VPropertyDef("size", "文件大小", NUMBER),
         VPropertyDef("name", "文件名", STRING)
     ))
@@ -64,6 +67,8 @@ object VTypeRegistry {
         VPropertyDef("text", "文本内容", STRING),
         VPropertyDef("center_x", "中心 X", NUMBER),
         VPropertyDef("center_y", "中心 Y", NUMBER),
+        VPropertyDef("left", "左边界", NUMBER),
+        VPropertyDef("top", "上边界", NUMBER),
         VPropertyDef("width", "宽度", NUMBER),
         VPropertyDef("height", "高度", NUMBER)
     ))
@@ -73,9 +78,14 @@ object VTypeRegistry {
         VPropertyDef("type", "类型", STRING),
         VPropertyDef("label", "标签", STRING),
         VPropertyDef("value", "值", ANY),
+        VPropertyDef("defaultvalue", "默认值", ANY),
         VPropertyDef("placeholder", "占位符", STRING),
         VPropertyDef("required", "必填", BOOLEAN),
-        VPropertyDef("triggerEvent", "触发事件", BOOLEAN)
+        VPropertyDef("triggerEvent", "触发事件", BOOLEAN),
+        VPropertyDef("istext", "是否文本", BOOLEAN),
+        VPropertyDef("isbutton", "是否按钮", BOOLEAN),
+        VPropertyDef("isinput", "是否输入框", BOOLEAN),
+        VPropertyDef("isswitch", "是否开关", BOOLEAN)
     ))
 
     val COORDINATE = SimpleVType("vflow.type.coordinate", "坐标", ANY, listOf(

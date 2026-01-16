@@ -4,21 +4,23 @@ package com.chaomixian.vflow.core.types.complex
 import android.graphics.BitmapFactory
 import android.net.Uri
 import com.chaomixian.vflow.core.logging.LogManager
-import com.chaomixian.vflow.core.types.BaseVObject
-import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 import java.io.File
 
 /**
  * 图像对象。
  * 包装一个图片 URI，并提供 width, height, path, size 等属性访问。
+ * 使用属性注册表管理属性，消除了重复的 when 语句
  */
-class VImage(val uriString: String) : BaseVObject() {
+class VImage(val uriString: String) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.IMAGE
     override val raw: Any = uriString
+    override val propertyRegistry = Companion.registry
 
     // 缓存尺寸信息，避免重复IO
     private var _width: Int? = null
@@ -31,30 +33,9 @@ class VImage(val uriString: String) : BaseVObject() {
 
     override fun asBoolean(): Boolean = uriString.isNotEmpty()
 
-    override fun getProperty(propertyName: String): VObject? {
-        // 懒加载图片元数据
-        if (_width == null) {
-            readImageMetadata()
-        }
-
-        return when (propertyName.lowercase()) {
-            "width", "w", "宽度" -> _width?.let { VNumber(it.toDouble()) } ?: VNull
-            "height", "h", "高度" -> _height?.let { VNumber(it.toDouble()) } ?: VNull
-            "path", "路径" -> {
-                val uri = Uri.parse(uriString)
-                if (uri.scheme == "file") VString(uri.path ?: "") else VString(uriString)
-            }
-            "uri" -> VString(uriString)
-            "size", "大小" -> _size?.let { VNumber(it.toDouble()) } ?: VNull // 字节数
-            "name", "文件名" -> {
-                val name = Uri.parse(uriString).lastPathSegment ?: "unknown.jpg"
-                VString(name)
-            }
-            else -> super.getProperty(propertyName)
-        }
-    }
-
     private fun readImageMetadata() {
+        if (_width != null) return // 已加载
+
         try {
             val context = LogManager.applicationContext
             val uri = Uri.parse(uriString)
@@ -81,6 +62,40 @@ class VImage(val uriString: String) : BaseVObject() {
         } catch (e: Exception) {
             e.printStackTrace()
             // 解析失败时保持 null
+        }
+    }
+
+    companion object {
+        // 属性注册表：所有 VImage 实例共享
+        private val registry = PropertyRegistry().apply {
+            register("width", "w", "宽度", getter = { host ->
+                val img = host as VImage
+                img.readImageMetadata()
+                img._width?.let { VNumber(it.toDouble()) } ?: VNull
+            })
+            register("height", "h", "高度", getter = { host ->
+                val img = host as VImage
+                img.readImageMetadata()
+                img._height?.let { VNumber(it.toDouble()) } ?: VNull
+            })
+            register("path", "路径", getter = { host ->
+                val img = host as VImage
+                val uri = Uri.parse(img.uriString)
+                if (uri.scheme == "file") VString(uri.path ?: "") else VString(img.uriString)
+            })
+            register("uri", getter = { host ->
+                VString((host as VImage).uriString)
+            })
+            register("size", "大小", "filesize", getter = { host ->
+                val img = host as VImage
+                img.readImageMetadata()
+                img._size?.let { VNumber(it.toDouble()) } ?: VNull
+            })
+            register("name", "文件名", "filename", getter = { host ->
+                val img = host as VImage
+                val name = Uri.parse(img.uriString).lastPathSegment ?: "unknown.jpg"
+                VString(name)
+            })
         }
     }
 }

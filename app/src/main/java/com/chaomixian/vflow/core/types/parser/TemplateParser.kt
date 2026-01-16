@@ -120,7 +120,6 @@ class TemplateParser(private val input: String) {
      */
     private fun parsePath(expression: String): List<String> {
         // 简单按点分割
-        // 未来可以在这里扩展支持数组下标语法 list[0] -> .0
         return expression.split('.').map { it.trim() }
     }
 }

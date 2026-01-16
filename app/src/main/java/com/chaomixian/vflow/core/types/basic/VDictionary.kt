@@ -1,12 +1,20 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/basic/VDictionary.kt
 package com.chaomixian.vflow.core.types.basic
 
-import com.chaomixian.vflow.core.types.BaseVObject
+import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.properties.PropertyRegistry
 
-class VDictionary(override val raw: Map<String, VObject>) : BaseVObject() {
+/**
+ * 字典类型的 VObject 实现
+ * 使用属性注册表管理属性，消除了重复的 when 语句
+ *
+ * 特殊逻辑：支持内置属性和动态Key查找
+ */
+class VDictionary(override val raw: Map<String, VObject>) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.DICTIONARY
+    override val propertyRegistry = Companion.registry
 
     override fun asString(): String {
         // 生成 JSON 风格的字符串
@@ -22,23 +30,66 @@ class VDictionary(override val raw: Map<String, VObject>) : BaseVObject() {
     // 转换为列表时，返回 Values 的列表
     override fun asList(): List<VObject> = raw.values.toList()
 
+    /**
+     * 重写 getProperty 以支持动态Key查找
+     * 优先级：内置属性 > 直接Key匹配（大小写敏感）> VNull
+     */
     override fun getProperty(propertyName: String): VObject? {
-        // 优先查找内置属性
-        return when (propertyName.lowercase()) {
-            "count", "size", "数量" -> VNumber(raw.size.toDouble())
-            "keys", "键" -> VList(raw.keys.map { VString(it) })
-            "values", "值" -> VList(raw.values.toList())
-            else -> {
-                // 如果不是内置属性，则尝试查找 Map 中的 Key
-                // 1. 直接匹配
-                if (raw.containsKey(propertyName)) return raw[propertyName]
+        // 1. 先查内置属性
+        val builtinProp = propertyRegistry.find(propertyName)
+        if (builtinProp != null) {
+            return builtinProp.accessor.get(this)
+        }
 
-                // 2. 忽略大小写匹配 (为了用户体验)
-                val key = raw.keys.find { it.equals(propertyName, ignoreCase = true) }
-                if (key != null) return raw[key]
+        // 2. 再查字典Key（直接匹配，大小写敏感）
+        if (raw.containsKey(propertyName)) {
+            return raw[propertyName]
+        }
 
-                return VNull
+        // 3. 兜底返回 VNull（不再进行大小写不敏感匹配）
+        return VNull
+    }
+
+    /**
+     * 获取所有可用的键（供UI使用）
+     * 返回格式：键名的列表，按插入顺序排序
+     */
+    fun getAvailableKeys(): List<String> = raw.keys.toList()
+
+    /**
+     * 获取所有可用的键及其值类型（供UI展示）
+     */
+    fun getAvailableKeysWithTypes(): List<Pair<String, String>> {
+        return raw.entries.map { (key, value) ->
+            val typeName = when (value) {
+                is VString -> "文本"
+                is VNumber -> "数字"
+                is VBoolean -> "布尔"
+                is VList -> "列表"
+                is VDictionary -> "字典"
+                else -> value.type.name
             }
+            key to typeName
+        }
+    }
+
+    companion object {
+        // 属性注册表：所有 VDictionary 实例共享
+        private val registry = PropertyRegistry().apply {
+            register("count", "size", "数量", getter = { host ->
+                VNumber((host as VDictionary).raw.size.toDouble())
+            })
+            register("keys", "键", getter = { host ->
+                VList((host as VDictionary).raw.keys.map { VString(it) })
+            })
+            register("values", "值", getter = { host ->
+                VList((host as VDictionary).raw.values.toList())
+            })
+            // 添加一个特殊的属性，用于UI获取键列表
+            register("availableKeys", "可用键", getter = { host ->
+                val dict = host as VDictionary
+                VList(dict.getAvailableKeys().map { VString(it) })
+            })
         }
     }
 }

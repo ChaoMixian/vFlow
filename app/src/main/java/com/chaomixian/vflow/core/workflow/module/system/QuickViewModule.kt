@@ -86,8 +86,8 @@ class QuickViewModule : BaseModule() {
         val uiService = context.services.get(ExecutionUIService::class)
             ?: return ExecutionResult.Failure("服务缺失", "无法获取UI服务来显示内容。")
 
-        // 获取要显示的内容，优先从魔法变量
-        val content = context.magicVariables["content"] ?: context.variables["content"]
+        // 使用统一的变量访问方法，自动处理递归解析
+        val content = context.getVariable("content")
 
         onProgress(ProgressUpdate("正在显示内容..."))
 
@@ -103,6 +103,7 @@ class QuickViewModule : BaseModule() {
                 is BooleanVariable -> content.value.toString()
                 is DictionaryVariable -> content.value.entries.joinToString("\n") { "${it.key}: ${it.value}" }
                 is ListVariable -> content.value.joinToString("\n")
+                is String -> content  // 已经是解析后的字符串
                 null -> "[空值]"
                 else -> content.toString()
             }
