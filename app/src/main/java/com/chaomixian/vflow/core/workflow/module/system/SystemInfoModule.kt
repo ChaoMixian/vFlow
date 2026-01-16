@@ -30,8 +30,8 @@ class SystemInfoModule : BaseModule() {
             id = "infotype",
             name = "信息类型",
             staticType = ParameterType.ENUM,
-            options = listOf("型号", "制造商", "安卓版本"),
-            defaultValue = "型号",
+            options = listOf("设备型号", "设备厂商", "安卓版本", "SDK版本","安全补丁"),
+            defaultValue = "设备型号",
             acceptsMagicVariable = false
         )
     )
@@ -56,9 +56,11 @@ class SystemInfoModule : BaseModule() {
     ): ExecutionResult {
 
         val resultValue: String = when (context.variables["infotype"]) {
-            "型号" -> Build.MODEL
-            "制造商" -> Build.MANUFACTURER
+            "设备型号" -> Build.MODEL
+            "设备厂商" -> Build.BRAND
             "安卓版本" -> Build.VERSION.RELEASE
+            "SDK版本" -> Build.VERSION.SDK_INT.toString()
+            "安全补丁" -> Build.VERSION.SECURITY_PATCH
             else -> return ExecutionResult.Failure("获取失败", "无效的值")
         }
         return ExecutionResult.Success(mapOf("sysinfo" to resultValue))
