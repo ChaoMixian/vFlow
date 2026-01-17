@@ -1,34 +1,58 @@
 // 文件：main/java/com/chaomixian/vflow/ui/settings/CoreManagementActivity.kt
 package com.chaomixian.vflow.ui.settings
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.services.CoreManagementService
+import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -39,6 +63,7 @@ import java.io.File
 /**
  * vFlowCore 管理 Activity
  * 用于查看 vFlowCore 状态、手动启动/杀死 Core 以及查看 Core 日志
+ * 采用 Material You 设计风格
  */
 class CoreManagementActivity : ComponentActivity() {
 
@@ -64,6 +89,7 @@ class CoreManagementActivity : ComponentActivity() {
                     onBackClick = { finish() },
                     onCheckStatus = { checkServerStatus() },
                     onStartServer = { startServer() },
+                    onStartServerWithMode = { mode -> startServerWithMode(mode) },
                     onStopServer = { stopServer() },
                     onLoadLogs = { loadServerLogs() },
                     autoStart = autoStartRequested
@@ -102,6 +128,65 @@ class CoreManagementActivity : ComponentActivity() {
 
             // 检查启动结果
             VFlowCoreBridge.ping()
+        }
+    }
+
+    /**
+     * 通过指定模式启动 vFlowCore
+     */
+    private suspend fun startServerWithMode(mode: ShellManager.ShellMode): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                // 如果已经在运行，先停止旧进程
+                if (VFlowCoreBridge.ping()) {
+                    DebugLogger.d("CoreManagementActivity", "检测到旧的 vFlowCore 正在运行，先停止...")
+                    VFlowCoreBridge.shutdown()
+                    delay(1500)
+                }
+
+                // 部署 Dex 到 Shell 可读的目录
+                val dexFile = File(StorageManager.tempDir, "vFlowCore.dex")
+                val parentDir = dexFile.parentFile
+                if (parentDir != null && !parentDir.exists()) {
+                    parentDir.mkdirs()
+                }
+
+                // 即使文件存在也覆盖，确保版本更新
+                applicationContext.assets.open("vFlowCore.dex").use { input ->
+                    dexFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                DebugLogger.d("CoreManagementActivity", "Dex 已部署到公共目录: ${dexFile.absolutePath}")
+
+                // 准备日志文件
+                val logFile = File(StorageManager.logsDir, "server_process.log")
+                val logParentDir = logFile.parentFile
+                if (logParentDir != null && !logParentDir.exists()) {
+                    logParentDir.mkdirs()
+                }
+
+                // 构建启动命令
+                val classpath = dexFile.absolutePath
+                val logPath = logFile.absolutePath
+                val coreClass = "com.chaomixian.vflow.server.VFlowCore"
+
+                val fullCmd = "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $coreClass' > \"$logPath\" 2>&1 &"
+
+                // 执行命令
+                DebugLogger.d("CoreManagementActivity", "执行启动命令: $fullCmd")
+                val result = ShellManager.execShellCommand(applicationContext, fullCmd, mode)
+
+                if (result.startsWith("Error")) {
+                    DebugLogger.e("CoreManagementActivity", "vFlowCore 启动命令执行失败: $result")
+                    false
+                } else {
+                    DebugLogger.i("CoreManagementActivity", "vFlowCore 启动命令已发送，正在等待响应...")
+                    delay(500)
+                    VFlowCoreBridge.ping()
+                }
+            } catch (e: Exception) {
+                DebugLogger.e("CoreManagementActivity", "启动过程发生异常", e)
+                false
+            }
         }
     }
 
@@ -160,6 +245,7 @@ private fun CoreManagementScreen(
     onBackClick: () -> Unit,
     onCheckStatus: suspend () -> Boolean,
     onStartServer: suspend () -> Boolean,
+    onStartServerWithMode: suspend (ShellManager.ShellMode) -> Boolean,
     onStopServer: suspend () -> Boolean,
     onLoadLogs: suspend () -> String,
     autoStart: Boolean = false
@@ -170,6 +256,7 @@ private fun CoreManagementScreen(
     var isChecking by remember { mutableStateOf(false) }
     var logs by remember { mutableStateOf("暂无日志...") }
     var statusDetail by remember { mutableStateOf("正在检查vFlowCore状态...") }
+    var logsExpanded by remember { mutableStateOf(false) }
 
     // 处理返回键
     BackHandler(enabled = true, onBack = onBackClick)
@@ -207,70 +294,126 @@ private fun CoreManagementScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = { Text("vFlowCore 管理") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                }
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                // vFlowCore 状态卡片
-                StatusCard(
-                    isRunning = isServerRunning,
-                    isChecking = isChecking,
-                    statusDetail = statusDetail
-                )
-            }
+            // 状态卡片
+            StatusCard(
+                isRunning = isServerRunning,
+                isChecking = isChecking,
+                statusDetail = statusDetail
+            )
 
-            item {
-                // vFlowCore 控制卡片
-                ControlCard(
-                    isRunning = isServerRunning,
-                    isChecking = isChecking,
-                    onStartClick = {
-                        if (isChecking) return@ControlCard
-                        statusDetail = "正在启动 vFlowCore..."
-                        isChecking = true
-                        coroutineScope.launch {
-                            val success = onStartServer()
-                            isChecking = false
-                            isServerRunning = success
-                            statusDetail = if (success) {
-                                showToast("vFlowCore 启动成功")
-                                // 重新加载日志
-                                logs = onLoadLogs()
-                                "vFlowCore 正常运行中"
-                            } else {
-                                showToast("vFlowCore 启动失败，请查看日志")
-                                "vFlowCore 启动失败"
-                            }
+            // 启动方式卡片组
+            Text(
+                text = "启动方式",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+
+            // Shizuku 启动卡片
+            LaunchMethodCard(
+                title = "通过 Shizuku 启动",
+                description = "使用 Shizuku 权限启动 Core，无需 Root",
+                icon = Icons.Default.Security,
+                iconTint = MaterialTheme.colorScheme.tertiary,
+                isAvailable = ShellManager.isShizukuActive(context),
+                isRunning = isChecking,
+                onClick = {
+                    if (isChecking) return@LaunchMethodCard
+                    if (!ShellManager.isShizukuActive(context)) {
+                        showToast("Shizuku 未激活或未授权，无法启动")
+                        return@LaunchMethodCard
+                    }
+                    statusDetail = "正在通过 Shizuku 启动 vFlowCore..."
+                    isChecking = true
+                    coroutineScope.launch {
+                        val success = onStartServerWithMode(ShellManager.ShellMode.SHIZUKU)
+                        isChecking = false
+                        isServerRunning = success
+                        statusDetail = if (success) {
+                            showToast("vFlowCore 启动成功")
+                            logs = onLoadLogs()
+                            "vFlowCore 正常运行中"
+                        } else {
+                            showToast("vFlowCore 启动失败，请查看日志")
+                            "vFlowCore 启动失败"
                         }
-                    },
-                    onStopClick = {
-                        if (isChecking) return@ControlCard
+                    }
+                }
+            )
+
+            // Root 启动卡片
+            LaunchMethodCard(
+                title = "通过 Root 启动",
+                description = "使用 Root 权限启动 Core，需要设备已 Root",
+                icon = Icons.Default.Terminal,
+                iconTint = MaterialTheme.colorScheme.primary,
+                isAvailable = ShellManager.isRootAvailable(),
+                isRunning = isChecking,
+                onClick = {
+                    if (isChecking) return@LaunchMethodCard
+                    if (!ShellManager.isRootAvailable()) {
+                        showToast("设备未 Root 或 Root 权限未授予，无法启动")
+                        return@LaunchMethodCard
+                    }
+                    statusDetail = "正在通过 Root 启动 vFlowCore..."
+                    isChecking = true
+                    coroutineScope.launch {
+                        val success = onStartServerWithMode(ShellManager.ShellMode.ROOT)
+                        isChecking = false
+                        isServerRunning = success
+                        statusDetail = if (success) {
+                            showToast("vFlowCore 启动成功")
+                            logs = onLoadLogs()
+                            "vFlowCore 正常运行中"
+                        } else {
+                            showToast("vFlowCore 启动失败，请查看日志")
+                            "vFlowCore 启动失败"
+                        }
+                    }
+                }
+            )
+
+            // 电脑授权启动卡片
+            AdbLaunchCard(
+                context = context,
+                isRunning = isChecking
+            )
+
+            // 控制按钮组
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 停止 Core 按钮
+                FilledTonalButton(
+                    onClick = {
+                        if (isChecking) return@FilledTonalButton
                         statusDetail = "正在停止 vFlowCore..."
                         isChecking = true
                         coroutineScope.launch {
-                            val success = onStopServer()
+                            val stillRunning = onStopServer()
                             isChecking = false
-                            isServerRunning = !success
-                            statusDetail = if (!success) {
+                            isServerRunning = stillRunning
+                            statusDetail = if (!stillRunning) {
                                 showToast("vFlowCore 已停止")
                                 "vFlowCore 未运行"
                             } else {
@@ -279,8 +422,26 @@ private fun CoreManagementScreen(
                             }
                         }
                     },
-                    onRefreshClick = {
-                        if (isChecking) return@ControlCard
+                    enabled = !isChecking && isServerRunning == true,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("停止 Core")
+                }
+
+                // 刷新状态按钮
+                FilledTonalButton(
+                    onClick = {
+                        if (isChecking) return@FilledTonalButton
                         statusDetail = "正在刷新状态..."
                         isChecking = true
                         coroutineScope.launch {
@@ -293,21 +454,34 @@ private fun CoreManagementScreen(
                                 "vFlowCore 未运行"
                             }
                         }
-                    }
-                )
+                    },
+                    enabled = !isChecking,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("刷新状态")
+                }
             }
 
-            item {
-                // vFlowCore 日志卡片
-                LogsCard(
-                    logs = logs,
-                    onReloadClick = {
-                        coroutineScope.launch {
-                            logs = onLoadLogs()
-                        }
+            // 日志卡片
+            LogsCard(
+                logs = logs,
+                expanded = logsExpanded,
+                onExpandChange = { logsExpanded = it },
+                onReloadClick = {
+                    coroutineScope.launch {
+                        logs = onLoadLogs()
                     }
-                )
-            }
+                }
+            )
+
+            // 底部间距
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -318,144 +492,347 @@ private fun StatusCard(
     isChecking: Boolean,
     statusDetail: String
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+    val statusColor = when {
+        isChecking -> MaterialTheme.colorScheme.onSurfaceVariant
+        isRunning == true -> MaterialTheme.colorScheme.primary
+        isRunning == false -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val statusText = when {
+        isChecking -> "检查中..."
+        isRunning == true -> "运行中"
+        isRunning == false -> "已停止"
+        else -> "检查中..."
+    }
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "vFlowCore 状态",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            // 状态指示器
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        if (isRunning == true) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "状态: ",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-
-                Text(
-                    text = when {
-                        isChecking -> "检查中..."
-                        isRunning == true -> "运行中"
-                        isRunning == false -> "已停止"
-                        else -> "检查中..."
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = when {
-                        isChecking -> MaterialTheme.colorScheme.onSurface
-                        isRunning == true -> Color(0xFF4CAF50)
-                        isRunning == false -> Color(0xFFF44336)
-                        else -> MaterialTheme.colorScheme.onSurface
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-
                 if (isChecking) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.5.dp,
+                        color = statusColor
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.width(16.dp))
 
-            Text(
-                text = statusDetail,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "vFlowCore 状态",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = statusColor,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = statusDetail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ControlCard(
-    isRunning: Boolean?,
-    isChecking: Boolean,
-    onStartClick: () -> Unit,
-    onStopClick: () -> Unit,
-    onRefreshClick: () -> Unit
+private fun LaunchMethodCard(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    iconTint: Color,
+    isAvailable: Boolean,
+    isRunning: Boolean,
+    onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+    ElevatedCard(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 图标
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        if (isAvailable) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = if (isAvailable) {
+                        iconTint
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isAvailable) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    }
+                )
+                if (!isAvailable) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "当前不可用",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdbLaunchCard(
+    context: Context,
+    isRunning: Boolean
+) {
+    var showCommand by remember { mutableStateOf(false) }
+    var commandCopied by remember { mutableStateOf(false) }
+
+    // 生成 ADB 命令（与 CoreManagementService 相同的逻辑）
+    val dexPath = "/sdcard/vFlow/temp/vFlowCore.dex"
+    val logPath = "/sdcard/vFlow/logs/server_process.log"
+    val adbCommand = """adb shell "sh -c 'export CLASSPATH="$dexPath"; exec app_process /system/bin com.chaomixian.vflow.server.VFlowCore' > '$logPath' 2>&1 &""""
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
         ) {
-            Text(
-                text = "vFlowCore 控制",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
+            // 头部
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = onStartClick,
-                    enabled = !isChecking,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.tertiaryContainer),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PlayArrow,
+                        Icons.Default.Laptop,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("启动 Core")
                 }
 
-                Button(
-                    onClick = onStopClick,
-                    enabled = !isChecking,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                Spacer(Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "通过电脑授权启动",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "使用 ADB 从电脑启动 Core",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // 展开/收起按钮
+                IconButton(
+                    onClick = { showCommand = !showCommand },
+                    modifier = Modifier.size(40.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Stop,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                    val rotation by animateFloatAsState(
+                        targetValue = if (showCommand) 180f else 0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        label = "rotation"
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("杀死 Core")
+                    Icon(
+                        if (showCommand) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (showCommand) "收起" else "展开",
+                        modifier = Modifier.rotate(rotation)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedButton(
-                onClick = onRefreshClick,
-                enabled = !isChecking,
-                modifier = Modifier.fillMaxWidth()
+            // 命令显示区域
+            AnimatedVisibility(
+                visible = showCommand,
+                enter = expandVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                ) + fadeIn(),
+                exit = shrinkVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                ) + fadeOut()
             ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("刷新状态")
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Spacer(Modifier.height(16.dp))
+
+                    // 提示文本
+                    Text(
+                        text = "在电脑上执行以下命令：",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // 命令框
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = null
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = adbCommand,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Spacer(Modifier.width(12.dp))
+
+                            // 复制按钮
+                            IconButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("ADB Command", adbCommand)
+                                    clipboard.setPrimaryClip(clip)
+                                    commandCopied = true
+                                    android.widget.Toast.makeText(context, "命令已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+
+                                    // 2秒后重置复制状态
+                                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                        kotlinx.coroutines.delay(2000)
+                                        commandCopied = false
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        if (commandCopied) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.surface
+                                        },
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                            ) {
+                                Icon(
+                                    Icons.Default.ContentCopy,
+                                    contentDescription = "复制命令",
+                                    tint = if (commandCopied) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // 使用说明
+                    Text(
+                        text = "• 确保 Android 设备已通过 USB 连接到电脑\n" +
+                               "• 已启用 USB 调试模式\n" +
+                               "• 电脑已安装 ADB 工具",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.4f
+                    )
+                }
             }
         }
     }
@@ -464,59 +841,109 @@ private fun ControlCard(
 @Composable
 private fun LogsCard(
     logs: String,
+    expanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
     onReloadClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
         ) {
+            // 头部
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "vFlowCore 日志",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "vFlowCore 日志",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (!expanded) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "点击展开查看",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
 
                 IconButton(
                     onClick = onReloadClick,
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
+                        Icons.Default.Refresh,
                         contentDescription = "重新加载",
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = { onExpandChange(!expanded) },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    val rotation by animateFloatAsState(
+                        targetValue = if (expanded) 180f else 0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        label = "rotation"
+                    )
+                    Icon(
+                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (expanded) "收起" else "展开",
+                        modifier = Modifier.rotate(rotation)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 200.dp, max = 400.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = logs,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth()
+            // 日志内容
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
                     )
+                ) + fadeIn(),
+                exit = shrinkVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                ) + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Spacer(Modifier.height(16.dp))
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 200.dp, max = 400.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = logs,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -1,20 +1,23 @@
 // 文件: main/java/com/chaomixian/vflow/ui/workflow_editor/RichTextView.kt
+// 描述: 支持变量药丸的编辑器（重构后 - 职责简化，仅负责编辑逻辑）
 package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.drawable.Drawable
-import android.text.Spannable
 import android.text.SpannableStringBuilder
-import android.text.style.ImageSpan
 import android.util.AttributeSet
-import com.google.android.material.textfield.TextInputEditText // 关键引用
-import java.util.regex.Pattern
+import com.google.android.material.textfield.TextInputEditText
+import com.chaomixian.vflow.core.workflow.model.ActionStep
 
 /**
- * 实现一个支持文本和“变量药丸”混合输入的自定义 EditText。
- * 继承 TextInputEditText 并使用正确的 Material 样式属性。
+ * 支持变量药丸的编辑器
+ *
+ * 职责（重构后）：
+ * - 仅处理编辑逻辑（光标管理、文本输入）
+ * - 渲染委托给 PillRenderer
+ *
+ * 不再负责：
+ * - 变量解析（由 PillVariableResolver 处理）
+ * - Pill 视觉渲染（由 PillRenderer 处理）
  */
 class RichTextView @JvmOverloads constructor(
     context: Context,
@@ -22,100 +25,56 @@ class RichTextView @JvmOverloads constructor(
     defStyleAttr: Int = com.google.android.material.R.attr.editTextStyle
 ) : TextInputEditText(context, attrs, defStyleAttr) {
 
-    private val variablePattern = Pattern.compile("(\\{\\{.*?\\}\\}|\\[\\[.*?\\]\\])")
+    // 保存 allSteps 引用，用于 insertVariable 方法
+    private var currentAllSteps: List<ActionStep> = emptyList()
 
     /**
-     * 将包含变量引用的纯文本转换为可显示的 Spannable。
-     * 不再添加空格。
+     * 设置富文本内容
+     *
+     * @param rawText 包含变量引用的原始文本
+     * @param allSteps 工作流中的所有步骤，用于解析变量
      */
-    fun setRichText(rawText: String, getPillDrawable: (String) -> Drawable) {
-        val spannable = SpannableStringBuilder()
-        val matcher = variablePattern.matcher(rawText)
-        var lastEnd = 0
-
-        while (matcher.find()) {
-            spannable.append(rawText.substring(lastEnd, matcher.start()))
-
-            val variableRef = matcher.group(1)
-            if (variableRef != null) {
-                val drawable = getPillDrawable(variableRef)
-                // 移除前置空格
-                // spannable.append(" ")
-                val start = spannable.length
-                spannable.append(variableRef)
-                val end = spannable.length
-                spannable.setSpan(CenterAlignedImageSpan(drawable), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                // 零宽字符用于光标定位，必须保留，否则光标无法移动到药丸后面
-                spannable.append("\u200B")
-            }
-            lastEnd = matcher.end()
-        }
-
-        if (lastEnd < rawText.length) {
-            spannable.append(rawText.substring(lastEnd))
-        }
-
+    fun setRichText(rawText: String, allSteps: List<ActionStep> = emptyList()) {
+        currentAllSteps = allSteps
+        // 使用 PillRenderer 的统一渲染方法，EDIT 模式用于编辑器
+        val spannable = PillRenderer.renderToSpannable(
+            rawText,
+            PillRenderer.RenderMode.EDIT,
+            allSteps,
+            context
+        )
         setText(spannable)
     }
 
     /**
-     * 将当前编辑器中的 Spannable 内容转换回包含变量引用的纯文本字符串。
-     * 仅移除零宽字符。
+     * 获取纯文本（原始变量引用）
      */
     fun getRawText(): String {
-        // 移除所有用于光标定位的零宽字符
-        return text.toString().replace("\u200B", "")
+        return text.toString()
     }
-
 
     /**
-     * 在当前光标位置插入一个变量“药丸”。
-     * 不再添加空格。
+     * 在当前光标位置插入一个变量"药丸"
+     *
+     * @param variableReference 变量引用（如 "{{step1.output}}"）
      */
-    fun insertVariablePill(variableReference: String, drawable: Drawable) {
+    fun insertVariablePill(variableReference: String) {
+        // 使用 PillRenderer 渲染单个 Pill，EDIT 模式用于编辑器
+        val pillSpannable = PillRenderer.renderSinglePill(
+            variableReference,
+            PillRenderer.RenderMode.EDIT,
+            currentAllSteps,
+            context
+        )
+
         val start = selectionStart.coerceAtLeast(0)
         val end = selectionEnd.coerceAtLeast(0)
-
         val spannable = text as SpannableStringBuilder
-        val span = CenterAlignedImageSpan(drawable)
 
-        // 插入内容仅包含变量引用和零宽字符
-        val textToInsert = "$variableReference\u200B"
+        // 插入到文本中
+        spannable.replace(start, end, pillSpannable)
 
-        spannable.replace(start, end, textToInsert)
-
-        // ImageSpan 应用于变量引用
-        val spanStart = start
-        val spanEnd = spanStart + variableReference.length
-        spannable.setSpan(span, spanStart, spanEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-
-        // 将光标移动到整个插入内容的末尾
-        setSelection(start + textToInsert.length)
-    }
-}
-
-/**
- * 自定义 ImageSpan，使其在垂直方向上与文本居中对齐。
- */
-class CenterAlignedImageSpan(drawable: Drawable) : ImageSpan(drawable) {
-    override fun draw(
-        canvas: Canvas,
-        text: CharSequence,
-        start: Int,
-        end: Int,
-        x: Float,
-        top: Int,
-        y: Int,
-        bottom: Int,
-        paint: Paint
-    ) {
-        val b = drawable
-        val fm = paint.fontMetricsInt
-        val transY = top + (bottom - top) / 2 - b.bounds.height() / 2
-
-        canvas.save()
-        canvas.translate(x, transY.toFloat())
-        b.draw(canvas)
-        canvas.restore()
+        // 将光标移动到插入内容的末尾
+        setSelection(start + pillSpannable.length)
     }
 }

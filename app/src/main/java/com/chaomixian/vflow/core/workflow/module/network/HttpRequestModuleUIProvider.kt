@@ -234,9 +234,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                 val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor, valueContainer, false)
                 val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
-                richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
-                    PillUtil.createPillDrawable(context, PillRenderer.getDisplayNameForVariableReference(variableRef, holder.allSteps ?: emptyList()))
-                }
+                richTextView.setRichText(currentValue?.toString() ?: "", holder.allSteps ?: emptyList())
 
                 richTextView.tag = "rich_text_view_body"
 

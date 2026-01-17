@@ -184,13 +184,8 @@ object StandardControlFactory {
         richTextView.minHeight = (80 * context.resources.displayMetrics.density).toInt()
 
         // 设置初始文本，并将变量引用渲染成"药丸"
-        richTextView.setRichText(initialText) { variableRef ->
-            val name = PillRenderer.getDisplayNameForVariableReference(
-                variableRef,
-                allSteps ?: emptyList()
-            )
-            PillUtil.createPillDrawable(context, name)
-        }
+        // 使用新的 API：直接传递 allSteps，内部使用 PillVariableResolver 和 RoundedBackgroundSpan
+        richTextView.setRichText(initialText, allSteps ?: emptyList())
 
         if (tag != null) richTextView.tag = tag
         return richEditorLayout

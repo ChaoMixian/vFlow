@@ -199,10 +199,7 @@ class VariableModuleUIProvider(
                 val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor, valueContainer, false)
                 val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
-                richTextView.setRichText(currentValue?.toString() ?: "") { variableRef ->
-                    // 使用 PillRenderer.getDisplayNameForVariableReference
-                    PillUtil.createPillDrawable(context, PillRenderer.getDisplayNameForVariableReference(variableRef, holder.allSteps ?: emptyList()))
-                }
+                richTextView.setRichText(currentValue?.toString() ?: "", holder.allSteps ?: emptyList())
                 valueContainer.addView(richEditorLayout)
                 row
             }

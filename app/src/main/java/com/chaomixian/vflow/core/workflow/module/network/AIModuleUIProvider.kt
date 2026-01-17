@@ -167,9 +167,7 @@ class AIModuleUIProvider : ModuleUIProvider {
         val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor, valueContainer, false)
         val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
-        richTextView.setRichText(initialValue) { variableRef ->
-            PillUtil.createPillDrawable(context, PillRenderer.getDisplayNameForVariableReference(variableRef, holder.allSteps ?: emptyList()))
-        }
+        richTextView.setRichText(initialValue, holder.allSteps ?: emptyList())
 
         // 将引用保存到 ViewHolder
         holder.promptRichText = richTextView

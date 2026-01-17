@@ -537,10 +537,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         if (richTextView != null) {
-            // 使用 PillRenderer 确保插入的药丸显示正确属性名
-            val displayName = PillRenderer.getDisplayNameForVariableReference(variableReference, allSteps ?: emptyList())
-            val drawable = PillUtil.createPillDrawable(requireContext(), displayName)
-            richTextView.insertVariablePill(variableReference, drawable)
+            // 使用新的 API：直接传递变量引用，内部使用 PillVariableResolver 解析
+            richTextView.insertVariablePill(variableReference)
             return // 直接操作视图后返回，避免重建UI
         }
 

@@ -28,6 +28,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.workflow_editor.pill.ParameterPillSpan
+import com.chaomixian.vflow.ui.workflow_editor.pill.PillTheme
 import com.google.android.material.color.MaterialColors
 import java.util.*
 
@@ -76,7 +78,7 @@ class ActionStepAdapter(
 
             indentSpace.layoutParams.width = (step.indentationLevel * 24 * context.resources.displayMetrics.density).toInt()
 
-            val categoryColor = ContextCompat.getColor(context, PillUtil.getCategoryColor(module.metadata.category))
+            val categoryColor = ContextCompat.getColor(context, PillTheme.getCategoryColor(module.metadata.category))
             val drawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = (4 * context.resources.displayMetrics.density)
@@ -182,7 +184,7 @@ class ActionStepAdapter(
                         return@setOnTouchListener true
                     }
                     val offset = layout.getOffsetForHorizontal(line, x.toFloat())
-                    val links = text.getSpans(offset, offset, PillUtil.ParameterPillSpan::class.java)
+                    val links = text.getSpans(offset, offset, ParameterPillSpan::class.java)
                     if (links.isNotEmpty()) {
                         if (adapterPosition != RecyclerView.NO_POSITION) {
                             onParameterPillClick(adapterPosition, links[0].parameterId)

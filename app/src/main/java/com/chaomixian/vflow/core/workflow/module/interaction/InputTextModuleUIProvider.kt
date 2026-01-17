@@ -113,9 +113,7 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         val richEditorLayout = LayoutInflater.from(context).inflate(R.layout.rich_text_editor, valueContainer, false)
         val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
-        richTextView.setRichText(initialValue) { variableRef ->
-            PillUtil.createPillDrawable(context, PillRenderer.getDisplayNameForVariableReference(variableRef, holder.allSteps ?: emptyList()))
-        }
+        richTextView.setRichText(initialValue, holder.allSteps ?: emptyList())
 
         // 给 RichTextView 设置 tag，以便 ActionEditorSheet 能找到它进行变量插入
         richTextView.tag = "rich_text_view_value"
