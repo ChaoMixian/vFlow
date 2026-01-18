@@ -89,7 +89,7 @@ class ApplyMaskModule : BaseModule() {
         return try {
             val request = ImageRequest.Builder(appContext)
                 .data(Uri.parse(imageVar.uri))
-                .allowHardware(false) // [修复] 禁止硬件位图
+                .allowHardware(false) // 禁止硬件位图
                 .build()
             val result = Coil.imageLoader(appContext).execute(request)
             val originalBitmap = result.drawable?.toBitmap()

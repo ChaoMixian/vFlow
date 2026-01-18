@@ -130,7 +130,7 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeJoin(context: ExecutionContext): ExecutionResult {
-        // [重构] 使用 VariableResolver 解析所有文本参数
+        // 使用 VariableResolver 解析所有文本参数
         val prefix = VariableResolver.resolve(context.variables["join_prefix"]?.toString() ?: "", context)
         val suffix = VariableResolver.resolve(context.variables["join_suffix"]?.toString() ?: "", context)
         val delimiter = VariableResolver.resolve(context.variables["join_delimiter"]?.toString() ?: ",", context)
@@ -152,7 +152,7 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeSplit(context: ExecutionContext): ExecutionResult {
-        // [重构] 统一解析
+        // 统一解析
         val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
         val delimiter = VariableResolver.resolve(context.variables["split_delimiter"]?.toString() ?: ",", context)
 
@@ -165,7 +165,7 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeReplace(context: ExecutionContext): ExecutionResult {
-        // [重构] 统一解析
+        // 统一解析
         val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
         val from = VariableResolver.resolve(context.variables["replace_from"]?.toString() ?: "", context)
         val to = VariableResolver.resolve(context.variables["replace_to"]?.toString() ?: "", context)
@@ -179,7 +179,7 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeRegex(context: ExecutionContext): ExecutionResult {
-        // [重构] 统一解析
+        // 统一解析
         val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
         val patternStr = VariableResolver.resolve(context.variables["regex_pattern"]?.toString() ?: "", context)
 

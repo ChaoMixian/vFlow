@@ -13,6 +13,9 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.Socket
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -39,6 +42,12 @@ object VFlowCoreBridge {
 
     var currentUid: Int = -1
         private set
+
+    // 心跳机制：定期发送 ping 保持连接活跃
+    private val heartbeatExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { r ->
+        Thread(r, "VFlowCoreBridge-Heartbeat").apply { isDaemon = true }
+    }
+    private var heartbeatFuture: ScheduledFuture<*>? = null
 
     /**
      * 核心权限模式
@@ -109,6 +118,8 @@ object VFlowCoreBridge {
 
         if (success) {
             isConnected = true
+            // 启动心跳保持连接活跃
+            startHeartbeat()
             // 更新 UID 缓存
             if (res!!.has("uid")) {
                 currentUid = res.optInt("uid")
@@ -116,6 +127,7 @@ object VFlowCoreBridge {
         } else {
             isConnected = false
             currentUid = -1
+            stopHeartbeat()
         }
         return success
     }
@@ -128,8 +140,9 @@ object VFlowCoreBridge {
             close() // 清理旧连接
             DebugLogger.d(TAG, "正在建立到 $HOST:$PORT 的连接...")
             socket = Socket(HOST, PORT)
-            socket?.soTimeout = 5000 // 读写超时
+            socket?.soTimeout = 0 // 0 = 无限超时，避免读写超时导致连接断开
             socket?.keepAlive = true
+            socket?.tcpNoDelay = true // 禁用 Nagle 算法，减少延迟
             writer = PrintWriter(socket!!.getOutputStream(), true)
             reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
             DebugLogger.i(TAG, "Socket 连接建立成功")
@@ -142,11 +155,42 @@ object VFlowCoreBridge {
     }
 
     private fun close() {
+        stopHeartbeat() // 停止心跳
         try { socket?.close() } catch (e: Exception) {}
         socket = null
         writer = null
         reader = null
         isConnected = false
+    }
+
+    /**
+     * 启动心跳机制
+     * 每 30 秒发送一次 ping，保持连接活跃
+     */
+    private fun startHeartbeat() {
+        stopHeartbeat() // 先停止之前的心跳
+
+        heartbeatFuture = heartbeatExecutor.scheduleWithFixedDelay({
+            try {
+                if (socket != null && !socket!!.isClosed && isConnected) {
+                    val req = JSONObject().put("target", "system").put("method", "ping")
+                    DebugLogger.d(TAG, "Heartbeat: sending ping")
+                    sendRaw(req)
+                }
+            } catch (e: Exception) {
+                DebugLogger.w(TAG, "Heartbeat failed: ${e.message}")
+                // 心跳失败，标记连接断开
+                isConnected = false
+            }
+        }, 30, 30, TimeUnit.SECONDS)
+    }
+
+    /**
+     * 停止心跳机制
+     */
+    private fun stopHeartbeat() {
+        heartbeatFuture?.cancel(false)
+        heartbeatFuture = null
     }
 
     /**
@@ -329,13 +373,59 @@ object VFlowCoreBridge {
         return sendRaw(req)?.optBoolean("success", false) ?: false
     }
 
+    /**
+     * 获取 WiFi 当前状态
+     */
+    fun isWifiEnabled(): Boolean {
+        val req = JSONObject()
+            .put("target", "wifi")
+            .put("method", "isEnabled")
+        val res = sendRaw(req)
+        return res?.optBoolean("enabled", false) ?: false
+    }
+
+    /**
+     * 切换 WiFi 状态（开启→关闭，关闭→开启）
+     * @return 返回切换后的状态
+     */
+    fun toggleWifi(): Boolean {
+        val req = JSONObject()
+            .put("target", "wifi")
+            .put("method", "toggle")
+        val res = sendRaw(req)
+        return res?.optBoolean("enabled", false) ?: false
+    }
+
     // Bluetooth Management APIs
     fun setBluetoothEnabled(enabled: Boolean): Boolean {
         val req = JSONObject()
-            .put("target", "bluetooth")
+            .put("target", "bluetooth_manager")
             .put("method", "setBluetoothEnabled")
             .put("params", JSONObject().put("enabled", enabled))
         return sendRaw(req)?.optBoolean("success", false) ?: false
+    }
+
+    /**
+     * 获取蓝牙当前状态
+     */
+    fun isBluetoothEnabled(): Boolean {
+        val req = JSONObject()
+            .put("target", "bluetooth_manager")
+            .put("method", "isEnabled")
+        val res = sendRaw(req)
+        return res?.optBoolean("enabled", false) ?: false
+    }
+
+    /**
+     * 切换蓝牙状态（开启→关闭，关闭→开启）
+     * @return 返回切换后的状态
+     */
+    fun toggleBluetooth(): Boolean {
+        val req = JSONObject()
+            .put("target", "bluetooth_manager")
+            .put("method", "toggle")
+        val res = sendRaw(req)
+        return res?.optBoolean("enabled", false) ?: false
     }
 
     // Activity Management APIs
@@ -349,12 +439,42 @@ object VFlowCoreBridge {
 
     // System Control APIs
     /**
-     * 请求 vFlowCore 优雅退出
+     * 请求 vFlow Core 优雅退出
      */
     fun shutdown(): Boolean {
         val req = JSONObject()
             .put("target", "system")
             .put("method", "exit")
         return sendRaw(req)?.optBoolean("success") ?: false
+    }
+
+    /**
+     * 重启 vFlow Core
+     * 用于 DEX 更新后加载新代码
+     */
+    suspend fun restart(context: Context): Boolean = withContext(Dispatchers.IO) {
+        try {
+            DebugLogger.i(TAG, "请求重启 vFlow Core...")
+            val intent = Intent(context, CoreManagementService::class.java).apply {
+                action = CoreManagementService.ACTION_RESTART_CORE
+            }
+            context.startService(intent)
+
+            // 等待重启完成
+            for (i in 1..20) { // 20 * 250ms = 5秒
+                delay(250)
+                if (establishConnection()) {
+                    if (checkConnection()) {
+                        DebugLogger.i(TAG, "vFlow Core 重启成功 (尝试 $i) 权限: $privilegeMode")
+                        return@withContext true
+                    }
+                }
+            }
+            DebugLogger.e(TAG, "vFlow Core 重启超时")
+            false
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "重启过程异常", e)
+            false
+        }
     }
 }

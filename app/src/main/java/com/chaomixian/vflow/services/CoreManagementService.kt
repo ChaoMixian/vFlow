@@ -20,6 +20,7 @@ class CoreManagementService : Service() {
 
         const val ACTION_START_CORE = "com.chaomixian.vflow.action.START_CORE"
         const val ACTION_STOP_CORE = "com.chaomixian.vflow.action.STOP_CORE"
+        const val ACTION_RESTART_CORE = "com.chaomixian.vflow.action.RESTART_CORE"
         const val ACTION_CHECK_HEALTH = "com.chaomixian.vflow.action.CHECK_HEALTH"
 
         private const val CORE_CLASS = "com.chaomixian.vflow.server.VFlowCore"
@@ -32,7 +33,8 @@ class CoreManagementService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START_CORE -> startvFlowCoreProcess()
+            ACTION_START_CORE -> startvFlowCoreProcess(forceRestart = false)
+            ACTION_RESTART_CORE -> startvFlowCoreProcess(forceRestart = true)
             ACTION_STOP_CORE -> stopvFlowCoreProcess()
             ACTION_CHECK_HEALTH -> checkAndRestartIfNeeded()
         }
@@ -45,14 +47,14 @@ class CoreManagementService : Service() {
         DebugLogger.d(TAG, "CoreManagementService 已销毁")
     }
 
-    private fun startvFlowCoreProcess() {
+    private fun startvFlowCoreProcess(forceRestart: Boolean = false) {
         if (isStarting) return
         serviceScope.launch {
             isStarting = true
             try {
-                // 如果已经在运行，先停止旧进程，便于调试
-                if (VFlowCoreBridge.ping()) {
-                    DebugLogger.d(TAG, "检测到旧的 vFlowCore 正在运行，先停止...")
+                // 只在明确要求重启时才停止现有进程
+                if (forceRestart && VFlowCoreBridge.ping()) {
+                    DebugLogger.d(TAG, "强制重启模式：检测到旧的 vFlowCore 正在运行，先停止...")
                     stopvFlowCoreProcess()
                     delay(1500) // 等待进程完全退出并释放 DEX 文件
 
@@ -61,6 +63,13 @@ class CoreManagementService : Service() {
                         DebugLogger.w(TAG, "进程仍未退出，强制等待...")
                         delay(1000)
                     }
+                }
+
+                // 如果 Core 已经在运行且不是强制重启模式，直接返回
+                if (!forceRestart && VFlowCoreBridge.ping()) {
+                    DebugLogger.d(TAG, "vFlowCore 已在运行，无需启动")
+                    isStarting = false
+                    return@launch
                 }
 
                 DebugLogger.i(TAG, "正在部署并启动 vFlowCore...")
@@ -137,8 +146,8 @@ class CoreManagementService : Service() {
     private fun checkAndRestartIfNeeded() {
         serviceScope.launch {
             if (!VFlowCoreBridge.ping()) {
-                DebugLogger.w(TAG, "健康检查：vFlowCore 未响应，正在重启...")
-                startvFlowCoreProcess()
+                DebugLogger.w(TAG, "健康检查：vFlowCore 未响应，正在启动...")
+                startvFlowCoreProcess(forceRestart = false)
             }
         }
     }

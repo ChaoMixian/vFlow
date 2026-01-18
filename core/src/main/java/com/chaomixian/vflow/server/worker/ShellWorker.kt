@@ -16,6 +16,10 @@ class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
         wrappers["bluetooth_manager"] = IBluetoothManagerWrapper()
         wrappers["power"] = IPowerManagerWrapper()
         wrappers["activity"] = IActivityManagerWrapper()
+        wrappers["connectivity"] = IConnectivityManagerWrapper()
+        wrappers["location"] = ILocationManagerWrapper()
+        wrappers["alarm"] = IAlarmManagerWrapper()
+        wrappers["activity_task"] = IActivityTaskManagerWrapper()
     }
 
     /**

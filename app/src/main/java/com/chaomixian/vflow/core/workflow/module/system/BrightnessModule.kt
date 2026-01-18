@@ -66,7 +66,7 @@ class BrightnessModule : BaseModule() {
 
         return try {
             val resolver = context.applicationContext.contentResolver
-            // [修复] 在设置亮度值之前，先将亮度模式设为手动
+            // 在设置亮度值之前，先将亮度模式设为手动
             Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
             // 设置亮度值
             Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, level)

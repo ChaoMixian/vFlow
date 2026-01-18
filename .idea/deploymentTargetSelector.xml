@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-01-17T18:42:14.812268Z">
+        <DropdownSelection timestamp="2026-01-18T15:26:26.934629Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Default" identifier="serial=192.168.31.213:33015;connection=07da5fc9" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/chao/.android/avd/Pixel_7_Pro.avd" />
             </handle>
           </Target>
         </DropdownSelection>

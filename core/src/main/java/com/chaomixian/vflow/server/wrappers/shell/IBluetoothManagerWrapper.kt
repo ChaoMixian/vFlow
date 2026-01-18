@@ -3,6 +3,7 @@ package com.chaomixian.vflow.server.wrappers.shell
 
 import com.chaomixian.vflow.server.wrappers.ServiceWrapper
 import com.chaomixian.vflow.server.common.utils.ReflectionUtils
+import com.chaomixian.vflow.server.common.Logger
 import org.json.JSONObject
 import java.lang.reflect.Method
 
@@ -10,11 +11,37 @@ class IBluetoothManagerWrapper : ServiceWrapper("bluetooth_manager", "android.bl
 
     private var enableMethod: Method? = null
     private var disableMethod: Method? = null
+    private var isEnabledMethod: Method? = null
+    private var getStateMethod: Method? = null
 
     override fun onServiceConnected(service: Any) {
         val clazz = service.javaClass
         enableMethod = ReflectionUtils.findMethodLoose(clazz, "enable")
         disableMethod = ReflectionUtils.findMethodLoose(clazz, "disable")
+        isEnabledMethod = ReflectionUtils.findMethodLoose(clazz, "isEnabled")
+        // 尝试查找 getState 方法作为备选
+        getStateMethod = ReflectionUtils.findMethodLoose(clazz, "getState")
+
+        Logger.debug("BluetoothManager", "=== Bluetooth Manager Methods ===")
+        Logger.debug("BluetoothManager", "enable: ${enableMethod != null}")
+        Logger.debug("BluetoothManager", "disable: ${disableMethod != null}")
+        Logger.debug("BluetoothManager", "isEnabled: ${isEnabledMethod != null}")
+        if (isEnabledMethod != null) {
+            Logger.debug("BluetoothManager", "isEnabled params: ${isEnabledMethod!!.parameterTypes.toList()}")
+        }
+        Logger.debug("BluetoothManager", "getState: ${getStateMethod != null}")
+        if (getStateMethod != null) {
+            Logger.debug("BluetoothManager", "getState params: ${getStateMethod!!.parameterTypes.toList()}")
+        }
+
+        // 列出所有方法
+        Logger.debug("BluetoothManager", "=== All Available Methods ===")
+        clazz.declaredMethods.forEach { method ->
+            if (method.name.contains("enable") || method.name.contains("Enable") ||
+                method.name.contains("state") || method.name.contains("State")) {
+                Logger.debug("BluetoothManager", "${method.name}: ${method.parameterTypes.toList()}")
+            }
+        }
     }
 
     override fun handle(method: String, params: JSONObject): JSONObject {
@@ -31,6 +58,18 @@ class IBluetoothManagerWrapper : ServiceWrapper("bluetooth_manager", "android.bl
             "setBluetoothEnabled" -> {
                 val success = setBluetoothEnabled(params.getBoolean("enabled"))
                 result.put("success", success)
+            }
+            "isEnabled" -> {
+                val enabled = isEnabled()
+                result.put("success", true)
+                result.put("enabled", enabled)
+            }
+            "toggle" -> {
+                val currentState = isEnabled()
+                val newState = !currentState
+                val success = setBluetoothEnabled(newState)
+                result.put("success", success)
+                result.put("enabled", newState) // 返回新状态
             }
             else -> {
                 result.put("success", false)
@@ -172,6 +211,74 @@ class IBluetoothManagerWrapper : ServiceWrapper("bluetooth_manager", "android.bl
             method.invoke(attributionSource) as? String
         } catch (e: Exception) {
             null
+        }
+    }
+
+    /**
+     * 获取蓝牙当前状态
+     */
+    private fun isEnabled(): Boolean {
+        if (serviceInterface == null) return false
+
+        // 首先尝试使用 isEnabled 方法
+        if (isEnabledMethod != null) {
+            return try {
+                Logger.debug("BluetoothManager", "Using isEnabled method...")
+                val paramCount = isEnabledMethod!!.parameterTypes.size
+                Logger.debug("BluetoothManager", "isEnabled has $paramCount parameters")
+
+                val result = if (paramCount == 0) {
+                    // 无参数版本
+                    isEnabledMethod!!.invoke(serviceInterface) as? Boolean ?: false
+                } else {
+                    // 有参数版本，尝试传入默认值
+                    val args = arrayOfNulls<Any>(paramCount)
+                    for (i in args.indices) {
+                        val paramType = isEnabledMethod!!.parameterTypes[i]
+                        args[i] = when {
+                            paramType == String::class.java -> "com.android.shell"
+                            paramType == Int::class.javaPrimitiveType || paramType == Integer::class.java -> 0
+                            else -> null
+                        }
+                    }
+                    isEnabledMethod!!.invoke(serviceInterface, *args) as? Boolean ?: false
+                }
+                Logger.debug("BluetoothManager", "isEnabled result: $result")
+                result
+            } catch (e: Exception) {
+                Logger.error("BluetoothManager", "isEnabled failed: ${e.message}", e)
+                // 继续尝试其他方法
+                false
+            }
+        }
+
+        // 如果 isEnabled 不存在或失败，尝试使用 getState 方法
+        if (getStateMethod != null) {
+            return try {
+                Logger.debug("BluetoothManager", "Using getState method...")
+                val state = getStateMethod!!.invoke(serviceInterface) as? Int ?: -1
+                Logger.debug("BluetoothManager", "getState result: $state")
+                // BluetoothAdapter 状态常量:
+                // STATE_OFF = 10, STATE_TURNING_ON = 11, STATE_ON = 12, STATE_TURNING_OFF = 13
+                val isEnabled = state == 12 // STATE_ON
+                Logger.info("BluetoothManager", "Bluetooth enabled: $isEnabled (state=$state)")
+                isEnabled
+            } catch (e: Exception) {
+                Logger.error("BluetoothManager", "getState failed: ${e.message}", e)
+                false
+            }
+        }
+
+        // 最后的备选方案：使用 dumpsys 命令
+        Logger.warn("BluetoothManager", "Trying dumpsys bluetooth_manager as fallback...")
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "dumpsys bluetooth_manager | grep '^  enabled:' | awk '{print $2}'"))
+            val output = process.inputStream.bufferedReader().readText().trim()
+            Logger.debug("BluetoothManager", "dumpsys output: '$output'")
+            output.toBoolean() || output == "true"
+        } catch (e: Exception) {
+            Logger.error("BluetoothManager", "dumpsys failed: ${e.message}", e)
+            false
         }
     }
 }

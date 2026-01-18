@@ -132,14 +132,14 @@ class AdjustImageModuleUIProvider : ModuleUIProvider {
 
         // 异步加载预览图
         CoroutineScope(Dispatchers.IO).launch {
-            // [修复] 定义一个明确的预览图尺寸
+            // 定义一个明确的预览图尺寸
             val previewWidth = 400
             val previewHeight = 400
 
             val loadedBitmap = if (imageVar != null && imageVar.isMagicVariable()) {
                 // 如果是魔法变量，加载内置样片
                 ContextCompat.getDrawable(context, R.drawable.sample_image_for_preview)
-                    ?.toBitmap(width = previewWidth, height = previewHeight) // [修复] 提供明确的宽高
+                    ?.toBitmap(width = previewWidth, height = previewHeight) // 提供明确的宽高
             } else {
                 // 如果有真实图片URI，则加载它
                 try {
@@ -148,7 +148,7 @@ class AdjustImageModuleUIProvider : ModuleUIProvider {
                 } catch (e: Exception) {
                     // URI无效或加载失败，同样回退到样片
                     ContextCompat.getDrawable(context, R.drawable.sample_image_for_preview)
-                        ?.toBitmap(width = previewWidth, height = previewHeight) // [修复] 提供明确的宽高
+                        ?.toBitmap(width = previewWidth, height = previewHeight) // 提供明确的宽高
                 }
             }
 

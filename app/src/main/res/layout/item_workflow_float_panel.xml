@@ -81,10 +81,10 @@
             <ImageView
                 android:id="@+id/btn_execute"
                 android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:src="@drawable/rounded_play_arrow_24"
                 android:contentDescription="执行工作流"
+                android:src="@drawable/rounded_play_arrow_24"
                 app:tint="?attr/colorOnPrimaryContainer"
                 tools:ignore="ContentDescription" />
         </com.google.android.material.card.MaterialCardView>

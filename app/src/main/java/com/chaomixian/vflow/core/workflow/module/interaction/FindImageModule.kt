@@ -153,8 +153,10 @@ class FindImageModule : BaseModule() {
 
         if (matches.isEmpty()) {
             onProgress(ProgressUpdate("未找到匹配图片"))
-            outputs["all_results"] = ListVariable(emptyList())
-            return ExecutionResult.Success(outputs)
+            return ExecutionResult.Failure(
+                "未找到图片",
+                "在屏幕上未找到与模板图片匹配的区域。请检查模板图片是否正确，或降低匹配相似度要求。"
+            )
         }
 
         // 确保按相似度排序（差异最小的在前面）

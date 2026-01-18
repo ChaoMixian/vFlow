@@ -144,7 +144,7 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         }
 
         inputsToShow.forEach { inputDef ->
-            // [修复] 使用 holder.view.context 替代 holder.itemView.context
+            // 使用 holder.view.context 替代 holder.itemView.context
             val inputView = createInputView(holder.view.context, inputDef, currentParameters[inputDef.id], holder.onMagicVariableRequested)
             holder.inputsContainer.addView(inputView)
             holder.inputViews[inputDef.id] = inputView

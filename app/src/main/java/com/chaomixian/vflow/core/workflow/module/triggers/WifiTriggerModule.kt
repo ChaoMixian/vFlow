@@ -1,5 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/WifiTriggerModule.kt
-// 描述: [重构] 增加了触发类型，现在支持 Wi-Fi 开启/关闭状态触发 和 网络连接/断开触发。
+// 描述: 增加了触发类型，现在支持 Wi-Fi 开启/关闭状态触发 和 网络连接/断开触发。
 package com.chaomixian.vflow.core.workflow.module.triggers
 
 import android.content.Context

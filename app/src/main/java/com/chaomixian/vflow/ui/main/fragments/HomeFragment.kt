@@ -160,7 +160,7 @@ class HomeFragment : Fragment() {
         // 设置模式文本 (Mode)
         val modeString = when (privilegeMode) {
             VFlowCoreBridge.PrivilegeMode.ROOT -> "Root"
-            VFlowCoreBridge.PrivilegeMode.SHELL -> "Shell (ADB)"
+            VFlowCoreBridge.PrivilegeMode.SHELL -> "Shell"
             VFlowCoreBridge.PrivilegeMode.NONE -> "无权限"
         }
         coreModeText.text = "模式：$modeString"

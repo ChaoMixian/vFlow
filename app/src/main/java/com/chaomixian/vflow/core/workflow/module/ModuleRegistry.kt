@@ -15,6 +15,7 @@ import com.chaomixian.vflow.core.workflow.module.triggers.*
 import com.chaomixian.vflow.core.workflow.module.snippet.*
 import com.chaomixian.vflow.core.workflow.module.ui.blocks.*
 import com.chaomixian.vflow.core.workflow.module.ui.components.*
+import com.chaomixian.vflow.core.workflow.module.core.*
 
 object ModuleRegistry {
     private val modules = mutableMapOf<String, ActionModule>()
@@ -43,9 +44,10 @@ object ModuleRegistry {
                     "文件" -> 4
                     "网络" -> 5
                     "应用与系统" -> 6
-                    "Shizuku" -> 7
-                    "模板" -> 8
-                    "UI 组件" -> 9
+                    "Core (Beta)" -> 7
+                    "Shizuku" -> 8
+                    "模板" -> 9
+                    "UI 组件" -> 10
                     else -> 99
                 }
             })
@@ -152,6 +154,24 @@ object ModuleRegistry {
         register(GetAppUsageStatsModule())
         register(InvokeModule())
         register(SystemInfoModule())
+
+        // Core (Beta) 模块
+        // 网络控制组
+        register(CoreBluetoothModule())           // 蓝牙控制（开启/关闭/切换）
+        register(CoreBluetoothStateModule())      // 读取蓝牙状态
+        register(CoreWifiModule())                // WiFi控制（开启/关闭/切换）
+        register(CoreWifiStateModule())           // 读取WiFi状态
+        register(CoreSetClipboardModule())        // 设置剪贴板
+        register(CoreGetClipboardModule())        // 读取剪贴板
+        // 屏幕控制组
+        register(CoreWakeScreenModule())          // 唤醒屏幕
+        register(CoreSleepScreenModule())         // 关闭屏幕
+        // 输入交互组
+        register(CoreScreenOperationModule())     // 屏幕操作（点击/滑动）
+        register(CoreInputTextModule())           // 输入文本
+        register(CorePressKeyModule())            // 按键
+        // 应用管理组
+        register(CoreForceStopAppModule())        // 强制停止应用
 
         // Shizuku 模块
         register(ShellCommandModule())

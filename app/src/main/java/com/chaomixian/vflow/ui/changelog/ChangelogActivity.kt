@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chaomixian.vflow.data.update.UpdateChecker
 import com.chaomixian.vflow.ui.common.BaseActivity
+import com.chaomixian.vflow.ui.common.ThemeUtils
 
 /**
  * 版本历史Activity
@@ -31,7 +32,9 @@ class ChangelogActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            MaterialTheme(
+                colorScheme = ThemeUtils.getAppColorScheme()
+            ) {
                 ChangelogScreen(onBack = { finish() })
             }
         }

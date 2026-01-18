@@ -46,7 +46,7 @@ data class JsonInput(
             name = name,
             staticType = staticType,
             defaultValue = defaultValue,
-            // [核心修复] 如果 options 为 null，则使用空列表
+            // 如果 options 为 null，则使用空列表
             options = options ?: emptyList(),
             acceptsMagicVariable = acceptsMagicVariable,
             acceptsNamedVariable = acceptsMagicVariable

@@ -1,5 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/handlers/WifiTriggerHandler.kt
-// 描述: [重构] 增加了对 Wi-Fi 开关状态的监听，现在能同时处理两种类型的触发事件。
+// 描述: 增加了对 Wi-Fi 开关状态的监听，现在能同时处理两种类型的触发事件。
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.BroadcastReceiver

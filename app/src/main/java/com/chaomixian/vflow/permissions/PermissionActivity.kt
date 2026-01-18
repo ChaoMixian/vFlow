@@ -129,7 +129,16 @@ class PermissionActivity : BaseActivity() {
             }
             PermissionType.SPECIAL -> {
                 if (permission.id == PermissionManager.SHIZUKU.id) {
-                    Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
+                    try {
+                        Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
+                    } catch (e: Exception) {
+                        // Shizuku 未启动或异常
+                        android.widget.Toast.makeText(
+                            this,
+                            "Shizuku 未启动，请先启动 Shizuku 服务",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
                     return
                 }
                 // 使用 PermissionManager 提供的统一接口获取 Intent
