@@ -5,9 +5,10 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.core.module.NumberVariable
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -37,7 +38,7 @@ class CalculationModule : BaseModule() {
             // 将类型从 NUMBER 改为 STRING，以同时接受数字字面量和变量引用字符串
             staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
             defaultValue = "0" // 默认值也改为字符串
         ),
         InputDefinition(
@@ -54,7 +55,7 @@ class CalculationModule : BaseModule() {
             // 为了支持命名变量，将类型从 NUMBER 改为 STRING
             staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
             defaultValue = "0" // 默认值也改为字符串
         )
     )
@@ -66,7 +67,7 @@ class CalculationModule : BaseModule() {
         OutputDefinition(
             id = "result",
             name = "结果",
-            typeName = NumberVariable.TYPE_NAME
+            typeName = VTypeRegistry.NUMBER.id
         )
     )
 
@@ -113,7 +114,7 @@ class CalculationModule : BaseModule() {
             }
             else -> return ExecutionResult.Failure("计算错误", "无效的运算符: '${'$'}{operator}'.")
         }
-        return ExecutionResult.Success(mapOf("result" to NumberVariable(resultValue.toDouble())))
+        return ExecutionResult.Success(mapOf("result" to VNumber(resultValue.toDouble())))
     }
 
     /**
@@ -121,7 +122,7 @@ class CalculationModule : BaseModule() {
      */
     private fun convertToBigDecimal(value: Any?): BigDecimal? {
         return when (value) {
-            is NumberVariable -> value.value.toBigDecimal()
+            is VNumber -> value.raw.toBigDecimal()
             is Number -> value.toString().toBigDecimalOrNull()
             is String -> value.toBigDecimalOrNull()
             else -> null

@@ -11,6 +11,9 @@ import coil.request.ImageRequest
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.io.File
@@ -54,25 +57,25 @@ class AdjustImageModule : BaseModule() {
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = INPUT_IMAGE, name = "源图像", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ImageVariable.TYPE_NAME)),
-        InputDefinition(id = P_EXPOSURE, name = "曝光", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_CONTRAST, name = "对比度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_BRIGHTNESS, name = "亮度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_SATURATION, name = "饱和度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_VIBRANCE, name = "鲜明度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_HIGHLIGHTS, name = "高光", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_SHADOWS, name = "阴影", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_BLACK_POINT, name = "黑点", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_WARMTH, name = "色温", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_TINT, name = "色调", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_VIGNETTE, name = "暗角", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_SHARPNESS, name = "锐化", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_CLARITY, name = "清晰度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
-        InputDefinition(id = P_DENOISE, name = "噪点消除", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
+        InputDefinition(id = INPUT_IMAGE, name = "源图像", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)),
+        InputDefinition(id = P_EXPOSURE, name = "曝光", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_CONTRAST, name = "对比度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_BRIGHTNESS, name = "亮度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_SATURATION, name = "饱和度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_VIBRANCE, name = "鲜明度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_HIGHLIGHTS, name = "高光", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_SHADOWS, name = "阴影", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_BLACK_POINT, name = "黑点", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_WARMTH, name = "色温", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_TINT, name = "色调", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_VIGNETTE, name = "暗角", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_SHARPNESS, name = "锐化", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_CLARITY, name = "清晰度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition(id = P_DENOISE, name = "噪点消除", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("image", "处理后的图像", ImageVariable.TYPE_NAME)
+        OutputDefinition("image", "处理后的图像", VTypeRegistry.IMAGE.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -90,12 +93,12 @@ class AdjustImageModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val imageVar = context.magicVariables[INPUT_IMAGE] as? ImageVariable
+        val imageVar = context.magicVariables[INPUT_IMAGE] as? VImage
             ?: return ExecutionResult.Failure("参数错误", "需要一个图像变量作为输入。")
 
         val appContext = context.applicationContext
         val params = getInputs().associate {
-            it.id to ((context.magicVariables[it.id] as? NumberVariable)?.value?.toFloat()
+            it.id to ((context.magicVariables[it.id] as? VNumber)?.raw?.toFloat()
                 ?: (context.variables[it.id] as? Number)?.toFloat() ?: 0f)
         }
 
@@ -103,12 +106,12 @@ class AdjustImageModule : BaseModule() {
         try {
             // 设置 allowHardware(false) 以确保获取软件位图，避免 copy 异常
             val request = ImageRequest.Builder(appContext)
-                .data(Uri.parse(imageVar.uri))
+                .data(Uri.parse(imageVar.uriString))
                 .allowHardware(false)
                 .build()
             val result = Coil.imageLoader(appContext).execute(request)
             val originalBitmap = result.drawable?.toBitmap()
-                ?: return ExecutionResult.Failure("图像加载失败", "无法从URI加载位图: ${imageVar.uri}")
+                ?: return ExecutionResult.Failure("图像加载失败", "无法从URI加载位图: ${imageVar.uriString}")
 
             var mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
 
@@ -147,7 +150,7 @@ class AdjustImageModule : BaseModule() {
             mutableBitmap.recycle()
 
             val outputUri = Uri.fromFile(outputFile).toString()
-            return ExecutionResult.Success(mapOf("image" to ImageVariable(outputUri)))
+            return ExecutionResult.Success(mapOf("image" to VImage(outputUri)))
 
         } catch (e: Exception) {
             return ExecutionResult.Failure("图像处理异常", e.localizedMessage ?: "发生未知错误")

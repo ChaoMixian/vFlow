@@ -4,8 +4,16 @@ package com.chaomixian.vflow.core.execution
 import android.content.Context
 import android.os.Parcelable
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.basic.VNull
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.basic.VDictionary
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -286,7 +294,7 @@ object WorkflowExecutor {
                     }
 
                     if (loopOutputs != null) {
-                        stepOutputs[loopStartStep.id] = loopOutputs
+                        stepOutputs[loopStartStep.id] = VObjectFactory.fromMapAny(loopOutputs)
                     }
                 }
             }
@@ -420,7 +428,7 @@ object WorkflowExecutor {
             when (val result = finalResult) {
                 is ExecutionResult.Success -> {
                     if (result.outputs.isNotEmpty()) {
-                        stepOutputs[step.id] = result.outputs
+                        stepOutputs[step.id] = VObjectFactory.fromMapAny(result.outputs)
                     }
                     pc++
                 }
@@ -433,10 +441,10 @@ object WorkflowExecutor {
                         // 生成该模块所有输出变量的默认空值
                         val defaultOutputs = generateDefaultOutputs(module, step)
                         // 添加错误元数据
-                        val skipOutputs = defaultOutputs + mapOf(
-                            "error" to TextVariable(result.errorMessage),
-                            "success" to BooleanVariable(false)
-                        )
+                        val skipOutputs = defaultOutputs.toMutableMap().apply {
+                            put("error", VString(result.errorMessage))
+                            put("success", VBoolean(false))
+                        }
                         stepOutputs[step.id] = skipOutputs
 
                         pc++ // 继续下一步
@@ -548,21 +556,21 @@ object WorkflowExecutor {
      * 为跳过的模块生成默认的空输出值。
      * 避免魔法变量在解析时因找不到值而回退到原始字符串。
      */
-    private fun generateDefaultOutputs(module: ActionModule, step: ActionStep): Map<String, Any> {
-        val outputs = mutableMapOf<String, Any>()
+    private fun generateDefaultOutputs(module: ActionModule, step: ActionStep): Map<String, VObject> {
+        val outputs = mutableMapOf<String, VObject>()
         try {
             // 获取模块定义的所有输出
             val outputDefs = module.getOutputs(step)
             for (def in outputDefs) {
                 // 根据类型生成安全的空值
                 val emptyValue = when (def.typeName) {
-                    TextVariable.TYPE_NAME -> TextVariable("")
-                    NumberVariable.TYPE_NAME -> NumberVariable(0.0)
-                    BooleanVariable.TYPE_NAME -> BooleanVariable(false)
-                    ListVariable.TYPE_NAME -> ListVariable(emptyList())
-                    DictionaryVariable.TYPE_NAME -> DictionaryVariable(emptyMap())
-                    ImageVariable.TYPE_NAME -> ImageVariable("") // 空 URI
-                    else -> TextVariable("") // 默认为空文本
+                    VTypeRegistry.STRING.id -> VString("")
+                    VTypeRegistry.NUMBER.id -> VNumber(0.0)
+                    VTypeRegistry.BOOLEAN.id -> VBoolean(false)
+                    VTypeRegistry.LIST.id -> VList(emptyList())
+                    VTypeRegistry.DICTIONARY.id -> VDictionary(emptyMap())
+                    VTypeRegistry.IMAGE.id -> VImage("") // 空 URI
+                    else -> VString("") // 默认为空文本
                 }
                 outputs[def.id] = emptyValue
             }

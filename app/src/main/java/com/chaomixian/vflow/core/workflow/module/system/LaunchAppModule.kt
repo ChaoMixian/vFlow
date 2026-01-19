@@ -9,6 +9,8 @@ import android.content.pm.PackageManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -42,7 +44,7 @@ class LaunchAppModule : BaseModule() {
         )
     )
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
 
@@ -103,7 +105,7 @@ class LaunchAppModule : BaseModule() {
         return try {
             context.applicationContext.startActivity(intent)
             onProgress(ProgressUpdate("已启动: $packageName"))
-            ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } catch (e: Exception) {
             ExecutionResult.Failure("启动异常", e.localizedMessage ?: "发生了未知错误")
         }

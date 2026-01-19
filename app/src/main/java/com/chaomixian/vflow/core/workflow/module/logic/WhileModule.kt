@@ -5,8 +5,9 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.module.BooleanVariable
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
@@ -47,7 +48,7 @@ class WhileModule : BaseBlockModule() {
             val originalValue1Def = staticInputs.first { it.id == "value1" }
             val newNumberValue1Def = originalValue1Def.copy(
                 staticType = ParameterType.NUMBER,
-                acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+                acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
             )
             dynamicInputs.add(newNumberValue1Def)
             dynamicInputs.add(staticInputs.first { it.id == "value2" })
@@ -57,10 +58,10 @@ class WhileModule : BaseBlockModule() {
 
     private fun getOperatorsForVariableType(variableTypeName: String?): List<String> {
         return when (variableTypeName) {
-            TextVariable.TYPE_NAME, ScreenElement.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT
-            NumberVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_NUMBER
-            BooleanVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_BOOLEAN
-            ListVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_COLLECTION
+            VTypeRegistry.STRING.id, ScreenElement.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT
+            VTypeRegistry.NUMBER.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_NUMBER
+            VTypeRegistry.BOOLEAN.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_BOOLEAN
+            VTypeRegistry.LIST.id, VTypeRegistry.DICTIONARY.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_COLLECTION
             null -> OPERATORS_FOR_ANY
             else -> OPERATORS_FOR_ANY
         }.distinct()
@@ -102,25 +103,25 @@ class WhileModule : BaseBlockModule() {
      */
     private fun userTypeToInternalName(userType: String?): String? {
         return when (userType) {
-            "文本" -> TextVariable.TYPE_NAME
-            "数字" -> NumberVariable.TYPE_NAME
-            "布尔" -> BooleanVariable.TYPE_NAME
-            "字典" -> DictionaryVariable.TYPE_NAME
-            "图像" -> ImageVariable.TYPE_NAME
+            "文本" -> VTypeRegistry.STRING.id
+            "数字" -> VTypeRegistry.NUMBER.id
+            "布尔" -> VTypeRegistry.BOOLEAN.id
+            "字典" -> VTypeRegistry.DICTIONARY.id
+            "图像" -> VTypeRegistry.IMAGE.id
             else -> null
         }
     }
 
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(BooleanVariable.TYPE_NAME, NumberVariable.TYPE_NAME, TextVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME, ListVariable.TYPE_NAME, ScreenElement.TYPE_NAME)),
+        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.BOOLEAN.id, VTypeRegistry.NUMBER.id, VTypeRegistry.STRING.id, VTypeRegistry.DICTIONARY.id, VTypeRegistry.LIST.id, ScreenElement.TYPE_NAME)),
         InputDefinition(id = "operator", name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
-        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, NumberVariable.TYPE_NAME, BooleanVariable.TYPE_NAME)),
-        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
+        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.NUMBER.id, VTypeRegistry.BOOLEAN.id)),
+        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "条件结果", BooleanVariable.TYPE_NAME)
+        OutputDefinition("result", "条件结果", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -180,7 +181,7 @@ class WhileModule : BaseBlockModule() {
 
         if (result) {
             onProgress(ProgressUpdate("条件为真，进入循环体。"))
-            return ExecutionResult.Success(mapOf("result" to BooleanVariable(true)))
+            return ExecutionResult.Success(mapOf("result" to VBoolean(true)))
         } else {
             onProgress(ProgressUpdate("条件为假，跳出循环。"))
             // 使用 BlockNavigator

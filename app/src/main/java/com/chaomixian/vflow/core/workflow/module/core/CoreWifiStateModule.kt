@@ -4,6 +4,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +28,7 @@ class CoreWifiStateModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("enabled", "WiFi状态", BooleanVariable.TYPE_NAME)
+        OutputDefinition("enabled", "WiFi状态", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -54,6 +56,6 @@ class CoreWifiStateModule : BaseModule() {
         val enabled = VFlowCoreBridge.isWifiEnabled()
 
         onProgress(ProgressUpdate("WiFi状态: ${if (enabled) "已开启" else "已关闭"}"))
-        return ExecutionResult.Success(mapOf("enabled" to BooleanVariable(enabled)))
+        return ExecutionResult.Success(mapOf("enabled" to VBoolean(enabled)))
     }
 }

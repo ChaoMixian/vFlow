@@ -7,6 +7,12 @@ import android.content.pm.PackageManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObjectFactory
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -41,14 +47,14 @@ class GetAppUsageStatsModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 10.0, // 默认前10个
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("stats_list", "统计列表", ListVariable.TYPE_NAME),
-        OutputDefinition("most_used_app", "最常使用的应用", TextVariable.TYPE_NAME), // 包名
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("stats_list", "统计列表", VTypeRegistry.LIST.id),
+        OutputDefinition("most_used_app", "最常使用的应用", VTypeRegistry.STRING.id), // 包名
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -65,7 +71,7 @@ class GetAppUsageStatsModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val intervalStr = context.variables["interval"] as? String ?: "今天"
-        val maxResults = ((context.magicVariables["max_results"] as? NumberVariable)?.value
+        val maxResults = ((context.magicVariables["max_results"] as? VNumber)?.raw
             ?: (context.variables["max_results"] as? Number)?.toDouble()
             ?: 10.0).toInt()
 
@@ -139,9 +145,9 @@ class GetAppUsageStatsModule : BaseModule() {
         if (sortedStats.isEmpty()) {
             onProgress(ProgressUpdate("指定时间段内没有应用使用记录"))
             return ExecutionResult.Success(mapOf(
-                "stats_list" to ListVariable(emptyList()),
-                "most_used_app" to TextVariable(""),
-                "success" to BooleanVariable(true)
+                "stats_list" to VList(emptyList()),
+                "most_used_app" to VString(""),
+                "success" to VBoolean(true)
             ))
         }
 
@@ -151,9 +157,9 @@ class GetAppUsageStatsModule : BaseModule() {
         onProgress(ProgressUpdate("最常使用: $mostUsedName"))
 
         return ExecutionResult.Success(mapOf(
-            "stats_list" to ListVariable(sortedStats),
-            "most_used_app" to TextVariable(mostUsed),
-            "success" to BooleanVariable(true)
+            "stats_list" to VList(sortedStats.map { VObjectFactory.from(it) }),
+            "most_used_app" to VString(mostUsed),
+            "success" to VBoolean(true)
         ))
     }
 }

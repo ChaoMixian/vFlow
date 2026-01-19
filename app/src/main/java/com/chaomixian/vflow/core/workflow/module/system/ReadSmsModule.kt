@@ -5,6 +5,10 @@ import android.provider.Telephony
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.utils.CodeExtractor
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -34,11 +38,11 @@ class ReadSmsModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("found", "是否找到", BooleanVariable.TYPE_NAME),
-        OutputDefinition("sender", "发件人号码", TextVariable.TYPE_NAME),
-        OutputDefinition("content", "短信全文", TextVariable.TYPE_NAME),
-        OutputDefinition("timestamp", "接收时间", NumberVariable.TYPE_NAME),
-        OutputDefinition("verification_code", "提取的验证码", TextVariable.TYPE_NAME)
+        OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
+        OutputDefinition("sender", "发件人号码", VTypeRegistry.STRING.id),
+        OutputDefinition("content", "短信全文", VTypeRegistry.STRING.id),
+        OutputDefinition("timestamp", "接收时间", VTypeRegistry.NUMBER.id),
+        OutputDefinition("verification_code", "提取的验证码", VTypeRegistry.STRING.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -76,9 +80,9 @@ class ReadSmsModule : BaseModule() {
         val magicVars = context.magicVariables
 
         val filterBy = params["filter_by"] as? String ?: filterOptions.first()
-        val senderFilter = (magicVars["sender"] as? TextVariable)?.value ?: params["sender"] as? String
-        val contentFilter = (magicVars["content"] as? TextVariable)?.value ?: params["content"] as? String
-        val maxScan = if (filterBy == "最新一条") 1 else ((magicVars["max_scan"] as? NumberVariable)?.value ?: params["max_scan"] as? Number ?: 20.0).toInt()
+        val senderFilter = (magicVars["sender"] as? VString)?.raw ?: params["sender"] as? String
+        val contentFilter = (magicVars["content"] as? VString)?.raw ?: params["content"] as? String
+        val maxScan = if (filterBy == "最新一条") 1 else ((magicVars["max_scan"] as? VNumber)?.raw ?: params["max_scan"] as? Number ?: 20.0).toInt()
         val extractCode = params["extract_code"] as? Boolean ?: false
 
         onProgress(ProgressUpdate("开始扫描最近 $maxScan 条短信..."))
@@ -130,17 +134,17 @@ class ReadSmsModule : BaseModule() {
                     }
 
                     return ExecutionResult.Success(mapOf(
-                        "found" to BooleanVariable(true),
-                        "sender" to TextVariable(sender),
-                        "content" to TextVariable(body),
-                        "timestamp" to NumberVariable(timestamp.toDouble()),
-                        "verification_code" to TextVariable(verificationCode)
+                        "found" to VBoolean(true),
+                        "sender" to VString(sender),
+                        "content" to VString(body),
+                        "timestamp" to VNumber(timestamp.toDouble()),
+                        "verification_code" to VString(verificationCode)
                     ))
                 }
             }
         }
 
         onProgress(ProgressUpdate("未找到匹配的短信"))
-        return ExecutionResult.Success(mapOf("found" to BooleanVariable(false)))
+        return ExecutionResult.Success(mapOf("found" to VBoolean(false)))
     }
 }

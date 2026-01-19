@@ -6,8 +6,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.LoopState
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.module.NumberVariable
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 // 文件：LoopModule.kt
@@ -81,7 +82,7 @@ class LoopModule : BaseBlockModule() {
     ): ExecutionResult {
         val countVar = context.magicVariables["count"] ?: context.variables["count"]
         val actualCount = when (countVar) {
-            is NumberVariable -> countVar.value.toLong()
+            is VNumber -> countVar.raw.toLong()
             is Number -> countVar.toLong()
             is String -> countVar.toLongOrNull() ?: (getInputs().firstOrNull { it.id == "count" }?.defaultValue as? Number ?: 0L).toLong()
             else -> (getInputs().firstOrNull { it.id == "count" }?.defaultValue as? Number ?: 0L).toLong()

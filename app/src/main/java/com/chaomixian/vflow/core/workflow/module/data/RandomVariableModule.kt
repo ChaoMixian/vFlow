@@ -12,9 +12,10 @@ import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.module.ProgressUpdate
 import com.chaomixian.vflow.core.module.ValidationResult
-import com.chaomixian.vflow.core.module.NumberVariable
-import com.chaomixian.vflow.core.module.TextVariable
 import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -53,7 +54,7 @@ class RandomVariableModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
             isFolded = true // UI Provider 根据类型显示/折叠
         ),
         // 随机数的上限（包含）。默认为 100。
@@ -63,7 +64,7 @@ class RandomVariableModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
             isFolded = true
         ),
         // 随机数的步进值。默认为 1。
@@ -73,7 +74,7 @@ class RandomVariableModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
             isFolded = true
         ),
         // 生成随机文本的长度。
@@ -83,7 +84,7 @@ class RandomVariableModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
             isFolded = true
         ),
         // 可选。如果为空，则使用默认字符集（数字+字母）。
@@ -93,7 +94,7 @@ class RandomVariableModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
             isFolded = true
         )
     )
@@ -101,9 +102,9 @@ class RandomVariableModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val inputType = step?.parameters?.get("type") as? String ?: "数字"
         val outputTypeName = when (inputType) {
-            "数字" -> NumberVariable.TYPE_NAME
-            "文本" -> TextVariable.TYPE_NAME
-            else -> NumberVariable.TYPE_NAME
+            "数字" -> VTypeRegistry.NUMBER.id
+            "文本" -> VTypeRegistry.STRING.id
+            else -> VTypeRegistry.NUMBER.id
         }
         return listOf(OutputDefinition("randomVariable", "随机变量", outputTypeName))
     }
@@ -166,9 +167,9 @@ class RandomVariableModule : BaseModule() {
                 // 如果所有参数都是整数，则返回整数；否则返回浮点数
                 val isIntMode = (min % 1 == 0.0) && (max % 1 == 0.0) && (step % 1 == 0.0)
                 if (isIntMode) {
-                    NumberVariable(rawResult.toLong().toDouble()) // NumberVariable 内部统一 Double
+                    VNumber(rawResult.toLong().toDouble()) // VNumber 内部统一 Double
                 } else {
-                    NumberVariable(rawResult)
+                    VNumber(rawResult)
                 }
             }
             "文本" -> {
@@ -189,7 +190,7 @@ class RandomVariableModule : BaseModule() {
                     .map { charPool.random() }
                     .joinToString("")
 
-                TextVariable(randomString)
+                VString(randomString)
             }
             // 添加 else 分支处理未知类型，保证 when 表达式的完备性
             else -> return ExecutionResult.Failure("未知类型", "无法创建类型为 '$type' 的随机变量")

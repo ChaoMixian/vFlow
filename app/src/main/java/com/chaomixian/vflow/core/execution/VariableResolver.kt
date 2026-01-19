@@ -133,17 +133,15 @@ object VariableResolver {
             val raw = context.namedVariables[rootKey]
             currentObj = VObjectFactory.from(raw)
         } else {
-            // {{stepId.outputId}}: 查 stepOutputs
+            // {{stepId.outputId}}: 查 stepOutputs (现在直接返回 VObject)
             // 路径通常是 [stepId, outputId, prop1, prop2...]
             if (path.size >= 2) {
                 val stepId = path[0]
                 val outputId = path[1]
-                val rawOutput = context.stepOutputs[stepId]?.get(outputId)
-                if (rawOutput != null) {
-                    currentObj = VObjectFactory.from(rawOutput)
-                    // 消耗掉前两个路径节点 (stepId, outputId)
-                    // 接下来的循环从 index 2 开始
-                    return traverseProperties(currentObj, path, 2)
+                val vOutput = context.stepOutputs[stepId]?.get(outputId)
+                if (vOutput != null) {
+                    // stepOutputs 现在直接存储 VObject，无需转换
+                    return traverseProperties(vOutput, path, 2)
                 }
             }
 

@@ -4,6 +4,9 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -27,8 +30,8 @@ class CoreGetClipboardModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("text", "剪贴板内容", TextVariable.TYPE_NAME),
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("text", "剪贴板内容", VTypeRegistry.STRING.id),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -56,8 +59,8 @@ class CoreGetClipboardModule : BaseModule() {
 
         onProgress(ProgressUpdate("剪贴板内容: $text"))
         return ExecutionResult.Success(mapOf(
-            "success" to BooleanVariable(true),
-            "text" to TextVariable(text)
+            "success" to VBoolean(true),
+            "text" to VString(text)
         ))
     }
 }

@@ -59,7 +59,8 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
             stepVariables: Map<String, List<MagicVariableItem>>,
             namedVariables: Map<String, List<MagicVariableItem>>,
             acceptsMagicVariable: Boolean,
-            acceptsNamedVariable: Boolean
+            acceptsNamedVariable: Boolean,
+            acceptedMagicVariableTypes: Set<String> = emptySet()
         ): MagicVariablePickerSheet {
             return MagicVariablePickerSheet().apply {
                 arguments = Bundle().apply {
@@ -67,6 +68,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                     putSerializable("namedVariables", HashMap(namedVariables))
                     putBoolean("acceptsMagic", acceptsMagicVariable)
                     putBoolean("acceptsNamed", acceptsNamedVariable)
+                    putSerializable("acceptedTypes", HashSet(acceptedMagicVariableTypes))
                 }
             }
         }
@@ -116,42 +118,67 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
     }
 
     private fun handleVariableSelection(item: MagicVariableItem) {
+        @Suppress("UNCHECKED_CAST")
+        val acceptedTypes = arguments?.getSerializable("acceptedTypes") as? Set<String> ?: emptySet()
+
         val type = VTypeRegistry.getType(item.typeId)
-        val properties = type.properties
+        val allProperties = type.properties
+
+        // 如果没有指定接受的类型，则显示所有属性
+        val properties = if (acceptedTypes.isEmpty()) {
+            allProperties
+        } else {
+            // 只显示匹配的属性
+            VTypeRegistry.getAcceptedProperties(item.typeId, acceptedTypes)
+        }
 
         if (properties.isEmpty()) {
+            // 如果没有匹配的属性，则直接使用变量本身
             onSelection?.invoke(item)
             dismiss()
         } else {
             // 特殊处理：字典和列表类型
             when (item.typeId) {
-                "vflow.type.dictionary" -> showDictionaryOptionsDialog(item, properties)
-                "vflow.type.list" -> showListOptionsDialog(item, properties)
-                else -> showPropertySelectionDialog(item, properties)
+                "vflow.type.dictionary" -> showDictionaryOptionsDialog(item, properties, acceptedTypes)
+                "vflow.type.list" -> showListOptionsDialog(item, properties, acceptedTypes)
+                else -> showPropertySelectionDialog(item, properties, acceptedTypes)
             }
         }
     }
 
     /**
      * 显示字典选项对话框（内置属性 + 指定键）
+     * @param acceptedTypes 接受的类型集合，用于判断是否显示"使用变量本身"选项
      */
-    private fun showDictionaryOptionsDialog(item: MagicVariableItem, properties: List<com.chaomixian.vflow.core.types.VPropertyDef>) {
+    private fun showDictionaryOptionsDialog(
+        item: MagicVariableItem,
+        properties: List<com.chaomixian.vflow.core.types.VPropertyDef>,
+        acceptedTypes: Set<String>
+    ) {
         val options = mutableListOf<String>()
-        options.add("使用 ${item.variableName} 本身")
+
+        // 只有当类型本身被接受时，才显示"使用变量本身"选项
+        if (acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
+            options.add("使用 ${item.variableName} 本身")
+        }
+
         properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
         options.add("选择指定键的值...")  // 添加选项
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("字典: ${item.variableName}")
             .setItems(options.toTypedArray()) { _, which ->
+                val hasUseSelfOption = acceptedTypes.isEmpty() || item.typeId in acceptedTypes
+                val offset = if (hasUseSelfOption) 1 else 0
+
                 when {
-                    which == 0 -> {
+                    hasUseSelfOption && which == 0 -> {
                         onSelection?.invoke(item)
                         dismiss()
                     }
                     which <= properties.size -> {
                         // 选择内置属性
-                        val prop = properties[which - 1]
+                        val prop = properties[which - offset]
                         val oldRef = item.variableReference
                         val newRef = when {
                             oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
@@ -217,24 +244,37 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
     /**
      * 显示列表选项对话框（内置属性 + 指定索引）
+     * @param acceptedTypes 接受的类型集合，用于判断是否显示"使用变量本身"选项
      */
-    private fun showListOptionsDialog(item: MagicVariableItem, properties: List<com.chaomixian.vflow.core.types.VPropertyDef>) {
+    private fun showListOptionsDialog(
+        item: MagicVariableItem,
+        properties: List<com.chaomixian.vflow.core.types.VPropertyDef>,
+        acceptedTypes: Set<String>
+    ) {
         val options = mutableListOf<String>()
-        options.add("使用 ${item.variableName} 本身")
+
+        // 只有当类型本身被接受时，才显示"使用变量本身"选项
+        if (acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
+            options.add("使用 ${item.variableName} 本身")
+        }
+
         properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
         options.add("选择指定索引的值...")  // 添加选项
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("列表: ${item.variableName}")
             .setItems(options.toTypedArray()) { _, which ->
+                val hasUseSelfOption = acceptedTypes.isEmpty() || item.typeId in acceptedTypes
+                val offset = if (hasUseSelfOption) 1 else 0
+
                 when {
-                    which == 0 -> {
+                    hasUseSelfOption && which == 0 -> {
                         onSelection?.invoke(item)
                         dismiss()
                     }
                     which <= properties.size -> {
                         // 选择内置属性
-                        val prop = properties[which - 1]
+                        val prop = properties[which - offset]
                         val oldRef = item.variableReference
                         val newRef = when {
                             oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
@@ -301,19 +341,32 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
     /**
      * 显示标准属性选择对话框（用于非字典/列表类型）
+     * @param acceptedTypes 接受的类型集合，用于判断是否显示"使用变量本身"选项
      */
-    private fun showPropertySelectionDialog(item: MagicVariableItem, properties: List<com.chaomixian.vflow.core.types.VPropertyDef>) {
+    private fun showPropertySelectionDialog(
+        item: MagicVariableItem,
+        properties: List<com.chaomixian.vflow.core.types.VPropertyDef>,
+        acceptedTypes: Set<String>
+    ) {
         val options = mutableListOf<String>()
-        options.add("使用 ${item.variableName} 本身")
+
+        // 只有当类型本身被接受时，才显示"使用变量本身"选项
+        if (acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
+            options.add("使用 ${item.variableName} 本身")
+        }
+
         properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("选择 ${item.variableName} 的属性")
             .setItems(options.toTypedArray()) { _, which ->
-                if (which == 0) {
+                val hasUseSelfOption = acceptedTypes.isEmpty() || item.typeId in acceptedTypes
+                val offset = if (hasUseSelfOption) 1 else 0
+
+                if (hasUseSelfOption && which == 0) {
                     onSelection?.invoke(item)
                 } else {
-                    val prop = properties[which - 1]
+                    val prop = properties[which - offset]
                     val oldRef = item.variableReference
                     // 智能拼接属性
                     val newRef = when {

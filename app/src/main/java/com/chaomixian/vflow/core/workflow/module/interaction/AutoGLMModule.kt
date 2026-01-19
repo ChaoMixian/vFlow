@@ -1,5 +1,6 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/interaction/AutoGLMModule.kt
 package com.chaomixian.vflow.core.workflow.module.interaction
+import com.chaomixian.vflow.core.types.VTypeRegistry
 
 import android.content.Context
 import android.util.DisplayMetrics
@@ -72,8 +73,8 @@ class AutoGLMModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "最终结果", TextVariable.TYPE_NAME),
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("result", "最终结果", VTypeRegistry.STRING.id),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

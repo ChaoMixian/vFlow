@@ -4,6 +4,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +28,7 @@ class CoreWakeScreenModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -55,7 +57,7 @@ class CoreWakeScreenModule : BaseModule() {
 
         return if (success) {
             onProgress(ProgressUpdate("屏幕唤醒成功"))
-            ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
             ExecutionResult.Failure("执行失败", "vFlow Core 屏幕唤醒失败")
         }

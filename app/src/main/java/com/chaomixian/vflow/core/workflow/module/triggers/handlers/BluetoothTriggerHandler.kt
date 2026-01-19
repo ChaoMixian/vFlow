@@ -11,8 +11,8 @@ import android.content.IntentFilter
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.core.module.DictionaryVariable
-import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.types.basic.VDictionary
+import com.chaomixian.vflow.core.types.basic.VString
 import kotlinx.coroutines.launch
 
 @SuppressLint("MissingPermission")
@@ -95,9 +95,9 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
                     val configAddress = config["device_address"] as? String
                     if (configEvent == event && (configAddress == "any" || configAddress == device?.address)) {
                         DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '${device?.name}'")
-                        val triggerData = DictionaryVariable(mapOf(
-                            "name" to TextVariable(device?.name ?: ""),
-                            "address" to TextVariable(device?.address ?: "")
+                        val triggerData = VDictionary(mapOf(
+                            "name" to VString(device?.name ?: ""),
+                            "address" to VString(device?.address ?: "")
                         ))
                         WorkflowExecutor.execute(workflow, context.applicationContext, triggerData)
                     }

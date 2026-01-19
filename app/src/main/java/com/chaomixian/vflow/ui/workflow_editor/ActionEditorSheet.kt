@@ -453,6 +453,20 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             onMagicVariableRequested = { inputId ->
                 readParametersFromUi()
                 this.onMagicVariableRequested?.invoke(inputId)
+            },
+            onEnumItemSelected = { selectedItem ->
+                // 防止重复触发：只在值真正改变时才重建UI
+                if (currentParameters[inputDef.id] != selectedItem) {
+                    currentParameters[inputDef.id] = selectedItem
+                    // 使用 Handler 延迟重建UI以避免在事件处理期间冻结
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        try {
+                            buildUi()
+                        } catch (e: Exception) {
+                            // 忽略视图已销毁的情况
+                        }
+                    }
+                }
             }
         )
     }

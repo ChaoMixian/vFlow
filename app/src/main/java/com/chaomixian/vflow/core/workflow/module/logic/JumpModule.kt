@@ -8,8 +8,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.module.BooleanVariable
-import com.chaomixian.vflow.core.module.NumberVariable
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 /**
@@ -32,12 +33,12 @@ class JumpModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 0L,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

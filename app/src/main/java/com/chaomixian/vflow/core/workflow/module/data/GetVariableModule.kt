@@ -5,6 +5,7 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -29,7 +30,7 @@ class GetVariableModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("value", "变量值", "vflow.type.any") // 输出类型未知
+        OutputDefinition("value", "变量值", VTypeRegistry.ANY.id) // 输出类型未知
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

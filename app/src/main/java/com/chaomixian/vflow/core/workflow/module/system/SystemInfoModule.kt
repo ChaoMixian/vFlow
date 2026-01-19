@@ -4,6 +4,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import android.os.Build
@@ -43,7 +45,7 @@ class SystemInfoModule : BaseModule() {
         OutputDefinition(
             id = "sysinfo",
             name = "系统信息",
-            typeName = TextVariable.TYPE_NAME
+            typeName = VTypeRegistry.STRING.id
         )
     )
 
@@ -63,7 +65,7 @@ class SystemInfoModule : BaseModule() {
             "安全补丁" -> Build.VERSION.SECURITY_PATCH
             else -> return ExecutionResult.Failure("获取失败", "无效的值")
         }
-        return ExecutionResult.Success(mapOf("sysinfo" to resultValue))
+        return ExecutionResult.Success(mapOf("sysinfo" to VString(resultValue)))
     }
 
     /**

@@ -12,6 +12,10 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -50,15 +54,15 @@ class ScreenOperationModule : BaseModule() {
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("operation_type", "类型", ParameterType.ENUM, "点击", options = listOf("点击", "长按", "滑动"), acceptsMagicVariable = false),
-        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, TextVariable.TYPE_NAME)),
-        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, TextVariable.TYPE_NAME), isHidden = false),
-        InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME), isHidden = false),
+        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, VTypeRegistry.STRING.id)),
+        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, VTypeRegistry.STRING.id), isHidden = false),
+        InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), isHidden = false),
         InputDefinition("execution_mode", "执行方式", ParameterType.ENUM, "自动", options = executionModeOptions, acceptsMagicVariable = false, isHidden = false),
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -144,7 +148,7 @@ class ScreenOperationModule : BaseModule() {
         }
 
         return if (success) {
-            ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
             ExecutionResult.Failure("执行失败", "操作无法执行，请检查相关权限或服务状态。")
         }

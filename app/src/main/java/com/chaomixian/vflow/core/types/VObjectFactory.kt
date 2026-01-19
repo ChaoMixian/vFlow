@@ -71,4 +71,12 @@ object VObjectFactory {
         }
         return VDictionary(vMap)
     }
+
+    /**
+     * 将 Map<String, Any?> 转换为 Map<String, VObject>
+     * 用于执行引擎将模块输出转换为 VObject 格式
+     */
+    fun fromMapAny(outputs: Map<String, Any?>): Map<String, VObject> {
+        return outputs.mapValues { (_, value) -> from(value) }
+    }
 }

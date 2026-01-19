@@ -8,6 +8,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
@@ -52,7 +54,7 @@ class SendKeyEventModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -87,6 +89,6 @@ class SendKeyEventModule : BaseModule() {
             return ExecutionResult.Failure("操作失败", "系统未能成功执行该全局操作。")
         }
 
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
     }
 }

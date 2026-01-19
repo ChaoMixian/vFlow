@@ -1,11 +1,13 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/logic/IfModule.kt
 // 描述: If/Else/EndIf 模块的实现。getSummary 已被简化，类型解析逻辑内聚。
 package com.chaomixian.vflow.core.workflow.module.logic
+import com.chaomixian.vflow.core.types.basic.VBoolean
 
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
@@ -63,10 +65,10 @@ class IfModule : BaseBlockModule() {
 
     /** 获取静态输入参数定义。 */
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(BooleanVariable.TYPE_NAME, NumberVariable.TYPE_NAME, TextVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME, ListVariable.TYPE_NAME, ScreenElement.TYPE_NAME)),
+        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.BOOLEAN.id, VTypeRegistry.NUMBER.id, VTypeRegistry.STRING.id, VTypeRegistry.DICTIONARY.id, VTypeRegistry.LIST.id, ScreenElement.TYPE_NAME)),
         InputDefinition(id = "operator", name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
-        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, NumberVariable.TYPE_NAME, BooleanVariable.TYPE_NAME)),
-        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
+        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.NUMBER.id, VTypeRegistry.BOOLEAN.id)),
+        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
     )
 
     /**
@@ -97,7 +99,7 @@ class IfModule : BaseBlockModule() {
             val originalValue1Def = staticInputs.first { it.id == "value1" }
             val newNumberValue1Def = originalValue1Def.copy(
                 staticType = ParameterType.NUMBER,
-                acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+                acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
             )
             dynamicInputs.add(newNumberValue1Def)
             dynamicInputs.add(staticInputs.first { it.id == "value2" })
@@ -106,7 +108,7 @@ class IfModule : BaseBlockModule() {
     }
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "条件结果", BooleanVariable.TYPE_NAME)
+        OutputDefinition("result", "条件结果", VTypeRegistry.BOOLEAN.id)
     )
 
     /**
@@ -168,17 +170,17 @@ class IfModule : BaseBlockModule() {
                 return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
             }
         }
-        return ExecutionResult.Success(mapOf("result" to BooleanVariable(result)))
+        return ExecutionResult.Success(mapOf("result" to VBoolean(result)))
     }
 
     // --- [内聚] 以下为移入模块内部的私有辅助方法 ---
 
     private fun getOperatorsForVariableType(variableTypeName: String?): List<String> {
         return when (variableTypeName) {
-            TextVariable.TYPE_NAME, ScreenElement.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT
-            NumberVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_NUMBER
-            BooleanVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_BOOLEAN
-            ListVariable.TYPE_NAME, DictionaryVariable.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_COLLECTION
+            VTypeRegistry.STRING.id, ScreenElement.TYPE_NAME -> OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT
+            VTypeRegistry.NUMBER.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_NUMBER
+            VTypeRegistry.BOOLEAN.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_BOOLEAN
+            VTypeRegistry.LIST.id, VTypeRegistry.DICTIONARY.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_COLLECTION
             null -> OPERATORS_FOR_ANY
             else -> OPERATORS_FOR_ANY
         }.distinct()
@@ -204,18 +206,46 @@ class IfModule : BaseBlockModule() {
             val sourceOutputId = parts.getOrNull(1) ?: return null
             val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
             val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
-            return sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId }?.typeName
+
+            // 获取输出的类型
+            val outputDef = sourceModule.getOutputs(sourceStep).find { it.id == sourceOutputId }
+            var currentTypeId = outputDef?.typeName
+
+            // 如果有属性访问路径（如 .length、.uppercase），则解析属性的类型
+            if (parts.size > 2) {
+                currentTypeId = resolvePropertyPath(currentTypeId, parts.drop(2))
+            }
+
+            return currentTypeId
         }
         return null
     }
 
+    /**
+     * 解析属性路径，返回最终属性的类型ID
+     * @param baseTypeId 基础类型ID（如 VTypeRegistry.STRING.id）
+     * @param propertyPath 属性路径（如 ["length"] 或 ["uppercase", "length"]）
+     * @return 最终属性的类型ID
+     */
+    private fun resolvePropertyPath(baseTypeId: String?, propertyPath: List<String>): String? {
+        var currentTypeId = baseTypeId
+
+        for (propertyName in propertyPath) {
+            val propertyType = VTypeRegistry.getPropertyType(currentTypeId, propertyName)
+            if (propertyType == null) return currentTypeId  // 如果找不到属性，返回当前类型
+            currentTypeId = propertyType.id
+        }
+
+        return currentTypeId
+    }
+
     private fun userTypeToInternalName(userType: String?): String? {
         return when (userType) {
-            "文本" -> TextVariable.TYPE_NAME
-            "数字" -> NumberVariable.TYPE_NAME
-            "布尔" -> BooleanVariable.TYPE_NAME
-            "字典" -> DictionaryVariable.TYPE_NAME
-            "图像" -> ImageVariable.TYPE_NAME
+            "文本" -> VTypeRegistry.STRING.id
+            "数字" -> VTypeRegistry.NUMBER.id
+            "布尔" -> VTypeRegistry.BOOLEAN.id
+            "字典" -> VTypeRegistry.DICTIONARY.id
+            "图像" -> VTypeRegistry.IMAGE.id
             else -> null
         }
     }
@@ -232,7 +262,11 @@ class ElseModule : BaseModule() {
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         val ifStepId = findPreviousStepInSameBlock(context.allSteps, context.currentStepIndex, IF_START_ID)
-        val ifOutput = ifStepId?.let { context.stepOutputs[it]?.get("result") as? BooleanVariable }?.value
+        // stepOutputs 现在包含 VObject (VBoolean)，使用 asBoolean() 方法
+        val ifOutput = ifStepId?.let {
+            val vObj = context.stepOutputs[it]?.get("result")
+            vObj?.asBoolean()
+        }
 
         if (ifOutput == true) {
             onProgress(ProgressUpdate("如果条件为真，跳过否则块。"))

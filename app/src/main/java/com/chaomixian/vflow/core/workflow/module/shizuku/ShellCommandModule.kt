@@ -1,5 +1,6 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/shizuku/ShellCommandModule.kt
 package com.chaomixian.vflow.core.workflow.module.shizuku
+import com.chaomixian.vflow.core.types.VTypeRegistry
 
 import android.content.Context
 import com.chaomixian.vflow.R
@@ -58,8 +59,8 @@ class ShellCommandModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "命令输出", TextVariable.TYPE_NAME),
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("result", "命令输出", VTypeRegistry.STRING.id),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

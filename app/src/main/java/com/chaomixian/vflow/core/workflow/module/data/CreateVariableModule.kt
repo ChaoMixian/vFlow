@@ -2,11 +2,14 @@
 package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
-import android.os.Parcelable
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.*
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -32,13 +35,13 @@ class CreateVariableModule : BaseModule() {
         if (step == null) return emptyList()
         val selectedType = step.parameters["type"] as? String
         val outputTypeName = when (selectedType) {
-            "文本" -> TextVariable.TYPE_NAME
-            "数字" -> NumberVariable.TYPE_NAME
-            "布尔" -> BooleanVariable.TYPE_NAME
-            "字典" -> DictionaryVariable.TYPE_NAME
-            "列表" -> ListVariable.TYPE_NAME
-            "图像" -> ImageVariable.TYPE_NAME
-            else -> TextVariable.TYPE_NAME
+            "文本" -> VTypeRegistry.STRING.id
+            "数字" -> VTypeRegistry.NUMBER.id
+            "布尔" -> VTypeRegistry.BOOLEAN.id
+            "字典" -> VTypeRegistry.DICTIONARY.id
+            "列表" -> VTypeRegistry.LIST.id
+            "图像" -> VTypeRegistry.IMAGE.id
+            else -> VTypeRegistry.STRING.id
         }
         return listOf(OutputDefinition("variable", "变量值", outputTypeName))
     }
@@ -105,38 +108,71 @@ class CreateVariableModule : BaseModule() {
         val rawValue = context.magicVariables["value"] ?: context.variables["value"]
         val variableName = context.variables["variableName"] as? String
 
-        val variable: Parcelable = when (type) {
+        val variable = when (type) {
             "文本" -> {
                 val resolvedText = VariableResolver.resolve(rawValue?.toString() ?: "", context)
-                TextVariable(resolvedText)
+                VString(resolvedText)
             }
             "数字" -> {
                 val numValue = when (rawValue) {
-                    is NumberVariable -> rawValue.value
+                    is VNumber -> rawValue.raw
                     is Number -> rawValue.toDouble()
                     is String -> rawValue.toDoubleOrNull()
                     else -> 0.0
                 } ?: 0.0
-                NumberVariable(numValue)
+                VNumber(numValue)
             }
-            "布尔" -> BooleanVariable(
+            "布尔" -> VBoolean(
                 when (rawValue) {
-                    is BooleanVariable -> rawValue.value
+                    is VBoolean -> rawValue.raw
                     is Boolean -> rawValue
                     else -> rawValue?.toString().toBoolean()
                 }
             )
-            "字典" -> DictionaryVariable((rawValue as? Map<*, *>)?.mapKeys { it.key.toString() } ?: emptyMap())
+            "字典" -> {
+                val map = (rawValue as? Map<*, *>)?.mapKeys { it.key.toString() }?.mapValues { entry ->
+                    // Convert Any? to VObject
+                    when (val value = entry.value) {
+                        is VObject -> value
+                        is String -> VString(value)
+                        is Number -> VNumber(value.toDouble())
+                        is Boolean -> VBoolean(value)
+                        is List<*> -> {
+                            val items = value.map { item ->
+                                when (item) {
+                                    is VObject -> item
+                                    is String -> VString(item)
+                                    is Number -> VNumber(item.toDouble())
+                                    is Boolean -> VBoolean(item)
+                                    else -> VNull
+                                }
+                            }
+                            VList(items)
+                        }
+                        else -> VNull
+                    }
+                } as? Map<String, VObject> ?: emptyMap()
+                VDictionary(map)
+            }
             "列表" -> {
-                val list = when (rawValue) {
-                    is List<*> -> rawValue
-                    is String -> rawValue.lines().filter { it.isNotEmpty() }
+                val list: List<VObject> = when (rawValue) {
+                    is VList -> rawValue.raw
+                    is List<*> -> rawValue.map { item ->
+                        when (item) {
+                            is VObject -> item
+                            is String -> VString(item)
+                            is Number -> VNumber(item.toDouble())
+                            is Boolean -> VBoolean(item)
+                            else -> VNull
+                        }
+                    }
+                    is String -> rawValue.lines().filter { it.isNotEmpty() }.map { VString(it) }
                     else -> emptyList()
                 }
-                ListVariable(list)
+                VList(list)
             }
-            "图像" -> ImageVariable(rawValue?.toString() ?: "")
-            else -> TextVariable(rawValue?.toString() ?: "")
+            "图像" -> VImage(rawValue?.toString() ?: "")
+            else -> VString(rawValue?.toString() ?: "")
         }
 
         if (!variableName.isNullOrBlank()) {

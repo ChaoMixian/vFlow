@@ -15,6 +15,7 @@ import android.webkit.MimeTypeMap
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -80,10 +81,10 @@ class SaveImageModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val imageVar = context.magicVariables["image"] as? ImageVariable
+        val imageVar = context.magicVariables["image"] as? VImage
             ?: return ExecutionResult.Failure("参数错误", "输入的不是一个有效的图片变量。")
 
-        val imageUri = Uri.parse(imageVar.uri)
+        val imageUri = Uri.parse(imageVar.uriString)
         val appContext = context.applicationContext
 
         onProgress(ProgressUpdate("正在保存图片..."))

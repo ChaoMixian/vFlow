@@ -4,11 +4,14 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 /**
- * “接收分享” 触发器。
+ * "接收分享" 触发器。
  * 当用户通过 Android 的分享菜单将内容分享给 vFlow 时，会触发此模块。
  */
 class ReceiveShareTriggerModule : BaseModule() {
@@ -44,10 +47,10 @@ class ReceiveShareTriggerModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val type = step?.parameters?.get("acceptedType") as? String ?: "任意"
         return when (type) {
-            "文本", "链接" -> listOf(OutputDefinition("shared_content", "分享的文本", TextVariable.TYPE_NAME))
-            "图片" -> listOf(OutputDefinition("shared_content", "分享的图片", ImageVariable.TYPE_NAME))
+            "文本", "链接" -> listOf(OutputDefinition("shared_content", "分享的文本", VTypeRegistry.STRING.id))
+            "图片" -> listOf(OutputDefinition("shared_content", "分享的图片", VTypeRegistry.IMAGE.id))
             // "文件" 和 "任意" 类型暂时都输出为文本（URI），未来可以扩展为更具体的类型
-            else -> listOf(OutputDefinition("shared_content", "分享的内容", TextVariable.TYPE_NAME))
+            else -> listOf(OutputDefinition("shared_content", "分享的内容", VTypeRegistry.STRING.id))
         }
     }
 

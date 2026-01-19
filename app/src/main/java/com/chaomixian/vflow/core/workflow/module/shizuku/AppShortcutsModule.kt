@@ -1,5 +1,6 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/shizuku/AppShortcutsModule.kt
 package com.chaomixian.vflow.core.workflow.module.shizuku
+import com.chaomixian.vflow.core.types.VTypeRegistry
 
 import android.content.Context
 import com.chaomixian.vflow.R
@@ -29,7 +30,7 @@ abstract class BaseShortcutModule : BaseModule() {
     }
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "命令输出", TextVariable.TYPE_NAME)
+        OutputDefinition("result", "命令输出", VTypeRegistry.STRING.id)
     )
 }
 

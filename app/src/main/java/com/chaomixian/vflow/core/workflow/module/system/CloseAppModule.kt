@@ -7,6 +7,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.services.ShellManager
@@ -54,7 +57,7 @@ class CloseAppModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -83,7 +86,7 @@ class CloseAppModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         // 支持魔法变量 (例如从之前的步骤获取包名)
-        val packageName = (context.magicVariables["packageName"] as? TextVariable)?.value
+        val packageName = (context.magicVariables["packageName"] as? VString)?.raw
             ?: context.variables["packageName"] as? String
 
         if (packageName.isNullOrBlank()) {
@@ -100,6 +103,6 @@ class CloseAppModule : BaseModule() {
             return ExecutionResult.Failure("执行失败", "无法停止应用: $result")
         }
 
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
     }
 }

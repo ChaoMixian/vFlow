@@ -5,6 +5,9 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -29,10 +32,10 @@ class NotificationTriggerModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("notification_object", "通知对象", NotificationObject.TYPE_NAME),
-        OutputDefinition("package_name", "应用包名", TextVariable.TYPE_NAME),
-        OutputDefinition("title", "通知标题", TextVariable.TYPE_NAME),
-        OutputDefinition("content", "通知内容", TextVariable.TYPE_NAME)
+        OutputDefinition("notification_object", "通知对象", VTypeRegistry.NOTIFICATION.id),
+        OutputDefinition("package_name", "应用包名", VTypeRegistry.STRING.id),
+        OutputDefinition("title", "通知标题", VTypeRegistry.STRING.id),
+        OutputDefinition("content", "通知内容", VTypeRegistry.STRING.id)
     )
 
     /**
@@ -80,20 +83,20 @@ class NotificationTriggerModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         onProgress(ProgressUpdate("通知已收到"))
-        val triggerData = context.triggerData as? DictionaryVariable
-        val id = (triggerData?.value?.get("id") as? TextVariable)?.value ?: ""
-        val packageName = (triggerData?.value?.get("package_name") as? TextVariable)?.value ?: ""
-        val title = (triggerData?.value?.get("title") as? TextVariable)?.value ?: ""
-        val content = (triggerData?.value?.get("content") as? TextVariable)?.value ?: ""
+        val triggerData = context.triggerData as? VDictionary
+        val id = (triggerData?.raw?.get("id") as? VString)?.raw ?: ""
+        val packageName = (triggerData?.raw?.get("package_name") as? VString)?.raw ?: ""
+        val title = (triggerData?.raw?.get("title") as? VString)?.raw ?: ""
+        val content = (triggerData?.raw?.get("content") as? VString)?.raw ?: ""
 
         val notificationObject = NotificationObject(id, packageName, title, content)
 
         return ExecutionResult.Success(
             outputs = mapOf(
                 "notification_object" to notificationObject,
-                "package_name" to TextVariable(packageName),
-                "title" to TextVariable(title),
-                "content" to TextVariable(content)
+                "package_name" to VString(packageName),
+                "title" to VString(title),
+                "content" to VString(content)
             )
         )
     }

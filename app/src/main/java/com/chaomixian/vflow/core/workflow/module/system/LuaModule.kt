@@ -1,5 +1,6 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/system/LuaModule.kt
 package com.chaomixian.vflow.core.workflow.module.system
+import com.chaomixian.vflow.core.types.VTypeRegistry
 
 import android.content.Context
 import com.chaomixian.vflow.R
@@ -44,7 +45,7 @@ class LuaModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("outputs", "脚本返回值", DictionaryVariable.TYPE_NAME)
+        OutputDefinition("outputs", "脚本返回值", VTypeRegistry.DICTIONARY.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -78,8 +79,9 @@ class LuaModule : BaseModule() {
                 val sourceStepId = parts.getOrNull(0)
                 val sourceOutputId = parts.getOrNull(1)
                 if (sourceStepId != null && sourceOutputId != null) {
-                    val value = context.stepOutputs[sourceStepId]?.get(sourceOutputId)
-                    scriptInputs[varName] = value
+                    // stepOutputs 现在包含 VObject，需要转换为 raw 值
+                    val vObj = context.stepOutputs[sourceStepId]?.get(sourceOutputId)
+                    scriptInputs[varName] = vObj?.raw ?: vObj?.asString()
                 }
             } else {
                 scriptInputs[varName] = magicVarRef

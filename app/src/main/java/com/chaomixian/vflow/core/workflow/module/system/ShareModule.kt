@@ -6,6 +6,10 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -32,7 +36,7 @@ class ShareModule : BaseModule() {
             staticType = ParameterType.ANY,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, ImageVariable.TYPE_NAME), // 接受文本和图片
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.IMAGE.id), // 接受文本和图片
             supportsRichText = true  // 支持混合变量
         )
     )
@@ -41,7 +45,7 @@ class ShareModule : BaseModule() {
      * 增加 success 输出以保持统一。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
 
@@ -70,8 +74,8 @@ class ShareModule : BaseModule() {
         val rawContent = context.magicVariables["content"] ?: context.variables["content"]
 
         val content = when (rawContent) {
-            is ImageVariable -> rawContent  // 图片变量直接使用，不解析
-            is TextVariable -> {
+            is VImage -> rawContent  // 图片变量直接使用，不解析
+            is VString -> {
                 // TextVariable 需要获取其值并解析（因为值可能包含变量引用）
                 context.getVariableAsString("content")
             }
@@ -97,6 +101,6 @@ class ShareModule : BaseModule() {
         }
 
         // 无论成功与否，都通过 success 输出返回结果
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(success ?: false)))
+        return ExecutionResult.Success(mapOf("success" to VBoolean(success ?: false)))
     }
 }

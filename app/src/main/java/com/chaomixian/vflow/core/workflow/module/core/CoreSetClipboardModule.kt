@@ -4,6 +4,9 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -31,13 +34,13 @@ class CoreSetClipboardModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME),
-        OutputDefinition("text", "设置的文本内容", TextVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
+        OutputDefinition("text", "设置的文本内容", VTypeRegistry.STRING.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -84,8 +87,8 @@ class CoreSetClipboardModule : BaseModule() {
         return if (success) {
             onProgress(ProgressUpdate("剪贴板设置成功"))
             ExecutionResult.Success(mapOf(
-                "success" to BooleanVariable(true),
-                "text" to TextVariable(text)
+                "success" to VBoolean(true),
+                "text" to VString(text)
             ))
         } else {
             ExecutionResult.Failure("执行失败", "vFlow Core 剪贴板设置失败")

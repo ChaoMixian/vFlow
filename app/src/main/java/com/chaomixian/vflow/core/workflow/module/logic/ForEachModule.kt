@@ -6,6 +6,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.LoopState
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -31,13 +33,13 @@ class ForEachModule : BaseBlockModule() {
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
             acceptsNamedVariable = true,
-            acceptedMagicVariableTypes = setOf(ListVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.LIST.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("item", "重复项目", "vflow.type.any"), // 项目类型是任意的，因为列表可以包含任何类型
-        OutputDefinition("index", "重复索引", NumberVariable.TYPE_NAME)
+        OutputDefinition("index", "重复索引", VTypeRegistry.NUMBER.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -52,8 +54,8 @@ class ForEachModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val listVar = context.magicVariables["input_list"] as? ListVariable
-        val items = listVar?.value
+        val listVar = context.magicVariables["input_list"] as? VList
+        val items = listVar?.raw
 
         if (items == null) {
             return ExecutionResult.Failure("参数错误", "输入必须是一个列表变量。")

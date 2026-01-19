@@ -12,6 +12,9 @@ import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.utils.VFlowImeManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
@@ -52,7 +55,7 @@ class InputTextModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
             supportsRichText = true
         ),
         InputDefinition(
@@ -77,7 +80,7 @@ class InputTextModule : BaseModule() {
     override val uiProvider: ModuleUIProvider = InputTextModuleUIProvider()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -149,7 +152,7 @@ class InputTextModule : BaseModule() {
         }
 
         return if (success) {
-            ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
             ExecutionResult.Failure("输入失败", "无法输入文本，请确保有输入框处于聚焦状态。")
         }

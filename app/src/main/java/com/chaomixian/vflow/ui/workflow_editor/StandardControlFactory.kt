@@ -40,7 +40,8 @@ object StandardControlFactory {
         inputDef: InputDefinition,
         currentValue: Any?,
         allSteps: List<ActionStep>?,
-        onMagicVariableRequested: ((String) -> Unit)?
+        onMagicVariableRequested: ((String) -> Unit)?,
+        onEnumItemSelected: ((String) -> Unit)? = null
     ): View {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null, false)
         row.findViewById<TextView>(R.id.input_name).text = inputDef.name
@@ -70,7 +71,7 @@ object StandardControlFactory {
                 allSteps,
                 onMagicVariableRequested?.let { { inputDef.id } }
             )
-            else -> createBaseViewForInputType(context, inputDef, currentValue)
+            else -> createBaseViewForInputType(context, inputDef, currentValue, onEnumItemSelected)
         }
 
         valueContainer.addView(valueView)
@@ -96,14 +97,16 @@ object StandardControlFactory {
     fun createBaseViewForInputType(
         context: Context,
         inputDef: InputDefinition,
-        currentValue: Any?
+        currentValue: Any?,
+        onItemSelectedCallback: ((String) -> Unit)? = null
     ): View {
         return when (inputDef.staticType) {
             ParameterType.BOOLEAN -> createSwitch(context, currentValue as? Boolean ?: false)
             ParameterType.ENUM -> createSpinner(
                 context,
                 inputDef.options,
-                currentValue as? String ?: inputDef.defaultValue as? String
+                currentValue as? String ?: inputDef.defaultValue as? String,
+                onItemSelectedCallback
             )
             else -> createTextInputLayout(
                 context,
@@ -126,7 +129,8 @@ object StandardControlFactory {
     fun createSpinner(
         context: Context,
         options: List<String>,
-        selectedValue: String?
+        selectedValue: String?,
+        onItemSelectedCallback: ((String) -> Unit)? = null
     ): Spinner {
         return Spinner(context).apply {
             adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, options).also {
@@ -134,6 +138,26 @@ object StandardControlFactory {
             }
             val selectionIndex = options.indexOf(selectedValue)
             if (selectionIndex != -1) setSelection(selectionIndex)
+
+            // 延迟设置监听器，避免初始化时触发
+            post {
+                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                        val selectedItem = options[position]
+                        // 只在值真正改变时才触发回调
+                        if (tag != selectedItem) {
+                            tag = selectedItem  // 用 tag 记录当前值
+                            onItemSelectedCallback?.invoke(selectedItem)
+                        }
+                    }
+
+                    override fun onNothingSelected(parent: AdapterView<*>?) {
+                        // 不需要处理
+                    }
+                }
+                // 设置初始 tag 值
+                tag = selectedValue
+            }
         }
     }
 

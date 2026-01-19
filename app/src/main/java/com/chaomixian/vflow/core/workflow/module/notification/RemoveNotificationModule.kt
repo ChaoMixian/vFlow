@@ -5,6 +5,7 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.NotificationTriggerHandler
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -51,7 +52,7 @@ class RemoveNotificationModule : BaseModule() {
 
         val notificationsToRemove = when (target) {
             is NotificationObject -> listOf(target)
-            is ListVariable -> target.value.filterIsInstance<NotificationObject>()
+            is VList -> target.raw.filterIsInstance<NotificationObject>()
             else -> emptyList()
         }
 

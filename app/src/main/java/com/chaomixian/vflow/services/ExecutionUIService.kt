@@ -11,8 +11,8 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.core.module.ImageVariable
-import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.ui.common.OverlayUIActivity
 import com.google.gson.Gson
@@ -241,17 +241,17 @@ class ExecutionUIService(private val context: Context) {
         val intent = Intent(context, OverlayUIActivity::class.java).apply {
             putExtra("request_type", "share")
             when (content) {
-                is TextVariable -> {
+                is VString -> {
                     putExtra("share_type", "text")
-                    putExtra("share_content", content.value)
+                    putExtra("share_content", content.raw)
                 }
                 is String -> {
                     putExtra("share_type", "text")
                     putExtra("share_content", content)
                 }
-                is ImageVariable -> {
+                is VImage -> {
                     putExtra("share_type", "image")
-                    putExtra("share_content", content.uri)
+                    putExtra("share_content", content.uriString)
                 }
                 else -> return false
             }

@@ -4,6 +4,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -38,8 +40,8 @@ class CoreWifiModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME),
-        OutputDefinition("enabled", "切换后的状态", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
+        OutputDefinition("enabled", "切换后的状态", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -96,8 +98,8 @@ class CoreWifiModule : BaseModule() {
             val stateText = if (newState) "已开启" else "已关闭"
             onProgress(ProgressUpdate("WiFi$stateText"))
             ExecutionResult.Success(mapOf(
-                "success" to BooleanVariable(true),
-                "enabled" to BooleanVariable(newState)
+                "success" to VBoolean(true),
+                "enabled" to VBoolean(newState)
             ))
         } else {
             ExecutionResult.Failure("执行失败", "vFlow Core WiFi操作失败")

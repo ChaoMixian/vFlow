@@ -8,6 +8,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.services.ShellManager
@@ -46,7 +48,7 @@ class InvokeModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -183,7 +185,7 @@ class InvokeModule : BaseModule() {
                     }
                 }
             }
-            return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } catch (e: Exception) {
             return ExecutionResult.Failure("调用失败", "执行 Intent 失败: ${e.message}\nIntent: $intent")
         }

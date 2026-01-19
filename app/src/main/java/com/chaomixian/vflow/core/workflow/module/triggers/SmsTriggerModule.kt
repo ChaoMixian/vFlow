@@ -6,6 +6,9 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -80,16 +83,16 @@ class SmsTriggerModule : BaseModule() {
 
 
     /**
-     * 当选择“识别验证码”时，增加一个新的输出。
+     * 当选择"识别验证码"时，增加一个新的输出。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val outputs = mutableListOf(
-            OutputDefinition("sender_number", "发件人号码", TextVariable.TYPE_NAME),
-            OutputDefinition("message_content", "短信内容", TextVariable.TYPE_NAME)
+            OutputDefinition("sender_number", "发件人号码", VTypeRegistry.STRING.id),
+            OutputDefinition("message_content", "短信内容", VTypeRegistry.STRING.id)
         )
         val contentType = step?.parameters?.get("content_filter_type") as? String
         if (contentType == "识别验证码") {
-            outputs.add(OutputDefinition("verification_code", "验证码", TextVariable.TYPE_NAME))
+            outputs.add(OutputDefinition("verification_code", "验证码", VTypeRegistry.STRING.id))
         }
         return outputs
     }
@@ -120,10 +123,10 @@ class SmsTriggerModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         onProgress(ProgressUpdate("短信已收到"))
-        val triggerData = context.triggerData as? DictionaryVariable
-        val sender = triggerData?.value?.get("sender") ?: TextVariable("")
-        val content = triggerData?.value?.get("content") ?: TextVariable("")
-        val verificationCode = triggerData?.value?.get("verification_code") ?: TextVariable("")
+        val triggerData = context.triggerData as? VDictionary
+        val sender = triggerData?.raw?.get("sender") as? VString ?: VString("")
+        val content = triggerData?.raw?.get("content") as? VString ?: VString("")
+        val verificationCode = triggerData?.raw?.get("verification_code") as? VString ?: VString("")
 
         return ExecutionResult.Success(
             outputs = mapOf(

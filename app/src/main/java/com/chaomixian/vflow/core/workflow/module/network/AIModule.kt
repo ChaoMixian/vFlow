@@ -6,6 +6,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.gson.Gson
@@ -48,8 +51,8 @@ class AIModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "回答内容", TextVariable.TYPE_NAME),
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("result", "回答内容", VTypeRegistry.STRING.id),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     // 摘要显示逻辑
@@ -143,8 +146,8 @@ class AIModule : BaseModule() {
                     val content = message.get("content").asString
 
                     ExecutionResult.Success(mapOf(
-                        "result" to TextVariable(content),
-                        "success" to BooleanVariable(true)
+                        "result" to VString(content),
+                        "success" to VBoolean(true)
                     ))
                 } else {
                     ExecutionResult.Failure("解析失败", "无法从响应中提取回答: $responseStr")

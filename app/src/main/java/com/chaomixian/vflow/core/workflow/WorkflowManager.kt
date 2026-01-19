@@ -4,6 +4,8 @@
 package com.chaomixian.vflow.core.workflow
 
 import android.content.Context
+import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.serialization.VObjectGsonAdapter
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
@@ -11,12 +13,15 @@ import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerModule
 import com.chaomixian.vflow.services.TriggerServiceProxy
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import java.util.*
 
 class WorkflowManager(val context: Context) {
     private val prefs = context.getSharedPreferences("vflow_workflows", Context.MODE_PRIVATE)
-    private val gson = Gson()
+    private val gson = GsonBuilder()
+        .registerTypeHierarchyAdapter(VObject::class.java, VObjectGsonAdapter())
+        .create()
 
     /**
      * 保存单个工作流。

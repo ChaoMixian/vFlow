@@ -1,10 +1,13 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/basic/VList.kt
 package com.chaomixian.vflow.core.types.basic
 
+import android.os.Parcelable
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 /**
  * 列表类型的 VObject 实现
@@ -12,9 +15,10 @@ import com.chaomixian.vflow.core.types.properties.PropertyRegistry
  *
  * 特殊逻辑：支持数字索引访问（如 list.0, list.-1）
  */
-class VList(override val raw: List<VObject>) : EnhancedBaseVObject() {
+@Parcelize
+data class VList(override val raw: @RawValue List<VObject>) : EnhancedBaseVObject(), Parcelable {
     override val type = VTypeRegistry.LIST
-    override val propertyRegistry = Companion.registry
+    override val propertyRegistry: PropertyRegistry = VListCompanion.registry
 
     override fun asString(): String {
         return raw.joinToString(", ") { it.asString() }
@@ -39,7 +43,7 @@ class VList(override val raw: List<VObject>) : EnhancedBaseVObject() {
             return if (actualIndex in raw.indices) raw[actualIndex] else VNull
         }
 
-        // 其他属性使用注册表
+        // 其他属性使用基类的实现（通过 propertyRegistry）
         return super.getProperty(propertyName)
     }
 
@@ -65,33 +69,36 @@ class VList(override val raw: List<VObject>) : EnhancedBaseVObject() {
             index to typeName
         }
     }
+}
 
-    companion object {
-        // 属性注册表：所有 VList 实例共享
-        private val registry = PropertyRegistry().apply {
-            register("count", "size", "数量", "长度", "length", getter = { host ->
-                VNumber((host as VList).raw.size.toDouble())
-            })
-            register("first", "第一个", "head", getter = { host ->
-                val list = (host as VList).raw
-                if (list.isNotEmpty()) list.first() else VNull
-            })
-            register("last", "最后一个", "tail", getter = { host ->
-                val list = (host as VList).raw
-                if (list.isNotEmpty()) list.last() else VNull
-            })
-            register("isempty", "为空", "empty", getter = { host ->
-                VBoolean((host as VList).raw.isEmpty())
-            })
-            register("random", "随机", "rand", getter = { host ->
-                val list = (host as VList).raw
-                if (list.isNotEmpty()) list.random() else VNull
-            })
-            // 添加一个特殊的属性，用于UI获取索引列表
-            register("availableIndices", "可用索引", getter = { host ->
-                val list = host as VList
-                VList(list.getAvailableIndices().map { VNumber(it.toDouble()) })
-            })
-        }
+/**
+ * VList 的伴生对象，持有共享的属性注册表
+ */
+object VListCompanion {
+    // 属性注册表：所有 VList 实例共享
+    val registry = PropertyRegistry().apply {
+        register("count", "size", "数量", "长度", "length", getter = { host ->
+            VNumber((host as VList).raw.size.toDouble())
+        })
+        register("first", "第一个", "head", getter = { host ->
+            val list = (host as VList).raw
+            if (list.isNotEmpty()) list.first() else VNull
+        })
+        register("last", "最后一个", "tail", getter = { host ->
+            val list = (host as VList).raw
+            if (list.isNotEmpty()) list.last() else VNull
+        })
+        register("isempty", "为空", "empty", getter = { host ->
+            VBoolean((host as VList).raw.isEmpty())
+        })
+        register("random", "随机", "rand", getter = { host ->
+            val list = (host as VList).raw
+            if (list.isNotEmpty()) list.random() else VNull
+        })
+        // 添加一个特殊的属性，用于UI获取索引列表
+        register("availableIndices", "可用索引", getter = { host ->
+            val list = host as VList
+            VList(list.getAvailableIndices().map { VNumber(it.toDouble()) })
+        })
     }
 }

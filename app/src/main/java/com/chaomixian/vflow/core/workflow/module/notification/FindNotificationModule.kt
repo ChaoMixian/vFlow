@@ -6,6 +6,10 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.complex.VNotification
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.NotificationTriggerHandler
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -80,9 +84,9 @@ class FindNotificationModule : BaseModule() {
         val listener = NotificationTriggerHandler.notificationListener
             ?: return ExecutionResult.Failure("服务未连接", "需要通知使用权才能查找通知。")
 
-        val appFilter = (context.magicVariables["app_filter"] as? TextVariable)?.value ?: context.variables["app_filter"] as? String
-        val titleFilter = (context.magicVariables["title_filter"] as? TextVariable)?.value ?: context.variables["title_filter"] as? String
-        val contentFilter = (context.magicVariables["content_filter"] as? TextVariable)?.value ?: context.variables["content_filter"] as? String
+        val appFilter = (context.magicVariables["app_filter"] as? VString)?.raw ?: context.variables["app_filter"] as? String
+        val titleFilter = (context.magicVariables["title_filter"] as? VString)?.raw ?: context.variables["title_filter"] as? String
+        val contentFilter = (context.magicVariables["content_filter"] as? VString)?.raw ?: context.variables["content_filter"] as? String
 
         onProgress(ProgressUpdate("正在查找通知..."))
 

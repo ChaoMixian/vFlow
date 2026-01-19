@@ -7,6 +7,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -35,13 +38,13 @@ class ToastModule : BaseModule() {
             defaultValue = "Hello, vFlow!",
             acceptsMagicVariable = true,
             acceptsNamedVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
             supportsRichText = true
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -88,6 +91,6 @@ class ToastModule : BaseModule() {
         withContext(Dispatchers.Main) {
             Toast.makeText(context.applicationContext, finalMessage, Toast.LENGTH_LONG).show()
         }
-        return ExecutionResult.Success(outputs = mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(outputs = mapOf("success" to VBoolean(true)))
     }
 }

@@ -21,6 +21,8 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
@@ -73,7 +75,7 @@ class CaptureScreenModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("image", "截图", ImageVariable.TYPE_NAME)
+        OutputDefinition("image", "截图", VTypeRegistry.IMAGE.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -117,7 +119,7 @@ class CaptureScreenModule : BaseModule() {
 
             if (finalUri != null) {
                 onProgress(ProgressUpdate("截屏成功"))
-                return ExecutionResult.Success(mapOf("image" to ImageVariable(finalUri.toString())))
+                return ExecutionResult.Success(mapOf("image" to VImage(finalUri.toString())))
             } else {
                 return ExecutionResult.Failure("裁剪失败", "无法裁剪图片")
             }

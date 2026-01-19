@@ -10,6 +10,9 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -46,14 +49,14 @@ class FindTextUntilModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("targetText", "目标文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
         InputDefinition("matchMode", "匹配模式", ParameterType.ENUM, "包含", options = matchModeOptions, acceptsMagicVariable = false),
-        InputDefinition("timeout", "超时时间(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
+        InputDefinition("timeout", "超时时间(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
 
         InputDefinition("searchMode", "查找模式", ParameterType.ENUM, "自动", options = searchModeOptions, acceptsMagicVariable = false, isFolded = true),
         InputDefinition("interval", "轮询间隔(ms)", ParameterType.NUMBER, 1000.0, acceptsMagicVariable = true, isFolded = true)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否找到", BooleanVariable.TYPE_NAME),
+        OutputDefinition("success", "是否找到", VTypeRegistry.BOOLEAN.id),
         OutputDefinition("element", "找到的元素", ScreenElement.TYPE_NAME),
         OutputDefinition("coordinate", "中心坐标", Coordinate.TYPE_NAME)
     )
@@ -79,7 +82,7 @@ class FindTextUntilModule : BaseModule() {
         val matchMode = context.variables["matchMode"] as? String ?: "包含"
         val searchMode = context.variables["searchMode"] as? String ?: "自动"
 
-        val timeoutSec = ((context.magicVariables["timeout"] as? NumberVariable)?.value
+        val timeoutSec = ((context.magicVariables["timeout"] as? VNumber)?.raw
             ?: (context.variables["timeout"] as? Number)?.toDouble() ?: 10.0).toLong()
 
         val interval = ((context.variables["interval"] as? Number)?.toLong() ?: 1000L).coerceAtLeast(100L)
@@ -123,7 +126,7 @@ class FindTextUntilModule : BaseModule() {
                 DebugLogger.d(TAG, "已找到目标，耗时 ${(System.currentTimeMillis() - startTime)/1000.0}s")
 
                 return ExecutionResult.Success(mapOf(
-                    "success" to BooleanVariable(true),
+                    "success" to VBoolean(true),
                     "element" to foundElement,
                     "coordinate" to coordinate
                 ))
@@ -134,7 +137,7 @@ class FindTextUntilModule : BaseModule() {
 
         onProgress(ProgressUpdate("查找超时"))
         return ExecutionResult.Success(mapOf(
-            "success" to BooleanVariable(false)
+            "success" to VBoolean(false)
         ))
     }
 

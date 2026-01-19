@@ -1,17 +1,48 @@
-// 文件: main/java/com/chaomixian/vflow/core/module/VariableTypes.kt
-package com.chaomixian.vflow.core.module // 包名已更新
+// 文件：VariableTypes.kt
+// 描述：定义了工作流中使用的核心数据类型。
+
+/**
+ * @deprecated 此文件中的类型已被 VObject 系统取代。
+ *
+ * **重要提示**: 此文件保留仅用于向后兼容和类型转换。
+ * 新代码不应直接使用这些类型。
+ *
+ * 请使用以下新类型：
+ * - 文本: [com.chaomixian.vflow.core.types.basic.VString]
+ * - 数字: [com.chaomixian.vflow.core.types.basic.VNumber]
+ * - 布尔: [com.chaomixian.vflow.core.types.basic.VBoolean]
+ * - 列表: [com.chaomixian.vflow.core.types.basic.VList]
+ * - 字典: [com.chaomixian.vflow.core.types.basic.VDictionary]
+ * - 图像: [com.chaomixian.vflow.core.types.complex.VImage]
+ * - 日期: [com.chaomixian.vflow.core.types.complex.VDate]
+ * - 时间: [com.chaomixian.vflow.core.types.complex.VTime]
+ *
+ * 迁移示例:
+ * ```kotlin
+ * // 旧代码
+ * val text = TextVariable("hello")
+ *
+ * // 新代码
+ * val text = VString("hello")
+ * ```
+ *
+ * VObjectFactory 会自动处理旧类型到新类型的转换。
+ */
+package com.chaomixian.vflow.core.module
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
 
-// 文件：VariableTypes.kt
-// 描述：定义了工作流中使用的核心数据类型。
-
 /**
  * 表示文本类型的变量。
  * @param value 变量的字符串值。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.basic.VString] 代替
  */
+@Deprecated(
+    message = "使用 VString 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VString(value)")
+)
 @Parcelize
 data class TextVariable(val value: String) : Parcelable {
     companion object {
@@ -23,7 +54,12 @@ data class TextVariable(val value: String) : Parcelable {
 /**
  * 表示数字类型的变量。
  * @param value 变量的 Double 值。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.basic.VNumber] 代替
  */
+@Deprecated(
+    message = "使用 VNumber 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VNumber(value)")
+)
 @Parcelize
 data class NumberVariable(val value: Double) : Parcelable {
     companion object {
@@ -35,7 +71,12 @@ data class NumberVariable(val value: Double) : Parcelable {
 /**
  * 表示布尔类型的变量。
  * @param value 变量的布尔值。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.basic.VBoolean] 代替
  */
+@Deprecated(
+    message = "使用 VBoolean 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VBoolean(value)")
+)
 @Parcelize
 data class BooleanVariable(val value: Boolean) : Parcelable {
     companion object {
@@ -47,7 +88,12 @@ data class BooleanVariable(val value: Boolean) : Parcelable {
 /**
  * 表示列表类型的变量。
  * @param value 变量的 List 值，列表元素可以是任意受支持的类型。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.basic.VList] 代替
  */
+@Deprecated(
+    message = "使用 VList 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VList(value.map { VObjectFactory.from(it) })")
+)
 @Parcelize
 data class ListVariable(val value: @RawValue List<Any?>) : Parcelable {
     companion object {
@@ -59,7 +105,12 @@ data class ListVariable(val value: @RawValue List<Any?>) : Parcelable {
 /**
  * 表示字典（Map）类型的变量。
  * @param value 变量的 Map 值，键为 String，值可以是任意受支持的类型。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.basic.VDictionary] 代替
  */
+@Deprecated(
+    message = "使用 VDictionary 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VDictionary(value.mapValues { VObjectFactory.from(it.value) })")
+)
 @Parcelize
 data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelable {
     companion object {
@@ -71,7 +122,12 @@ data class DictionaryVariable(val value: @RawValue Map<String, Any?>) : Parcelab
 /**
  * 表示图像类型的变量。
  * @param uri 图像的 URI 字符串。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.complex.VImage] 代替
  */
+@Deprecated(
+    message = "使用 VImage 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VImage(uri)")
+)
 @Parcelize
 data class ImageVariable(val uri: String) : Parcelable {
     companion object {
@@ -83,7 +139,12 @@ data class ImageVariable(val uri: String) : Parcelable {
 /**
  * 表示时间类型的变量。
  * @param value 变量的时间值，格式为 "HH:mm"。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.complex.VTime] 代替
  */
+@Deprecated(
+    message = "使用 VTime 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VTime(value)")
+)
 @Parcelize
 data class TimeVariable(val value: String) : Parcelable {
     companion object {
@@ -95,7 +156,12 @@ data class TimeVariable(val value: String) : Parcelable {
 /**
  * 表示日期类型的变量。
  * @param value 变量的日期值，格式为 "yyyy-MM-dd"。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.complex.VDate] 代替
  */
+@Deprecated(
+    message = "使用 VDate 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VDate(value)")
+)
 @Parcelize
 data class DateVariable(val value: String) : Parcelable {
     companion object {

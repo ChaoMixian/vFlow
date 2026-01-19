@@ -14,7 +14,7 @@ import android.net.wifi.WifiManager
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.types.basic.VString
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -139,10 +139,10 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                     val targetMatches = (configTarget == ANY_WIFI_TARGET) || (configTarget.equals(ssid, ignoreCase = true))
                     if (configEvent == event && targetMatches) {
                         DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '$ssid'")
-                        val triggerData = TextVariable(ssid ?: "")
+                        val triggerData = VString(ssid ?: "")
                         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                         val bssid = if (event == "连接到") wifiManager.connectionInfo?.bssid else ""
-                        val variables = mapOf("bssid" to TextVariable(bssid ?: ""))
+                        val variables = mapOf("bssid" to VString(bssid ?: ""))
                         WorkflowExecutor.execute(workflow, context.applicationContext, triggerData)
                     }
                 } else { // Wi-Fi状态

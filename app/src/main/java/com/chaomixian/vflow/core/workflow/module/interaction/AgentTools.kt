@@ -18,6 +18,7 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.BooleanVariable
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.ImageVariable
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.utils.VFlowImeManager
 import com.chaomixian.vflow.services.ServiceStateBus
@@ -411,7 +412,7 @@ class AgentTools(private val context: ExecutionContext) {
         val captureRes = captureModule.execute(captureContext) { } // 静默执行
 
         val imagePath = if (captureRes is ExecutionResult.Success) {
-            (captureRes.outputs["image"] as? ImageVariable)?.uri
+            (captureRes.outputs["image"] as? VImage)?.uriString
         } else null
 
         if (imagePath == null) {
@@ -427,7 +428,7 @@ class AgentTools(private val context: ExecutionContext) {
             "search_strategy" to "默认 (从上到下)"
         )
 
-        val ocrMagicVars = mutableMapOf<String, Any?>("image" to ImageVariable(imagePath))
+        val ocrMagicVars = mutableMapOf<String, Any?>("image" to VImage(imagePath))
 
         val ocrContext = context.copy(
             variables = ocrParams,

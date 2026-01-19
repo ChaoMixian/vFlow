@@ -8,6 +8,9 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import java.io.File
@@ -33,8 +36,8 @@ class GetClipboardModule : BaseModule() {
 
     // 输出文本和图片两种变量
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("text_content", "剪贴板文本", TextVariable.TYPE_NAME),
-        OutputDefinition("image_content", "剪贴板图片", ImageVariable.TYPE_NAME)
+        OutputDefinition("text_content", "剪贴板文本", VTypeRegistry.STRING.id),
+        OutputDefinition("image_content", "剪贴板图片", VTypeRegistry.IMAGE.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -53,7 +56,7 @@ class GetClipboardModule : BaseModule() {
 
         if (!clipboard.hasPrimaryClip()) {
             onProgress(ProgressUpdate("剪贴板为空"))
-            outputs["text_content"] = TextVariable("")
+            outputs["text_content"] = VString("")
             return ExecutionResult.Success(outputs)
         }
 
@@ -63,7 +66,7 @@ class GetClipboardModule : BaseModule() {
             // 优先检查文本
             if (clipData.description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
                 val text = item.text?.toString() ?: ""
-                outputs["text_content"] = TextVariable(text)
+                outputs["text_content"] = VString(text)
                 onProgress(ProgressUpdate("已读取剪贴板文本内容"))
             }
 
@@ -79,7 +82,7 @@ class GetClipboardModule : BaseModule() {
                                 input.copyTo(output)
                             }
                         }
-                        outputs["image_content"] = ImageVariable(tempFile.toURI().toString())
+                        outputs["image_content"] = VImage(tempFile.toURI().toString())
                         onProgress(ProgressUpdate("已读取剪贴板图片内容"))
                     } catch (e: Exception) {
                         onProgress(ProgressUpdate("读取剪贴板图片失败: ${e.message}"))
@@ -90,7 +93,7 @@ class GetClipboardModule : BaseModule() {
 
         // 确保即使没读到文本，也有默认的空文本输出
         if (!outputs.containsKey("text_content")) {
-            outputs["text_content"] = TextVariable("")
+            outputs["text_content"] = VString("")
         }
 
         return ExecutionResult.Success(outputs)

@@ -1,10 +1,13 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/basic/VDictionary.kt
 package com.chaomixian.vflow.core.types.basic
 
+import android.os.Parcelable
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 /**
  * 字典类型的 VObject 实现
@@ -12,9 +15,10 @@ import com.chaomixian.vflow.core.types.properties.PropertyRegistry
  *
  * 特殊逻辑：支持内置属性和动态Key查找
  */
-class VDictionary(override val raw: Map<String, VObject>) : EnhancedBaseVObject() {
+@Parcelize
+data class VDictionary(override val raw: @RawValue Map<String, VObject>) : EnhancedBaseVObject(), Parcelable {
     override val type = VTypeRegistry.DICTIONARY
-    override val propertyRegistry = Companion.registry
+    override val propertyRegistry: PropertyRegistry = VDictionaryCompanion.registry
 
     override fun asString(): String {
         // 生成 JSON 风格的字符串
@@ -72,24 +76,27 @@ class VDictionary(override val raw: Map<String, VObject>) : EnhancedBaseVObject(
             key to typeName
         }
     }
+}
 
-    companion object {
-        // 属性注册表：所有 VDictionary 实例共享
-        private val registry = PropertyRegistry().apply {
-            register("count", "size", "数量", getter = { host ->
-                VNumber((host as VDictionary).raw.size.toDouble())
-            })
-            register("keys", "键", getter = { host ->
-                VList((host as VDictionary).raw.keys.map { VString(it) })
-            })
-            register("values", "值", getter = { host ->
-                VList((host as VDictionary).raw.values.toList())
-            })
-            // 添加一个特殊的属性，用于UI获取键列表
-            register("availableKeys", "可用键", getter = { host ->
-                val dict = host as VDictionary
-                VList(dict.getAvailableKeys().map { VString(it) })
-            })
-        }
+/**
+ * VDictionary 的伴生对象，持有共享的属性注册表
+ */
+object VDictionaryCompanion {
+    // 属性注册表：所有 VDictionary 实例共享
+    val registry = PropertyRegistry().apply {
+        register("count", "size", "数量", getter = { host ->
+            VNumber((host as VDictionary).raw.size.toDouble())
+        })
+        register("keys", "键", getter = { host ->
+            VList((host as VDictionary).raw.keys.map { VString(it) })
+        })
+        register("values", "值", getter = { host ->
+            VList((host as VDictionary).raw.values.toList())
+        })
+        // 添加一个特殊的属性，用于UI获取键列表
+        register("availableKeys", "可用键", getter = { host ->
+            val dict = host as VDictionary
+            VList(dict.getAvailableKeys().map { VString(it) })
+        })
     }
 }

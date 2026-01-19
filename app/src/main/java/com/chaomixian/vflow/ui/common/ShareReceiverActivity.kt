@@ -7,8 +7,8 @@ import android.os.Parcelable
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
-import com.chaomixian.vflow.core.module.ImageVariable
-import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -83,7 +83,7 @@ class ShareReceiverActivity : AppCompatActivity() {
         return when {
             // 分享的是纯文本
             intent.type?.startsWith("text/") == true -> {
-                intent.getStringExtra(Intent.EXTRA_TEXT)?.let { TextVariable(it) }
+                intent.getStringExtra(Intent.EXTRA_TEXT)?.let { VString(it) }
             }
             // 分享的是图片
             intent.type?.startsWith("image/") == true -> {
@@ -96,7 +96,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                                 input.copyTo(output)
                             }
                         }
-                        ImageVariable(Uri.fromFile(tempFile).toString())
+                        VImage(Uri.fromFile(tempFile).toString()) as Parcelable?
                     } catch (e: Exception) {
                         e.printStackTrace()
                         null
@@ -106,7 +106,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             // 其他文件类型（暂未完全支持，作为文本处理其URI）
             else -> {
                 (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.toString()?.let {
-                    TextVariable(it)
+                    VString(it)
                 }
             }
         }

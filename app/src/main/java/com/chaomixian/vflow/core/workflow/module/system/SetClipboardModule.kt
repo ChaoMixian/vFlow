@@ -10,6 +10,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver // 引入解析器
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.io.File
@@ -37,14 +41,14 @@ class SetClipboardModule : BaseModule() {
             staticType = ParameterType.ANY,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME, ImageVariable.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.IMAGE.id),
             supportsRichText = false
         )
     )
 
     // 定义输出参数
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -73,9 +77,9 @@ class SetClipboardModule : BaseModule() {
         val contentObj = magicContent ?: rawContent
 
         val clip: ClipData? = when (contentObj) {
-            is ImageVariable -> {
+            is VImage -> {
                 try {
-                    val imageFile = File(URI(contentObj.uri))
+                    val imageFile = File(URI(contentObj.uriString))
                     val authority = "${appContext.packageName}.provider"
                     // 使用 FileProvider 生成安全的 content:// URI
                     val safeUri = FileProvider.getUriForFile(appContext, authority, imageFile)
@@ -103,7 +107,7 @@ class SetClipboardModule : BaseModule() {
         if (clip != null) {
             clipboard.setPrimaryClip(clip)
             onProgress(ProgressUpdate("已将内容写入剪贴板"))
-            return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         }
 
         return ExecutionResult.Failure("未知错误", "无法创建剪贴板数据。")

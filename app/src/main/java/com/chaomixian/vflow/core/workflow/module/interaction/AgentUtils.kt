@@ -17,7 +17,7 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.annotation.RequiresApi
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ExecutionResult
-import com.chaomixian.vflow.core.module.ImageVariable
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.utils.VirtualDisplayManager
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -91,9 +91,9 @@ object AgentUtils {
         val result = captureModule.execute(tempContext) { }
 
         if (result is ExecutionResult.Success) {
-            val imageVar = result.outputs["image"] as? ImageVariable
+            val imageVar = result.outputs["image"] as? VImage
             if (imageVar != null) {
-                val uri = Uri.parse(imageVar.uri)
+                val uri = Uri.parse(imageVar.uriString)
                 // 获取原图 Base64 和 原始尺寸
                 val (base64, width, height) = imageUriToBase64(context, uri)
                 return ScreenshotResult(base64, uri.path, width, height)

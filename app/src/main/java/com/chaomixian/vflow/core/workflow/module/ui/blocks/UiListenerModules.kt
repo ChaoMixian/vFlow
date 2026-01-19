@@ -1,5 +1,6 @@
 // 文件: java/com/chaomixian/vflow/core/workflow/module/ui/blocks/UiListenerModules.kt
 package com.chaomixian.vflow.core.workflow.module.ui.blocks
+import com.chaomixian.vflow.core.types.VTypeRegistry
 
 import android.content.Context
 import com.chaomixian.vflow.R
@@ -116,7 +117,7 @@ class UpdateUiComponentModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?) = listOf(
-        OutputDefinition("success", "是否成功", com.chaomixian.vflow.core.module.BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
@@ -128,7 +129,7 @@ class UpdateUiComponentModule : BaseModule() {
 
         // 提取目标组件 ID（支持 VUiComponent 对象或字符串）
         val targetId = when (val obj = context.magicVariables["target_id"]) {
-            is com.chaomixian.vflow.core.module.TextVariable -> obj.value
+            is com.chaomixian.vflow.core.types.basic.VString -> obj.raw
             is com.chaomixian.vflow.core.types.complex.VUiComponent -> obj.getId()
             else -> context.variables["target_id"]?.toString() ?: ""
         }
@@ -170,7 +171,7 @@ class UpdateUiComponentModule : BaseModule() {
 
         // 发送更新命令到 UI
         UiSessionBus.sendCommand(sessionId, UiCommand("update", targetId, payload))
-        return ExecutionResult.Success(mapOf("success" to com.chaomixian.vflow.core.module.BooleanVariable(true)))
+        return ExecutionResult.Success(mapOf("success" to com.chaomixian.vflow.core.types.basic.VBoolean(true)))
     }
 }
 
@@ -216,9 +217,9 @@ class GetComponentValueModule : BaseModule() {
         PillUtil.buildSpannable(context, "获取组件 ", PillUtil.createPillFromParam(step.parameters["component_id"], getInputs()[0]))
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        // 从 TextVariable 对象或 VUiComponent 对象中提取组件 ID
+        // 从 VString 对象或 VUiComponent 对象中提取组件 ID
         val componentId = when (val obj = context.magicVariables["component_id"]) {
-            is com.chaomixian.vflow.core.module.TextVariable -> obj.value
+            is com.chaomixian.vflow.core.types.basic.VString -> obj.raw
             is com.chaomixian.vflow.core.types.complex.VUiComponent -> obj.getId()
             else -> context.variables["component_id"]?.toString() ?: ""
         }

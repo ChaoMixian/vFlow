@@ -8,6 +8,14 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VDictionary
+import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ExecutionUIService
@@ -52,7 +60,7 @@ class QuickViewModule : BaseModule() {
      * 增加 success 输出以保持统一。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     /**
@@ -92,17 +100,17 @@ class QuickViewModule : BaseModule() {
         onProgress(ProgressUpdate("正在显示内容..."))
 
         // 检查内容是否为图片变量
-        if (content is ImageVariable) {
+        if (content is VImage) {
             // 如果是图片，调用专门显示图片的服务
-            uiService.showQuickViewImage("快速查看", content.uri)
+            uiService.showQuickViewImage("快速查看", content.uriString)
         } else {
             // 否则，将内容转换为字符串并显示
             val contentAsString = when (content) {
-                is TextVariable -> content.value
-                is NumberVariable -> content.value.toString()
-                is BooleanVariable -> content.value.toString()
-                is DictionaryVariable -> content.value.entries.joinToString("\n") { "${it.key}: ${it.value}" }
-                is ListVariable -> content.value.joinToString("\n")
+                is VString -> content.raw
+                is VNumber -> content.raw.toString()
+                is VBoolean -> content.raw.toString()
+                is VDictionary -> content.raw.entries.joinToString("\n") { "${it.key}: ${it.value}" }
+                is VList -> content.raw.joinToString("\n")
                 is String -> content  // 已经是解析后的字符串
                 null -> "[空值]"
                 else -> content.toString()
@@ -113,6 +121,6 @@ class QuickViewModule : BaseModule() {
 
         onProgress(ProgressUpdate("用户已关闭查看窗口"))
         // 返回成功结果
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
     }
 }

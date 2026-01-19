@@ -32,6 +32,7 @@ import com.chaomixian.vflow.core.execution.ExecutionState
 import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -632,8 +633,10 @@ class WorkflowEditorActivity : BaseActivity() {
             if (module.id == LOOP_START_ID || module.id == FOREACH_START_ID) continue
 
             val outputs = module.getOutputs(step).filter { outputDef ->
-                targetInputDef.acceptedMagicVariableTypes.isEmpty() ||
-                        targetInputDef.acceptedMagicVariableTypes.contains(outputDef.typeName)
+                VTypeRegistry.isTypeOrAnyPropertyAccepted(
+                    outputDef.typeName,
+                    targetInputDef.acceptedMagicVariableTypes
+                )
             }
 
             if (outputs.isNotEmpty()) {
@@ -693,7 +696,8 @@ class WorkflowEditorActivity : BaseActivity() {
             groupedStepOutputs,
             namedVariables,
             acceptsMagicVariable = targetInputDef.acceptsMagicVariable,
-            acceptsNamedVariable = targetInputDef.acceptsNamedVariable
+            acceptsNamedVariable = targetInputDef.acceptsNamedVariable,
+            acceptedMagicVariableTypes = targetInputDef.acceptedMagicVariableTypes
         )
 
         picker.onSelection = { selectedItem ->

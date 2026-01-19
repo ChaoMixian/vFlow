@@ -1,5 +1,6 @@
 // 文件: java/com/chaomixian/vflow/core/workflow/module/ui/components/BaseUiComponentModule.kt
 package com.chaomixian.vflow.core.workflow.module.ui.components
+import com.chaomixian.vflow.core.types.VTypeRegistry
 
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
@@ -36,7 +37,7 @@ abstract class BaseUiComponentModule : BaseModule() {
 
     override fun getOutputs(step: ActionStep?) = listOf(
         OutputDefinition("component", "组件对象", "vflow.type.uicomponent"),
-        OutputDefinition("id", "组件ID", TextVariable.TYPE_NAME)
+        OutputDefinition("id", "组件ID", VTypeRegistry.STRING.id)
     )
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {

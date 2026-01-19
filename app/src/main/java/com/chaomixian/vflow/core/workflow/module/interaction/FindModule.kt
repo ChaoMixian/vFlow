@@ -11,7 +11,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.module.TextVariable // 更新导入
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.permissions.PermissionManager
 // 项目内部的无障碍服务，避免与 Android 框架的同名类混淆
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
@@ -84,7 +86,7 @@ class FindTextModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true, // 目标文本可以来自魔法变量
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id)
         ),
         InputDefinition(
             id = "outputFormat",
@@ -111,15 +113,15 @@ class FindTextModule : BaseModule() {
         // 根据输出格式确定主结果的类型
         val resultTypeName = when (format) {
             "坐标" -> Coordinate.TYPE_NAME
-            "视图ID" -> TextVariable.TYPE_NAME
+            "视图ID" -> VTypeRegistry.STRING.id
             else -> ScreenElement.TYPE_NAME
         }
 
         // 定义所有输出
         return listOf(
             OutputDefinition("first_result", "第一个结果", resultTypeName, conditions),
-            OutputDefinition("all_results", "所有结果", ListVariable.TYPE_NAME, conditions),
-            OutputDefinition("count", "结果数量", NumberVariable.TYPE_NAME, conditions)
+            OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, conditions),
+            OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions)
         )
     }
 
@@ -169,7 +171,7 @@ class FindTextModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务未运行", "查找文本需要无障碍服务，但该服务当前未运行。")
 
         // 获取目标文本，优先从魔法变量，其次从静态变量
-        val targetText = (context.magicVariables["targetText"] as? TextVariable)?.value
+        val targetText = (context.magicVariables["targetText"] as? VString)?.raw
             ?: context.variables["targetText"] as? String
 
         // 校验目标文本是否为空
@@ -189,11 +191,11 @@ class FindTextModule : BaseModule() {
             val outputFormat = context.variables["outputFormat"] as? String ?: "元素"
             val outputs = mutableMapOf<String, Any?>()
 
-            outputs["count"] = NumberVariable(count.toDouble())
+            outputs["count"] = VNumber(count.toDouble())
 
             if (nodes.isEmpty()) {
                 onProgress(ProgressUpdate("未在屏幕上找到匹配的文本。"))
-                outputs["all_results"] = ListVariable(emptyList())
+                outputs["all_results"] = emptyList<Any>()
                 return ExecutionResult.Success(outputs)
             }
 
@@ -203,7 +205,7 @@ class FindTextModule : BaseModule() {
                 node.getBoundsInScreen(bounds)
                 when (outputFormat) {
                     "坐标" -> Coordinate(bounds.centerX(), bounds.centerY())
-                    "视图ID" -> TextVariable(node.viewIdResourceName ?: "")
+                    "视图ID" -> VString(node.viewIdResourceName ?: "")
                     else -> ScreenElement(
                         bounds = bounds,
                         text = node.text?.toString() ?: node.contentDescription?.toString()
@@ -211,7 +213,7 @@ class FindTextModule : BaseModule() {
                 }
             }
 
-            outputs["all_results"] = ListVariable(allResultsList)
+            outputs["all_results"] = allResultsList
             outputs["first_result"] = allResultsList.first()
 
             // 回收所有在 findNodesByText 中获取的节点副本

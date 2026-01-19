@@ -12,6 +12,9 @@ import coil.request.ImageRequest
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.io.File
@@ -75,12 +78,12 @@ class RotateImageModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val imageVar = context.magicVariables["image"] as? ImageVariable
+        val imageVar = context.magicVariables["image"] as? VImage
             ?: return ExecutionResult.Failure("参数错误", "需要一个图像变量作为输入。")
 
         val degreesValue = context.magicVariables["degrees"] ?: context.variables["degrees"]
         val degrees = when(degreesValue) {
-            is NumberVariable -> degreesValue.value.toFloat()
+            is VNumber -> degreesValue.raw.toFloat()
             is Number -> degreesValue.toFloat()
             is String -> degreesValue.toFloatOrNull() ?: 90f
             else -> 90f
@@ -91,12 +94,12 @@ class RotateImageModule : BaseModule() {
 
         return try {
             val request = ImageRequest.Builder(appContext)
-                .data(Uri.parse(imageVar.uri))
+                .data(Uri.parse(imageVar.uriString))
                 .allowHardware(false) // 禁止硬件位图
                 .build()
             val result = Coil.imageLoader(appContext).execute(request)
             val originalBitmap = result.drawable?.toBitmap()
-                ?: return ExecutionResult.Failure("图像加载失败", "无法从 URI 加载位图: ${imageVar.uri}")
+                ?: return ExecutionResult.Failure("图像加载失败", "无法从 URI 加载位图: ${imageVar.uriString}")
 
             onProgress(ProgressUpdate("正在旋转图像..."))
 

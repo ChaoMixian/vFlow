@@ -14,6 +14,8 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.services.ShellManager
@@ -74,8 +76,8 @@ class FindImageModule : BaseModule() {
 
         return listOf(
             OutputDefinition("first_result", "最相似坐标", Coordinate.TYPE_NAME, conditions),
-            OutputDefinition("all_results", "所有结果", ListVariable.TYPE_NAME, conditions),
-            OutputDefinition("count", "结果数量", NumberVariable.TYPE_NAME, conditions)
+            OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, conditions),
+            OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions)
         )
     }
 
@@ -149,7 +151,7 @@ class FindImageModule : BaseModule() {
         } catch (e: Exception) { }
 
         val outputs = mutableMapOf<String, Any?>()
-        outputs["count"] = NumberVariable(matches.size.toDouble())
+        outputs["count"] = VNumber(matches.size.toDouble())
 
         if (matches.isEmpty()) {
             onProgress(ProgressUpdate("未找到匹配图片"))
@@ -171,7 +173,7 @@ class FindImageModule : BaseModule() {
         val bestMatch = sortedMatches.first()
         val bestCoordinate = allCoordinates.first()
 
-        outputs["all_results"] = ListVariable(allCoordinates)
+        outputs["all_results"] = allCoordinates
         outputs["first_result"] = bestCoordinate
 
         val similarityPercent = ((1.0 - bestMatch.diffRatio) * 100).toInt()

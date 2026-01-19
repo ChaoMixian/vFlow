@@ -6,6 +6,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VDictionary
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.gson.Gson
@@ -44,15 +48,15 @@ class HttpRequestModule : BaseModule() {
         InputDefinition("query_params", "查询参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true),
         InputDefinition("body_type", "请求体类型", ParameterType.ENUM, "无", options = bodyTypeOptions, acceptsMagicVariable = false),
         InputDefinition("body", "请求体", ParameterType.ANY, acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)),
+        InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
         InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("response_body", "响应内容", TextVariable.TYPE_NAME),
-        OutputDefinition("status_code", "状态码", NumberVariable.TYPE_NAME),
-        OutputDefinition("response_headers", "响应头", DictionaryVariable.TYPE_NAME),
-        OutputDefinition("error", "错误信息", TextVariable.TYPE_NAME)
+        OutputDefinition("response_body", "响应内容", VTypeRegistry.STRING.id),
+        OutputDefinition("status_code", "状态码", VTypeRegistry.NUMBER.id),
+        OutputDefinition("response_headers", "响应头", VTypeRegistry.DICTIONARY.id),
+        OutputDefinition("error", "错误信息", VTypeRegistry.STRING.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -155,10 +159,10 @@ class HttpRequestModule : BaseModule() {
                 onProgress(ProgressUpdate("收到响应，状态码: $statusCode"))
 
                 ExecutionResult.Success(mapOf(
-                    "response_body" to TextVariable(responseBody),
-                    "status_code" to NumberVariable(statusCode.toDouble()),
-                    "response_headers" to DictionaryVariable(responseHeaders),
-                    "error" to TextVariable("")
+                    "response_body" to VString(responseBody),
+                    "status_code" to VNumber(statusCode.toDouble()),
+                    "response_headers" to VDictionary(responseHeaders.mapValues { VString(it.value) }),
+                    "error" to VString("")
                 ))
 
             } catch (e: IOException) {

@@ -6,6 +6,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.util.regex.Pattern
@@ -29,7 +33,7 @@ class TextProcessingModule : BaseModule() {
         InputDefinition("operation", "操作", ParameterType.ENUM, "拼接", options = operationOptions, acceptsMagicVariable = false),
         // --- 拼接 ---
         InputDefinition("join_prefix", "前缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("join_list", "列表", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ListVariable.TYPE_NAME)),
+        InputDefinition("join_list", "列表", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.LIST.id)),
         InputDefinition("join_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true),
         InputDefinition("join_suffix", "后缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
         // --- 通用文本输入 ---
@@ -41,7 +45,7 @@ class TextProcessingModule : BaseModule() {
         InputDefinition("replace_to", "替换为", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
         // --- 正则 ---
         InputDefinition("regex_pattern", "正则表达式", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("regex_group", "匹配组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME))
+        InputDefinition("regex_group", "匹配组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
     )
 
     /**
@@ -67,8 +71,8 @@ class TextProcessingModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val operation = step?.parameters?.get("operation") as? String ?: "拼接"
         return when (operation) {
-            "拼接", "替换" -> listOf(OutputDefinition("result_text", "结果文本", TextVariable.TYPE_NAME))
-            "分割", "正则提取" -> listOf(OutputDefinition("result_list", "结果列表", ListVariable.TYPE_NAME))
+            "拼接", "替换" -> listOf(OutputDefinition("result_text", "结果文本", VTypeRegistry.STRING.id))
+            "分割", "正则提取" -> listOf(OutputDefinition("result_list", "结果列表", VTypeRegistry.LIST.id))
             else -> emptyList()
         }
     }
@@ -138,7 +142,7 @@ class TextProcessingModule : BaseModule() {
         // 列表变量通常直接引用，使用 resolveValue
         val rawList = context.variables["join_list"]
         val listToJoin = if (rawList is String) {
-            (VariableResolver.resolveValue(rawList, context) as? ListVariable)?.value ?: (VariableResolver.resolveValue(rawList, context) as? List<*>)
+            (VariableResolver.resolveValue(rawList, context) as? VList)?.raw ?: (VariableResolver.resolveValue(rawList, context) as? List<*>)
         } else {
             (rawList as? List<*>)
         }
@@ -148,7 +152,7 @@ class TextProcessingModule : BaseModule() {
         }
 
         val joinedString = listToJoin.joinToString(separator = delimiter, prefix = prefix, postfix = suffix)
-        return ExecutionResult.Success(mapOf("result_text" to TextVariable(joinedString)))
+        return ExecutionResult.Success(mapOf("result_text" to VString(joinedString)))
     }
 
     private fun executeSplit(context: ExecutionContext): ExecutionResult {
@@ -160,8 +164,8 @@ class TextProcessingModule : BaseModule() {
             return ExecutionResult.Failure("输入错误", "源文本不能为空。")
         }
 
-        val resultList = source.split(delimiter)
-        return ExecutionResult.Success(mapOf("result_list" to ListVariable(resultList)))
+        val resultList = source.split(delimiter).map { VString(it) }
+        return ExecutionResult.Success(mapOf("result_list" to VList(resultList)))
     }
 
     private fun executeReplace(context: ExecutionContext): ExecutionResult {
@@ -175,7 +179,7 @@ class TextProcessingModule : BaseModule() {
         }
 
         val resultText = source.replace(from, to)
-        return ExecutionResult.Success(mapOf("result_text" to TextVariable(resultText)))
+        return ExecutionResult.Success(mapOf("result_text" to VString(resultText)))
     }
 
     private fun executeRegex(context: ExecutionContext): ExecutionResult {
@@ -186,7 +190,7 @@ class TextProcessingModule : BaseModule() {
         // 组号通常是数字
         val groupVar = context.magicVariables["regex_group"] ?: context.variables["regex_group"]
         val group = when(groupVar) {
-            is NumberVariable -> groupVar.value.toInt()
+            is VNumber -> groupVar.raw.toInt()
             is Number -> groupVar.toInt()
             else -> 0
         }
@@ -204,7 +208,7 @@ class TextProcessingModule : BaseModule() {
                     matcher.group(group)?.let { results.add(it) }
                 }
             }
-            return ExecutionResult.Success(mapOf("result_list" to ListVariable(results)))
+            return ExecutionResult.Success(mapOf("result_list" to VList(results.map { VString(it) })))
         } catch (e: Exception) {
             return ExecutionResult.Failure("正则错误", e.localizedMessage ?: "无效的正则表达式")
         }

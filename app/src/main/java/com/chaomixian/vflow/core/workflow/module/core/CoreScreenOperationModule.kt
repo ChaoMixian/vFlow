@@ -5,6 +5,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.interaction.Coordinate
 import com.chaomixian.vflow.services.VFlowCoreBridge
@@ -49,7 +53,7 @@ class CoreScreenOperationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "500,1000",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(Coordinate.TYPE_NAME, TextVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(Coordinate.TYPE_NAME, VTypeRegistry.STRING.id)
         ),
         InputDefinition(
             id = "target_end",
@@ -57,7 +61,7 @@ class CoreScreenOperationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(Coordinate.TYPE_NAME, TextVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(Coordinate.TYPE_NAME, VTypeRegistry.STRING.id)
         ),
         InputDefinition(
             id = "duration",
@@ -65,12 +69,12 @@ class CoreScreenOperationModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 0.0,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -157,7 +161,7 @@ class CoreScreenOperationModule : BaseModule() {
 
         return if (success) {
             onProgress(ProgressUpdate("点击成功"))
-            ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
             ExecutionResult.Failure("执行失败", "vFlow Core 点击操作失败")
         }
@@ -190,7 +194,7 @@ class CoreScreenOperationModule : BaseModule() {
 
         return if (success) {
             onProgress(ProgressUpdate("长按成功"))
-            ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
             ExecutionResult.Failure("执行失败", "vFlow Core 长按操作失败")
         }
@@ -232,7 +236,7 @@ class CoreScreenOperationModule : BaseModule() {
 
         return if (success) {
             onProgress(ProgressUpdate("滑动成功"))
-            ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+            ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
             ExecutionResult.Failure("执行失败", "vFlow Core 滑动操作失败")
         }

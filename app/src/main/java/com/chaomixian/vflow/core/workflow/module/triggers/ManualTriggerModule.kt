@@ -4,8 +4,9 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.module.BooleanVariable
 
 // 文件：ManualTriggerModule.kt
 // 描述：定义手动触发器模块，用于通过用户点击启动工作流。
@@ -25,7 +26,7 @@ class ManualTriggerModule : BaseModule() {
 
     /** 输出参数：触发是否成功 (始终为 true)。 */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     /** 模块摘要：直接使用元数据中的名称。 */
@@ -39,6 +40,6 @@ class ManualTriggerModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         onProgress(ProgressUpdate("工作流被手动触发"))
-        return ExecutionResult.Success(outputs = mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(outputs = mapOf("success" to VBoolean(true)))
     }
 }

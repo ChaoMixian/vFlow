@@ -8,8 +8,8 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.core.module.DictionaryVariable
-import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.types.basic.VDictionary
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.services.VFlowNotificationListenerService
 import kotlinx.coroutines.launch
 
@@ -100,11 +100,11 @@ class NotificationTriggerHandler : ListeningTriggerHandler() {
 
                 if (appMatches && titleMatches && contentMatches) {
                     DebugLogger.i(TAG, "通知满足条件，触发工作流 '${workflow.name}'")
-                    val triggerData = DictionaryVariable(mapOf(
-                        "package_name" to TextVariable(packageName),
-                        "title" to TextVariable(title),
-                        "content" to TextVariable(content),
-                        "id" to TextVariable(sbn.key)
+                    val triggerData = VDictionary(mapOf(
+                        "package_name" to VString(packageName),
+                        "title" to VString(title),
+                        "content" to VString(content),
+                        "id" to VString(sbn.key)
                     ))
                     // 在这里获取 applicationContext
                     val appContext = workflowManager.context.applicationContext

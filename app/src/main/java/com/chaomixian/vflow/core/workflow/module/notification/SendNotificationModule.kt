@@ -9,13 +9,13 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.ActionMetadata
 import com.chaomixian.vflow.core.module.BaseModule
-import com.chaomixian.vflow.core.module.BooleanVariable
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.module.ProgressUpdate
-import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -49,7 +49,7 @@ class SendNotificationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "vFlow 通知",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.Companion.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
             supportsRichText = true  // 支持混合变量
         ),
         InputDefinition(
@@ -58,13 +58,13 @@ class SendNotificationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "这是一条来自 vFlow 的消息。",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.Companion.TYPE_NAME),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
             supportsRichText = true  // 支持混合变量
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.Companion.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -121,6 +121,6 @@ class SendNotificationModule : BaseModule() {
 
         onProgress(ProgressUpdate("已发送通知: $title"))
 
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
     }
 }

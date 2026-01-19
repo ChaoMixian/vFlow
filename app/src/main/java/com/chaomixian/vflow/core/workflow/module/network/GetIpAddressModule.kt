@@ -7,6 +7,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.net.HttpURLConnection
@@ -52,7 +54,7 @@ class GetIpAddressModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("ip_address", "IP地址", TextVariable.TYPE_NAME)
+        OutputDefinition("ip_address", "IP地址", VTypeRegistry.STRING.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -85,7 +87,7 @@ class GetIpAddressModule : BaseModule() {
             }
 
             if (ipAddress != null) {
-                ExecutionResult.Success(mapOf("ip_address" to TextVariable(ipAddress)))
+                ExecutionResult.Success(mapOf("ip_address" to VString(ipAddress)))
             } else {
                 ExecutionResult.Failure("获取失败", "未能找到符合条件的 $type $ipVersion 地址。")
             }

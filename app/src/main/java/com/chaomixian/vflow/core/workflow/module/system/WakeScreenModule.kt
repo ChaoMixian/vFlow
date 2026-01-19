@@ -6,6 +6,8 @@ import android.os.PowerManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.services.ShellManager
@@ -35,8 +37,8 @@ class WakeScreenModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME),
-        OutputDefinition("screen_on", "屏幕是否点亮", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
+        OutputDefinition("screen_on", "屏幕是否点亮", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -61,8 +63,8 @@ class WakeScreenModule : BaseModule() {
 
             if (success) {
                 ExecutionResult.Success(mapOf(
-                    "success" to BooleanVariable(true),
-                    "screen_on" to BooleanVariable(isScreenOn)
+                    "success" to VBoolean(true),
+                    "screen_on" to VBoolean(isScreenOn)
                 ))
             } else {
                 ExecutionResult.Failure("唤醒失败", "无法唤醒屏幕，请检查 Shizuku 或 Root 权限。")

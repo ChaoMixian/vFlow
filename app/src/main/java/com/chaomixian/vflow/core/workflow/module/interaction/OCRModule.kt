@@ -7,6 +7,11 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.mlkit.vision.common.InputImage
@@ -38,13 +43,13 @@ class OCRModule : BaseModule() {
     val strategyOptions = listOf("默认 (从上到下)", "最接近中心", "置信度最高")
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("image", "输入图片", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ImageVariable.TYPE_NAME)),
+        InputDefinition("image", "输入图片", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)),
         InputDefinition("mode", "模式", ParameterType.ENUM, "识别全文", options = modeOptions, acceptsMagicVariable = false),
         InputDefinition("target_text", "查找内容", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
         // 高级选项
         InputDefinition("language", "识别语言", ParameterType.ENUM, "中英混合", options = languageOptions, acceptsMagicVariable = false, isHidden = true),
         InputDefinition("search_strategy", "查找策略", ParameterType.ENUM, "默认 (从上到下)", options = strategyOptions, acceptsMagicVariable = false, isHidden = true),
-        // 用于保存“更多设置”开关的状态
+        // 用于保存"更多设置"开关的状态
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
     )
 
@@ -56,16 +61,16 @@ class OCRModule : BaseModule() {
         val mode = step?.parameters?.get("mode") as? String ?: "识别全文"
         return if (mode == "识别全文") {
             listOf(
-                OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME),
-                OutputDefinition("full_text", "识别到的文字", TextVariable.TYPE_NAME)
+                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
+                OutputDefinition("full_text", "识别到的文字", VTypeRegistry.STRING.id)
             )
         } else {
             listOf(
-                OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME),
-                OutputDefinition("found", "是否找到", BooleanVariable.TYPE_NAME),
+                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
+                OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
                 OutputDefinition("first_match", "第一个结果 (元素)", ScreenElement.TYPE_NAME),
-                OutputDefinition("all_matches", "所有结果 (列表)", ListVariable.TYPE_NAME),
-                OutputDefinition("count", "找到数量", NumberVariable.TYPE_NAME)
+                OutputDefinition("all_matches", "所有结果 (列表)", VTypeRegistry.LIST.id),
+                OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id)
             )
         }
     }
@@ -87,7 +92,7 @@ class OCRModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         // 获取参数
-        val imageVar = context.magicVariables["image"] as? ImageVariable
+        val imageVar = context.magicVariables["image"] as? VImage
             ?: return ExecutionResult.Failure("参数错误", "请提供一张有效的图片。")
         val mode = context.variables["mode"] as? String ?: "识别全文"
         val language = context.variables["language"] as? String ?: "中英混合"
@@ -109,7 +114,7 @@ class OCRModule : BaseModule() {
 
         try {
             onProgress(ProgressUpdate("正在处理图片..."))
-            val inputImage = InputImage.fromFilePath(appContext, Uri.parse(imageVar.uri))
+            val inputImage = InputImage.fromFilePath(appContext, Uri.parse(imageVar.uriString))
 
             onProgress(ProgressUpdate("正在识别文字..."))
             val result: Text = recognizer.process(inputImage).await()
@@ -119,8 +124,8 @@ class OCRModule : BaseModule() {
                 val fullText = result.text
                 onProgress(ProgressUpdate("识别完成，文字长度: ${fullText.length}"))
                 return ExecutionResult.Success(mapOf(
-                    "success" to BooleanVariable(true),
-                    "full_text" to TextVariable(fullText)
+                    "success" to VBoolean(true),
+                    "full_text" to VString(fullText)
                 ))
             }
 
@@ -141,10 +146,10 @@ class OCRModule : BaseModule() {
             if (matches.isEmpty()) {
                 onProgress(ProgressUpdate("未找到指定文字"))
                 return ExecutionResult.Success(mapOf(
-                    "success" to BooleanVariable(true),
-                    "found" to BooleanVariable(false),
-                    "count" to NumberVariable(0.0),
-                    "all_matches" to ListVariable(emptyList())
+                    "success" to VBoolean(true),
+                    "found" to VBoolean(false),
+                    "count" to VNumber(0.0),
+                    "all_matches" to emptyList<Any>()
                 ))
             }
 
@@ -171,11 +176,11 @@ class OCRModule : BaseModule() {
             onProgress(ProgressUpdate("找到 ${matches.size} 个结果，第一个位于 (${firstMatch.bounds.centerX()}, ${firstMatch.bounds.centerY()})"))
 
             return ExecutionResult.Success(mapOf(
-                "success" to BooleanVariable(true),
-                "found" to BooleanVariable(true),
-                "count" to NumberVariable(matches.size.toDouble()),
+                "success" to VBoolean(true),
+                "found" to VBoolean(true),
+                "count" to VNumber(matches.size.toDouble()),
                 "first_match" to firstMatch,
-                "all_matches" to ListVariable(sortedMatches)
+                "all_matches" to sortedMatches
             ))
 
         } catch (e: IOException) {

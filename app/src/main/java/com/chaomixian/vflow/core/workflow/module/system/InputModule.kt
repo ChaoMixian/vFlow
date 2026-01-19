@@ -4,6 +4,11 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VDate
+import com.chaomixian.vflow.core.types.complex.VTime
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ExecutionUIService
@@ -44,17 +49,17 @@ class InputModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "请输入内容",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(TextVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         val inputType = step?.parameters?.get("inputType") as? String ?: "文本"
         val outputTypeName = when (inputType) {
-            "数字" -> NumberVariable.TYPE_NAME
-            "时间" -> TimeVariable.TYPE_NAME
-            "日期" -> DateVariable.TYPE_NAME
-            else -> TextVariable.TYPE_NAME
+            "数字" -> VTypeRegistry.NUMBER.id
+            "时间" -> VTypeRegistry.TIME.id
+            "日期" -> VTypeRegistry.DATE.id
+            else -> VTypeRegistry.STRING.id
         }
         return listOf(OutputDefinition("userInput", "用户输入 ($inputType)", outputTypeName))
     }
@@ -88,7 +93,7 @@ class InputModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务缺失", "无法获取UI服务来请求用户输入。")
 
         val inputType = context.variables["inputType"] as? String ?: "文本"
-        val prompt = (context.magicVariables["prompt"] as? TextVariable)?.value
+        val prompt = (context.magicVariables["prompt"] as? VString)?.raw
             ?: context.variables["prompt"] as? String
             ?: "请输入"
 
@@ -98,16 +103,16 @@ class InputModule : BaseModule() {
             ?: return ExecutionResult.Failure("用户取消", "用户取消了输入操作。")
 
         val resultVariable = when (inputType) {
-            "数字" -> NumberVariable((userInput as? Double) ?: 0.0)
-            "时间" -> TimeVariable(userInput.toString())
+            "数字" -> VNumber((userInput as? Double) ?: 0.0)
+            "时间" -> VTime(userInput.toString())
             "日期" -> {
                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 // MaterialDatePicker 返回的是UTC毫秒，需要设置时区以保证日期正确
                 sdf.timeZone = TimeZone.getTimeZone("UTC")
                 val dateString = sdf.format(Date(userInput as Long))
-                DateVariable(dateString)
+                VDate(dateString)
             }
-            else -> TextVariable(userInput.toString())
+            else -> VString(userInput.toString())
         }
 
         onProgress(ProgressUpdate("获取到用户输入"))

@@ -6,6 +6,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.WifiTriggerHandler
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -48,8 +50,8 @@ class WifiTriggerModule : BaseModule() {
 
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("ssid", "网络SSID", TextVariable.TYPE_NAME),
-        OutputDefinition("bssid", "网络BSSID", TextVariable.TYPE_NAME)
+        OutputDefinition("ssid", "网络SSID", VTypeRegistry.STRING.id),
+        OutputDefinition("bssid", "网络BSSID", VTypeRegistry.STRING.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -73,11 +75,11 @@ class WifiTriggerModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         onProgress(ProgressUpdate("Wi-Fi 事件已触发"))
-        val ssid = context.triggerData as? TextVariable
-        val bssid = context.variables["bssid"] as? TextVariable
+        val ssid = context.triggerData as? VString
+        val bssid = context.variables["bssid"] as? VString
         return ExecutionResult.Success(outputs = mapOf(
-            "ssid" to (ssid ?: TextVariable("")),
-            "bssid" to (bssid ?: TextVariable(""))
+            "ssid" to (ssid ?: VString("")),
+            "bssid" to (bssid ?: VString(""))
         ))
     }
 }

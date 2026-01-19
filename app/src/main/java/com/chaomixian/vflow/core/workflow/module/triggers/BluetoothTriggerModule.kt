@@ -5,6 +5,9 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -49,8 +52,8 @@ class BluetoothTriggerModule : BaseModule() {
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         return listOf(
-            OutputDefinition("device_name", "设备名称", TextVariable.TYPE_NAME),
-            OutputDefinition("device_address", "设备地址", TextVariable.TYPE_NAME)
+            OutputDefinition("device_name", "设备名称", VTypeRegistry.STRING.id),
+            OutputDefinition("device_address", "设备地址", VTypeRegistry.STRING.id)
         )
     }
 
@@ -71,10 +74,10 @@ class BluetoothTriggerModule : BaseModule() {
     }
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         onProgress(ProgressUpdate("蓝牙事件已触发"))
-        val deviceName = context.triggerData as? DictionaryVariable
+        val deviceName = context.triggerData as? VDictionary
         val outputs = mapOf(
-            "device_name" to (deviceName?.value?.get("name") ?: TextVariable("")),
-            "device_address" to (deviceName?.value?.get("address") ?: TextVariable(""))
+            "device_name" to (deviceName?.raw?.get("name") as? VString ?: VString("")),
+            "device_address" to (deviceName?.raw?.get("address") as? VString ?: VString(""))
         )
         return ExecutionResult.Success(outputs)
     }

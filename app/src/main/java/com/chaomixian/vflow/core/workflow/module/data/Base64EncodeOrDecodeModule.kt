@@ -5,6 +5,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.nio.charset.Charset
@@ -46,7 +48,7 @@ class Base64EncodeOrDecodeModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result_text", "结果文本", TextVariable.TYPE_NAME)
+        OutputDefinition("result_text", "结果文本", VTypeRegistry.STRING.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -78,7 +80,7 @@ class Base64EncodeOrDecodeModule : BaseModule() {
     ): ExecutionResult {
         val operation = context.variables["operation"] as? String ?: "编码"
         val rawSource = context.variables["source_text"]?.toString() ?: ""
-        
+
         // 解析可能包含变量药丸的文本
         val source = VariableResolver.resolve(rawSource, context)
 
@@ -89,7 +91,7 @@ class Base64EncodeOrDecodeModule : BaseModule() {
                 val decodedBytes = Base64.getDecoder().decode(source)
                 String(decodedBytes, Charset.forName("UTF-8"))
             }
-            ExecutionResult.Success(mapOf("result_text" to TextVariable(result)))
+            ExecutionResult.Success(mapOf("result_text" to VString(result)))
         } catch (e: IllegalArgumentException) {
             ExecutionResult.Failure("解码失败", "输入的文本不是有效的 Base64 编码格式。")
         } catch (e: Exception) {

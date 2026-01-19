@@ -10,8 +10,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.core.module.BooleanVariable // 更新导入
-import com.chaomixian.vflow.core.module.TextVariable // 更新导入
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.permissions.PermissionManager
 // 为项目内的 AccessibilityService 设置别名，以区分 Android 框架的同名类
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
@@ -47,7 +48,7 @@ class ClickModule : BaseModule() {
             acceptedMagicVariableTypes = setOf( // 定义接受的魔法变量类型
                 ScreenElement.TYPE_NAME,
                 Coordinate.TYPE_NAME,
-                TextVariable.TYPE_NAME
+                VTypeRegistry.STRING.id
             ),
             defaultValue = "" // 默认值为空字符串
         )
@@ -57,7 +58,7 @@ class ClickModule : BaseModule() {
      * 定义模块的输出参数。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "点击成功", BooleanVariable.TYPE_NAME) // 输出一个布尔值表示点击是否成功
+        OutputDefinition("success", "点击成功", VTypeRegistry.BOOLEAN.id) // 输出一个布尔值表示点击是否成功
     )
 
     /**
@@ -107,8 +108,8 @@ class ClickModule : BaseModule() {
                 onProgress(ProgressUpdate("正在点击坐标: (${target.x}, ${target.y})"))
                 performGestureClick(service, target.x, target.y, onProgress) // 执行手势点击
             }
-            is TextVariable -> { // 如果目标是文本变量 (通常代表视图ID)
-                val viewId = target.value
+            is VString -> { // 如果目标是文本变量 (通常代表视图ID)
+                val viewId = target.raw
                 onProgress(ProgressUpdate("正在点击视图ID: $viewId"))
                 performViewIdClick(service, viewId, onProgress) // 执行基于视图ID的点击
             }
@@ -128,7 +129,7 @@ class ClickModule : BaseModule() {
             }
         }
         // 返回执行结果，包含点击是否成功的布尔值
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(clickSuccess)))
+        return ExecutionResult.Success(mapOf("success" to VBoolean(clickSuccess)))
     }
 
     /**

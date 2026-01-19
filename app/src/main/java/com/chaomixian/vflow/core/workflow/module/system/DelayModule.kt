@@ -4,10 +4,10 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-// 确保从正确的包导入变量类型
-import com.chaomixian.vflow.core.module.BooleanVariable
-import com.chaomixian.vflow.core.module.NumberVariable
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.delay
 
@@ -39,7 +39,7 @@ class DelayModule : BaseModule() {
             staticType = ParameterType.NUMBER, // 参数类型为数字
             defaultValue = 1000L, // 默认延迟1000毫秒（1秒）
             acceptsMagicVariable = true, // 允许使用魔法变量指定延迟时间
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME) // 接受数字类型的魔法变量
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id) // 接受数字类型的魔法变量
         )
     )
 
@@ -47,7 +47,7 @@ class DelayModule : BaseModule() {
      * 定义模块的输出参数。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME) // 输出一个布尔值表示延迟是否成功完成
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id) // 输出一个布尔值表示延迟是否成功完成
     )
 
     /**
@@ -108,7 +108,7 @@ class DelayModule : BaseModule() {
 
         // 将获取到的值转换为长整型毫秒数
         val duration = when(durationValue) {
-            is NumberVariable -> durationValue.value.toLong() // 如果是 NumberVariable
+            is VNumber -> durationValue.raw.toLong() // 如果是 VNumber
             is Number -> durationValue.toLong() // 如果是普通 Number 类型
             is String -> durationValue.toLongOrNull() ?: 1000L // 如果是字符串，尝试解析，失败则用默认值
             else -> 1000L // 其他未知类型，使用默认值
@@ -125,6 +125,6 @@ class DelayModule : BaseModule() {
             delay(duration)
         }
         // 返回成功结果
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
     }
 }

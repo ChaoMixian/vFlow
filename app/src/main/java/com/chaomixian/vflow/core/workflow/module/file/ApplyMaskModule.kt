@@ -10,6 +10,7 @@ import coil.request.ImageRequest
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.android.material.shape.CornerFamily
@@ -80,7 +81,7 @@ class ApplyMaskModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val imageVar = context.magicVariables["image"] as? ImageVariable
+        val imageVar = context.magicVariables["image"] as? VImage
             ?: return ExecutionResult.Failure("参数错误", "需要一个图像变量作为输入。")
 
         val appContext = context.applicationContext
@@ -88,12 +89,12 @@ class ApplyMaskModule : BaseModule() {
 
         return try {
             val request = ImageRequest.Builder(appContext)
-                .data(Uri.parse(imageVar.uri))
+                .data(Uri.parse(imageVar.uriString))
                 .allowHardware(false) // 禁止硬件位图
                 .build()
             val result = Coil.imageLoader(appContext).execute(request)
             val originalBitmap = result.drawable?.toBitmap()
-                ?: return ExecutionResult.Failure("图像加载失败", "无法从 URI 加载位图: ${imageVar.uri}")
+                ?: return ExecutionResult.Failure("图像加载失败", "无法从 URI 加载位图: ${imageVar.uriString}")
 
             val softwareBitmap = toSoftwareBitmap(originalBitmap)
 

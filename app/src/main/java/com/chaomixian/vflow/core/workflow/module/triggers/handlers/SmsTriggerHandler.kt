@@ -10,8 +10,8 @@ import android.provider.Telephony
 import android.util.Log
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.core.module.DictionaryVariable
-import com.chaomixian.vflow.core.module.TextVariable
+import com.chaomixian.vflow.core.types.basic.VDictionary
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.utils.CodeExtractor // 导入 CodeExtractor
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import kotlinx.coroutines.launch
@@ -68,14 +68,14 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
                 if (matchResult.isMatch) {
                     DebugLogger.i(TAG, "短信满足条件，触发工作流 '${workflow.name}'")
                     val triggerDataMap = mutableMapOf(
-                        "sender" to TextVariable(sender),
-                        "content" to TextVariable(content)
+                        "sender" to VString(sender),
+                        "content" to VString(content)
                     )
                     // 如果提取到了验证码，也将其加入触发数据
                     matchResult.verificationCode?.let {
-                        triggerDataMap["verification_code"] = TextVariable(it)
+                        triggerDataMap["verification_code"] = VString(it)
                     }
-                    WorkflowExecutor.execute(workflow, context.applicationContext, DictionaryVariable(triggerDataMap))
+                    WorkflowExecutor.execute(workflow, context.applicationContext, VDictionary(triggerDataMap))
                 }
             }
         }

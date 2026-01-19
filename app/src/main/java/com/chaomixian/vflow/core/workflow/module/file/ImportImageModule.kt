@@ -7,6 +7,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ExecutionUIService
@@ -33,7 +35,7 @@ class ImportImageModule : BaseModule() {
 
     // 输出一个图像变量
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("image", "选择的图片", ImageVariable.TYPE_NAME)
+        OutputDefinition("image", "选择的图片", VTypeRegistry.IMAGE.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -56,7 +58,7 @@ class ImportImageModule : BaseModule() {
         val imageUri = uiService.requestImage()
             ?: return ExecutionResult.Failure("用户取消", "用户取消了图片选择。")
 
-        val resultVariable = ImageVariable(imageUri)
+        val resultVariable = VImage(imageUri)
 
         onProgress(ProgressUpdate("获取到图片"))
         return ExecutionResult.Success(mapOf("image" to resultVariable))

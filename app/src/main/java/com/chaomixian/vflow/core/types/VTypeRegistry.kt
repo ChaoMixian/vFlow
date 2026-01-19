@@ -4,7 +4,14 @@ package com.chaomixian.vflow.core.types
 object VTypeRegistry {
     // --- 基础类型 ---
     val ANY = SimpleVType("vflow.type.any", "任意")
-
+    val NUMBER = SimpleVType("vflow.type.number", "数字", ANY, listOf(
+        VPropertyDef("int", "整数部分", ANY),
+        VPropertyDef("round", "四舍五入", ANY),
+        VPropertyDef("abs", "绝对值", ANY)
+    ))
+    val BOOLEAN = SimpleVType("vflow.type.boolean", "布尔", ANY, listOf(
+        VPropertyDef("not", "反转", ANY)
+    ))
     val STRING = SimpleVType("vflow.type.string", "文本", ANY, listOf(
         VPropertyDef("length", "长度", ANY),
         VPropertyDef("uppercase", "大写", ANY),
@@ -13,21 +20,11 @@ object VTypeRegistry {
         VPropertyDef("isempty", "是否为空", ANY)
     ))
 
-    val NUMBER = SimpleVType("vflow.type.number", "数字", ANY, listOf(
-        VPropertyDef("int", "整数部分", ANY),
-        VPropertyDef("round", "四舍五入", ANY),
-        VPropertyDef("abs", "绝对值", ANY)
-    ))
-
-    val BOOLEAN = SimpleVType("vflow.type.boolean", "布尔", ANY, listOf(
-        VPropertyDef("not", "反转", ANY)
-    ))
-
     val NULL = SimpleVType("vflow.type.null", "空", ANY)
 
     // --- 集合类型 ---
     val LIST = SimpleVType("vflow.type.list", "列表", ANY, listOf(
-        VPropertyDef("count", "数量", NUMBER),
+        VPropertyDef("count", "数量", ANY),
         VPropertyDef("first", "第一项", ANY),
         VPropertyDef("last", "最后一项", ANY),
         VPropertyDef("isempty", "是否为空", ANY),
@@ -35,72 +32,219 @@ object VTypeRegistry {
     ))
 
     val DICTIONARY = SimpleVType("vflow.type.dictionary", "字典", ANY, listOf(
-        VPropertyDef("count", "数量", NUMBER),
-        VPropertyDef("keys", "所有键", LIST),
-        VPropertyDef("values", "所有值", LIST)
+        VPropertyDef("count", "数量", ANY),
+        VPropertyDef("keys", "所有键", ANY),
+        VPropertyDef("values", "所有值", ANY)
     ))
 
     // --- 复杂业务类型 ---
     val IMAGE = SimpleVType("vflow.type.image", "图片", ANY, listOf(
-        VPropertyDef("width", "宽度", NUMBER),
-        VPropertyDef("height", "高度", NUMBER),
-        VPropertyDef("path", "文件路径", STRING),
-        VPropertyDef("uri", "URI地址", STRING),
-        VPropertyDef("size", "文件大小", NUMBER),
-        VPropertyDef("name", "文件名", STRING)
+        VPropertyDef("width", "宽度", ANY),
+        VPropertyDef("height", "高度", ANY),
+        VPropertyDef("path", "文件路径", ANY),
+        VPropertyDef("uri", "URI地址", ANY),
+        VPropertyDef("size", "文件大小", ANY),
+        VPropertyDef("name", "文件名", ANY)
     ))
 
     val DATE = SimpleVType("vflow.type.date", "日期", ANY, listOf(
-        VPropertyDef("year", "年", NUMBER),
-        VPropertyDef("month", "月", NUMBER),
-        VPropertyDef("day", "日", NUMBER),
-        VPropertyDef("weekday", "星期 (1-7)", NUMBER),
-        VPropertyDef("timestamp", "时间戳", NUMBER)
+        VPropertyDef("year", "年", ANY),
+        VPropertyDef("month", "月", ANY),
+        VPropertyDef("day", "日", ANY),
+        VPropertyDef("weekday", "星期 (1-7)", ANY),
+        VPropertyDef("timestamp", "时间戳", ANY)
     ))
 
     val TIME = SimpleVType("vflow.type.time", "时间", ANY, listOf(
-        VPropertyDef("hour", "时", NUMBER),
-        VPropertyDef("minute", "分", NUMBER)
+        VPropertyDef("hour", "时", ANY),
+        VPropertyDef("minute", "分", ANY)
     ))
 
     val UI_ELEMENT = SimpleVType("vflow.type.screen_element", "界面元素", ANY, listOf(
-        VPropertyDef("text", "文本内容", STRING),
-        VPropertyDef("center_x", "中心 X", NUMBER),
-        VPropertyDef("center_y", "中心 Y", NUMBER),
-        VPropertyDef("left", "左边界", NUMBER),
-        VPropertyDef("top", "上边界", NUMBER),
-        VPropertyDef("width", "宽度", NUMBER),
-        VPropertyDef("height", "高度", NUMBER)
+        VPropertyDef("text", "文本内容", ANY),
+        VPropertyDef("center_x", "中心 X", ANY),
+        VPropertyDef("center_y", "中心 Y", ANY),
+        VPropertyDef("left", "左边界", ANY),
+        VPropertyDef("top", "上边界", ANY),
+        VPropertyDef("width", "宽度", ANY),
+        VPropertyDef("height", "高度", ANY)
     ))
 
     val UI_COMPONENT = SimpleVType("vflow.type.uicomponent", "UI组件", ANY, listOf(
-        VPropertyDef("id", "组件ID", STRING),
-        VPropertyDef("type", "类型", STRING),
-        VPropertyDef("label", "标签", STRING),
+        VPropertyDef("id", "组件ID", ANY),
+        VPropertyDef("type", "类型", ANY),
+        VPropertyDef("label", "标签", ANY),
         VPropertyDef("value", "值", ANY),
         VPropertyDef("defaultvalue", "默认值", ANY),
-        VPropertyDef("placeholder", "占位符", STRING),
-        VPropertyDef("required", "必填", BOOLEAN),
-        VPropertyDef("triggerEvent", "触发事件", BOOLEAN),
-        VPropertyDef("istext", "是否文本", BOOLEAN),
-        VPropertyDef("isbutton", "是否按钮", BOOLEAN),
-        VPropertyDef("isinput", "是否输入框", BOOLEAN),
-        VPropertyDef("isswitch", "是否开关", BOOLEAN)
+        VPropertyDef("placeholder", "占位符", ANY),
+        VPropertyDef("required", "必填", ANY),
+        VPropertyDef("triggerEvent", "触发事件", ANY),
+        VPropertyDef("istext", "是否文本", ANY),
+        VPropertyDef("isbutton", "是否按钮", ANY),
+        VPropertyDef("isinput", "是否输入框", ANY),
+        VPropertyDef("isswitch", "是否开关", ANY)
     ))
 
     val COORDINATE = SimpleVType("vflow.type.coordinate", "坐标", ANY, listOf(
-        VPropertyDef("x", "X 坐标", NUMBER),
-        VPropertyDef("y", "Y 坐标", NUMBER)
+        VPropertyDef("x", "X 坐标", ANY),
+        VPropertyDef("y", "Y 坐标", ANY)
     ))
 
     val NOTIFICATION = SimpleVType("vflow.type.notification_object", "通知", ANY, listOf(
-        VPropertyDef("title", "标题", STRING),
-        VPropertyDef("content", "内容", STRING),
-        VPropertyDef("package", "应用包名", STRING),
-        VPropertyDef("id", "通知 ID", STRING)
+        VPropertyDef("title", "标题", ANY),
+        VPropertyDef("content", "内容", ANY),
+        VPropertyDef("package", "应用包名", ANY),
+        VPropertyDef("id", "通知 ID", ANY)
     ))
 
     val APP = SimpleVType("vflow.type.app", "应用", ANY) // 暂无属性
+
+    /**
+     * 获取指定类型的指定属性的类型
+     * 例如: getPropertyType(VTypeRegistry.STRING.id, "length") -> VTypeRegistry.NUMBER
+     */
+    fun getPropertyType(typeId: String?, propertyName: String): VType? {
+        val type = getType(typeId)
+
+        // 查找属性定义（支持通过名称或显示名匹配）
+        val propertyDef = type.properties.find { prop ->
+            prop.name == propertyName || prop.displayName == propertyName
+        }
+
+        return if (propertyDef != null && propertyDef.type != ANY) {
+            propertyDef.type
+        } else {
+            // 如果属性定义中的类型是 ANY，或者找不到属性定义，则根据属性名推断
+            inferPropertyType(typeId, propertyName)
+        }
+    }
+
+    /**
+     * 推断属性的类型（当属性定义中的类型为 ANY 时使用）
+     */
+    private fun inferPropertyType(typeId: String?, propertyName: String): VType? {
+        return when (typeId) {
+            STRING.id -> {
+                when (propertyName) {
+                    "length", "len", "长度", "count" -> NUMBER
+                    "uppercase", "大写", "lowercase", "小写", "trim", "去空格", "trimmed" -> STRING
+                    "isempty", "为空", "empty" -> BOOLEAN
+                    else -> null
+                }
+            }
+            NUMBER.id -> {
+                when (propertyName) {
+                    "int", "整数部分", "round", "四舍五入", "abs", "绝对值" -> NUMBER
+                    else -> null
+                }
+            }
+            BOOLEAN.id -> {
+                when (propertyName) {
+                    "not", "反转" -> BOOLEAN
+                    else -> null
+                }
+            }
+            LIST.id -> {
+                when (propertyName) {
+                    "count", "length", "大小", "数量" -> NUMBER
+                    "isempty", "为空", "empty" -> BOOLEAN
+                    else -> null
+                }
+            }
+            DICTIONARY.id -> {
+                when (propertyName) {
+                    "count", "length", "大小", "数量" -> NUMBER
+                    "isempty", "为空", "empty" -> BOOLEAN
+                    "keys", "键", "values", "值" -> LIST
+                    else -> null
+                }
+            }
+            IMAGE.id -> {
+                when (propertyName) {
+                    "width", "宽度", "height", "高度", "size", "文件大小" -> NUMBER
+                    "path", "文件路径", "uri", "URI地址", "name", "文件名" -> STRING
+                    else -> null
+                }
+            }
+            DATE.id -> {
+                when (propertyName) {
+                    "year", "年", "month", "月", "day", "日", "weekday", "星期", "timestamp", "时间戳" -> NUMBER
+                    else -> null
+                }
+            }
+            TIME.id -> {
+                when (propertyName) {
+                    "hour", "时", "minute", "分" -> NUMBER
+                    else -> null
+                }
+            }
+            UI_ELEMENT.id, UI_COMPONENT.id -> {
+                when (propertyName) {
+                    "text", "文本内容", "id", "type", "类型", "label", "标签", "placeholder", "占位符",
+                    "package", "应用包名", "title", "标题", "content", "内容" -> STRING
+                    "center_x", "center_y", "left", "top", "width", "宽度", "height", "高度", "x", "y" -> NUMBER
+                    "value", "值", "defaultvalue", "默认值" -> ANY
+                    "required", "必填", "triggerEvent", "触发事件", "istext", "isbutton", "isinput", "isswitch" -> BOOLEAN
+                    else -> null
+                }
+            }
+            COORDINATE.id -> {
+                when (propertyName) {
+                    "x", "y" -> NUMBER
+                    else -> null
+                }
+            }
+            NOTIFICATION.id -> {
+                when (propertyName) {
+                    "title", "标题", "content", "内容", "package", "应用包名", "id", "通知 ID" -> STRING
+                    else -> null
+                }
+            }
+            else -> null
+        }
+    }
+
+    /**
+     * 检查某个类型是否匹配目标类型集合（包括该类型的属性）
+     * @param typeId 要检查的类型ID
+     * @param acceptedTypes 目标类型集合（如果为空，则接受所有类型）
+     * @return true 如果类型本身匹配，或者该类型的任一属性匹配
+     */
+    fun isTypeOrAnyPropertyAccepted(typeId: String?, acceptedTypes: Set<String>): Boolean {
+        if (acceptedTypes.isEmpty()) return true
+
+        val type = getType(typeId)
+
+        // 检查类型本身是否匹配
+        if (type.id in acceptedTypes) return true
+
+        // 检查是否有任一属性匹配
+        for (property in type.properties) {
+            val propertyType = getPropertyType(typeId, property.name)
+            if (propertyType != null && propertyType.id in acceptedTypes) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * 获取某个类型中匹配目标类型集合的所有属性
+     * @param typeId 类型ID
+     * @param acceptedTypes 目标类型集合（如果为空，则返回所有属性）
+     * @return 匹配的属性列表
+     */
+    fun getAcceptedProperties(typeId: String?, acceptedTypes: Set<String>): List<VPropertyDef> {
+        val type = getType(typeId)
+
+        if (acceptedTypes.isEmpty()) return type.properties
+
+        return type.properties.filter { property ->
+            val propertyType = getPropertyType(typeId, property.name)
+            propertyType != null && propertyType.id in acceptedTypes
+        }
+    }
 
     // 辅助方法：根据 ID 获取类型
     fun getType(id: String?): VType {
