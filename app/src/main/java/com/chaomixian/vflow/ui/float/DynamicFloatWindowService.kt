@@ -12,9 +12,11 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.android.material.textfield.TextInputEditText
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.module.ui.UiEvent
 import com.chaomixian.vflow.core.workflow.module.ui.UiSessionBus
@@ -45,6 +47,11 @@ class DynamicFloatWindowService : Service() {
     private var initialY = 0
     private var initialTouchX = 0f
     private var initialTouchY = 0f
+
+    // 焦点管理状态
+    private var isFocusableMode = false
+    private var currentFocusedEditText: TextInputEditText? = null
+    private lateinit var windowParams: WindowManager.LayoutParams
 
     companion object {
         const val EXTRA_ELEMENTS = "elements"
@@ -114,7 +121,7 @@ class DynamicFloatWindowService : Service() {
         }
 
         // 设置窗口参数
-        val params = WindowManager.LayoutParams(
+        windowParams = WindowManager.LayoutParams(
             width.dpToPx(),
             height.dpToPx(),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -138,8 +145,18 @@ class DynamicFloatWindowService : Service() {
                 contentContainer,
                 serviceScope,
                 sessionId,
-                onSubmit = { /* 悬浮窗不需要提交逻辑 */ }
+                onSubmit = { /* 悬浮窗不需要提交逻辑 */ },
+                onEditTextFocus = { editText, hasFocus -> handleEditTextFocusChange(editText, hasFocus) }
             )
+        }
+
+        // 设置根布局点击监听，用于检测点击外部区域
+        floatView?.setOnClickListener {
+            if (isFocusableMode) {
+                currentFocusedEditText?.clearFocus()
+                hideInputMethod()
+                setWindowFocusable(false)
+            }
         }
 
         // Header 关闭按钮点击事件
@@ -150,21 +167,25 @@ class DynamicFloatWindowService : Service() {
         // Header 拖拽功能 - 拖拽指示器
         dragIndicator?.setOnTouchListener(object : View.OnTouchListener {
             override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-                return when (event?.action) {
+                when (event?.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        initialX = params.x
-                        initialY = params.y
+                        // 如果处于输入模式，禁用拖拽
+                        if (isFocusableMode) {
+                            return false
+                        }
+                        initialX = windowParams.x
+                        initialY = windowParams.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
-                        true
+                        return true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        params.x = initialX + (event.rawX - initialTouchX).toInt()
-                        params.y = initialY + (event.rawY - initialTouchY).toInt()
-                        windowManager.updateViewLayout(floatView, params)
-                        true
+                        windowParams.x = initialX + (event.rawX - initialTouchX).toInt()
+                        windowParams.y = initialY + (event.rawY - initialTouchY).toInt()
+                        windowManager.updateViewLayout(floatView, windowParams)
+                        return true
                     }
-                    else -> false
+                    else -> return false
                 }
             }
         })
@@ -172,27 +193,31 @@ class DynamicFloatWindowService : Service() {
         // Header 拖拽功能 - 整个标题栏
         headerView?.setOnTouchListener(object : View.OnTouchListener {
             override fun onTouch(view: View, event: MotionEvent): Boolean {
-                return when (event.action) {
+                when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        initialX = params.x
-                        initialY = params.y
+                        // 如果处于输入模式，禁用拖拽
+                        if (isFocusableMode) {
+                            return false
+                        }
+                        initialX = windowParams.x
+                        initialY = windowParams.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
-                        true
+                        return true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        params.x = initialX + (event.rawX - initialTouchX).toInt()
-                        params.y = initialY + (event.rawY - initialTouchY).toInt()
-                        windowManager.updateViewLayout(floatView, params)
-                        true
+                        windowParams.x = initialX + (event.rawX - initialTouchX).toInt()
+                        windowParams.y = initialY + (event.rawY - initialTouchY).toInt()
+                        windowManager.updateViewLayout(floatView, windowParams)
+                        return true
                     }
-                    else -> false
+                    else -> return false
                 }
             }
         })
 
         // 添加到窗口
-        windowManager.addView(floatView, params)
+        windowManager.addView(floatView, windowParams)
 
         // 启动命令监听
         startCommandListener()
@@ -217,6 +242,13 @@ class DynamicFloatWindowService : Service() {
             windowManager.removeView(it)
             floatView = null
         }
+
+        // 清理焦点状态
+        if (isFocusableMode) {
+            hideInputMethod()
+        }
+        currentFocusedEditText = null
+        isFocusableMode = false
 
         sessionId = null
         stopSelf()
@@ -257,6 +289,71 @@ class DynamicFloatWindowService : Service() {
             // 发送关闭事件
             UiSessionBus.notifyClosed(id)
             closeFloatWindow()
+        }
+    }
+
+    /**
+     * 切换窗口焦点模式
+     * @param focusable true=可获取焦点（输入模式），false=不可获取焦点（默认模式）
+     */
+    private fun setWindowFocusable(focusable: Boolean) {
+        if (isFocusableMode == focusable) return
+
+        isFocusableMode = focusable
+
+        windowParams.flags = if (focusable) {
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        } else {
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        }
+
+        floatView?.let {
+            windowManager.updateViewLayout(it, windowParams)
+        }
+    }
+
+    /**
+     * 显示输入法
+     */
+    private fun showInputMethod(editText: TextInputEditText) {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    /**
+     * 隐藏输入法
+     */
+    private fun hideInputMethod() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        floatView?.windowToken?.let { token ->
+            imm.hideSoftInputFromWindow(token, 0)
+        }
+    }
+
+    /**
+     * 处理输入框焦点变化
+     */
+    private fun handleEditTextFocusChange(editText: TextInputEditText, hasFocus: Boolean) {
+        when {
+            hasFocus && !isFocusableMode -> {
+                currentFocusedEditText = editText
+                setWindowFocusable(true)
+                floatView?.postDelayed({
+                    showInputMethod(editText)
+                }, 100)
+            }
+            !hasFocus && isFocusableMode -> {
+                currentFocusedEditText = null
+                floatView?.postDelayed({
+                    if (currentFocusedEditText == null) {
+                        hideInputMethod()
+                        setWindowFocusable(false)
+                    }
+                }, 100)
+            }
+            hasFocus && isFocusableMode -> {
+                currentFocusedEditText = editText
+            }
         }
     }
 

@@ -69,7 +69,8 @@ object DynamicUiRenderer {
         container: ViewGroup,
         lifecycleScope: CoroutineScope? = null,
         sessionId: String? = null,
-        onSubmit: (Map<String, Any>) -> Unit
+        onSubmit: (Map<String, Any>) -> Unit,
+        onEditTextFocus: ((TextInputEditText, Boolean) -> Unit)? = null
     ) {
         viewsMap.clear()
         container.removeAllViews()
@@ -114,6 +115,19 @@ object DynamicUiRenderer {
                                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                             })
+                        }
+
+                        // 添加焦点监听器
+                        if (onEditTextFocus != null) {
+                            setOnFocusChangeListener { _, hasFocus ->
+                                onEditTextFocus(this, hasFocus)
+                            }
+
+                            setOnClickListener {
+                                if (!isFocused) {
+                                    requestFocus()
+                                }
+                            }
                         }
                     }
                     layout.addView(editText)

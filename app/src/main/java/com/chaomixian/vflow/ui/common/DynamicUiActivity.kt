@@ -88,10 +88,17 @@ class DynamicUiActivity : BaseActivity() {
         setContentView(rootLayout)
 
         // 渲染组件
-        DynamicUiRenderer.render(this, elements, contentContainer, lifecycleScope, sessionId) { data ->
-            // 提交回调 (仅用于非交互模式的提交按钮，或交互模式下的最终提交)
-            finishWithResult(data)
-        }
+        DynamicUiRenderer.render(
+            this,
+            elements,
+            contentContainer,
+            lifecycleScope,
+            sessionId,
+            onSubmit = { data ->
+                // 提交回调 (仅用于非交互模式的提交按钮，或交互模式下的最终提交)
+                finishWithResult(data)
+            }
+        )
 
         // 如果是交互模式，启动指令监听
         if (isInteractive && sessionId.isNotEmpty()) {
