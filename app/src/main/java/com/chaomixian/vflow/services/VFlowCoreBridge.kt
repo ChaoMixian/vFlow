@@ -58,6 +58,15 @@ object VFlowCoreBridge {
         ROOT     // Root (uid 0)
     }
 
+    /**
+     * 命令执行模式
+     */
+    enum class ExecMode {
+        SHELL,   // 强制使用 Shell 权限
+        ROOT,    // 强制使用 Root 权限
+        AUTO     // 根据用户的默认 shell 偏好自动选择
+    }
+
     val privilegeMode: PrivilegeMode
         get() = when {
             !isConnected -> PrivilegeMode.NONE
@@ -302,11 +311,46 @@ object VFlowCoreBridge {
     }
 
     // 业务 API 封装
+    /**
+     * 执行 Shell 命令（使用当前权限模式）
+     * @param cmd 要执行的命令
+     * @return 命令输出
+     */
     fun exec(cmd: String): String {
+        return exec(cmd, if (privilegeMode == PrivilegeMode.ROOT) ExecMode.ROOT else ExecMode.SHELL)
+    }
+
+    /**
+     * 执行 Shell 命令（可指定执行模式）
+     * @param cmd 要执行的命令
+     * @param mode 执行模式：SHELL(强制 Shell), ROOT(强制 Root), AUTO(根据用户偏好)
+     * @param context 用于 AUTO 模式下读取用户偏好设置
+     * @return 命令输出
+     */
+    fun exec(cmd: String, mode: ExecMode, context: Context? = null): String {
+        // 根据 mode 决定使用哪个权限级别
+        val execAsRoot = when (mode) {
+            ExecMode.ROOT -> true
+            ExecMode.SHELL -> false
+            ExecMode.AUTO -> {
+                // AUTO 模式：读取用户的默认 shell 偏好设置
+                if (context != null) {
+                    val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+                    val defaultShellMode = prefs.getString("default_shell_mode", "shizuku")
+                    defaultShellMode == "root"
+                } else {
+                    // 没有提供 context，回退到当前权限模式
+                    privilegeMode == PrivilegeMode.ROOT
+                }
+            }
+        }
+
         val req = JSONObject()
             .put("target", "system")
             .put("method", "exec")
-            .put("params", JSONObject().put("cmd", cmd))
+            .put("params", JSONObject()
+                .put("cmd", cmd)
+                .put("asRoot", execAsRoot))
         val res = sendRaw(req)
         return res?.optString("output", "") ?: ""
     }

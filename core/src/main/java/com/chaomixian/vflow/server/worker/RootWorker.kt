@@ -2,13 +2,14 @@
 package com.chaomixian.vflow.server.worker
 
 import com.chaomixian.vflow.server.common.Config
-//import com.chaomixian.vflow.server.wrappers.shell.*
 
 class RootWorker : BaseWorker(Config.PORT_WORKER_ROOT, "Root") {
 
     override fun registerWrappers() {
         // 注册需要 Root 权限的 Wrappers
         // wrappers["activity"] = IActivityManagerWrapper()
+
+        // 注意：system target 由 Master 动态路由，不在 wrappers 中注册
     }
 
     fun run() {

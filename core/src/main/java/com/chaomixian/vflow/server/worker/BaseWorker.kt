@@ -122,6 +122,21 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
                 return result
             }
 
+            // 系统命令执行 (Exec)
+            if (target == "system" && method == "exec") {
+                val cmd = params.optString("cmd", "")
+                if (cmd.isBlank()) {
+                    result.put("success", false)
+                    result.put("error", "Command is empty")
+                    return result
+                }
+
+                val output = executeCommand(cmd)
+                result.put("success", true)
+                result.put("output", output)
+                return result
+            }
+
             // 查找 Wrapper
             val wrapper = wrappers[target]
             if (wrapper == null) {
@@ -153,6 +168,30 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
         while (keys.hasNext()) {
             val key = keys.next()
             result.put(key, wrapperResult.get(key))
+        }
+    }
+
+    /**
+     * 执行 Shell 命令
+     * @param command 要执行的命令
+     * @return 命令输出，失败时返回 "Error: ..." 格式
+     */
+    private fun executeCommand(command: String): String {
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
+
+            val stdout = process.inputStream.bufferedReader().use { it.readText() }
+            val stderr = process.errorStream.bufferedReader().use { it.readText() }
+            val exitCode = process.waitFor()
+
+            if (exitCode == 0) {
+                stdout.trim()
+            } else {
+                val errorMsg = if (stderr.isNotBlank()) stderr else if (stdout.isNotBlank()) stdout else "Exit code $exitCode"
+                "Error: ${errorMsg.trim()}"
+            }
+        } catch (e: Exception) {
+            "Error: ${e.message}"
         }
     }
 }

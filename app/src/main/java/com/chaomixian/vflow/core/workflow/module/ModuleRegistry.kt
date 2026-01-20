@@ -172,6 +172,8 @@ object ModuleRegistry {
         register(CorePressKeyModule())            // 按键
         // 应用管理组
         register(CoreForceStopAppModule())        // 强制停止应用
+        // 系统控制组
+        register(CoreShellCommandModule())        // 执行命令
 
         // Shizuku 模块
         register(ShellCommandModule())

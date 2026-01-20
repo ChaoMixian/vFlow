@@ -20,6 +20,8 @@ class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
         wrappers["location"] = ILocationManagerWrapper()
         wrappers["alarm"] = IAlarmManagerWrapper()
         wrappers["activity_task"] = IActivityTaskManagerWrapper()
+
+        // 注意：system target 由 Master 动态路由，不在 wrappers 中注册
     }
 
     /**

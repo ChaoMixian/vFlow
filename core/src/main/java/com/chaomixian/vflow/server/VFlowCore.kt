@@ -175,9 +175,55 @@ object VFlowCore {
     }
 
     private fun routeRequest(target: String, requestStr: String): String {
+        // 处理 system target 的特殊路由
+        if (target == "system") {
+            return try {
+                val req = JSONObject(requestStr)
+                val method = req.optString("method")
+
+                // ping 请求直接返回
+                if (method == "ping") {
+                    return JSONObject().put("success", true).put("uid", SystemUtils.getMyUid()).toString()
+                }
+
+                // exec 请求根据 asRoot 参数路由
+                if (method == "exec") {
+                    val asRoot = req.optJSONObject("params")?.optBoolean("asRoot", false) ?: false
+                    val port = if (asRoot) Config.PORT_WORKER_ROOT else Config.PORT_WORKER_SHELL
+
+                    // 检查目标 Worker 是否存在
+                    if (asRoot && !SystemUtils.isRoot()) {
+                        return JSONObject().put("success", false).put("error", "RootWorker not available (Master not Root)").toString()
+                    }
+
+                    return try {
+                        Socket(Config.LOCALHOST, port).use { ws ->
+                            ws.soTimeout = Config.SOCKET_TIMEOUT
+                            val wWriter = PrintWriter(OutputStreamWriter(ws.getOutputStream()), true)
+                            val wReader = BufferedReader(InputStreamReader(ws.inputStream))
+                            wWriter.println(requestStr)
+                            wReader.readLine() ?: JSONObject().put("success", false).put("error", "Empty response").toString()
+                        }
+                    } catch (e: Exception) {
+                        JSONObject().put("success", false).put("error", "Worker error: ${e.message}").toString()
+                    }
+                }
+
+                // exit 请求（系统控制）
+                if (method == "exit") {
+                    return JSONObject().put("success", true).toString()
+                }
+
+                // 其他 system 请求
+                JSONObject().put("success", false).put("error", "Unknown system method").toString()
+            } catch (e: Exception) {
+                JSONObject().put("success", false).put("error", "Invalid request").toString()
+            }
+        }
+
+        // 其他 target 使用静态路由表
         val port = Config.ROUTING_TABLE[target]
         if (port == null) {
-            if (target == "system") return JSONObject().put("success", true).put("uid", SystemUtils.getMyUid()).toString()
             return JSONObject().put("success", false).put("error", "No route").toString()
         }
 
