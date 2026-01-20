@@ -66,10 +66,8 @@ class MainActivity : BaseActivity() {
         DebugLogger.initialize(applicationContext) // 初始化调试日志记录器
         // 应用启动时，立即发起 Shizuku 预连接
         ShellManager.proactiveConnect(applicationContext)
-        // 启动 Server 管理服务
-        startService(Intent(this, CoreManagementService::class.java).apply {
-            action = CoreManagementService.ACTION_START_CORE
-        })
+        // 检查并自动启动 vFlow Core
+        checkCoreAutoStart()
         // 启动后台触发器服务
         startService(Intent(this, TriggerService::class.java))
 
@@ -129,6 +127,35 @@ class MainActivity : BaseActivity() {
                         // 自动启动守护，仅支持 Shizuku
                         ShellManager.startWatcher(this@MainActivity)
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * 检查并自动启动 vFlow Core
+     */
+    private fun checkCoreAutoStart() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val autoStartEnabled = prefs.getBoolean("core_auto_start_enabled", false)
+        val savedMode = prefs.getString("preferred_core_launch_mode", null)
+
+        DebugLogger.d("MainActivity", "checkCoreAutoStart: autoStartEnabled=$autoStartEnabled, savedMode=$savedMode")
+
+        if (autoStartEnabled) {
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val isRunning = com.chaomixian.vflow.services.VFlowCoreBridge.ping()
+                DebugLogger.d("MainActivity", "Core is running: $isRunning")
+
+                if (!isRunning) {
+                    DebugLogger.i("MainActivity", "自动启动 vFlow Core with EXTRA_AUTO_START=true")
+                    val intent = Intent(this@MainActivity, CoreManagementService::class.java).apply {
+                        action = CoreManagementService.ACTION_START_CORE
+                        putExtra(CoreManagementService.EXTRA_AUTO_START, true)
+                    }
+                    startService(intent)
+                } else {
+                    DebugLogger.d("MainActivity", "Core 已经在运行，跳过自动启动")
                 }
             }
         }

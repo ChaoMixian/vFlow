@@ -78,7 +78,7 @@ object VFlowCore {
 
     private fun runAsMaster() {
         val isRoot = SystemUtils.isRoot()
-        val debugVersion = 11
+        val debugVersion = 12
         println(">>> vFlow Core MASTER Starting (PID: ${android.os.Process.myPid()}, UID: ${SystemUtils.getMyUid()}) <<<")
         println(">>> Debug Version: $debugVersion <<<")
 

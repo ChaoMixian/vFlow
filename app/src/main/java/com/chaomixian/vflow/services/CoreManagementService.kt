@@ -1,10 +1,13 @@
 // 文件: main/java/com/chaomixian/vflow/services/CoreManagementService.kt
 package com.chaomixian.vflow.services
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.utils.StorageManager
 import kotlinx.coroutines.*
@@ -12,7 +15,16 @@ import java.io.File
 
 /**
  * vFlowCore 管理服务。
- * 负责 vFlowCore (app_process) 的部署、启动和停止。
+ *
+ * 职责：
+ * - 作为 Android Service 组件的外壳，接收 Intent 请求
+ * - 将具体逻辑委托给 CoreManager 和 CoreLauncher
+ * - 处理自动启动失败的通知
+ *
+ * 不再负责：
+ * - Core 的具体启动逻辑（由 CoreLauncher 负责）
+ * - 生命周期管理（由 CoreManager 负责）
+ * - 健康检查和自动重启（由 CoreManager 负责）
  */
 class CoreManagementService : Service() {
 
@@ -24,20 +36,61 @@ class CoreManagementService : Service() {
         const val ACTION_RESTART_CORE = "com.chaomixian.vflow.action.RESTART_CORE"
         const val ACTION_CHECK_HEALTH = "com.chaomixian.vflow.action.CHECK_HEALTH"
 
-        private const val CORE_CLASS = "com.chaomixian.vflow.server.VFlowCore"
+        const val EXTRA_SHELL_MODE = "com.chaomixian.vflow.extra.SHELL_MODE"
+        const val EXTRA_FORCE_RESTART = "com.chaomixian.vflow.extra.FORCE_RESTART"
+        const val EXTRA_AUTO_START = "com.chaomixian.vflow.extra.AUTO_START"
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var isStarting = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START_CORE -> startvFlowCoreProcess(forceRestart = false)
-            ACTION_RESTART_CORE -> startvFlowCoreProcess(forceRestart = true)
-            ACTION_STOP_CORE -> stopvFlowCoreProcess()
-            ACTION_CHECK_HEALTH -> checkAndRestartIfNeeded()
+            ACTION_START_CORE, ACTION_RESTART_CORE -> {
+                val forceRestart = intent.action == ACTION_RESTART_CORE ||
+                        intent.getBooleanExtra(EXTRA_FORCE_RESTART, false)
+
+                val isAutoStart = intent.getBooleanExtra(EXTRA_AUTO_START, false)
+
+                DebugLogger.d(TAG, "onStartCommand: action=${intent?.action}, isAutoStart=$isAutoStart, hasShellMode=${intent?.hasExtra(EXTRA_SHELL_MODE)}")
+
+                // 确定启动模式
+                val launchMode = determineLaunchMode(intent, isAutoStart)
+
+                // 如果是自动启动且模式不可用，显示通知并返回
+                if (isAutoStart && !isLaunchModeAvailable(launchMode)) {
+                    val modeName = when (launchMode) {
+                        CoreLauncher.LaunchMode.ROOT -> "root"
+                        CoreLauncher.LaunchMode.SHIZUKU -> "shizuku"
+                        else -> "unknown"
+                    }
+                    showAutoStartFailedNotification(modeName)
+                    return START_NOT_STICKY
+                }
+
+                // 启动 Core
+                serviceScope.launch {
+                    CoreLauncher.launch(
+                        context = applicationContext,
+                        mode = launchMode,
+                        forceRestart = forceRestart
+                    )
+                }
+            }
+            ACTION_STOP_CORE -> {
+                serviceScope.launch {
+                    CoreManager.stop(applicationContext)
+                }
+            }
+            ACTION_CHECK_HEALTH -> {
+                serviceScope.launch {
+                    if (!CoreManager.healthCheck()) {
+                        DebugLogger.w(TAG, "健康检查：Core 未响应，正在启动...")
+                        CoreLauncher.launch(applicationContext)
+                    }
+                }
+            }
         }
         return START_STICKY
     }
@@ -49,170 +102,121 @@ class CoreManagementService : Service() {
     }
 
     /**
-     * 检测设备架构
+     * 确定启动模式。
      */
-    private fun detectDeviceAbi(): String {
-        val primaryAbi = Build.SUPPORTED_ABIS[0]
+    private fun determineLaunchMode(intent: Intent?, isAutoStart: Boolean): CoreLauncher.LaunchMode {
         return when {
-            primaryAbi.startsWith("arm64") -> "arm64-v8a"
-            primaryAbi.startsWith("armeabi-v7a") -> "armeabi-v7a"
-            primaryAbi.startsWith("x86_64") -> "x86_64"
-            primaryAbi.startsWith("x86") -> "x86"
-            else -> "arm64-v8a" // 默认
+            // Intent 中明确指定了模式
+            intent?.hasExtra(EXTRA_SHELL_MODE) == true -> {
+                val mode = intent.getStringExtra(EXTRA_SHELL_MODE)
+                when (mode) {
+                    ShellManager.ShellMode.AUTO.name -> CoreLauncher.LaunchMode.AUTO
+                    ShellManager.ShellMode.ROOT.name -> CoreLauncher.LaunchMode.ROOT
+                    ShellManager.ShellMode.SHIZUKU.name -> CoreLauncher.LaunchMode.SHIZUKU
+                    else -> {
+                        DebugLogger.w(TAG, "无效的模式名称: $mode，使用 AUTO")
+                        CoreLauncher.LaunchMode.AUTO
+                    }
+                }
+            }
+            // 自动启动模式或手动启动 - 读取 Core 专用偏好
+            else -> {
+                val prefs = getSharedPreferences("vFlowPrefs", MODE_PRIVATE)
+                val coreMode = prefs.getString("preferred_core_launch_mode", "shizuku")
+                when (coreMode) {
+                    "root" -> CoreLauncher.LaunchMode.ROOT
+                    "shizuku" -> CoreLauncher.LaunchMode.SHIZUKU
+                    else -> {
+                        DebugLogger.w(TAG, "未知的启动模式: $coreMode，使用 SHIZUKU")
+                        CoreLauncher.LaunchMode.SHIZUKU
+                    }
+                }
+            }
         }
     }
 
     /**
-     * 部署 vflow_shell_exec 到应用私有目录
+     * 检查启动模式是否可用。
      */
-    private fun deployShellLauncher(): File? {
-        val deviceAbi = detectDeviceAbi()
-        DebugLogger.d(TAG, "Device ABI: $deviceAbi")
-
-        val execDir = File(applicationContext.filesDir, "bin")
-        if (!execDir.exists()) execDir.mkdirs()
-
-        val execFile = File(execDir, "vflow_shell_exec")
-        val assetPath = "vflow_shell_exec/$deviceAbi/vflow_shell_exec"
-
-        return try {
-            applicationContext.assets.open(assetPath).use { input ->
-                execFile.outputStream().use { output -> input.copyTo(output) }
+    private fun isLaunchModeAvailable(mode: CoreLauncher.LaunchMode): Boolean {
+        return when (mode) {
+            CoreLauncher.LaunchMode.ROOT -> {
+                val isRoot = ShellManager.isRootAvailable()
+                DebugLogger.d(TAG, "Root 可用性检查: $isRoot")
+                isRoot
             }
-
-            // 设置可执行权限 (755: rwxr-xr-x)
-            execFile.setExecutable(true, false)
-            execFile.setReadable(true, false)
-            execFile.setWritable(true, true) // 仅所有者可写
-
-            DebugLogger.d(TAG, "vflow_shell_exec deployed: ${execFile.absolutePath}")
-            execFile
-        } catch (e: Exception) {
-            DebugLogger.e(TAG, "Failed to deploy vflow_shell_exec", e)
-            null
+            CoreLauncher.LaunchMode.SHIZUKU -> {
+                val isActive = ShellManager.isShizukuActive(applicationContext)
+                DebugLogger.d(TAG, "Shizuku 可用性检查: $isActive")
+                isActive
+            }
+            CoreLauncher.LaunchMode.AUTO -> true // AUTO 模式会自动选择
         }
     }
 
-    private fun startvFlowCoreProcess(forceRestart: Boolean = false) {
-        if (isStarting) return
-        serviceScope.launch {
-            isStarting = true
-            try {
-                // 只在明确要求重启时才停止现有进程
-                if (forceRestart && VFlowCoreBridge.ping()) {
-                    DebugLogger.d(TAG, "强制重启模式：检测到旧的 vFlowCore 正在运行，先停止...")
-                    stopvFlowCoreProcess()
-                    delay(1500) // 等待进程完全退出并释放 DEX 文件
+    /**
+     * 显示自动启动失败通知（保存的模式不可用）
+     */
+    private fun showAutoStartFailedNotification(savedMode: String) {
+        val notificationId = 3001
+        val channelId = "core_autostart_channel"
 
-                    // 确认进程已退出
-                    if (VFlowCoreBridge.ping()) {
-                        DebugLogger.w(TAG, "进程仍未退出，强制等待...")
-                        delay(1000)
-                    }
-                }
-
-                // 如果 Core 已经在运行且不是强制重启模式，直接返回
-                if (!forceRestart && VFlowCoreBridge.ping()) {
-                    DebugLogger.d(TAG, "vFlowCore 已在运行，无需启动")
-                    isStarting = false
-                    return@launch
-                }
-
-                DebugLogger.i(TAG, "正在部署并启动 vFlowCore...")
-
-                // 部署 Dex 到 Shell 可读的目录
-                val dexFile = File(StorageManager.tempDir, "vFlowCore.dex")
-
-                try {
-                    if (!dexFile.parentFile.exists()) dexFile.parentFile.mkdirs()
-
-                    // 即使文件存在也覆盖，确保版本更新
-                    applicationContext.assets.open("vFlowCore.dex").use { input ->
-                        dexFile.outputStream().use { output -> input.copyTo(output) }
-                    }
-                    DebugLogger.d(TAG, "Dex 已部署到公共目录: ${dexFile.absolutePath}")
-                } catch (e: Exception) {
-                    DebugLogger.e(TAG, "部署 vFlowCore.dex 失败", e)
-                    return@launch
-                }
-
-                // 准备日志文件
-                val logFile = File(StorageManager.logsDir, "server_process.log")
-
-                // 部署 vflow_shell_exec
-                val shellLauncher = deployShellLauncher()
-
-                // 构建启动命令
-                val classpath = dexFile.absolutePath
-                val logPath = logFile.absolutePath
-
-                var tempScript: File? = null
-                val fullCmd = if (shellLauncher != null) {
-                    // 创建临时 shell 脚本来正确处理参数
-                    // 避免在 sh -c 中使用复杂的引号嵌套
-                    tempScript = File(StorageManager.tempDir, "start_vflowcore_${System.currentTimeMillis()}.sh")
-                    tempScript.writeText("""
-                        #!/system/bin/sh
-                        export CLASSPATH="$classpath"
-                        exec app_process /system/bin $CORE_CLASS --shell-launcher "${shellLauncher.absolutePath}"
-                    """.trimIndent())
-                    tempScript.setExecutable(true)
-
-                    DebugLogger.d(TAG, "vflow_shell_exec path: ${shellLauncher.absolutePath}")
-                    "sh ${tempScript.absolutePath} > \"$logPath\" 2>&1 & rm -f ${tempScript.absolutePath}"
-                } else {
-                    // 回退到原有方式
-                    "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS' > \"$logPath\" 2>&1 &"
-                }
-
-                // 执行命令
-                DebugLogger.d(TAG, "执行启动命令: $fullCmd")
-                val result = ShellManager.execShellCommand(applicationContext, fullCmd, ShellManager.ShellMode.AUTO)
-
-                if (result.startsWith("Error")) {
-                    DebugLogger.e(TAG, "vFlowCore 启动命令执行失败: $result")
-                } else {
-                    DebugLogger.i(TAG, "vFlowCore 启动命令已发送，正在等待响应...")
-                    // 给一点时间让进程启动
-                    delay(500)
-                    if (VFlowCoreBridge.ping()) {
-                        DebugLogger.i(TAG, "vFlowCore 启动验证成功！")
-                    } else {
-                        DebugLogger.w(TAG, "vFlowCore 启动后未立即响应 Ping，请检查日志: $logPath")
-                    }
-                }
-
-            } catch (e: Exception) {
-                DebugLogger.e(TAG, "启动过程发生异常", e)
-            } finally {
-                isStarting = false
+        // 创建通知渠道
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "vFlow Core 自动启动",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "vFlow Core 自动启动状态通知"
             }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
         }
+
+        val modeName = if (savedMode == "shizuku") "Shizuku" else "Root"
+        val message = "保存的启动方式 ($modeName) 当前不可用，请手动启动 vFlow Core"
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setContentTitle("vFlow Core 自动启动失败")
+            .setContentText(message)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.notify(notificationId, notification)
     }
 
-    private fun stopvFlowCoreProcess() {
-        serviceScope.launch {
-            DebugLogger.i(TAG, "正在停止 vFlowCore...")
-            // 优先使用优雅退出
-            if (VFlowCoreBridge.shutdown()) {
-                DebugLogger.i(TAG, "vFlowCore 已收到退出指令")
-                // 等待进程退出
-                delay(1000)
-            } else {
-                // 如果优雅退出失败（比如进程未响应），使用强制杀死
-                DebugLogger.w(TAG, "优雅退出失败，使用强制终止")
-                val cmd = "pkill -f $CORE_CLASS"
-                ShellManager.execShellCommand(applicationContext, cmd, ShellManager.ShellMode.AUTO)
-            }
-        }
-    }
+    /**
+     * 显示无偏好设置通知
+     */
+    private fun showNoPreferenceNotification() {
+        val notificationId = 3002
+        val channelId = "core_autostart_channel"
 
-    private fun checkAndRestartIfNeeded() {
-        serviceScope.launch {
-            if (!VFlowCoreBridge.ping()) {
-                DebugLogger.w(TAG, "健康检查：vFlowCore 未响应，正在启动...")
-                startvFlowCoreProcess(forceRestart = false)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "vFlow Core 自动启动",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "vFlow Core 自动启动状态通知"
             }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
         }
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setContentTitle("vFlow Core 自动启动")
+            .setContentText("请先手动启动一次 vFlow Core 以记录您的启动偏好")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.notify(notificationId, notification)
     }
 }
