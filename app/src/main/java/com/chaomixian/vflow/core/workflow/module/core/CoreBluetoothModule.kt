@@ -11,6 +11,8 @@ import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 
 /**
  * 蓝牙控制模块（Beta）。
@@ -25,6 +27,10 @@ class CoreBluetoothModule : BaseModule() {
         iconRes = R.drawable.rounded_bluetooth_24,
         category = "Core (Beta)"
     )
+
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return listOf(PermissionManager.CORE)
+    }
 
     private val actionOptions = listOf("开启", "关闭", "切换")
 

@@ -7,6 +7,8 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +27,10 @@ class CoreWifiModule : BaseModule() {
         iconRes = R.drawable.rounded_android_wifi_3_bar_24,
         category = "Core (Beta)"
     )
+
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return listOf(PermissionManager.CORE)
+    }
 
     private val actionOptions = listOf("开启", "关闭", "切换")
 

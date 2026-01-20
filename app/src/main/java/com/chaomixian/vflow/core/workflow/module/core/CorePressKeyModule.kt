@@ -13,6 +13,8 @@ import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 
 /**
  * 按键模块（Beta）。
@@ -27,6 +29,10 @@ class CorePressKeyModule : BaseModule() {
         iconRes = R.drawable.rounded_keyboard_24,
         category = "Core (Beta)"
     )
+
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return listOf(PermissionManager.CORE)
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(

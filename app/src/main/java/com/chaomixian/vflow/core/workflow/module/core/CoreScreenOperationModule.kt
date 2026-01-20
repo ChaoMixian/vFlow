@@ -15,6 +15,8 @@ import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 
 /**
  * 屏幕操作模块（Beta）。
@@ -33,6 +35,10 @@ class CoreScreenOperationModule : BaseModule() {
         iconRes = R.drawable.rounded_ads_click_24,
         category = "Core (Beta)"
     )
+
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return listOf(PermissionManager.CORE)
+    }
 
     override val uiProvider: ModuleUIProvider = CoreScreenOperationModuleUIProvider()
 

@@ -10,6 +10,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 
 /**
  * 关闭屏幕模块（Beta）。
@@ -24,6 +26,10 @@ class CoreSleepScreenModule : BaseModule() {
         iconRes = R.drawable.rounded_brightness_5_24,
         category = "Core (Beta)"
     )
+
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return listOf(PermissionManager.CORE)
+    }
 
     override fun getInputs(): List<InputDefinition> = emptyList()
 

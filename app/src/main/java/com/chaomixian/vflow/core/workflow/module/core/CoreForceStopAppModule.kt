@@ -12,6 +12,8 @@ import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 
 /**
  * 强制停止应用模块（Beta）。
@@ -26,6 +28,10 @@ class CoreForceStopAppModule : BaseModule() {
         iconRes = R.drawable.rounded_stop_circle_24,
         category = "Core (Beta)"
     )
+
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return listOf(PermissionManager.CORE)
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(

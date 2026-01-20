@@ -12,6 +12,8 @@ import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 
 /**
  * 读取剪贴板模块（Beta）。
@@ -26,6 +28,10 @@ class CoreGetClipboardModule : BaseModule() {
         iconRes = R.drawable.rounded_content_paste_24,
         category = "Core (Beta)"
     )
+
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return listOf(PermissionManager.CORE)
+    }
 
     override fun getInputs(): List<InputDefinition> = emptyList()
 
