@@ -23,6 +23,7 @@ object VFlowCore {
     private var isRunning = true
     private val executor = Executors.newCachedThreadPool()
     private val workerProcesses = mutableListOf<Process>()
+    private var shellLauncherPath: String? = null
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -36,6 +37,12 @@ object VFlowCore {
                 "--type" -> {
                     if (i + 1 < args.size) workerType = args[i + 1]
                     i++
+                }
+                "--shell-launcher" -> {
+                    if (i + 1 < args.size) {
+                        shellLauncherPath = args[i + 1]
+                        i++
+                    }
                 }
             }
             i++
@@ -71,7 +78,7 @@ object VFlowCore {
 
     private fun runAsMaster() {
         val isRoot = SystemUtils.isRoot()
-        val debugVersion = 10
+        val debugVersion = 11
         println(">>> vFlow Core MASTER Starting (PID: ${android.os.Process.myPid()}, UID: ${SystemUtils.getMyUid()}) <<<")
         println(">>> Debug Version: $debugVersion <<<")
 
@@ -79,23 +86,27 @@ object VFlowCore {
             workerProcesses.forEach { SystemUtils.killProcess(it) }
         })
 
-        spawnWorkers(isRoot)
+        spawnWorkers(isRoot, shellLauncherPath)
         startMasterServer()
     }
 
-    private fun spawnWorkers(isRoot: Boolean) {
+    private fun spawnWorkers(isRoot: Boolean, shellLauncherPath: String?) {
         println("--- Spawning Workers ---")
 
-        // 1. 启动 Shell Worker (它会自我降权)
+        // 1. 启动 Shell Worker
         try {
-            val p = SystemUtils.startWorkerProcess("shell")
+            val p = if (shellLauncherPath != null) {
+                SystemUtils.startWorkerProcess("shell", shellLauncherPath)
+            } else {
+                SystemUtils.startWorkerProcess("shell")
+            }
             workerProcesses.add(p)
             setupWorkerLogger(p, "ShellWorker")
         } catch (e: Exception) {
             System.err.println("❌ Failed to start ShellWorker: ${e.message}")
         }
 
-        // 2. 启动 Root Worker (仅 Master 为 Root 时)
+        // 2. 启动 Root Worker (仅 Master 为 Root 时，保持原样，不需要 vflow_shell_exec)
         if (isRoot) {
             try {
                 val p = SystemUtils.startWorkerProcess("root")

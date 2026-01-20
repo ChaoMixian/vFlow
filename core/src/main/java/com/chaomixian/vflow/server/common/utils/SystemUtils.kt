@@ -54,6 +54,32 @@ object SystemUtils {
             .start()
     }
 
+    /**
+     * 使用 vflow_shell_exec 启动 Worker（自动降权 + SELinux 切换）
+     */
+    fun startWorkerProcess(type: String, shellLauncherPath: String): Process {
+        val classPath = getClassPath()
+        val mainClass = "com.chaomixian.vflow.server.VFlowCore"
+
+        // 使用 vflow_shell_exec 包装启动
+        val cmd = listOf(
+            shellLauncherPath,           // vflow_shell_exec 路径
+            "CLASSPATH=$classPath",      // 环境变量前缀
+            "app_process",               // 要执行的程序
+            "/system/bin",               // app_process 参数
+            mainClass,
+            "--worker",
+            "--type",
+            type
+        )
+
+        println(">>> Spawning Worker [$type] via vflow_shell_exec: ${cmd.joinToString(" ")}")
+
+        return ProcessBuilder(cmd)
+            .redirectErrorStream(true)
+            .start()
+    }
+
     fun killProcess(process: Process?) {
         if (process != null && process.isAlive) {
             try {

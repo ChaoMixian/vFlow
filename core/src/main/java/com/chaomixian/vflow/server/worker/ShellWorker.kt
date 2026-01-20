@@ -27,12 +27,16 @@ class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
      * 处理权限降级逻辑
      */
     fun run() {
-        // 如果当前是 Root 身份启动的 ShellWorker，需要主动降权
+        // 如果通过 vflow_shell_exec 启动，此时应该已经是 Shell 权限
+        // 如果通过 app_process 直接启动（回退模式），则需要降权
         if (SystemUtils.isRoot()) {
+            System.err.println("⚠️ ShellWorker started as Root, dropping privileges...")
             if (!SystemUtils.dropPrivilegesToShell()) {
                 System.err.println("❌ Critical: Failed to drop privileges for ShellWorker.")
                 exitProcess(1)
             }
+        } else {
+            println("✅ ShellWorker running as Shell (UID: ${SystemUtils.getMyUid()})")
         }
 
         // 启动 ServerSocket

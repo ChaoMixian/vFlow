@@ -3,6 +3,7 @@ package com.chaomixian.vflow.services
 
 import android.app.Service
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.utils.StorageManager
@@ -45,6 +46,51 @@ class CoreManagementService : Service() {
         super.onDestroy()
         serviceScope.cancel()
         DebugLogger.d(TAG, "CoreManagementService 已销毁")
+    }
+
+    /**
+     * 检测设备架构
+     */
+    private fun detectDeviceAbi(): String {
+        val primaryAbi = Build.SUPPORTED_ABIS[0]
+        return when {
+            primaryAbi.startsWith("arm64") -> "arm64-v8a"
+            primaryAbi.startsWith("armeabi-v7a") -> "armeabi-v7a"
+            primaryAbi.startsWith("x86_64") -> "x86_64"
+            primaryAbi.startsWith("x86") -> "x86"
+            else -> "arm64-v8a" // 默认
+        }
+    }
+
+    /**
+     * 部署 vflow_shell_exec 到应用私有目录
+     */
+    private fun deployShellLauncher(): File? {
+        val deviceAbi = detectDeviceAbi()
+        DebugLogger.d(TAG, "Device ABI: $deviceAbi")
+
+        val execDir = File(applicationContext.filesDir, "bin")
+        if (!execDir.exists()) execDir.mkdirs()
+
+        val execFile = File(execDir, "vflow_shell_exec")
+        val assetPath = "vflow_shell_exec/$deviceAbi/vflow_shell_exec"
+
+        return try {
+            applicationContext.assets.open(assetPath).use { input ->
+                execFile.outputStream().use { output -> input.copyTo(output) }
+            }
+
+            // 设置可执行权限 (755: rwxr-xr-x)
+            execFile.setExecutable(true, false)
+            execFile.setReadable(true, false)
+            execFile.setWritable(true, true) // 仅所有者可写
+
+            DebugLogger.d(TAG, "vflow_shell_exec deployed: ${execFile.absolutePath}")
+            execFile
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "Failed to deploy vflow_shell_exec", e)
+            null
+        }
     }
 
     private fun startvFlowCoreProcess(forceRestart: Boolean = false) {
@@ -93,13 +139,31 @@ class CoreManagementService : Service() {
                 // 准备日志文件
                 val logFile = File(StorageManager.logsDir, "server_process.log")
 
+                // 部署 vflow_shell_exec
+                val shellLauncher = deployShellLauncher()
+
                 // 构建启动命令
-                // 使用 sh -c 确保 CLASSPATH 正确传递
                 val classpath = dexFile.absolutePath
                 val logPath = logFile.absolutePath
 
-                // 使用 sh -c 'export CLASSPATH=...; exec ...' 确保 CLASSPATH 在子进程中生效
-                val fullCmd = "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS' > \"$logPath\" 2>&1 &"
+                var tempScript: File? = null
+                val fullCmd = if (shellLauncher != null) {
+                    // 创建临时 shell 脚本来正确处理参数
+                    // 避免在 sh -c 中使用复杂的引号嵌套
+                    tempScript = File(StorageManager.tempDir, "start_vflowcore_${System.currentTimeMillis()}.sh")
+                    tempScript.writeText("""
+                        #!/system/bin/sh
+                        export CLASSPATH="$classpath"
+                        exec app_process /system/bin $CORE_CLASS --shell-launcher "${shellLauncher.absolutePath}"
+                    """.trimIndent())
+                    tempScript.setExecutable(true)
+
+                    DebugLogger.d(TAG, "vflow_shell_exec path: ${shellLauncher.absolutePath}")
+                    "sh ${tempScript.absolutePath} > \"$logPath\" 2>&1 & rm -f ${tempScript.absolutePath}"
+                } else {
+                    // 回退到原有方式
+                    "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS' > \"$logPath\" 2>&1 &"
+                }
 
                 // 执行命令
                 DebugLogger.d(TAG, "执行启动命令: $fullCmd")
