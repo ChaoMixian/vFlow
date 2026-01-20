@@ -154,6 +154,9 @@ object VFlowCoreBridge {
         }
     }
 
+    /**
+     * 关闭连接（私有方法）
+     */
     private fun close() {
         stopHeartbeat() // 停止心跳
         try { socket?.close() } catch (e: Exception) {}
@@ -161,6 +164,16 @@ object VFlowCoreBridge {
         writer = null
         reader = null
         isConnected = false
+    }
+
+    /**
+     * 断开连接（公开方法）
+     * 用于主动断开与 vFlowCore 的连接
+     */
+    fun disconnect() {
+        DebugLogger.i(TAG, "主动断开与 vFlowCore 的连接")
+        close()
+        currentUid = -1
     }
 
     /**

@@ -19,6 +19,17 @@ class BootReceiver : BroadcastReceiver() {
             } else {
                 context.startService(serviceIntent)
             }
+
+            // 检查 vFlow Core 自动启动
+            val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean("core_auto_start_enabled", false)) {
+                DebugLogger.i("BootReceiver", "vFlow Core 自动启动已启用，尝试启动...")
+                val coreIntent = Intent(context, CoreManagementService::class.java).apply {
+                    action = CoreManagementService.ACTION_START_CORE
+                    putExtra(CoreManagementService.EXTRA_AUTO_START, true)
+                }
+                context.startService(coreIntent)
+            }
         }
     }
 }
