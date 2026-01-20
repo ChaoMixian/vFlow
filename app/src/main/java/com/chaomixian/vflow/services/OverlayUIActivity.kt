@@ -230,11 +230,16 @@ class OverlayUIActivity : AppCompatActivity() {
 
     /**
      * 为文本快速查看对话框添加复制和分享按钮，并重写行为
+     * 使用自定义布局以支持长按选择文本
      */
     private fun showQuickViewDialog(title: String, content: String) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quick_view_text, null)
+        val textView = dialogView.findViewById<TextView>(R.id.text_view_content)
+        textView.text = content
+
         val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(title)
-            .setMessage(content)
+            .setView(dialogView)
             .setPositiveButton("关闭") { _, _ -> complete(true) }
             .setNeutralButton("复制", null)
             .setNegativeButton("分享", null)
