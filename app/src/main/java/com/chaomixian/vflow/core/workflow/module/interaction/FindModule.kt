@@ -14,6 +14,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.module.Coordinate
+import com.chaomixian.vflow.core.module.ScreenElement
 import com.chaomixian.vflow.permissions.PermissionManager
 // 项目内部的无障碍服务，避免与 Android 框架的同名类混淆
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
@@ -22,36 +24,7 @@ import kotlinx.parcelize.Parcelize
 import java.util.regex.Pattern
 
 /**
- * 表示屏幕上的一个UI元素。
- * @param bounds 元素在屏幕上的边界矩形。
- * @param text 元素的文本内容（可选）。
- */
-@Parcelize
-data class ScreenElement(
-    val bounds: Rect,
-    val text: String?
-) : Parcelable {
-    companion object {
-        /** ScreenElement 类型的唯一标识符。 */
-        const val TYPE_NAME = "vflow.type.screen_element"
-    }
-}
-
-/**
- * 表示屏幕上的一个坐标点。
- * @param x x轴坐标。
- * @param y y轴坐标。
- */
-@Parcelize
-data class Coordinate(val x: Int, val y: Int) : Parcelable {
-    companion object {
-        /** Coordinate 类型的唯一标识符。 */
-        const val TYPE_NAME = "vflow.type.coordinate"
-    }
-}
-
-/**
- * “查找文本”模块。
+ * "查找文本"模块。
  * 使用无障碍服务在当前屏幕上根据文本内容查找UI元素。
  * 支持多种匹配模式和输出格式。
  */

@@ -2,7 +2,7 @@
 package com.chaomixian.vflow.core.workflow.module.logic
 
 import com.chaomixian.vflow.core.module.*
-import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
+import com.chaomixian.vflow.core.module.ScreenElement
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.min

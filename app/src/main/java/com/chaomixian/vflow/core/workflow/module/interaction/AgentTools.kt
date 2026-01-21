@@ -20,6 +20,7 @@ import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.ImageVariable
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.module.ScreenElement
 import com.chaomixian.vflow.core.utils.VFlowImeManager
 import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.services.ShellManager

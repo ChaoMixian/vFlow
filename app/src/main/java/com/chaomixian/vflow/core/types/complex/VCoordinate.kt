@@ -5,7 +5,7 @@ import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
-import com.chaomixian.vflow.core.workflow.module.interaction.Coordinate
+import com.chaomixian.vflow.core.module.Coordinate
 
 /**
  * 坐标类型的 VObject 实现

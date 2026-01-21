@@ -6,7 +6,7 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
-import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
+import com.chaomixian.vflow.core.module.ScreenElement
 
 /**
  * 屏幕元素类型的 VObject 实现

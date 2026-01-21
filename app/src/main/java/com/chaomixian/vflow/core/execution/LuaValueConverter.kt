@@ -2,8 +2,8 @@
 package com.chaomixian.vflow.core.execution
 
 import com.chaomixian.vflow.core.module.*
-import com.chaomixian.vflow.core.workflow.module.interaction.Coordinate
-import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
+import com.chaomixian.vflow.core.module.Coordinate
+import com.chaomixian.vflow.core.module.ScreenElement
 import org.luaj.vm2.LuaTable
 import org.luaj.vm2.LuaValue
 

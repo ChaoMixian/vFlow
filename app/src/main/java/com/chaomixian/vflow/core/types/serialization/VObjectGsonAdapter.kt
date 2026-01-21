@@ -3,7 +3,7 @@ package com.chaomixian.vflow.core.types.serialization
 import com.chaomixian.vflow.core.types.*
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.types.complex.*
-import com.chaomixian.vflow.core.workflow.module.interaction.Coordinate
+import com.chaomixian.vflow.core.module.Coordinate
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 import com.google.gson.TypeAdapter

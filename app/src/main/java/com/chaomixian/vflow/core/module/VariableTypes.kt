@@ -171,6 +171,45 @@ data class DateVariable(val value: String) : Parcelable {
 }
 
 /**
+ * 表示屏幕上的一个UI元素。
+ * @param bounds 元素在屏幕上的边界矩形。
+ * @param text 元素的文本内容（可选）。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.complex.VScreenElement] 代替
+ */
+@Deprecated(
+    message = "使用 VScreenElement 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VScreenElement(this)")
+)
+@Parcelize
+data class ScreenElement(
+    val bounds: android.graphics.Rect,
+    val text: String?
+) : Parcelable {
+    companion object {
+        /** ScreenElement 类型的唯一标识符。 */
+        const val TYPE_NAME = "vflow.type.ui_element"
+    }
+}
+
+/**
+ * 表示屏幕上的一个坐标点。
+ * @param x x轴坐标。
+ * @param y y轴坐标。
+ * @deprecated 使用 [com.chaomixian.vflow.core.types.complex.VCoordinate] 代替
+ */
+@Deprecated(
+    message = "使用 VCoordinate 代替。此类型仅用于向后兼容。",
+    replaceWith = ReplaceWith("VCoordinate(this)")
+)
+@Parcelize
+data class Coordinate(val x: Int, val y: Int) : Parcelable {
+    companion object {
+        /** Coordinate 类型的唯一标识符。 */
+        const val TYPE_NAME = "vflow.type.coordinate"
+    }
+}
+
+/**
  * 检查字符串是否为魔法变量引用 (来自步骤输出)。
  * e.g., "{{stepId.outputId}}"
  */

@@ -4,8 +4,8 @@ package com.chaomixian.vflow.core.types
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.types.complex.*
-import com.chaomixian.vflow.core.workflow.module.interaction.Coordinate
-import com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement
+import com.chaomixian.vflow.core.module.Coordinate
+import com.chaomixian.vflow.core.module.ScreenElement
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 
