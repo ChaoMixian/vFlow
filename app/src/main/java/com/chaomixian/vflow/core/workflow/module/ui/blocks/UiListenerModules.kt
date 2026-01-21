@@ -224,27 +224,33 @@ class GetComponentValueModule : BaseModule() {
             else -> context.variables["component_id"]?.toString() ?: ""
         }
 
-        // 从 namedVariables 中获取组件值
-        val valueKey = "component_value.$componentId"
-        val value = context.namedVariables[valueKey]
+        // 创建 VUiComponent 对象
+        @Suppress("UNCHECKED_CAST")
+        val elementsList = context.namedVariables[KEY_UI_ELEMENTS_LIST] as? List<com.chaomixian.vflow.core.workflow.module.ui.model.UiElement>
+        val element = elementsList?.find { it.id == componentId }
 
-        return if (value != null) {
-            // 创建 VUiComponent 对象
-            @Suppress("UNCHECKED_CAST")
-            val elementsList = context.namedVariables[KEY_UI_ELEMENTS_LIST] as? List<com.chaomixian.vflow.core.workflow.module.ui.model.UiElement>
-            val element = elementsList?.find { it.id == componentId }
-
-            if (element != null) {
-                val vComponent = com.chaomixian.vflow.core.types.complex.VUiComponent(element, value)
-                ExecutionResult.Success(mapOf(
-                    "component" to vComponent,
-                    "value" to value
-                ))
-            } else {
-                ExecutionResult.Failure("组件未找到", "组件 '$componentId' 不存在于当前界面")
+        return if (element != null) {
+            // 创建一个 valueProvider 来动态获取组件值
+            val valueProvider = {
+                context.namedVariables["component_value.$componentId"]
             }
+
+            // 获取当前值（如果存在）
+            val currentValue = valueProvider()
+
+            // 创建 VUiComponent 对象，传入 valueProvider 以支持动态获取值
+            val vComponent = com.chaomixian.vflow.core.types.complex.VUiComponent(
+                element,
+                currentValue ?: element.defaultValue,
+                valueProvider
+            )
+
+            ExecutionResult.Success(mapOf(
+                "component" to vComponent,
+                "value" to (currentValue ?: element.defaultValue)
+            ))
         } else {
-            ExecutionResult.Failure("组件未找到", "组件 '$componentId' 没有值或不存在")
+            ExecutionResult.Failure("组件未找到", "组件 '$componentId' 不存在于当前界面")
         }
     }
 }

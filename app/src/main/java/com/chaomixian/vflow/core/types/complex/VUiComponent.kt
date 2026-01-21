@@ -30,8 +30,15 @@ import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
  */
 class VUiComponent(
     val element: UiElement,
-    val currentValue: Any? = null
+    currentValue: Any? = null,
+    private val valueProvider: (() -> Any?)? = null
 ) : EnhancedBaseVObject() {
+
+    // 当前值（可以是初始值，或通过 valueProvider 动态获取）
+    val currentValue: Any?
+        get() = valueProvider?.invoke() ?: _currentValue
+
+    private val _currentValue: Any? = currentValue
 
     override val type = VTypeRegistry.UI_COMPONENT
     override val raw: Any = element

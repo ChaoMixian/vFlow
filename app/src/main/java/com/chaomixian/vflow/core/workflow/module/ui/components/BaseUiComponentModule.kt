@@ -4,6 +4,7 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.ui.blocks.KEY_UI_ELEMENTS_LIST
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
@@ -49,11 +50,25 @@ abstract class BaseUiComponentModule : BaseModule() {
             list.add(element)
             onProgress(ProgressUpdate("已注册组件: ${element.id}"))
 
-            // 创建并返回 VUiComponent 对象
-            val vComponent = VUiComponent(element, element.defaultValue)
+            // 保存对 namedVariables 的引用，用于动态获取组件值
+            // 在事件循环中，组件值会被更新到 namedVariables["component_value.$componentId"]
+            val valueProvider = {
+                // 延迟获取：在访问 value 时才从 namedVariables 中读取最新值
+                context.namedVariables["component_value.${element.id}"]
+            }
+
+            // 尝试获取当前值（如果已存在）
+            val actualValue = valueProvider()
+
+            // 创建并返回 VUiComponent 对象，传入 valueProvider 以支持动态获取值
+            val vComponent = VUiComponent(
+                element,
+                actualValue ?: element.defaultValue,
+                valueProvider
+            )
             return ExecutionResult.Success(mapOf(
                 "component" to vComponent,
-                "id" to TextVariable(element.id)
+                "id" to VString(element.id)
             ))
         } else {
             return ExecutionResult.Failure("位置错误", "UI 组件必须放置在\"创建界面\"积木块内部。")
