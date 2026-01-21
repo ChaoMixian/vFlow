@@ -28,6 +28,9 @@ class RichTextView @JvmOverloads constructor(
     // 保存 allSteps 引用，用于 insertVariable 方法
     private var currentAllSteps: List<ActionStep> = emptyList()
 
+    // 可选的变量类型过滤器（例如只允许图片类型）
+    private var variableTypeFilter: Set<String>? = null
+
     /**
      * 设置富文本内容
      *
@@ -77,4 +80,19 @@ class RichTextView @JvmOverloads constructor(
         // 将光标移动到插入内容的末尾
         setSelection(start + pillSpannable.length)
     }
+
+    /**
+     * 设置变量类型过滤器
+     * 设置后，只有符合类型的变量才能被插入（用于变量选择器过滤）
+     *
+     * @param types 允许的变量类型集合（例如 setOf("vflow.type.image")）
+     */
+    fun setVariableTypeFilter(types: Set<String>?) {
+        variableTypeFilter = types
+    }
+
+    /**
+     * 获取变量类型过滤器
+     */
+    fun getVariableTypeFilter(): Set<String>? = variableTypeFilter
 }

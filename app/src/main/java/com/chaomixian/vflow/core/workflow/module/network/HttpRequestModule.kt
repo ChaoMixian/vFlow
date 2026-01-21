@@ -13,6 +13,8 @@ import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VImage
+import okhttp3.MultipartBody
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.gson.Gson
@@ -42,7 +44,7 @@ class HttpRequestModule : BaseModule() {
 
     // 定义支持的HTTP方法和请求体类型
     val methodOptions = listOf("GET", "POST", "PUT", "DELETE", "PATCH")
-    val bodyTypeOptions = listOf("无", "JSON", "表单", "原始文本")
+    val bodyTypeOptions = listOf("无", "JSON", "表单", "原始文本", "文件")
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("url", "URL", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true),
@@ -54,6 +56,29 @@ class HttpRequestModule : BaseModule() {
         InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
         InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true)
     )
+
+    /**
+     * 动态输入：根据 body_type 设置 body 的 acceptedMagicVariableTypes
+     * - 文件类型：只允许图片类型
+     * - 其他类型：允许任何类型
+     */
+    override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
+        val baseInputs = getInputs()
+        val bodyType = step?.parameters?.get("body_type") as? String ?: "无"
+
+        return baseInputs.map { inputDef ->
+            if (inputDef.id == "body") {
+                // 根据请求体类型动态设置接受的变量类型
+                val acceptedTypes = when (bodyType) {
+                    "文件" -> setOf(VTypeRegistry.IMAGE.id)  // 只允许图片
+                    else -> emptySet()  // 允许任何类型
+                }
+                inputDef.copy(acceptedMagicVariableTypes = acceptedTypes)
+            } else {
+                inputDef
+            }
+        }
+    }
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("response_body", "响应内容", VTypeRegistry.STRING.id),
@@ -147,6 +172,11 @@ class HttpRequestModule : BaseModule() {
                             }
                         }
                     }
+                    "文件" -> {
+                        // 文件：不解析变量，直接传递原始文本（稍后在 createRequestBody 中处理）
+                        // 这样可以保留 {{step1.image}}{{step2.image}} 格式的变量引用
+                        bodyDataRaw?.toString() ?: ""
+                    }
                     else -> context.magicVariables["body"] ?: bodyDataRaw
                 }
 
@@ -164,7 +194,7 @@ class HttpRequestModule : BaseModule() {
 
                 val requestBody = when {
                     method == "GET" || method == "DELETE" -> null
-                    else -> createRequestBody(bodyType, bodyData)
+                    else -> createRequestBody(context, bodyType, bodyData)
                 }
 
                 val requestBuilder = Request.Builder().url(finalUrl)
@@ -298,8 +328,9 @@ class HttpRequestModule : BaseModule() {
      * - JSON: application/json; charset=utf-8
      * - 表单: application/x-www-form-urlencoded（由FormBody自动设置）
      * - 原始文本: text/plain; charset=utf-8
+     * - 文件: multipart/form-data（用于上传多个图片）
      */
-    private fun createRequestBody(bodyType: String, bodyData: Any?): RequestBody? {
+    private fun createRequestBody(context: ExecutionContext, bodyType: String, bodyData: Any?): RequestBody? {
         return when (bodyType) {
             "JSON" -> {
                 val json = Gson().toJson(bodyData)
@@ -318,7 +349,160 @@ class HttpRequestModule : BaseModule() {
                 // 设置Content-Type为text/plain
                 (bodyData?.toString() ?: "").toRequestBody("text/plain; charset=utf-8".toMediaTypeOrNull())
             }
+            "文件" -> {
+                // 支持上传多个图片文件（使用 multipart/form-data）
+                // bodyData 应该是原始文本，可能包含多个变量引用
+                val resolvedText = bodyData?.toString() ?: ""
+
+                android.util.Log.d("HttpRequestModule", "File upload - bodyData: $bodyData, resolvedText: '$resolvedText'")
+
+                // 解析富文本中的所有图片变量引用
+                val images = extractImagesFromRichText(resolvedText, context)
+
+                android.util.Log.d("HttpRequestModule", "Images count: ${images.size}")
+
+                if (images.isEmpty()) {
+                    android.util.Log.e("HttpRequestModule", "No images found, trying magicVariables")
+                    // 没有找到图片，尝试直接作为单个 VImage 处理
+                    val image = (context.magicVariables["body"] as? VImage)
+                    android.util.Log.d("HttpRequestModule", "Magic variable image: $image")
+                    if (image != null) {
+                        createSingleFileUpload(context, image)
+                    } else {
+                        android.util.Log.e("HttpRequestModule", "No image found at all, returning null")
+                        null
+                    }
+                } else {
+                    // 多个图片，创建 multipart 请求
+                    createMultipleFilesUpload(context, images)
+                }
+            }
             else -> null
+        }
+    }
+
+    /**
+     * 从富文本中提取所有图片变量
+     * 支持纯变量引用（如 "{{step1.image}}"）和混合文本（如 "prefix{{step1.image}}suffix"）
+     * 会自动过滤掉纯文本干扰
+     */
+    private fun extractImagesFromRichText(text: String, context: ExecutionContext): List<VImage> {
+        val images = mutableListOf<VImage>()
+
+        // 正则匹配变量引用 {{variable}}
+        val variablePattern = Regex("\\{\\{([^}]+)\\}\\}")
+        val matches = variablePattern.findAll(text)
+
+        android.util.Log.d("HttpRequestModule", "extractImagesFromRichText: text='$text', matches count=${matches.count()}")
+
+        for (match in matches) {
+            val variablePath = match.groupValues[1]
+            android.util.Log.d("HttpRequestModule", "Found variable: $variablePath")
+
+            // 解析变量路径：格式为 "stepId.outputId" 或 "outputId"
+            val parts = variablePath.split('.')
+            val stepId = if (parts.size >= 2) parts[0] else null
+            val outputId = if (parts.size >= 2) parts[1] else parts[0]
+
+            android.util.Log.d("HttpRequestModule", "Parsed - stepId: $stepId, outputId: $outputId")
+
+            // 尝试从步骤输出中获取 VImage 对象
+            val image = if (stepId != null) {
+                // 格式：stepId.outputId
+                val stepOutput = context.stepOutputs[stepId]
+                val outputValue = stepOutput?.get(outputId)
+                android.util.Log.d("HttpRequestModule", "Step output value type: ${outputValue?.javaClass?.name}")
+                outputValue as? VImage
+            } else {
+                // 格式：只有 outputId（从当前步骤的魔法变量获取）
+                val magicVar = context.magicVariables[outputId]
+                android.util.Log.d("HttpRequestModule", "Magic variable type: ${magicVar?.javaClass?.name}")
+                magicVar as? VImage
+            }
+
+            if (image != null) {
+                android.util.Log.d("HttpRequestModule", "Added VImage: ${image.uriString}")
+                images.add(image)
+            } else {
+                android.util.Log.w("HttpRequestModule", "Variable $variablePath is not an image or not found")
+            }
+        }
+
+        android.util.Log.d("HttpRequestModule", "Total images extracted: ${images.size}")
+        return images
+    }
+
+    /**
+     * 创建单个文件上传的请求体
+     */
+    private fun createSingleFileUpload(context: ExecutionContext, image: VImage): RequestBody? {
+        return try {
+            val uri = android.net.Uri.parse(image.uriString)
+            val resolver = context.applicationContext.contentResolver
+            val inputStream = resolver.openInputStream(uri) ?: return null
+
+            // 读取图片数据到内存
+            val bytes = inputStream.use { it.readBytes() }
+
+            // 获取 MIME 类型
+            val mimeType = resolver.getType(uri) ?: "image/jpeg"
+
+            // 获取文件名
+            val fileName = image.uriString.substringAfterLast("/")
+
+            // 创建 multipart body
+            MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "file",  // 表单字段名
+                    fileName,
+                    bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+                )
+                .build()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * 创建多文件上传的请求体
+     */
+    private fun createMultipleFilesUpload(context: ExecutionContext, images: List<VImage>): RequestBody? {
+        return try {
+            val multipartBuilder = MultipartBody.Builder().setType(MultipartBody.FORM)
+
+            images.forEachIndexed { index, image ->
+                val uri = android.net.Uri.parse(image.uriString)
+                val resolver = context.applicationContext.contentResolver
+                val inputStream = resolver.openInputStream(uri) ?: return@forEachIndexed
+
+                try {
+                    // 读取图片数据到内存
+                    val bytes = inputStream.use { it.readBytes() }
+
+                    // 获取 MIME 类型
+                    val mimeType = resolver.getType(uri) ?: "image/jpeg"
+
+                    // 获取文件名
+                    val fileName = image.uriString.substringAfterLast("/")
+
+                    // 添加到 multipart 请求
+                    // 使用 file0, file1, file2... 作为字段名
+                    multipartBuilder.addFormDataPart(
+                        "file$index",
+                        fileName,
+                        bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            multipartBuilder.build()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

@@ -180,7 +180,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
         val body = when(h.bodyTypeSpinner.selectedItem.toString()) {
             "表单" -> h.bodyAdapter?.getItemsAsMap()
-            "JSON", "原始文本" -> h.rawBodyRichTextView?.getRawText()
+            "JSON", "原始文本", "文件" -> h.rawBodyRichTextView?.getRawText()
             else -> null
         }
         return mapOf(
@@ -222,7 +222,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                 addButton.setOnClickListener { holder.bodyAdapter?.addItem() }
                 holder.bodyEditorContainer.addView(editorView)
             }
-            "JSON", "原始文本" -> {
+            "JSON", "原始文本", "文件" -> {
                 val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null)
                 row.findViewById<TextView>(R.id.input_name).visibility = View.GONE
 
@@ -235,6 +235,11 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                 val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
                 richTextView.setRichText(currentValue?.toString() ?: "", holder.allSteps ?: emptyList())
+
+                // 为"文件"类型添加类型过滤，只允许图片类型变量
+                if (bodyType == "文件") {
+                    richTextView.setVariableTypeFilter(setOf("vflow.type.image"))
+                }
 
                 richTextView.tag = "rich_text_view_body"
 
