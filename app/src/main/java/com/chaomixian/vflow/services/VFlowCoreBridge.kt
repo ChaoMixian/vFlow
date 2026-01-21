@@ -421,6 +421,18 @@ object VFlowCoreBridge {
         return sendRaw(req)?.optBoolean("success") ?: false
     }
 
+    /**
+     * 获取屏幕当前状态
+     * @return true = 屏幕亮屏（可交互），false = 屏幕熄屏
+     */
+    fun isInteractive(): Boolean {
+        val req = JSONObject()
+            .put("target", "power")
+            .put("method", "isInteractive")
+        val res = sendRaw(req)
+        return res?.optBoolean("enabled", false) ?: false
+    }
+
     // WiFi Management APIs
     fun setWifiEnabled(enabled: Boolean): Boolean {
         val req = JSONObject()

@@ -11,11 +11,13 @@ class IPowerManagerWrapper : ServiceWrapper("power", "android.os.IPowerManager\$
 
     private var wakeUpMethod: Method? = null
     private var goToSleepMethod: Method? = null
+    private var isInteractiveMethod: Method? = null
 
     override fun onServiceConnected(service: Any) {
         val clazz = service.javaClass
         wakeUpMethod = ReflectionUtils.findMethodLoose(clazz, "wakeUp")
         goToSleepMethod = ReflectionUtils.findMethodLoose(clazz, "goToSleep")
+        isInteractiveMethod = ReflectionUtils.findMethodLoose(clazz, "isInteractive")
     }
 
     override fun handle(method: String, params: JSONObject): JSONObject {
@@ -23,6 +25,11 @@ class IPowerManagerWrapper : ServiceWrapper("power", "android.os.IPowerManager\$
         when (method) {
             "wakeUp" -> { wakeUp(); result.put("success", true) }
             "goToSleep" -> { goToSleep(); result.put("success", true) }
+            "isInteractive" -> {
+                val interactive = isInteractive()
+                result.put("success", true)
+                result.put("enabled", interactive)
+            }
             else -> {
                 result.put("success", false)
                 result.put("error", "Unknown method: $method")
@@ -92,6 +99,32 @@ class IPowerManagerWrapper : ServiceWrapper("power", "android.os.IPowerManager\$
             goToSleepMethod!!.invoke(serviceInterface, *args)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun isInteractive(): Boolean {
+        if (serviceInterface == null || isInteractiveMethod == null) return false
+        return try {
+            val paramTypes = isInteractiveMethod!!.parameterTypes
+            if (paramTypes.isEmpty()) {
+                // 无参数版本
+                ReflectionUtils.invoke<Boolean>(isInteractiveMethod, serviceInterface) ?: false
+            } else {
+                // 有参数版本（可能需要 flags 参数）
+                val args = arrayOfNulls<Any>(paramTypes.size)
+                for (i in args.indices) {
+                    val paramType = paramTypes[i]
+                    args[i] = when {
+                        paramType.isPrimitive && paramType == Int::class.javaPrimitiveType -> Integer.valueOf(0)
+                        paramType == Integer::class.java -> Integer.valueOf(0)
+                        else -> null
+                    }
+                }
+                ReflectionUtils.invoke<Boolean>(isInteractiveMethod, serviceInterface, *args) ?: false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 }

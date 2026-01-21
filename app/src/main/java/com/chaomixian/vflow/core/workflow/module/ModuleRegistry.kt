@@ -166,6 +166,7 @@ object ModuleRegistry {
         // 屏幕控制组
         register(CoreWakeScreenModule())          // 唤醒屏幕
         register(CoreSleepScreenModule())         // 关闭屏幕
+        register(CoreScreenStatusModule())        // 读取屏幕状态
         // 输入交互组
         register(CoreScreenOperationModule())     // 屏幕操作（点击/滑动）
         register(CoreInputTextModule())           // 输入文本
