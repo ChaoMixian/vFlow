@@ -179,8 +179,8 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
         // URL 由标准控件处理，不在这里读取
 
         val body = when(h.bodyTypeSpinner.selectedItem.toString()) {
-            "JSON", "表单" -> h.bodyAdapter?.getItemsAsMap()
-            "原始文本" -> h.rawBodyRichTextView?.getRawText()
+            "表单" -> h.bodyAdapter?.getItemsAsMap()
+            "JSON", "原始文本" -> h.rawBodyRichTextView?.getRawText()
             else -> null
         }
         return mapOf(
@@ -205,7 +205,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
         holder.rawBodyRichTextView = null
 
         when (bodyType) {
-            "JSON", "表单" -> {
+            "表单" -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.bodyEditorContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_dictionary)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_kv_pair)
@@ -222,7 +222,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                 addButton.setOnClickListener { holder.bodyAdapter?.addItem() }
                 holder.bodyEditorContainer.addView(editorView)
             }
-            "原始文本" -> {
+            "JSON", "原始文本" -> {
                 val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null)
                 row.findViewById<TextView>(R.id.input_name).visibility = View.GONE
 

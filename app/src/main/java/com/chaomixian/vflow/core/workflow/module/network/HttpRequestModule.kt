@@ -127,15 +127,24 @@ class HttpRequestModule : BaseModule() {
                         }
                     }
                     "JSON" -> {
-                        // JSON：使用类型保留的解析
+                        // JSON：支持字符串输入（来自 RichTextView）或 Map 输入（来自变量引用）
                         val mapData = (context.magicVariables["body"] as? DictionaryVariable)?.value
                             ?: (bodyDataRaw as? Map<*, *>)
+
                         if (mapData is Map<*, *>) {
-                            // 递归解析 Map 中的值
+                            // Map 输入：递归解析 Map 中的值
                             @Suppress("UNCHECKED_CAST")
-                            resolveMapForJson(mapData as Map<String, Any?>, context)  // 新函数：保留类型
+                            resolveMapForJson(mapData as Map<String, Any?>, context)
                         } else {
-                            mapData
+                            // 字符串输入：解析变量引用，然后尝试解析 JSON
+                            val jsonString = VariableResolver.resolve(bodyDataRaw?.toString() ?: "", context)
+                            // 尝试解析 JSON 字符串为对象，以便保留类型
+                            try {
+                                Gson().fromJson(jsonString, Any::class.java)
+                            } catch (e: Exception) {
+                                // JSON 解析失败，返回原始字符串
+                                jsonString
+                            }
                         }
                     }
                     else -> context.magicVariables["body"] ?: bodyDataRaw
