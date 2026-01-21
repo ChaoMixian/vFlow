@@ -16,6 +16,7 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -29,6 +30,10 @@ import java.util.regex.Pattern
  * "屏幕操作" 模块。
  */
 class ScreenOperationModule : BaseModule() {
+
+    companion object {
+        private const val TAG = "ScreenOperationModule"
+    }
 
     override val id = "vflow.interaction.screen_operation"
     override val metadata = ActionMetadata(
@@ -158,39 +163,66 @@ class ScreenOperationModule : BaseModule() {
         return when (target) {
             is ScreenElement -> Point(target.bounds.centerX(), target.bounds.centerY())
             is Coordinate -> Point(target.x, target.y)
+            is VCoordinate -> {
+                // 处理新的 VCoordinate 类型
+                Point(target.coordinate.x, target.coordinate.y)
+            }
+            is VString -> {
+                // 处理新的 VString 类型
+                val str = target.asString()
+                parseStringToPoint(str)
+            }
             is String -> {
-                if (target.contains(",") && !target.contains("[")) {
-                    val parts = target.split(",")
-                    val x = parts[0].trim().toIntOrNull()
-                    val y = parts[1].trim().toIntOrNull()
-                    if (x != null && y != null) return Point(x, y)
-                }
-                val rectMatcher = Pattern.compile("\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]").matcher(target)
-                if (rectMatcher.find()) {
-                    val left = rectMatcher.group(1)?.toIntOrNull() ?: 0
-                    val top = rectMatcher.group(2)?.toIntOrNull() ?: 0
-                    val right = rectMatcher.group(3)?.toIntOrNull() ?: 0
-                    val bottom = rectMatcher.group(4)?.toIntOrNull() ?: 0
-                    return Point((left + right) / 2, (top + bottom) / 2)
-                }
-
-                val accService = ServiceStateBus.getAccessibilityService()
-                if (accService != null) {
-                    val root = accService.rootInActiveWindow
-                    if (root != null) {
-                        val nodes = root.findAccessibilityNodeInfosByViewId(target)
-                        val node = nodes?.firstOrNull()
-                        if (node != null) {
-                            val rect = Rect()
-                            node.getBoundsInScreen(rect)
-                            return Point(rect.centerX(), rect.centerY())
-                        }
-                    }
-                }
-                null
+                parseStringToPoint(target)
             }
             else -> null
         }
+    }
+
+    private fun parseStringToPoint(target: String): Point? {
+        // 检查是否为坐标格式 "x,y"（包含逗号但不包含方括号，避免与矩形格式混淆）
+        if (target.contains(",") && !target.contains("[")) {
+            val parts = target.split(",")
+            // 如果是坐标格式但解析失败，直接返回 null（不再尝试其他方式）
+            if (parts.size == 2) {
+                val x = parts[0].trim().toIntOrNull()
+                val y = parts[1].trim().toIntOrNull()
+                if (x != null && y != null) {
+                    return Point(x, y)
+                } else {
+                    // 坐标格式错误（如 "200," 或 ",300" 或 "abc,def"）
+                    DebugLogger.w(TAG, "坐标格式错误: '$target'")
+                    return null
+                }
+            } else if (parts.size > 2) {
+                // 有多个逗号，可能不是坐标格式
+                DebugLogger.w(TAG, "疑似坐标格式但部分过多: '$target'")
+                // 不立即返回 null，继续尝试其他解析方式
+            }
+        }
+        val rectMatcher = Pattern.compile("\\[(\\d+),(\\d+)\\]\\[(\\d+),(\\d+)\\]").matcher(target)
+        if (rectMatcher.find()) {
+            val left = rectMatcher.group(1)?.toIntOrNull() ?: 0
+            val top = rectMatcher.group(2)?.toIntOrNull() ?: 0
+            val right = rectMatcher.group(3)?.toIntOrNull() ?: 0
+            val bottom = rectMatcher.group(4)?.toIntOrNull() ?: 0
+            return Point((left + right) / 2, (top + bottom) / 2)
+        }
+
+        val accService = ServiceStateBus.getAccessibilityService()
+        if (accService != null) {
+            val root = accService.rootInActiveWindow
+            if (root != null) {
+                val nodes = root.findAccessibilityNodeInfosByViewId(target)
+                val node = nodes?.firstOrNull()
+                if (node != null) {
+                    val rect = Rect()
+                    node.getBoundsInScreen(rect)
+                    return Point(rect.centerX(), rect.centerY())
+                }
+            }
+        }
+        return null
     }
 
     private fun createClickPath(p: Point): Path {

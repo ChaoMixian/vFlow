@@ -9,6 +9,7 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -276,15 +277,47 @@ class CoreScreenOperationModule : BaseModule() {
             return Point(value.x, value.y)
         }
 
+        // 处理 VCoordinate 类型（新的 VObject 类型）
+        if (value is VCoordinate) {
+            DebugLogger.d(TAG, "解析坐标 $paramKey: VCoordinate(${value.coordinate.x}, ${value.coordinate.y})")
+            return Point(value.coordinate.x, value.coordinate.y)
+        }
+
+        // 处理 VString 类型（支持字符串 "x,y"）
+        if (value is VString) {
+            val coordStr = value.asString()
+            DebugLogger.d(TAG, "解析坐标 $paramKey: VString('$coordStr')")
+            return parseStringToCoordinate(coordStr)
+        }
+
         val coordStr = value.toString()
-        DebugLogger.w(TAG, "坐标参数 '$paramKey' 不是 Coordinate 类型，而是: ${value.javaClass.simpleName}, 值: $coordStr")
+        DebugLogger.w(TAG, "坐标参数 '$paramKey' 不是已知类型，而是: ${value.javaClass.simpleName}, 值: $coordStr")
 
         // 解析字符串 "x,y"
-        val parts = coordStr.split(",")
-        if (parts.size != 2) return null
+        return parseStringToCoordinate(coordStr)
+    }
 
-        val x = parts[0].trim().toIntOrNull() ?: return null
-        val y = parts[1].trim().toIntOrNull() ?: return null
+    /**
+     * 解析字符串格式的坐标 "x,y"
+     */
+    private fun parseStringToCoordinate(coordStr: String): Point? {
+        val parts = coordStr.split(",")
+        if (parts.size != 2) {
+            DebugLogger.w(TAG, "坐标格式错误: 部分数量不是2 (coordStr='$coordStr', parts=${parts.size})")
+            return null
+        }
+
+        val x = parts[0].trim().toIntOrNull()
+        if (x == null) {
+            DebugLogger.w(TAG, "坐标格式错误: x坐标无效 (coordStr='$coordStr', x='${parts[0].trim()}')")
+            return null
+        }
+
+        val y = parts[1].trim().toIntOrNull()
+        if (y == null) {
+            DebugLogger.w(TAG, "坐标格式错误: y坐标无效 (coordStr='$coordStr', y='${parts[1].trim()}')")
+            return null
+        }
 
         return Point(x, y)
     }
