@@ -6,8 +6,11 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VDictionary
+import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -109,18 +112,28 @@ class HttpRequestModule : BaseModule() {
 
                 val bodyData: Any? = when (bodyType) {
                     "原始文本" -> {
-                        // 如果是原始文本，直接解析富文本字符串
+                        // 原始文本：直接解析富文本字符串
                         VariableResolver.resolve(bodyDataRaw?.toString() ?: "", context)
                     }
-                    "JSON", "表单" -> {
-                        // 如果是 Map，先尝试获取魔法变量（如果有），否则使用静态 Map 并解析其中的值
+                    "表单" -> {
+                        // 表单：必须使用字符串转换（表单编码要求）
                         val mapData = (context.magicVariables["body"] as? DictionaryVariable)?.value
                             ?: (bodyDataRaw as? Map<*, *>)
-
+                        if (mapData is Map<*, *>) {
+                            @Suppress("UNCHECKED_CAST")
+                            resolveMap(mapData as Map<String, Any?>, context)  // 保持现有行为：转字符串
+                        } else {
+                            mapData
+                        }
+                    }
+                    "JSON" -> {
+                        // JSON：使用类型保留的解析
+                        val mapData = (context.magicVariables["body"] as? DictionaryVariable)?.value
+                            ?: (bodyDataRaw as? Map<*, *>)
                         if (mapData is Map<*, *>) {
                             // 递归解析 Map 中的值
                             @Suppress("UNCHECKED_CAST")
-                            resolveMap(mapData as Map<String, Any?>, context)
+                            resolveMapForJson(mapData as Map<String, Any?>, context)  // 新函数：保留类型
                         } else {
                             mapData
                         }
@@ -175,6 +188,7 @@ class HttpRequestModule : BaseModule() {
 
     /**
      * 辅助函数：遍历 Map 中的值，如果是字符串则尝试解析变量。
+     * 注意：此函数将所有值转换为字符串，适用于表单编码，但不适用于JSON（会丢失类型）。
      */
     private fun resolveMap(map: Map<String, Any?>, context: ExecutionContext): Map<String, String> {
         return map.entries.associate { (key, value) ->
@@ -187,10 +201,100 @@ class HttpRequestModule : BaseModule() {
         }
     }
 
+    /**
+     * 用于JSON的Map解析：保留类型信息
+     * 返回 Map<String, Any?> 其中值可以是 String, Number, Boolean, Map, List, null
+     */
+    private fun resolveMapForJson(map: Map<String, Any?>, context: ExecutionContext): Map<String, Any?> {
+        return map.mapValues { (_, value) ->
+            resolveValuePreservingType(value, context)
+        }
+    }
+
+    /**
+     * 递归解析值，保留原始类型用于JSON序列化
+     * - 字符串：解析变量引用
+     * - VObject：提取raw值，递归处理嵌套结构
+     * - 基础类型（数字/布尔/null）：直接返回
+     * - 集合类型（Map/List）：递归处理每个元素
+     */
+    private fun resolveValuePreservingType(value: Any?, context: ExecutionContext): Any? {
+        return when (value) {
+            // 1. 字符串：使用resolveValue保留类型，或resolve解析为字符串
+            is String -> {
+                // 如果字符串只是单个变量引用（如 "{{step1.output}}"），使用resolveValue保留类型
+                if (!VariableResolver.isComplex(value)) {
+                    VariableResolver.resolveValue(value, context)
+                } else {
+                    // 复杂文本（混合文本和变量），解析为字符串
+                    VariableResolver.resolve(value, context)
+                }
+            }
+
+            // 2. VObject: 提取原始值并递归处理
+            is VObject -> {
+                when (value) {
+                    is VString -> {
+                        // VString也可能是复杂字符串，需要解析
+                        val rawStr = value.raw ?: ""
+                        if (!VariableResolver.isComplex(rawStr)) {
+                            VariableResolver.resolveValue(rawStr, context)
+                        } else {
+                            VariableResolver.resolve(rawStr, context)
+                        }
+                    }
+                    is VNumber -> value.raw  // 保留 Double 类型
+                    is VBoolean -> value.raw  // 保留 Boolean 类型
+                    is VList -> value.raw.map { resolveValuePreservingType(it, context) }
+                    is VDictionary -> {
+                        value.raw.mapValues { (_, vObj) ->
+                            resolveValuePreservingType(vObj, context)
+                        }
+                    }
+                    else -> value.asString()  // 兜底
+                }
+            }
+
+            // 3. 旧版Variable类型兼容
+            is NumberVariable -> value.value
+            is BooleanVariable -> value.value
+            is TextVariable -> VariableResolver.resolve(value.value, context)
+            is ListVariable -> value.value.map { resolveValuePreservingType(it, context) }
+            is DictionaryVariable -> {
+                value.value.mapValues { (_, v) ->
+                    resolveValuePreservingType(v, context)
+                }
+            }
+
+            // 4. 集合类型：递归处理
+            is Map<*, *> -> {
+                @Suppress("UNCHECKED_CAST")
+                (value as? Map<String, Any?>)?.mapValues { (_, v) ->
+                    resolveValuePreservingType(v, context)
+                }
+            }
+            is List<*> -> value.map { resolveValuePreservingType(it, context) }
+
+            // 5. 基础类型：直接返回
+            is Number, is Boolean, null -> value
+
+            // 6. 兜底
+            else -> value.toString()
+        }
+    }
+
+    /**
+     * 根据bodyType创建适当的请求体
+     * Content-Type会自动设置：
+     * - JSON: application/json; charset=utf-8
+     * - 表单: application/x-www-form-urlencoded（由FormBody自动设置）
+     * - 原始文本: text/plain; charset=utf-8
+     */
     private fun createRequestBody(bodyType: String, bodyData: Any?): RequestBody? {
         return when (bodyType) {
             "JSON" -> {
                 val json = Gson().toJson(bodyData)
+                // 明确设置Content-Type为application/json
                 json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
             }
             "表单" -> {
@@ -198,9 +302,11 @@ class HttpRequestModule : BaseModule() {
                 (bodyData as? Map<*, *>)?.forEach { (key, value) ->
                     formBuilder.add(key.toString(), value.toString())
                 }
+                // FormBody会自动设置Content-Type为application/x-www-form-urlencoded
                 formBuilder.build()
             }
             "原始文本" -> {
+                // 设置Content-Type为text/plain
                 (bodyData?.toString() ?: "").toRequestBody("text/plain; charset=utf-8".toMediaTypeOrNull())
             }
             else -> null
