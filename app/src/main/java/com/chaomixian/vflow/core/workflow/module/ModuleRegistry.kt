@@ -92,6 +92,7 @@ object ModuleRegistry {
         register(AutoGLMModule())
         register(FindTextUntilModule())
         register(FindImageModule())
+        register(OperitModule())
 
         // 逻辑控制
         register(IfModule())

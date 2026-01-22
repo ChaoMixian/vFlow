@@ -382,7 +382,12 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val icon = ImageView(context).apply {
             setImageResource(R.drawable.rounded_settings_24)
             layoutParams = LinearLayout.LayoutParams((20 * density).toInt(), (20 * density).toInt())
-            setColorFilter(requireContext().getColor(com.google.android.material.R.color.design_default_color_on_secondary))
+            val color = com.google.android.material.color.MaterialColors.getColor(
+                context,
+                com.google.android.material.R.attr.colorOnSurfaceVariant,
+                android.graphics.Color.GRAY
+            )
+            setColorFilter(color)
             alpha = 0.7f
         }
 
@@ -400,6 +405,12 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val arrow = ImageView(context).apply {
             setImageResource(R.drawable.rounded_arrow_drop_down_24)
             layoutParams = LinearLayout.LayoutParams((24 * density).toInt(), (24 * density).toInt())
+            val color = com.google.android.material.color.MaterialColors.getColor(
+                context,
+                com.google.android.material.R.attr.colorOnSurfaceVariant,
+                android.graphics.Color.GRAY
+            )
+            setColorFilter(color)
             alpha = 0.7f
         }
 
