@@ -23,6 +23,8 @@ object ConditionEvaluator {
      * @return 条件评估的布尔结果。
      */
     fun evaluateCondition(input1: Any?, operator: String, value1: Any?, value2: Any?): Boolean {
+        // OP_EXISTS 和 OP_NOT_EXISTS 应该只检查对象本身是否存在
+        // 不应该检查其内部属性（如 VScreenElement.text）
         when (operator) {
             OP_EXISTS -> return input1 != null
             OP_NOT_EXISTS -> return input1 == null
@@ -36,12 +38,23 @@ object ConditionEvaluator {
             is VList, is Collection<*> -> evaluateCollectionCondition(input1, operator)
             is VDictionary, is Map<*, *> -> evaluateMapCondition(input1, operator)
             is VNumber, is Number -> {
-                val value = input1.toDoubleValue() ?: return false
-                evaluateNumberCondition(value, operator, value1, value2)
+                val value = input1.toDoubleValue()
+                if (value == null) false
+                else evaluateNumberCondition(value, operator, value1, value2)
             }
             is VScreenElement -> {
-                val text = input1.text ?: return false
-                evaluateTextCondition(text, operator, value1)
+                val text = input1.text
+                if (text == null) {
+                    // text为null时，视为"空字符串"进行文本操作
+                    // 对于"为空"操作返回true，其他操作使用空字符串
+                    when (operator) {
+                        OP_IS_EMPTY -> true
+                        OP_IS_NOT_EMPTY -> false
+                        else -> evaluateTextCondition("", operator, value1)
+                    }
+                } else {
+                    evaluateTextCondition(text, operator, value1)
+                }
             }
             else -> false
         }
