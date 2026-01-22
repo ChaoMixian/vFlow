@@ -497,6 +497,59 @@ object VFlowCoreBridge {
         return res?.optBoolean("enabled", false) ?: false
     }
 
+    /**
+     * 截图
+     * @return 返回base64编码后的图片
+     */
+    fun captureScreen(): String {
+        val req = JSONObject()
+            .put("target", "screenshot")
+            .put("method", "capture")
+        val res = sendRaw(req)
+        return res?.optString("data", "") ?: ""
+    }
+
+    /**
+     * 扩展截图方法，支持格式、质量和尺寸参数
+     * @param format 输出格式 ("png" 或 "jpeg")
+     * @param quality JPEG质量 (1-100)，仅对JPEG有效
+     * @param maxWidth 最大宽度，0表示不限制
+     * @param maxHeight 最大高度，0表示不限制
+     * @return Base64编码的图像数据
+     */
+    fun captureScreenEx(format: String = "png", quality: Int = 90, maxWidth: Int = 0, maxHeight: Int = 0): String {
+        val req = JSONObject()
+            .put("target", "screenshot")
+            .put("method", "captureScreen")
+            .put("params", JSONObject().apply {
+                put("format", format)
+                put("quality", quality)
+                put("maxWidth", maxWidth)
+                put("maxHeight", maxHeight)
+                put("includeBase64", true)
+            })
+        val res = sendRaw(req)
+        return res?.optString("data", "") ?: ""
+    }
+
+    /**
+     * 获取屏幕尺寸
+     * @return Pair<宽度, 高度>
+     */
+    fun getScreenSize(): Pair<Int, Int> {
+        val req = JSONObject()
+            .put("target", "screenshot")
+            .put("method", "getScreenSize")
+            .put("params", JSONObject())
+        val res = sendRaw(req)
+        if (res?.optBoolean("success", false) == true) {
+            val width = res.optInt("width", 0)
+            val height = res.optInt("height", 0)
+            return Pair(width, height)
+        }
+        return Pair(0, 0)
+    }
+
     // Activity Management APIs
     fun forceStopPackage(packageName: String): Boolean {
         val req = JSONObject()

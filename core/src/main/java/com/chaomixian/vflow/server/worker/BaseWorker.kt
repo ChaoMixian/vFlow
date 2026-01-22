@@ -3,6 +3,7 @@ package com.chaomixian.vflow.server.worker
 
 import com.chaomixian.vflow.server.common.Config
 import com.chaomixian.vflow.server.wrappers.ServiceWrapper
+import com.chaomixian.vflow.server.wrappers.IWrapper
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -21,8 +22,9 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
     private var isRunning = true
     private val executor = Executors.newCachedThreadPool()
 
-    // 服务注册表: Target Name -> ServiceWrapper 实例
-    protected val wrappers = ConcurrentHashMap<String, ServiceWrapper>()
+    // 服务注册表: Target Name -> Wrapper 实例 (支持 ServiceWrapper 和 IWrapper)
+    protected val serviceWrappers = ConcurrentHashMap<String, ServiceWrapper>()
+    protected val simpleWrappers = ConcurrentHashMap<String, IWrapper>()
 
     /**
      * 子类必须实现此方法以注册支持的 Wrappers
@@ -35,7 +37,8 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
         // 注册服务
         try {
             registerWrappers()
-            println("✅ $name Worker services registered: ${wrappers.keys.joinToString(", ")}")
+            val allTargets = (serviceWrappers.keys + simpleWrappers.keys).joinToString(", ")
+            println("✅ $name Worker services registered: $allTargets")
         } catch (e: Exception) {
             System.err.println("❌ $name Worker failed to register wrappers: ${e.message}")
             // 即使部分失败，也继续启动，避免进程崩溃
@@ -137,15 +140,21 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
                 return result
             }
 
-            // 查找 Wrapper
-            val wrapper = wrappers[target]
-            if (wrapper == null) {
+            // 查找 Wrapper (先查找 ServiceWrapper，再查找 IWrapper)
+            val serviceWrapper = serviceWrappers[target]
+            val simpleWrapper = simpleWrappers[target]
+
+            if (serviceWrapper == null && simpleWrapper == null) {
                 result.put("error", "Service not found or not supported in this worker ($target)")
                 return result
             }
 
             // 动态调用
-            dispatchToWrapper(wrapper, target, method, params, result)
+            if (serviceWrapper != null) {
+                dispatchToServiceWrapper(serviceWrapper, target, method, params, result)
+            } else {
+                dispatchToSimpleWrapper(simpleWrapper!!, target, method, params, result)
+            }
 
         } catch (e: Exception) {
             result.put("success", false)
@@ -156,10 +165,24 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
     }
 
     /**
-     * 将请求分发给具体的 Wrapper 实例
-     * 现在只需要调用 wrapper 的 handle 方法
+     * 将请求分发给 ServiceWrapper 实例
      */
-    private fun dispatchToWrapper(wrapper: ServiceWrapper, target: String, method: String, params: JSONObject, result: JSONObject) {
+    private fun dispatchToServiceWrapper(wrapper: ServiceWrapper, target: String, method: String, params: JSONObject, result: JSONObject) {
+        // 调用 wrapper 的 handle 方法，让它自己处理
+        val wrapperResult = wrapper.handle(method, params)
+
+        // 将 wrapper 的结果合并到 result 中
+        val keys = wrapperResult.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            result.put(key, wrapperResult.get(key))
+        }
+    }
+
+    /**
+     * 将请求分发给 IWrapper 实例
+     */
+    private fun dispatchToSimpleWrapper(wrapper: IWrapper, target: String, method: String, params: JSONObject, result: JSONObject) {
         // 调用 wrapper 的 handle 方法，让它自己处理
         val wrapperResult = wrapper.handle(method, params)
 

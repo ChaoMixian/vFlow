@@ -55,6 +55,7 @@ object Config {
         "location" to PORT_WORKER_SHELL,
         "alarm" to PORT_WORKER_SHELL,
         "activity_task" to PORT_WORKER_SHELL,
+        "screenshot" to PORT_WORKER_SHELL,
 
         // 必须 Root 权限
         "system_root" to PORT_WORKER_ROOT

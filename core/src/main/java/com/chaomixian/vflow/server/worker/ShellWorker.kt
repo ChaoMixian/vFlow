@@ -9,17 +9,20 @@ import kotlin.system.exitProcess
 class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
 
     override fun registerWrappers() {
-        // 注册所有 Shell 级别的 Wrappers
-        wrappers["clipboard"] = IClipboardWrapper()
-        wrappers["input"] = IInputManagerWrapper()
-        wrappers["wifi"] = IWifiManagerWrapper()
-        wrappers["bluetooth_manager"] = IBluetoothManagerWrapper()
-        wrappers["power"] = IPowerManagerWrapper()
-        wrappers["activity"] = IActivityManagerWrapper()
-        wrappers["connectivity"] = IConnectivityManagerWrapper()
-        wrappers["location"] = ILocationManagerWrapper()
-        wrappers["alarm"] = IAlarmManagerWrapper()
-        wrappers["activity_task"] = IActivityTaskManagerWrapper()
+        // 注册所有 Shell 级别的 ServiceWrappers
+        serviceWrappers["clipboard"] = IClipboardWrapper()
+        serviceWrappers["input"] = IInputManagerWrapper()
+        serviceWrappers["wifi"] = IWifiManagerWrapper()
+        serviceWrappers["bluetooth_manager"] = IBluetoothManagerWrapper()
+        serviceWrappers["power"] = IPowerManagerWrapper()
+        serviceWrappers["activity"] = IActivityManagerWrapper()
+        serviceWrappers["connectivity"] = IConnectivityManagerWrapper()
+        serviceWrappers["location"] = ILocationManagerWrapper()
+        serviceWrappers["alarm"] = IAlarmManagerWrapper()
+        serviceWrappers["activity_task"] = IActivityTaskManagerWrapper()
+
+        // 注册所有 Shell 级别的 SimpleWrappers (不需要连接系统服务的)
+        simpleWrappers["screenshot"] = IScreenshotWrapper()
 
         // 注意：system target 由 Master 动态路由，不在 wrappers 中注册
     }
