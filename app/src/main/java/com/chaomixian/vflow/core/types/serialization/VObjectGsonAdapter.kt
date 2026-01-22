@@ -1,9 +1,9 @@
 package com.chaomixian.vflow.core.types.serialization
 
+import android.graphics.Rect
 import com.chaomixian.vflow.core.types.*
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.types.complex.*
-import com.chaomixian.vflow.core.module.Coordinate
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 import com.google.gson.TypeAdapter
@@ -57,8 +57,8 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
             is VImage -> out.name("value").value(value.raw.toString())
             is VCoordinate -> {
                 out.name("value").beginObject()
-                out.name("x").value(value.coordinate.x)
-                out.name("y").value(value.coordinate.y)
+                out.name("x").value(value.x)
+                out.name("y").value(value.y)
                 out.endObject()
             }
             is VDate -> out.name("value").value(value.dateString)
@@ -66,12 +66,12 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
             is VScreenElement -> {
                 out.name("value").beginObject()
                 out.name("bounds").beginObject()
-                out.name("left").value(value.element.bounds.left)
-                out.name("top").value(value.element.bounds.top)
-                out.name("right").value(value.element.bounds.right)
-                out.name("bottom").value(value.element.bounds.bottom)
+                out.name("left").value(value.bounds.left)
+                out.name("top").value(value.bounds.top)
+                out.name("right").value(value.bounds.right)
+                out.name("bottom").value(value.bounds.bottom)
                 out.endObject()
-                out.name("text").value(value.element.text ?: "")
+                out.name("text").value(value.text ?: "")
                 out.endObject()
             }
             is VNotification -> {
@@ -208,9 +208,22 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
             VTypeRegistry.TIME.id -> VTime(rawValue?.toString() ?: "")
             VTypeRegistry.COORDINATE.id -> {
                 if (rawValue is Map<*, *>) {
-                    val x = (rawValue["x"] as? Number)?.toDouble() ?: 0.0
-                    val y = (rawValue["y"] as? Number)?.toDouble() ?: 0.0
-                    VCoordinate(Coordinate(x.toInt(), y.toInt()))
+                    val x = (rawValue["x"] as? Number)?.toInt() ?: 0
+                    val y = (rawValue["y"] as? Number)?.toInt() ?: 0
+                    VCoordinate(x, y)
+                } else {
+                    VNull
+                }
+            }
+            VTypeRegistry.UI_ELEMENT.id -> {
+                if (rawValue is Map<*, *>) {
+                    val boundsMap = rawValue["bounds"] as? Map<*, *>
+                    val left = (boundsMap?.get("left") as? Number)?.toInt() ?: 0
+                    val top = (boundsMap?.get("top") as? Number)?.toInt() ?: 0
+                    val right = (boundsMap?.get("right") as? Number)?.toInt() ?: 0
+                    val bottom = (boundsMap?.get("bottom") as? Number)?.toInt() ?: 0
+                    val text = rawValue["text"] as? String
+                    VScreenElement(Rect(left, top, right, bottom), text)
                 } else {
                     VNull
                 }

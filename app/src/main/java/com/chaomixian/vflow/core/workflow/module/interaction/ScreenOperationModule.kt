@@ -59,8 +59,8 @@ class ScreenOperationModule : BaseModule() {
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("operation_type", "类型", ParameterType.ENUM, "点击", options = listOf("点击", "长按", "滑动"), acceptsMagicVariable = false),
-        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, VTypeRegistry.STRING.id)),
-        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(ScreenElement.TYPE_NAME, Coordinate.TYPE_NAME, VTypeRegistry.STRING.id), isHidden = false),
+        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.UI_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)),
+        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.UI_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id), isHidden = false),
         InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), isHidden = false),
         InputDefinition("execution_mode", "执行方式", ParameterType.ENUM, "自动", options = executionModeOptions, acceptsMagicVariable = false, isHidden = false),
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
@@ -161,14 +161,10 @@ class ScreenOperationModule : BaseModule() {
 
     private fun resolveTargetToPoint(context: ExecutionContext, target: Any?): Point? {
         return when (target) {
-            is ScreenElement -> Point(target.bounds.centerX(), target.bounds.centerY())
-            is Coordinate -> Point(target.x, target.y)
             is VCoordinate -> {
-                // 处理新的 VCoordinate 类型
-                Point(target.coordinate.x, target.coordinate.y)
+                Point(target.x, target.y)
             }
             is VString -> {
-                // 处理新的 VString 类型
                 val str = target.asString()
                 parseStringToPoint(str)
             }

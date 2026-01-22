@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/interaction/AgentModule.kt
 package com.chaomixian.vflow.core.workflow.module.interaction
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.*
 
 import android.content.ContentValues.TAG
 import android.content.Context
@@ -451,7 +452,7 @@ class AgentModule : BaseModule() {
                                 if (name == "finish_task") {
                                     val res = args["result"]?.toString() ?: "Done"
                                     val suc = args["success"] as? Boolean ?: true
-                                    taskResult = ExecutionResult.Success(mapOf("result" to TextVariable(res), "success" to BooleanVariable(suc)))
+                                    taskResult = ExecutionResult.Success(mapOf("result" to VString(res), "success" to VBoolean(suc)))
                                 } else {
                                     toolResult = when(name) {
                                         "click_point" -> {
@@ -515,8 +516,8 @@ class AgentModule : BaseModule() {
             } // 主循环结束
 
             return taskResult ?: ExecutionResult.Success(mapOf(
-                "result" to TextVariable("Task stopped: Max steps ($maxSteps) reached."),
-                "success" to BooleanVariable(false)
+                "result" to VString("Task stopped: Max steps ($maxSteps) reached."),
+                "success" to VBoolean(false)
             ))
 
         } finally {

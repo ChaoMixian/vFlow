@@ -8,7 +8,6 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.interaction.FindTextModule
-import com.chaomixian.vflow.core.module.ScreenElement
 import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.core.workflow.module.system.DelayModule
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -57,7 +56,7 @@ class FindTextUntilSnippet : BaseModule() {
             OutputDefinition(
                 "result",
                 "找到的元素",
-                ScreenElement.TYPE_NAME
+                VTypeRegistry.UI_ELEMENT.id
             )
         )
     }

@@ -10,6 +10,7 @@ import coil.request.ImageRequest
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -39,7 +40,7 @@ class ApplyMaskModule : BaseModule() {
             name = "源图像",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(ImageVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)
         ),
         InputDefinition(
             id = "mask_shape",
@@ -52,7 +53,7 @@ class ApplyMaskModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("image", "处理后的图像", ImageVariable.TYPE_NAME)
+        OutputDefinition("image", "处理后的图像", VTypeRegistry.IMAGE.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -116,7 +117,7 @@ class ApplyMaskModule : BaseModule() {
             maskedBitmap.recycle()
 
             val outputUri = Uri.fromFile(outputFile).toString()
-            ExecutionResult.Success(mapOf("image" to ImageVariable(outputUri)))
+            ExecutionResult.Success(mapOf("image" to VImage(outputUri)))
 
         } catch (e: Exception) {
             ExecutionResult.Failure("图像处理异常", e.localizedMessage ?: "发生未知错误")

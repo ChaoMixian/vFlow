@@ -7,8 +7,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
-import com.chaomixian.vflow.core.types.basic.VString
-import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.types.complex.VNotification
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.NotificationTriggerHandler
@@ -33,7 +32,7 @@ class FindNotificationModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("notifications", "找到的通知", ListVariable.TYPE_NAME)
+        OutputDefinition("notifications", "找到的通知", VTypeRegistry.LIST.id)
     )
 
     /**
@@ -110,6 +109,6 @@ class FindNotificationModule : BaseModule() {
 
         onProgress(ProgressUpdate("找到了 ${foundNotifications.size} 条通知。"))
 
-        return ExecutionResult.Success(mapOf("notifications" to ListVariable(foundNotifications)))
+        return ExecutionResult.Success(mapOf("notifications" to VList(foundNotifications.map { VNotification(it) })))
     }
 }

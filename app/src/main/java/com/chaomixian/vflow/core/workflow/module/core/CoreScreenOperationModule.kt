@@ -59,7 +59,7 @@ class CoreScreenOperationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "500,1000",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(Coordinate.TYPE_NAME, VTypeRegistry.STRING.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)
         ),
         InputDefinition(
             id = "target_end",
@@ -67,7 +67,7 @@ class CoreScreenOperationModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(Coordinate.TYPE_NAME, VTypeRegistry.STRING.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)
         ),
         InputDefinition(
             id = "duration",
@@ -271,16 +271,10 @@ class CoreScreenOperationModule : BaseModule() {
             return null
         }
 
-        // 处理 Coordinate 类型
-        if (value is Coordinate) {
-            DebugLogger.d(TAG, "解析坐标 $paramKey: Coordinate(${value.x}, ${value.y})")
-            return Point(value.x, value.y)
-        }
-
-        // 处理 VCoordinate 类型（新的 VObject 类型）
+        // 处理 VCoordinate 类型
         if (value is VCoordinate) {
-            DebugLogger.d(TAG, "解析坐标 $paramKey: VCoordinate(${value.coordinate.x}, ${value.coordinate.y})")
-            return Point(value.coordinate.x, value.coordinate.y)
+            DebugLogger.d(TAG, "解析坐标 $paramKey: VCoordinate(${value.x}, ${value.y})")
+            return Point(value.x, value.y)
         }
 
         // 处理 VString 类型（支持字符串 "x,y"）

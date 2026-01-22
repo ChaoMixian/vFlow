@@ -14,8 +14,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VNumber
-import com.chaomixian.vflow.core.module.Coordinate
-import com.chaomixian.vflow.core.module.ScreenElement
+import com.chaomixian.vflow.core.types.complex.VCoordinate
+import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.permissions.PermissionManager
 // 项目内部的无障碍服务，避免与 Android 框架的同名类混淆
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
@@ -85,9 +85,9 @@ class FindTextModule : BaseModule() {
 
         // 根据输出格式确定主结果的类型
         val resultTypeName = when (format) {
-            "坐标" -> Coordinate.TYPE_NAME
+            "坐标" -> VTypeRegistry.COORDINATE.id  // 使用新的 VCoordinate 类型 ID
             "视图ID" -> VTypeRegistry.STRING.id
-            else -> ScreenElement.TYPE_NAME
+            else -> VTypeRegistry.UI_ELEMENT.id  // 使用新的 VScreenElement 类型 ID
         }
 
         // 定义所有输出
@@ -172,14 +172,14 @@ class FindTextModule : BaseModule() {
                 return ExecutionResult.Success(outputs)
             }
 
-            // 转换所有节点为所需的输出格式
+            // 转换所有节点为所需的输出格式（使用新的 VObject 类型）
             val allResultsList = nodes.map { node ->
                 val bounds = Rect()
                 node.getBoundsInScreen(bounds)
                 when (outputFormat) {
-                    "坐标" -> Coordinate(bounds.centerX(), bounds.centerY())
+                    "坐标" -> VCoordinate(bounds.centerX(), bounds.centerY())
                     "视图ID" -> VString(node.viewIdResourceName ?: "")
-                    else -> ScreenElement(
+                    else -> VScreenElement(
                         bounds = bounds,
                         text = node.text?.toString() ?: node.contentDescription?.toString()
                     )

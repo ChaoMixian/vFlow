@@ -5,18 +5,20 @@ import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
-import com.chaomixian.vflow.core.module.Coordinate
 
 /**
  * 坐标类型的 VObject 实现
  * 使用属性注册表管理属性，消除了重复的 when 语句
  */
-class VCoordinate(val coordinate: Coordinate) : EnhancedBaseVObject() {
+data class VCoordinate(
+    val x: Int,
+    val y: Int
+) : EnhancedBaseVObject() {
     override val type = VTypeRegistry.COORDINATE
-    override val raw: Any = coordinate
+    override val raw: Any = this
     override val propertyRegistry = Companion.registry
 
-    override fun asString(): String = "${coordinate.x},${coordinate.y}"
+    override fun asString(): String = "$x,$y"
 
     override fun asNumber(): Double? = null
 
@@ -26,10 +28,10 @@ class VCoordinate(val coordinate: Coordinate) : EnhancedBaseVObject() {
         // 属性注册表：所有 VCoordinate 实例共享
         private val registry = PropertyRegistry().apply {
             register("x", getter = { host ->
-                VNumber((host as VCoordinate).coordinate.x.toDouble())
+                VNumber((host as VCoordinate).x.toDouble())
             })
             register("y", getter = { host ->
-                VNumber((host as VCoordinate).coordinate.y.toDouble())
+                VNumber((host as VCoordinate).y.toDouble())
             })
         }
     }

@@ -2,7 +2,8 @@
 package com.chaomixian.vflow.core.workflow.module.logic
 
 import com.chaomixian.vflow.core.module.*
-import com.chaomixian.vflow.core.module.ScreenElement
+import com.chaomixian.vflow.core.types.basic.*
+import com.chaomixian.vflow.core.types.complex.VScreenElement
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.min
@@ -30,16 +31,16 @@ object ConditionEvaluator {
 
         // 根据主输入的数据类型，调用相应的评估函数
         return when (input1) {
-            is TextVariable, is String -> evaluateTextCondition(input1.toStringValue(), operator, value1)
-            is BooleanVariable, is Boolean -> evaluateBooleanCondition(input1.toBooleanValue(), operator)
-            is ListVariable, is Collection<*> -> evaluateCollectionCondition(input1, operator)
-            is DictionaryVariable, is Map<*, *> -> evaluateMapCondition(input1, operator)
-            is NumberVariable, is Number -> {
-                val value = input1.toDoubleValue() ?: return false // 数字转换失败则条件不成立
+            is VString, is String -> evaluateTextCondition(input1.toStringValue(), operator, value1)
+            is VBoolean, is Boolean -> evaluateBooleanCondition(input1.toBooleanValue(), operator)
+            is VList, is Collection<*> -> evaluateCollectionCondition(input1, operator)
+            is VDictionary, is Map<*, *> -> evaluateMapCondition(input1, operator)
+            is VNumber, is Number -> {
+                val value = input1.toDoubleValue() ?: return false
                 evaluateNumberCondition(value, operator, value1, value2)
             }
-            is ScreenElement -> {
-                val text = input1.text ?: return false // 屏幕元素无文本则条件不成立 (除非是EXISTS/NOT_EXISTS)
+            is VScreenElement -> {
+                val text = input1.text ?: return false
                 evaluateTextCondition(text, operator, value1)
             }
             else -> false
@@ -97,7 +98,7 @@ object ConditionEvaluator {
     /** 评估集合（列表）相关条件。 */
     private fun evaluateCollectionCondition(col1: Any, operator: String): Boolean {
         val size = when(col1) {
-            is ListVariable -> col1.value.size
+            is VList -> col1.raw.size
             is Collection<*> -> col1.size
             else -> -1 //无法获取大小
         }
@@ -111,7 +112,7 @@ object ConditionEvaluator {
     /** 评估字典（Map）相关条件。 */
     private fun evaluateMapCondition(map1: Any, operator: String): Boolean {
         val size = when(map1) {
-            is DictionaryVariable -> map1.value.size
+            is VDictionary -> map1.raw.size
             is Map<*,*> -> map1.size
             else -> -1 //无法获取大小
         }
@@ -126,14 +127,14 @@ object ConditionEvaluator {
     /** 将任意类型安全转换为字符串。 */
     private fun Any?.toStringValue(): String {
         return when(this) {
-            is TextVariable -> this.value
+            is VString -> this.raw
             else -> this?.toString() ?: ""
         }
     }
     /** 将任意类型安全转换为 Double?。 */
     private fun Any?.toDoubleValue(): Double? {
         return when(this) {
-            is NumberVariable -> this.value
+            is VNumber -> this.raw
             is Number -> this.toDouble()
             is String -> this.toDoubleOrNull()
             else -> null
@@ -142,7 +143,7 @@ object ConditionEvaluator {
     /** 将任意类型安全转换为布尔值。 */
     private fun Any?.toBooleanValue(): Boolean {
         return when(this) {
-            is BooleanVariable -> this.value
+            is VBoolean -> this.raw
             is Boolean -> this
             else -> false // 默认转换为 false
         }

@@ -8,6 +8,7 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.pill.PillFormatter
 import com.chaomixian.vflow.core.pill.PillType
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -138,13 +139,13 @@ class CoreShellCommandModule : BaseModule() {
         // 4. 返回结果
         return if (result.isBlank()) {
             ExecutionResult.Success(mapOf(
-                "result" to TextVariable(""),
-                "success" to BooleanVariable(true)
+                "result" to VString(""),
+                "success" to VBoolean(true)
             ))
         } else {
             ExecutionResult.Success(mapOf(
-                "result" to TextVariable(result),
-                "success" to BooleanVariable(true)
+                "result" to VString(result),
+                "success" to VBoolean(true)
             ))
         }
     }

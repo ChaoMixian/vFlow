@@ -37,7 +37,7 @@ class RotateImageModule : BaseModule() {
             name = "源图像",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(ImageVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)
         ),
         InputDefinition(
             id = "degrees",
@@ -45,12 +45,12 @@ class RotateImageModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 90.0,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("image", "旋转后的图像", ImageVariable.TYPE_NAME)
+        OutputDefinition("image", "旋转后的图像", VTypeRegistry.IMAGE.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -117,7 +117,7 @@ class RotateImageModule : BaseModule() {
             rotatedBitmap.recycle()
 
             val outputUri = Uri.fromFile(outputFile).toString()
-            ExecutionResult.Success(mapOf("image" to ImageVariable(outputUri)))
+            ExecutionResult.Success(mapOf("image" to VImage(outputUri)))
 
         } catch (e: Exception) {
             ExecutionResult.Failure("图像处理异常", e.localizedMessage ?: "发生未知错误")

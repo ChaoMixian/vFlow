@@ -13,6 +13,9 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.complex.VCoordinate
+import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -27,7 +30,7 @@ import kotlinx.coroutines.tasks.await
 import java.util.regex.Pattern
 
 /**
- * “查找直到出现”原子模块。
+ * "查找直到出现"原子模块。
  */
 class FindTextUntilModule : BaseModule() {
     override val id = "vflow.interaction.find_until"
@@ -57,8 +60,8 @@ class FindTextUntilModule : BaseModule() {
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("success", "是否找到", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("element", "找到的元素", ScreenElement.TYPE_NAME),
-        OutputDefinition("coordinate", "中心坐标", Coordinate.TYPE_NAME)
+        OutputDefinition("element", "找到的元素", VTypeRegistry.UI_ELEMENT.id),
+        OutputDefinition("coordinate", "中心坐标", VTypeRegistry.COORDINATE.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -101,7 +104,7 @@ class FindTextUntilModule : BaseModule() {
         val timeoutMs = timeoutSec * 1000
 
         while (System.currentTimeMillis() - startTime < timeoutMs) {
-            var foundElement: ScreenElement? = null
+            var foundElement: VScreenElement? = null
 
             if (searchMode == "自动" || searchMode == "无障碍") {
                 val root = service?.rootInActiveWindow
@@ -110,7 +113,7 @@ class FindTextUntilModule : BaseModule() {
                     if (node != null) {
                         val bounds = Rect()
                         node.getBoundsInScreen(bounds)
-                        foundElement = ScreenElement(bounds, node.text?.toString() ?: node.contentDescription?.toString())
+                        foundElement = VScreenElement(bounds, node.text?.toString() ?: node.contentDescription?.toString())
                         node.recycle()
                     }
                 }
@@ -121,7 +124,7 @@ class FindTextUntilModule : BaseModule() {
             }
 
             if (foundElement != null) {
-                val coordinate = Coordinate(foundElement.bounds.centerX(), foundElement.bounds.centerY())
+                val coordinate = VCoordinate(foundElement.bounds.centerX(), foundElement.bounds.centerY())
                 onProgress(ProgressUpdate("已找到目标，耗时 ${(System.currentTimeMillis() - startTime)/1000.0}s"))
                 DebugLogger.d(TAG, "已找到目标，耗时 ${(System.currentTimeMillis() - startTime)/1000.0}s")
 
@@ -170,14 +173,14 @@ class FindTextUntilModule : BaseModule() {
         return null
     }
 
-    private suspend fun performOCR(context: ExecutionContext, targetText: String, matchMode: String): ScreenElement? {
+    private suspend fun performOCR(context: ExecutionContext, targetText: String, matchMode: String): VScreenElement? {
         val captureModule = ModuleRegistry.getModule("vflow.system.capture_screen") ?: return null
         val tempContext = context.copy(variables = mutableMapOf("mode" to "自动"))
         val result = captureModule.execute(tempContext) { }
 
         if (result is ExecutionResult.Success) {
-            val imageVar = result.outputs["image"] as? ImageVariable ?: return null
-            val imageUri = Uri.parse(imageVar.uri)
+            val imageVar = result.outputs["image"] as? VImage ?: return null
+            val imageUri = Uri.parse(imageVar.uriString)
 
             try {
                 val inputImage = InputImage.fromFilePath(context.applicationContext, imageUri)
@@ -198,7 +201,7 @@ class FindTextUntilModule : BaseModule() {
                         if (isMatch) {
                             val rect = line.boundingBox
                             if (rect != null) {
-                                return ScreenElement(rect, lineText)
+                                return VScreenElement(rect, lineText)
                             }
                         }
                     }

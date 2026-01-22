@@ -107,7 +107,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
         val currentQueryParams = (currentParameters["query_params"] as? Map<*, *>)
             ?.map { it.key.toString() to it.value.toString() }?.toMutableList() ?: mutableListOf()
 
-        holder.queryParamsAdapter = DictionaryKVAdapter(currentQueryParams) { key ->
+        holder.queryParamsAdapter = DictionaryKVAdapter(currentQueryParams, allSteps) { key ->
             if (key.isNotBlank()) onMagicVariableRequested?.invoke("query_params.$key")
         }
         holder.queryParamsRecyclerView.apply {
@@ -120,7 +120,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
         val currentHeaders = (currentParameters["headers"] as? Map<*, *>)
             ?.map { it.key.toString() to it.value.toString() }?.toMutableList() ?: mutableListOf()
 
-        holder.headersAdapter = DictionaryKVAdapter(currentHeaders) { key ->
+        holder.headersAdapter = DictionaryKVAdapter(currentHeaders, allSteps) { key ->
             if (key.isNotBlank()) onMagicVariableRequested?.invoke("headers.$key")
         }
         holder.headersRecyclerView.apply {
@@ -213,7 +213,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
                 val currentMap = (currentValue as? Map<*, *>)?.map { it.key.toString() to it.value.toString() }?.toMutableList() ?: mutableListOf()
 
-                holder.bodyAdapter = DictionaryKVAdapter(currentMap) { key ->
+                holder.bodyAdapter = DictionaryKVAdapter(currentMap, holder.allSteps) { key ->
                     if (key.isNotBlank()) onMagicReq?.invoke("body.$key")
                 }
 

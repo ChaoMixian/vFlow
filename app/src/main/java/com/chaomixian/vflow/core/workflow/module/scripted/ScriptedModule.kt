@@ -7,6 +7,9 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.LuaExecutor
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.VObjectFactory
+import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -129,22 +132,28 @@ class ScriptedModule(
 
     private fun wrapToVariable(value: Any, typeHint: String): Any {
         return when (typeHint.lowercase()) {
-            "text" -> TextVariable(value.toString())
+            "text" -> VString(value.toString())
             "number" -> {
                 val num = value.toString().toDoubleOrNull() ?: 0.0
-                NumberVariable(num)
+                VNumber(num)
             }
-            "boolean" -> BooleanVariable(value.toString().toBoolean())
+            "boolean" -> VBoolean(value.toString().toBoolean())
             "list" -> {
-                if (value is List<*>) ListVariable(value) else ListVariable(emptyList())
+                if (value is List<*>) {
+                    // Convert List<Any?> to List<VObject>
+                    val vObjects = value.mapNotNull { VObjectFactory.from(it) as? VObject }
+                    VList(vObjects)
+                } else VList(emptyList())
             }
             "dictionary" -> {
                 if (value is Map<*, *>) {
                     @Suppress("UNCHECKED_CAST")
-                    DictionaryVariable(value as Map<String, Any?>)
-                } else DictionaryVariable(emptyMap())
+                    // Convert Map<String, Any?> to Map<String, VObject>
+                    val vMap = (value as Map<String, Any?>).mapValues { VObjectFactory.from(it.value) }
+                    VDictionary(vMap)
+                } else VDictionary(emptyMap())
             }
-            else -> TextVariable(value.toString())
+            else -> VString(value.toString())
         }
     }
 }

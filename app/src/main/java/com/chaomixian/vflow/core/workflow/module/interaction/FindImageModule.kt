@@ -16,6 +16,7 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.services.ShellManager
@@ -75,7 +76,7 @@ class FindImageModule : BaseModule() {
         )
 
         return listOf(
-            OutputDefinition("first_result", "最相似坐标", Coordinate.TYPE_NAME, conditions),
+            OutputDefinition("first_result", "最相似坐标", VTypeRegistry.COORDINATE.id, conditions),
             OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, conditions),
             OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions)
         )
@@ -164,9 +165,9 @@ class FindImageModule : BaseModule() {
         // 确保按相似度排序（差异最小的在前面）
         val sortedMatches = matches.sortedBy { it.diffRatio }
 
-        // 转换为坐标列表
+        // 转换为坐标列表（使用新的 VCoordinate 类型）
         val allCoordinates = sortedMatches.map { match ->
-            Coordinate(match.centerX, match.centerY)
+            VCoordinate(match.centerX, match.centerY)
         }
 
         // 最相似的结果（第一个）

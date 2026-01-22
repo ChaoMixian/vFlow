@@ -12,6 +12,7 @@ import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.mlkit.vision.common.InputImage
@@ -68,7 +69,7 @@ class OCRModule : BaseModule() {
             listOf(
                 OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
                 OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
-                OutputDefinition("first_match", "第一个结果 (元素)", ScreenElement.TYPE_NAME),
+                OutputDefinition("first_match", "第一个结果 (元素)", VTypeRegistry.UI_ELEMENT.id),
                 OutputDefinition("all_matches", "所有结果 (列表)", VTypeRegistry.LIST.id),
                 OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id)
             )
@@ -129,15 +130,15 @@ class OCRModule : BaseModule() {
                 ))
             }
 
-            // 处理结果 - 查找文本模式
+            // 处理结果 - 查找文本模式（使用新的 VScreenElement 类型）
             onProgress(ProgressUpdate("正在查找匹配项: $targetText"))
-            val matches = mutableListOf<ScreenElement>()
+            val matches = mutableListOf<VScreenElement>()
 
             for (block in result.textBlocks) {
                 for (line in block.lines) {
                     if (line.text.contains(targetText, ignoreCase = true)) {
                         line.boundingBox?.let { rect ->
-                            matches.add(ScreenElement(rect, line.text))
+                            matches.add(VScreenElement(rect, line.text))
                         }
                     }
                 }

@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/shizuku/AppShortcutsModule.kt
 package com.chaomixian.vflow.core.workflow.module.shizuku
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.*
 
 import android.content.Context
 import com.chaomixian.vflow.R
@@ -25,7 +26,7 @@ abstract class BaseShortcutModule : BaseModule() {
         return if (result.startsWith("Error:")) {
             ExecutionResult.Failure("执行失败", result)
         } else {
-            ExecutionResult.Success(mapOf("result" to TextVariable(result)))
+            ExecutionResult.Success(mapOf("result" to VString(result)))
         }
     }
 

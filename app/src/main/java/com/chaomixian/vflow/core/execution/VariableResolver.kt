@@ -104,9 +104,8 @@ object VariableResolver {
         if (segments.size == 1 && segments[0] is TemplateSegment.Variable) {
             val segment = segments[0] as TemplateSegment.Variable
             val vObj = resolveVariableObject(segment, context)
-            // 返回 vObj 还是 vObj.raw?
-            // 为了兼容旧系统，目前返回 raw，但未来应全面切换到 VObject
-            // 这里为了让旧模块(如 SaveImage)能拿到 ImageVariable/String，我们返回 raw
+            // 返回 VObject 的原始值用于字符串插值
+            // 例如：VString("hello").raw -> "hello", VNumber(42).raw -> 42.0
             return vObj.raw ?: vObj.asString()
         }
 

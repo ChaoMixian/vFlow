@@ -4,10 +4,7 @@ package com.chaomixian.vflow.core.execution
 import android.content.Context
 import android.os.Parcelable
 import com.chaomixian.vflow.core.types.VObject
-import com.chaomixian.vflow.core.types.basic.VString
-import com.chaomixian.vflow.core.module.TextVariable
-import com.chaomixian.vflow.core.module.NumberVariable
-import com.chaomixian.vflow.core.module.BooleanVariable
+import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import java.io.File
 import java.util.*
@@ -95,16 +92,13 @@ data class ExecutionContext(
         return when (value) {
             is String -> value
             is VObject -> value.asString()
-            is com.chaomixian.vflow.core.module.TextVariable -> value.value
-            is com.chaomixian.vflow.core.module.NumberVariable -> value.value.toString()
-            is com.chaomixian.vflow.core.module.BooleanVariable -> value.value.toString()
             null -> defaultValue
             else -> value.toString()
         }
     }
 
     /**
-     * 获取步骤输出的原始值（用于兼容未迁移的模块）
+     * 获取步骤输出的 VObject
      *
      * @param stepId 步骤ID
      * @param outputKey 输出键

@@ -1,6 +1,8 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/system/LuaModule.kt
 package com.chaomixian.vflow.core.workflow.module.system
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.VObjectFactory
+import com.chaomixian.vflow.core.types.basic.*
 
 import android.content.Context
 import com.chaomixian.vflow.R
@@ -95,7 +97,9 @@ class LuaModule : BaseModule() {
             onProgress(ProgressUpdate("正在执行Lua脚本..."))
             val resultTable = luaExecutor.execute(script, scriptInputs)
             onProgress(ProgressUpdate("脚本执行完成"))
-            ExecutionResult.Success(mapOf("outputs" to DictionaryVariable(resultTable)))
+            // Convert Map<String, Any?> to Map<String, VObject>
+            val vMap = resultTable.mapValues { VObjectFactory.from(it.value) }
+            ExecutionResult.Success(mapOf("outputs" to VDictionary(vMap)))
         } catch (e: Exception) {
             ExecutionResult.Failure("Lua脚本执行失败", e.localizedMessage ?: "未知错误")
         }

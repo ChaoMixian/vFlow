@@ -15,12 +15,11 @@ import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.RequiresApi
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.core.module.BooleanVariable
 import com.chaomixian.vflow.core.module.ExecutionResult
-import com.chaomixian.vflow.core.module.ImageVariable
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.module.ModuleRegistry
-import com.chaomixian.vflow.core.module.ScreenElement
 import com.chaomixian.vflow.core.utils.VFlowImeManager
 import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.services.ShellManager
@@ -440,9 +439,9 @@ class AgentTools(private val context: ExecutionContext) {
         val ocrRes = ocrModule.execute(ocrContext) { }
 
         if (ocrRes is ExecutionResult.Success) {
-            val found = (ocrRes.outputs["found"] as? BooleanVariable)?.value == true
+            val found = (ocrRes.outputs["found"] as? VBoolean)?.raw == true
             if (found) {
-                val firstMatch = ocrRes.outputs["first_match"] as? ScreenElement
+                val firstMatch = ocrRes.outputs["first_match"] as? VScreenElement
                 if (firstMatch != null) {
                     val x = firstMatch.bounds.centerX()
                     val y = firstMatch.bounds.centerY()

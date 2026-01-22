@@ -9,7 +9,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
-import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.services.ShellManager
@@ -105,7 +105,7 @@ class InvokeModule : BaseModule() {
         val flagsInt = rawFlags.toIntOrNull()
 
         @Suppress("UNCHECKED_CAST")
-        val extrasMap = (context.magicVariables["extras"] as? DictionaryVariable)?.value
+        val extrasMap = (context.magicVariables["extras"] as? VDictionary)?.raw
             ?: (context.variables["extras"] as? Map<String, Any?>)
             ?: emptyMap()
 

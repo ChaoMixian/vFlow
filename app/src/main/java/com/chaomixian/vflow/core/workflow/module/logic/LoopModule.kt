@@ -37,7 +37,7 @@ class LoopModule : BaseBlockModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 5L, // 默认5次
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NumberVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
         )
     )
 
@@ -48,8 +48,8 @@ class LoopModule : BaseBlockModule() {
      * 使得循环体内的模块可以通过魔法变量引用它们。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("loop_index", "循环索引", NumberVariable.TYPE_NAME),
-        OutputDefinition("loop_total", "循环总数", NumberVariable.TYPE_NAME)
+        OutputDefinition("loop_index", "循环索引", VTypeRegistry.NUMBER.id),
+        OutputDefinition("loop_total", "循环总数", VTypeRegistry.NUMBER.id)
     )
 
 

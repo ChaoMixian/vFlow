@@ -221,7 +221,7 @@ class VariableModuleUIProvider(
                     ?.toMutableList()
                     ?: mutableListOf()
 
-                val dictAdapter = DictionaryKVAdapter(currentMap) { key ->
+                val dictAdapter = DictionaryKVAdapter(currentMap, holder.allSteps) { key ->
                     if (key.isNotBlank()) {
                         holder.onMagicVariableRequested?.invoke("value.$key")
                     }
@@ -242,7 +242,7 @@ class VariableModuleUIProvider(
                     ?.toMutableList()
                     ?: mutableListOf()
 
-                val listAdapter = ListItemAdapter(currentList) { position ->
+                val listAdapter = ListItemAdapter(currentList, holder.allSteps) { position ->
                     holder.onMagicVariableRequested?.invoke("value.$position")
                 }
                 holder.listAdapter = listAdapter

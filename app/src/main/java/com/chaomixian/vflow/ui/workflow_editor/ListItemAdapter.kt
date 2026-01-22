@@ -10,15 +10,20 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.isMagicVariable
+import com.chaomixian.vflow.core.module.isNamedVariable
+import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.workflow_editor.pill.PillVariableResolver
 import com.google.android.material.textfield.TextInputLayout
 
 /**
  * 用于在编辑器中动态添加/删除/编辑列表项的 RecyclerView.Adapter。
  * @param data 存储列表项的可变列表。
+ * @param allSteps 工作流中的所有步骤，用于解析魔法变量和命名变量。
  * @param onMagicClick 当用户点击某一项的魔法变量按钮时触发的回调。
  */
 class ListItemAdapter(
     private val data: MutableList<String>,
+    private val allSteps: List<ActionStep>? = null,
     private val onMagicClick: (position: Int) -> Unit
 ) : RecyclerView.Adapter<ListItemAdapter.ViewHolder>() {
 
@@ -61,10 +66,32 @@ class ListItemAdapter(
         holder.valueContainer.removeAllViews()
         val inflater = LayoutInflater.from(holder.itemView.context)
 
-        // 如果值是一个魔法变量引用，则显示一个药丸(Pill)
-        if (itemValue.isMagicVariable()) {
+        // 如果值是一个变量引用（魔法变量或命名变量），则显示一个药丸
+        if (itemValue.isMagicVariable() || itemValue.isNamedVariable()) {
             val pillView = inflater.inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
-            pillView.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
+            val textView = pillView.findViewById<TextView>(R.id.pill_text)
+
+            // 尝试使用 PillVariableResolver 解析变量以获取友好的显示名称
+            val displayName = if (allSteps != null) {
+                PillVariableResolver.resolveVariable(holder.itemView.context, itemValue, allSteps)?.displayName
+            } else {
+                null
+            } ?: run {
+                // Fallback: 提取变量名作为显示文本
+                when {
+                    itemValue.isMagicVariable() -> {
+                        val content = itemValue.removeSurrounding("{{", "}}")
+                        val parts = content.split('.')
+                        if (parts.size >= 2) "${parts[0]}.${parts[1]}" else content
+                    }
+                    itemValue.isNamedVariable() -> {
+                        itemValue.removeSurrounding("[[", "]]")
+                    }
+                    else -> itemValue
+                }
+            }
+
+            textView.text = displayName
             holder.valueContainer.addView(pillView)
             pillView.setOnClickListener {
                 if (holder.adapterPosition != RecyclerView.NO_POSITION) {

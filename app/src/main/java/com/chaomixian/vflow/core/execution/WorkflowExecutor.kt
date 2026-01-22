@@ -280,13 +280,13 @@ object WorkflowExecutor {
                     val loopOutputs = when {
                         loopStartStep.moduleId == LOOP_START_ID && loopState is LoopState.CountLoopState -> {
                             mapOf(
-                                "loop_index" to NumberVariable((loopState.currentIteration + 1).toDouble()),
-                                "loop_total" to NumberVariable(loopState.totalIterations.toDouble())
+                                "loop_index" to VNumber((loopState.currentIteration + 1).toDouble()),
+                                "loop_total" to VNumber(loopState.totalIterations.toDouble())
                             )
                         }
                         loopStartStep.moduleId == FOREACH_START_ID && loopState is LoopState.ForEachLoopState -> {
                             mapOf(
-                                "index" to NumberVariable((loopState.currentIndex + 1).toDouble()),
+                                "index" to VNumber((loopState.currentIndex + 1).toDouble()),
                                 "item" to loopState.itemList.getOrNull(loopState.currentIndex)
                             )
                         }

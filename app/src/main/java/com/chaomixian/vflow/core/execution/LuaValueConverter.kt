@@ -2,8 +2,9 @@
 package com.chaomixian.vflow.core.execution
 
 import com.chaomixian.vflow.core.module.*
-import com.chaomixian.vflow.core.module.Coordinate
-import com.chaomixian.vflow.core.module.ScreenElement
+import com.chaomixian.vflow.core.types.basic.*
+import com.chaomixian.vflow.core.types.complex.VCoordinate
+import com.chaomixian.vflow.core.types.complex.VScreenElement
 import org.luaj.vm2.LuaTable
 import org.luaj.vm2.LuaValue
 
@@ -31,25 +32,22 @@ object LuaValueConverter {
             is Float -> LuaValue.valueOf(value.toDouble())
             is Double -> LuaValue.valueOf(value)
 
-            // --- vFlow 变量类型拆箱 ---
-            is TextVariable -> LuaValue.valueOf(value.value)
-            is NumberVariable -> LuaValue.valueOf(value.value)
-            is BooleanVariable -> LuaValue.valueOf(value.value)
-            is ImageVariable -> LuaValue.valueOf(value.uri) // 图片转为 URI 字符串
-            // 列表和字典变量递归调用自身进行转换
-            is DictionaryVariable -> coerceToLua(value.value)
-            is ListVariable -> coerceToLua(value.value)
+            // --- VObject 类型拆箱 ---
+            is VString -> LuaValue.valueOf(value.raw)
+            is VNumber -> LuaValue.valueOf(value.raw)
+            is VBoolean -> LuaValue.valueOf(value.raw)
+            // 列表和字典递归调用自身进行转换
+            is VDictionary -> coerceToLua(value.raw)
+            is VList -> coerceToLua(value.raw)
 
             // --- 业务对象转换 ---
-            is ScreenElement -> {
-                // 将 ScreenElement 转为 Table: { bounds = "rect string", text = "..." }
+            is VScreenElement -> {
                 val table = LuaTable()
                 table.set("bounds", LuaValue.valueOf(value.bounds.toShortString()))
                 table.set("text", LuaValue.valueOf(value.text ?: ""))
                 table
             }
-            is Coordinate -> {
-                // 将 Coordinate 转为 Table: { x = 100, y = 200 }
+            is VCoordinate -> {
                 val table = LuaTable()
                 table.set("x", LuaValue.valueOf(value.x))
                 table.set("y", LuaValue.valueOf(value.y))

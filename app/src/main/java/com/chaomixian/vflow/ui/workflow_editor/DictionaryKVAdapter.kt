@@ -13,14 +13,20 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.isMagicVariable
+import com.chaomixian.vflow.core.module.isNamedVariable
+import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.workflow_editor.pill.PillVariableResolver
 import com.google.android.material.textfield.TextInputLayout
 
 /**
  * 字典键值对 (K-V) 编辑的 RecyclerView.Adapter。
  * @param data 存储键值对的可变列表，每个元素是一个 Pair<String, String>。
+ * @param allSteps 工作流中的所有步骤，用于解析魔法变量和命名变量。
+ * @param onMagicClick 当点击魔法变量按钮时的回调（传入键名）。
  */
 class DictionaryKVAdapter(
     private val data: MutableList<Pair<String, String>>,
+    private val allSteps: List<ActionStep>? = null,
     private val onMagicClick: ((key: String) -> Unit)? = null
 ) : RecyclerView.Adapter<DictionaryKVAdapter.ViewHolder>() {
 
@@ -58,9 +64,32 @@ class DictionaryKVAdapter(
         holder.valueContainer.removeAllViews()
         val inflater = LayoutInflater.from(holder.itemView.context)
 
-        if (item.second.isMagicVariable()) {
+        // 检查是否是变量引用（魔法变量或命名变量）
+        if (item.second.isMagicVariable() || item.second.isNamedVariable()) {
             val pillView = inflater.inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
-            pillView.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
+            val textView = pillView.findViewById<TextView>(R.id.pill_text)
+
+            // 尝试使用 PillVariableResolver 解析变量以获取友好的显示名称
+            val displayName = if (allSteps != null) {
+                PillVariableResolver.resolveVariable(holder.itemView.context, item.second, allSteps)?.displayName
+            } else {
+                null
+            } ?: run {
+                // Fallback: 提取变量名作为显示文本
+                when {
+                    item.second.isMagicVariable() -> {
+                        val content = item.second.removeSurrounding("{{", "}}")
+                        val parts = content.split('.')
+                        if (parts.size >= 2) "${parts[0]}.${parts[1]}" else content
+                    }
+                    item.second.isNamedVariable() -> {
+                        item.second.removeSurrounding("[[", "]]")
+                    }
+                    else -> item.second
+                }
+            }
+
+            textView.text = displayName
             holder.valueContainer.addView(pillView)
         } else {
             // 使用和XML中一致的 TextInputEditText，并设置好布局参数

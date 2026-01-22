@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/interaction/AutoGLMModule.kt
 package com.chaomixian.vflow.core.workflow.module.interaction
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.*
 
 import android.content.Context
 import android.util.DisplayMetrics
@@ -431,16 +432,16 @@ class AutoGLMModule : BaseModule() {
                         "finish" -> {
                             val msg = command["message"] as? String ?: "Done"
                             taskResult = ExecutionResult.Success(mapOf(
-                                "result" to TextVariable(msg),
-                                "success" to BooleanVariable(true)
+                                "result" to VString(msg),
+                                "success" to VBoolean(true)
                             ))
                         }
                         else -> {
                             if (answer.startsWith("finish")) {
                                 val msg = command["message"] as? String ?: answer
                                 taskResult = ExecutionResult.Success(mapOf(
-                                    "result" to TextVariable(msg),
-                                    "success" to BooleanVariable(true)
+                                    "result" to VString(msg),
+                                    "success" to VBoolean(true)
                                 ))
                             }
                         }
@@ -468,8 +469,8 @@ class AutoGLMModule : BaseModule() {
             }
 
             return taskResult ?: ExecutionResult.Success(mapOf(
-                "result" to TextVariable("Max steps reached"),
-                "success" to BooleanVariable(false)
+                "result" to VString("Max steps reached"),
+                "success" to VBoolean(false)
             ))
 
         } finally {

@@ -15,6 +15,8 @@ import android.webkit.MimeTypeMap
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -47,7 +49,7 @@ class SaveImageModule : BaseModule() {
             name = "图片",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(ImageVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)
         )
     )
 
@@ -55,8 +57,8 @@ class SaveImageModule : BaseModule() {
      * 增加 file_path 输出。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME),
-        OutputDefinition("file_path", "文件路径", TextVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
+        OutputDefinition("file_path", "文件路径", VTypeRegistry.STRING.id)
     )
 
 
@@ -149,8 +151,8 @@ class SaveImageModule : BaseModule() {
             onProgress(ProgressUpdate("图片已保存至: $filePath"))
             return ExecutionResult.Success(
                 mapOf(
-                    "success" to BooleanVariable(true),
-                    "file_path" to TextVariable(filePath ?: newImageUri.toString()) // 如果路径获取失败，回退到URI
+                    "success" to VBoolean(true),
+                    "file_path" to VString(filePath ?: newImageUri.toString()) // 如果路径获取失败，回退到URI
                 )
             )
 

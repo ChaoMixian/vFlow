@@ -5,7 +5,8 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
-import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.NotificationTriggerHandler
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -28,12 +29,12 @@ class RemoveNotificationModule : BaseModule() {
             name = "目标通知",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NotificationObject.TYPE_NAME, ListVariable.TYPE_NAME)
+            acceptedMagicVariableTypes = setOf(NotificationObject.TYPE_NAME, VTypeRegistry.LIST.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", BooleanVariable.TYPE_NAME)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -66,6 +67,6 @@ class RemoveNotificationModule : BaseModule() {
             listener.cancelNotification(it.id)
         }
 
-        return ExecutionResult.Success(mapOf("success" to BooleanVariable(true)))
+        return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
     }
 }

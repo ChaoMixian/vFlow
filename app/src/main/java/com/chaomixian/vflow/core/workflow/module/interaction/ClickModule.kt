@@ -13,6 +13,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VCoordinate
+import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.permissions.PermissionManager
 // 为项目内的 AccessibilityService 设置别名，以区分 Android 框架的同名类
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
@@ -46,8 +48,8 @@ class ClickModule : BaseModule() {
             staticType = ParameterType.STRING, // 静态类型为字符串，实际可以是多种动态类型
             acceptsMagicVariable = true,       // 允许使用魔法变量
             acceptedMagicVariableTypes = setOf( // 定义接受的魔法变量类型
-                ScreenElement.TYPE_NAME,
-                Coordinate.TYPE_NAME,
+                VTypeRegistry.UI_ELEMENT.id,
+                VTypeRegistry.COORDINATE.id,
                 VTypeRegistry.STRING.id
             ),
             defaultValue = "" // 默认值为空字符串
@@ -93,37 +95,45 @@ class ClickModule : BaseModule() {
 
         // 根据目标的不同类型执行相应的点击逻辑
         val clickSuccess: Boolean = when (target) {
-            is ScreenElement -> { // 如果目标是屏幕元素
+            is VScreenElement -> {
                 onProgress(ProgressUpdate("正在点击找到的元素"))
-                val node = findNodeByBounds(service, target.bounds) // 根据边界查找节点
+                val bounds = target.bounds
+                val node = findNodeByBounds(service, bounds)
                 var success = false
                 if (node != null) {
-                    success = node.performAction(AccessibilityNodeInfo.ACTION_CLICK) // 尝试标准点击动作
-                    node.recycle() // 回收节点
+                    success = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    node.recycle()
                 }
-                // 如果标准点击失败或未找到节点，则尝试在该元素中心进行手势点击
-                success || performGestureClick(service, target.bounds.centerX(), target.bounds.centerY(), onProgress)
+                success || performGestureClick(service, bounds.centerX(), bounds.centerY(), onProgress)
             }
-            is Coordinate -> { // 如果目标是坐标
+            is VCoordinate -> {
                 onProgress(ProgressUpdate("正在点击坐标: (${target.x}, ${target.y})"))
-                performGestureClick(service, target.x, target.y, onProgress) // 执行手势点击
+                performGestureClick(service, target.x, target.y, onProgress)
             }
-            is VString -> { // 如果目标是文本变量 (通常代表视图ID)
+            is VString -> {
                 val viewId = target.raw
                 onProgress(ProgressUpdate("正在点击视图ID: $viewId"))
-                performViewIdClick(service, viewId, onProgress) // 执行基于视图ID的点击
+                performViewIdClick(service, viewId, onProgress)
             }
-            is String -> { // 如果目标是普通字符串
-                val coordinate = target.toCoordinate() // 尝试将其解析为坐标
-                if (coordinate != null) { // 如果是坐标字符串
-                    onProgress(ProgressUpdate("正在点击坐标: (${coordinate.x}, ${coordinate.y})"))
-                    performGestureClick(service, coordinate.x, coordinate.y, onProgress)
-                } else { // 否则视为视图ID
+            is String -> {
+                // 尝试解析为坐标
+                val parts = target.split(",")
+                if (parts.size == 2) {
+                    val x = parts[0].trim().toIntOrNull()
+                    val y = parts[1].trim().toIntOrNull()
+                    if (x != null && y != null) {
+                        onProgress(ProgressUpdate("正在点击坐标: ($x, $y)"))
+                        performGestureClick(service, x, y, onProgress)
+                    } else {
+                        onProgress(ProgressUpdate("正在点击视图ID: $target"))
+                        performViewIdClick(service, target, onProgress)
+                    }
+                } else {
                     onProgress(ProgressUpdate("正在点击视图ID: $target"))
                     performViewIdClick(service, target, onProgress)
                 }
             }
-            else -> { // 无效的目标类型
+            else -> {
                 onProgress(ProgressUpdate("点击失败：目标无效"))
                 false
             }
@@ -197,23 +207,6 @@ class ClickModule : BaseModule() {
         if (success) onProgress(ProgressUpdate("已通过手势成功点击坐标: ($x, $y)"))
         else onProgress(ProgressUpdate("手势点击坐标 ($x, $y) 失败或被取消"))
         return success
-    }
-
-    /**
-     * 将形如 \"x,y\" 的字符串解析为 Coordinate 对象。
-     * @return 解析成功则返回 Coordinate 对象，否则返回 null。
-     */
-    private fun String.toCoordinate(): Coordinate? {
-        return try {
-            val parts = this.split(',')
-            if (parts.size == 2) {
-                Coordinate(parts[0].trim().toInt(), parts[1].trim().toInt())
-            } else {
-                null
-            }
-        } catch (e: Exception) { // 捕获数字转换等异常
-            null
-        }
     }
 
     /**

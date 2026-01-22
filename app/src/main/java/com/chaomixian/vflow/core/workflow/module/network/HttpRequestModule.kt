@@ -119,14 +119,14 @@ class HttpRequestModule : BaseModule() {
 
                 // 解析 Headers (支持变量)
                 @Suppress("UNCHECKED_CAST")
-                val rawHeaders = (context.magicVariables["headers"] as? DictionaryVariable)?.value
+                val rawHeaders = (context.magicVariables["headers"] as? VDictionary)?.raw
                     ?: (context.variables["headers"] as? Map<String, Any?>)
                     ?: emptyMap()
                 val headers = resolveMap(rawHeaders, context)
 
                 // 解析 Query Params (支持变量)
                 @Suppress("UNCHECKED_CAST")
-                val rawQueryParams = (context.magicVariables["query_params"] as? DictionaryVariable)?.value
+                val rawQueryParams = (context.magicVariables["query_params"] as? VDictionary)?.raw
                     ?: (context.variables["query_params"] as? Map<String, Any?>)
                     ?: emptyMap()
                 val queryParams = resolveMap(rawQueryParams, context)
@@ -142,7 +142,7 @@ class HttpRequestModule : BaseModule() {
                     }
                     "表单" -> {
                         // 表单：必须使用字符串转换（表单编码要求）
-                        val mapData = (context.magicVariables["body"] as? DictionaryVariable)?.value
+                        val mapData = (context.magicVariables["body"] as? VDictionary)?.raw
                             ?: (bodyDataRaw as? Map<*, *>)
                         if (mapData is Map<*, *>) {
                             @Suppress("UNCHECKED_CAST")
@@ -153,7 +153,7 @@ class HttpRequestModule : BaseModule() {
                     }
                     "JSON" -> {
                         // JSON：支持字符串输入（来自 RichTextView）或 Map 输入（来自变量引用）
-                        val mapData = (context.magicVariables["body"] as? DictionaryVariable)?.value
+                        val mapData = (context.magicVariables["body"] as? VDictionary)?.raw
                             ?: (bodyDataRaw as? Map<*, *>)
 
                         if (mapData is Map<*, *>) {
@@ -180,7 +180,7 @@ class HttpRequestModule : BaseModule() {
                     else -> context.magicVariables["body"] ?: bodyDataRaw
                 }
 
-                val timeout = ((context.magicVariables["timeout"] as? NumberVariable)?.value
+                val timeout = ((context.magicVariables["timeout"] as? VNumber)?.raw
                     ?: (context.variables["timeout"] as? Number)?.toDouble()
                     ?: 10.0).toLong()
 
@@ -294,18 +294,7 @@ class HttpRequestModule : BaseModule() {
                 }
             }
 
-            // 3. 旧版Variable类型兼容
-            is NumberVariable -> value.value
-            is BooleanVariable -> value.value
-            is TextVariable -> VariableResolver.resolve(value.value, context)
-            is ListVariable -> value.value.map { resolveValuePreservingType(it, context) }
-            is DictionaryVariable -> {
-                value.value.mapValues { (_, v) ->
-                    resolveValuePreservingType(v, context)
-                }
-            }
-
-            // 4. 集合类型：递归处理
+            // 3. 集合类型：递归处理
             is Map<*, *> -> {
                 @Suppress("UNCHECKED_CAST")
                 (value as? Map<String, Any?>)?.mapValues { (_, v) ->

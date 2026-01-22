@@ -4,8 +4,6 @@ package com.chaomixian.vflow.core.types
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.types.complex.*
-import com.chaomixian.vflow.core.module.Coordinate
-import com.chaomixian.vflow.core.module.ScreenElement
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 
@@ -31,20 +29,7 @@ object VObjectFactory {
             is Double -> VNumber(value)
             is Boolean -> VBoolean(value)
 
-            // --- 旧版 Variable 类型兼容 ---
-            is TextVariable -> VString(value.value)
-            is NumberVariable -> VNumber(value.value)
-            is BooleanVariable -> VBoolean(value.value)
-            // 列表和字典需要递归处理
-            is ListVariable -> fromCollection(value.value)
-            is DictionaryVariable -> fromMap(value.value)
-            is ImageVariable -> VImage(value.uri)
-            is DateVariable -> VDate(value.value)
-            is TimeVariable -> VTime(value.value)
-
             // --- 业务对象 ---
-            is ScreenElement -> VScreenElement(value)
-            is Coordinate -> VCoordinate(value)
             is NotificationObject -> VNotification(value)
             is UiElement -> VUiComponent(value, null)
 
