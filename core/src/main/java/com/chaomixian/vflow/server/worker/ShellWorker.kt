@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.server.worker
 
 import com.chaomixian.vflow.server.common.Config
+import com.chaomixian.vflow.server.common.Workarounds
 import com.chaomixian.vflow.server.common.utils.SystemUtils
 import com.chaomixian.vflow.server.wrappers.shell.*
 import kotlin.system.exitProcess
@@ -43,6 +44,11 @@ class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
         } else {
             println("✅ ShellWorker running as Shell (UID: ${SystemUtils.getMyUid()})")
         }
+
+        // 应用 FakeContext 工作区，伪装成 com.android.shell
+        // 必须在任何服务连接之前调用
+        Workarounds.apply()
+        println("✅ FakeContext applied as com.android.shell")
 
         // 启动 ServerSocket
         super.start()
