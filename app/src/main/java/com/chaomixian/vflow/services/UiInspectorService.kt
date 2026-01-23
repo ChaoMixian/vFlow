@@ -235,14 +235,34 @@ class UiInspectorService : Service() {
     private fun findSmallestNodeAtPoint(node: AccessibilityNodeInfo, x: Int, y: Int): AccessibilityNodeInfo? {
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
+
+        // 检查点是否在节点范围内
         if (!bounds.contains(x, y)) return null
 
+        // 收集所有包含该点的可见子节点
+        val validChildren = mutableListOf<AccessibilityNodeInfo>()
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            val foundInChild = findSmallestNodeAtPoint(child, x, y)
-            if (foundInChild != null) return foundInChild
+            // 只考虑可见的节点
+            if (child.isVisibleToUser) {
+                val found = findSmallestNodeAtPoint(child, x, y)
+                if (found != null) {
+                    validChildren.add(found)
+                }
+            }
         }
-        return node
+
+        // 如果有有效的子节点，返回面积最小的那个
+        if (validChildren.isNotEmpty()) {
+            return validChildren.minByOrNull {
+                val rect = Rect()
+                it.getBoundsInScreen(rect)
+                rect.width() * rect.height()
+            }
+        }
+
+        // 如果没有子节点，检查当前节点是否可见
+        return if (node.isVisibleToUser) node else null
     }
 
     // --- 弹窗显示逻辑 ---
