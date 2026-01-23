@@ -18,7 +18,7 @@ checkNotNull(sdkDir) { "未找到 Android SDK 路径，请在 local.properties �
 val androidJar = "$sdkDir/platforms/android-36/android.jar"
 
 // 指定构建工具版本 (d8 所在位置)
-val buildToolsVersion = "36.0.0"
+val buildToolsVersion = "36.1.0"
 val d8Path = "$sdkDir/build-tools/$buildToolsVersion/d8" +
         if (System.getProperty("os.name").lowercase().contains("windows")) ".bat" else ""
 

@@ -195,6 +195,10 @@
             android:name=".ui.float.DynamicFloatWindowService"
             android:exported="false" />
 
+        <service
+            android:name=".services.UiInspectorService"
+            android:exported="false" />
+
         <receiver
             android:name=".services.BootReceiver"
             android:exported="true">

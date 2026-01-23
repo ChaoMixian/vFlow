@@ -20,8 +20,11 @@ object ServiceStateBus {
     private val _windowChangeEventFlow = MutableSharedFlow<Pair<String, String>>()
     val windowChangeEventFlow = _windowChangeEventFlow.asSharedFlow()
 
+    // 缓存最后一个窗口类名，供 UIInspector 使用
+    var lastWindowClassName: String? = null
+        private set
 
-    // 定义广播动作 (保留，以防未来有其他用途)
+    // 定义广播动作
     const val ACTION_ACCESSIBILITY_SERVICE_STATE_CHANGED = "vflow.action.ACCESSIBILITY_SERVICE_STATE_CHANGED"
     const val EXTRA_IS_CONNECTED = "is_connected"
 
@@ -43,6 +46,7 @@ object ServiceStateBus {
      * 由 AccessibilityService 调用，用于发出窗口变化事件。
      */
     suspend fun postWindowChangeEvent(packageName: String, className: String) {
+        lastWindowClassName = className
         _windowChangeEventFlow.emit(packageName to className)
     }
 

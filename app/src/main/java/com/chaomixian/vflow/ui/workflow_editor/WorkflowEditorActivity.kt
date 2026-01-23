@@ -45,6 +45,7 @@ import com.chaomixian.vflow.core.workflow.module.logic.LOOP_START_ID
 import com.chaomixian.vflow.core.workflow.module.logic.LoopModule
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.services.UiInspectorService
 import com.chaomixian.vflow.ui.app_picker.AppPickerActivity
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
@@ -216,6 +217,16 @@ class WorkflowEditorActivity : BaseActivity() {
         // AI 按钮点击事件
         aiMagicButton.setOnClickListener {
             showAiCreationSheet()
+        }
+
+        // 长按触发 UI 检查器
+        aiMagicButton.setOnLongClickListener {
+            // 启动检查服务
+            val intent = Intent(this, UiInspectorService::class.java)
+            startService(intent)
+            // moveTaskToBack(true)
+            Toast.makeText(this, "UI 检查器已开启，拖动蓝色图标选择控件", Toast.LENGTH_LONG).show()
+            true
         }
 
         lifecycleScope.launch {
