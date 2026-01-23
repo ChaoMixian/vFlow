@@ -161,6 +161,8 @@ class UiInspectorService : Service() {
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
+        var downTime = 0L
+        val LONG_PRESS_TIMEOUT = 500L // 长按阈值（毫秒）
 
         floatIconView?.setOnTouchListener { view, event ->
             when (event.action) {
@@ -170,6 +172,7 @@ class UiInspectorService : Service() {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
+                    downTime = System.currentTimeMillis()
 
                     val service = ServiceStateBus.getAccessibilityService()
                     currentRootNode = service?.rootInActiveWindow
@@ -194,7 +197,12 @@ class UiInspectorService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
+                    val pressDuration = System.currentTimeMillis() - downTime
+                    if (!isDragging && pressDuration >= LONG_PRESS_TIMEOUT) {
+                        // 长按：关闭服务
+                        stopSelf()
+                    } else if (!isDragging) {
+                        // 短按：显示详情
                         showNodeDetails()
                     }
                     currentRootNode = null
