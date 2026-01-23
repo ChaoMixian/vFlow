@@ -225,7 +225,7 @@ class WorkflowEditorActivity : BaseActivity() {
             val intent = Intent(this, UiInspectorService::class.java)
             startService(intent)
             // moveTaskToBack(true)
-            Toast.makeText(this, "UI 检查器已开启，拖动蓝色图标选择控件", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "UI 检查器已开启，拖动图标选择控件", Toast.LENGTH_LONG).show()
             true
         }
 
