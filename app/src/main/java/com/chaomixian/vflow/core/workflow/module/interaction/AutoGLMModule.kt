@@ -341,11 +341,13 @@ class AutoGLMModule : BaseModule() {
                         "Tap" -> {
                             val rawPos = command["element"] as? List<*>
                             if (rawPos != null && rawPos.size == 2) {
-                                val normX = (rawPos[0] as Number).toInt()
-                                val normY = (rawPos[1] as Number).toInt()
-                                val realX = (normX / 999.0 * screenWidth).toInt()
-                                val realY = (normY / 999.0 * screenHeight).toInt()
-                                agentTools.clickPoint(realX, realY)
+                                val normX = (rawPos[0] as? Number)?.toInt()
+                                val normY = (rawPos[1] as? Number)?.toInt()
+                                if (normX != null && normY != null) {
+                                    val realX = (normX / 999.0 * screenWidth).toInt()
+                                    val realY = (normY / 999.0 * screenHeight).toInt()
+                                    agentTools.clickPoint(realX, realY)
+                                }
                             }
                         }
                         "Type", "Type_Name" -> { // 处理 Type 和 Type_Name
@@ -361,41 +363,47 @@ class AutoGLMModule : BaseModule() {
                             val end = command["end"] as? List<*>
                             if (start != null && end != null && start.size == 2 && end.size == 2) {
                                 // 解析归一化坐标 (0-1000)
-                                val normSX = (start[0] as Number).toInt()
-                                val normSY = (start[1] as Number).toInt()
-                                val normEX = (end[0] as Number).toInt()
-                                val normEY = (end[1] as Number).toInt()
+                                val normSX = (start[0] as? Number)?.toInt()
+                                val normSY = (start[1] as? Number)?.toInt()
+                                val normEX = (end[0] as? Number)?.toInt()
+                                val normEY = (end[1] as? Number)?.toInt()
 
-                                // 映射到真实屏幕坐标
-                                val realSX = (normSX / 1000.0 * screenWidth).toInt()
-                                val realSY = (normSY / 1000.0 * screenHeight).toInt()
-                                val realEX = (normEX / 1000.0 * screenWidth).toInt()
-                                val realEY = (normEY / 1000.0 * screenHeight).toInt()
+                                if (normSX != null && normSY != null && normEX != null && normEY != null) {
+                                    // 映射到真实屏幕坐标
+                                    val realSX = (normSX / 1000.0 * screenWidth).toInt()
+                                    val realSY = (normSY / 1000.0 * screenHeight).toInt()
+                                    val realEX = (normEX / 1000.0 * screenWidth).toInt()
+                                    val realEY = (normEY / 1000.0 * screenHeight).toInt()
 
-                                // 调用精确滑动
-                                actionFeedback = agentTools.swipe(realSX, realSY, realEX, realEY)
-                            } else {
-                                actionFeedback = "Failed: Invalid swipe coordinates."
+                                    // 调用精确滑动
+                                    actionFeedback = agentTools.swipe(realSX, realSY, realEX, realEY)
+                                } else {
+                                    actionFeedback = "Failed: Invalid swipe coordinates."
+                                }
                             }
                         }
                         "Double Tap" -> {
                             val rawPos = command["element"] as? List<*>
                             if (rawPos != null && rawPos.size == 2) {
-                                val normX = (rawPos[0] as Number).toInt()
-                                val normY = (rawPos[1] as Number).toInt()
-                                val realX = (normX / 999.0 * screenWidth).toInt()
-                                val realY = (normY / 999.0 * screenHeight).toInt()
-                                agentTools.doubleTap(realX, realY)
+                                val normX = (rawPos[0] as? Number)?.toInt()
+                                val normY = (rawPos[1] as? Number)?.toInt()
+                                if (normX != null && normY != null) {
+                                    val realX = (normX / 999.0 * screenWidth).toInt()
+                                    val realY = (normY / 999.0 * screenHeight).toInt()
+                                    agentTools.doubleTap(realX, realY)
+                                }
                             }
                         }
                         "Long Press" -> {
                             val rawPos = command["element"] as? List<*>
                             if (rawPos != null && rawPos.size == 2) {
-                                val normX = (rawPos[0] as Number).toInt()
-                                val normY = (rawPos[1] as Number).toInt()
-                                val realX = (normX / 999.0 * screenWidth).toInt()
-                                val realY = (normY / 999.0 * screenHeight).toInt()
-                                agentTools.longPress(realX, realY)
+                                val normX = (rawPos[0] as? Number)?.toInt()
+                                val normY = (rawPos[1] as? Number)?.toInt()
+                                if (normX != null && normY != null) {
+                                    val realX = (normX / 999.0 * screenWidth).toInt()
+                                    val realY = (normY / 999.0 * screenHeight).toInt()
+                                    agentTools.longPress(realX, realY)
+                                }
                             }
                         }
                         "Note" -> {

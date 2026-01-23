@@ -438,15 +438,32 @@ object WorkflowExecutor {
                     if (errorPolicy == ActionEditorSheet.POLICY_SKIP) {
                         DebugLogger.w("WorkflowExecutor", "根据策略，跳过错误继续执行。")
 
-                        // 生成该模块所有输出变量的默认空值
-                        val defaultOutputs = generateDefaultOutputs(module, step)
-                        // 添加错误元数据
-                        val skipOutputs = defaultOutputs.toMutableMap().apply {
+                        // 1. 如果模块提供了 partialOutputs，使用它们作为基础
+                        // 2. 否则生成默认的 VNull 输出
+                        val baseOutputs = if (result.partialOutputs.isNotEmpty()) {
+                            // 使用模块提供的部分输出，转换为 VObject
+                            VObjectFactory.fromMapAny(result.partialOutputs)
+                        } else {
+                            // 生成默认的 VNull 输出
+                            generateDefaultOutputs(module, step)
+                        }
+
+                        // 3. 确保所有定义的输出都有值（没有在 partialOutputs 中的填 VNull）
+                        val outputDefs = module.getOutputs(step)
+                        val skipOutputs = baseOutputs.toMutableMap()
+                        for (def in outputDefs) {
+                            if (!skipOutputs.containsKey(def.id)) {
+                                skipOutputs[def.id] = VNull
+                            }
+                        }
+
+                        // 4. 添加错误元数据
+                        skipOutputs.apply {
                             put("error", VString(result.errorMessage))
                             put("success", VBoolean(false))
                         }
-                        stepOutputs[step.id] = skipOutputs
 
+                        stepOutputs[step.id] = skipOutputs
                         pc++ // 继续下一步
                     } else {
                         // POLICY_STOP (默认) 或 重试耗尽
@@ -562,17 +579,10 @@ object WorkflowExecutor {
             // 获取模块定义的所有输出
             val outputDefs = module.getOutputs(step)
             for (def in outputDefs) {
-                // 根据类型生成安全的空值
-                val emptyValue = when (def.typeName) {
-                    VTypeRegistry.STRING.id -> VString("")
-                    VTypeRegistry.NUMBER.id -> VNumber(0.0)
-                    VTypeRegistry.BOOLEAN.id -> VBoolean(false)
-                    VTypeRegistry.LIST.id -> VList(emptyList())
-                    VTypeRegistry.DICTIONARY.id -> VDictionary(emptyMap())
-                    VTypeRegistry.IMAGE.id -> VImage("") // 空 URI
-                    else -> VString("") // 默认为空文本
-                }
-                outputs[def.id] = emptyValue
+                // 统一返回 VNull，表示"操作失败，没有值"
+                // 这样用户可以通过 IF 模块的"不存在"操作符来检测失败
+                // 参考：EXCEPTION_HANDLING.md 和 VOBJECT_SEMANTICS.md
+                outputs[def.id] = VNull
             }
         } catch (e: Exception) {
             DebugLogger.w("WorkflowExecutor", "生成默认输出时出错: ${e.message}")

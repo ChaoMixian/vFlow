@@ -151,8 +151,9 @@ class GetAppUsageStatsModule : BaseModule() {
             ))
         }
 
-        val mostUsed = sortedStats.first()["package_name"] as String
-        val mostUsedName = sortedStats.first()["app_name"] as String
+        // 使用安全的访问方式，代码意图更清晰
+        val mostUsed = sortedStats.firstOrNull()?.get("package_name") as? String ?: ""
+        val mostUsedName = sortedStats.firstOrNull()?.get("app_name") as? String ?: ""
 
         onProgress(ProgressUpdate("最常使用: $mostUsedName"))
 

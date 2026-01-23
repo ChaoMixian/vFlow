@@ -4,196 +4,457 @@
 
 ## 设计原则
 
-### 1. 容错性优先
-vFlow是一个工作流自动化工具，不同于传统的编程环境。当某个操作失败时，我们应该：
-- **避免整个工作流中断**
-- **提供合理的默认值或返回值**
-- **让后续的条件判断模块决定如何处理**
+### 1. 用户控制优先
+vFlow是一个工作流自动化工具，用户应该有完全的控制权来决定如何处理失败情况：
+- **通过"异常处理策略"控制行为**：重试、忽略错误继续、停止工作流
+- **统一的错误处理机制**：所有失败情况都返回 `ExecutionResult.Failure`
+- **灵活性**：同一个模块在不同工作流中可以有不同的错误处理行为
 
-### 2. 显式优于隐式
-- 返回值应该明确表示操作的状态
-- 使用`VNull`表示"未找到"或"无意义的结果"
-- 使用空容器（`VList([])`、`VDictionary(emptyMap())`）表示"查找成功但无结果"
+### 2. Success vs Failure 的清晰语义
 
-### 3. 与成熟项目的对比
-参考Python等成熟项目的做法，但根据工作流工具的特性进行调整：
+**Success**：操作**成功完成**
+- 操作完全成功，没有遇到任何错误
+- 返回有效输出数据
+- 不会触发"异常处理策略"
 
-| 场景 | Python行为 | vFlow行为 | 理由 |
-|------|-----------|-----------|------|
-| 列表越界 | 抛出`IndexError` | 返回`VNull` | 工作流不应因单个错误中断 |
-| 字典Key不存在 | 返回`None` | 返回`VNull` | 语义一致 |
-| 空列表的布尔值 | `False` | 存在=`True` | 区分"存在"和"有内容" |
+**Failure**：操作**失败或业务未完成**
+- 业务查找失败（可能需要重试）
+- 技术错误（系统级问题）
+- 参数错误（配置问题）
+- **触发"异常处理策略"**，用户可以选择：
+  - **重试**：自动重试 N 次
+  - **忽略错误继续**：生成默认输出（包含 `VNull` 和 `error` 信息）
+  - **停止工作流**：终止执行
+
+### 3. 容错性保持
+虽然查找失败返回 `Failure`，但系统的容错性通过"异常处理策略"实现：
+- 用户可以选择"忽略错误继续"，效果等同于返回 `VNull`
+- 用户可以选择"重试"，自动处理临时性失败
+- 用户可以选择"停止工作流"，在关键步骤失败时终止
 
 ---
 
-## 核心约定
+## Success vs Failure 判断标准
 
-### 约定1: 查找类操作的返回值
+### ✅ 返回 Success 的场景
 
-查找操作（Find、Get、Search等）根据结果类型的不同，采用不同的返回值约定：
-
-#### 返回单一对象的查找
+#### 1. 操作完全成功
 ```kotlin
-// ✅ 正确示例
-GetElement → 找到返回 VScreenElement, 未找到返回 VNull
-GetVariable → 变量存在返回值, 不存在返回 VNull
+// ✅ 正确：操作成功完成
+CaptureScreenModule → Success + VImage
+ClickModule → Success + VBoolean(true)
+DelayModule → Success + VBoolean(true)
 ```
 
-#### 返回集合的查找
+#### 2. 部分成功但有有效输出
 ```kotlin
-// ✅ 正确示例
-FindNotification → 找到返回 VList([...]), 未找到返回 VList([])
-FindText → 找到返回 VList([...]), 未找到返回 VList([])
+// ✅ 正确：文本处理（部分文本被处理）
+TextProcessingModule → Success + VString("处理后的文本")
+
+// ✅ 正确：数据转换成功
+CalculationModule → Success + VNumber(42.0)
 ```
 
-**理由**：
-- 返回单一对象时，使用`VNull`可以明确表示"未找到"
-- 返回集合时，空集合本身就是一个有效的结果（"查找完成，但没有匹配项"）
+### ❌ 返回 Failure 的场景
 
-### 约定2: 容器访问的容错性
-
-所有容器访问操作（索引、属性访问）都应该容错：
-
+#### 1. 业务查找失败（可能需要重试）
 ```kotlin
-// ✅ 正确实现
-VList[index] 越界 → VNull
-VList.first (空列表) → VNull
-VList.last (空列表) → VNull
-VList.random (空列表) → VNull
-VDictionary[key] 不存在 → VNull
+// ✅ 正确：查找类模块未找到时返回 Failure
+FindImageModule (未找到) → Failure("未找到图片", "在屏幕上未找到与模板图片匹配的区域。相似度要求: 80%")
+FindTextModule (未找到) → Failure("未找到文本", "未在屏幕上找到匹配的文本: '登录'")
+GetVariableModule (变量不存在) → Failure("变量不存在", "找不到变量 'username' 的值")
 ```
 
-**理由**：
-- 工作流中访问可能不存在的数据是很常见的
-- 抛出异常会导致整个工作流中断
-- 返回`VNull`允许后续的IF模块判断并处理
+**用户可以通过"异常处理策略"选择行为**：
+- **重试**：UI 可能还在加载，等待一段时间后重试
+- **忽略错误继续**：输出 `VNull` + `error` 信息，继续执行后续步骤
+- **停止工作流**：关键元素不存在，终止工作流
 
-### 约定3: 条件判断的操作符语义
-
-IF模块的条件判断操作符有明确的语义定义：
-
-| 操作符 | 语义 | 检查内容 |
-|--------|------|---------|
-| 存在 | 对象不为null | `input != null` |
-| 不存在 | 对象为null | `input == null` |
-| 为空 | 内容为空 | 空字符串、空容器、null属性等 |
-| 不为空 | 内容不为空 | 有实际内容 |
-
-**关键区别**：
-- `OP_EXISTS` / `OP_NOT_EXISTS`：检查**对象本身**是否存在
-- `OP_IS_EMPTY` / `OP_IS_NOT_EMPTY`：检查对象的**内容**是否为空
-
-**示例**：
+#### 2. 技术错误（系统级问题）
 ```kotlin
-// 查找通知未找到时的返回值
-val result = VList(emptyList())  // 空列表
-
-// 条件判断
-result 存在 → true   // 对象本身存在
-result 不存在 → false
-result 为空 → true   // 内容为空
-result 不为空 → false
+// ✅ 正确：技术错误返回 Failure
+NetworkModule (超时) → Failure("网络超时", "连接超时，请检查网络连接")
+CaptureScreenModule (权限拒绝) → Failure("权限不足", "需要 Shizuku 或 Root 权限")
+FileModule (文件不存在) → Failure("文件不存在", "文件 /sdcard/test.png 不存在")
 ```
 
-### 约定4: 特殊类型的null处理
-
-#### VScreenElement.text 为null
-`VScreenElement`的`text`属性可能为null（例如图片按钮没有文本）。此时应该：
-
+#### 3. 参数错误（配置问题）
 ```kotlin
-// ✅ 正确处理
-val element = VScreenElement(bounds, null, ...)  // text为null
-
-// 条件判断
-element 存在 → true              // 对象存在
-element.text 为空 → true         // null视为"空"
-element 包含"abc" → false        // 空字符串不包含"abc"
+// ✅ 正确：参数错误返回 Failure
+FindImageModule (未设置模板) → Failure("参数错误", "请先设置模板图片")
+FindTextModule (搜索文本为空) → Failure("参数缺失", "目标文本不能为空")
 ```
 
-**实现**：
+---
+
+## 异常处理策略的工作流程
+
+vFlow 的 WorkflowExecutor 提供三种"异常处理策略"：
+
+### 1. 停止工作流（默认）
+```
+模块返回 Failure
+    ↓
+工作流立即终止
+    ↓
+显示错误通知
+```
+
+### 2. 忽略错误继续
+```
+模块返回 Failure
+    ↓
+生成默认输出：
+    1. 如果模块提供了 partialOutputs，使用它们作为基础
+    2. 否则所有输出设为 VNull
+    3. 没有提供的输出补充为 VNull
+    4. 添加 error 字段（错误信息）
+    5. 添加 success 字段（false）
+    ↓
+继续执行下一个步骤
+```
+
+**示例1：模块提供 partialOutputs（推荐）**
 ```kotlin
-is VScreenElement -> {
-    val text = input1.text
-    if (text == null) {
-        // text为null时，视为"空字符串"进行文本操作
-        when (operator) {
-            OP_IS_EMPTY -> true
-            OP_IS_NOT_EMPTY -> false
-            else -> evaluateTextCondition("", operator, value1)
+// FindImageModule 返回 Failure，并提供语义化的部分输出
+ExecutionResult.Failure(
+    "未找到图片",
+    "在屏幕上未找到与模板图片匹配的区域。相似度要求: 80%。",
+    partialOutputs = mapOf(
+        "count" to VNumber(0.0),              // 找到 0 个（语义化）
+        "all_results" to emptyList<Any>(),   // 空列表（语义化）
+        "first_result" to VNull             // 没有"第一个"
+    )
+)
+
+// WorkflowExecutor 的 POLICY_SKIP 策略处理
+val skipOutputs = mutableMapOf<String, VObject>(
+    "count" to VNumber(0.0),           // 来自 partialOutputs
+    "all_results" to VList(emptyList()), // 来自 partialOutputs
+    "first_result" to VNull,          // 来自 partialOutputs
+    "error" to VString("未找到图片..."), // 自动添加
+    "success" to VBoolean(false)      // 自动添加
+)
+```
+
+**示例2：模块不提供 partialOutputs**
+```kotlin
+// GetVariableModule 返回 Failure，不提供 partialOutputs
+ExecutionResult.Failure(
+    "变量不存在",
+    "找不到变量 'username' 的值"
+    // partialOutputs 默认为 emptyMap()
+)
+
+// WorkflowExecutor 的 POLICY_SKIP 策略处理
+val skipOutputs = mutableMapOf<String, VObject>(
+    "value" to VNull,                      // 默认值：VNull
+    "error" to VString("找不到变量..."),   // 自动添加
+    "success" to VBoolean(false)          // 自动添加
+)
+```
+
+**为什么模块应该提供 `partialOutputs`？**
+
+| 输出 | 没有 partialOutputs | 有 partialOutputs | 优势 |
+|------|-------------------|------------------|------|
+| `count` | `VNull` | `VNumber(0)` | ✅ 语义清晰："找到0个" |
+| `all_results` | `VNull` | `VList([])` | ✅ 语义清晰："列表为空" |
+| `first_result` | `VNull` | `VNull` | ✅ 一致：没有"第一个" |
+
+**用户的使用体验**：
+```kotlin
+// 场景1：用户想知道"找到了多少个"
+IF {{count}} == 0  → true ✅ (语义化)
+IF {{count}} > 0   → false ✅ (语义化)
+
+// 场景2：用户想用 count 做计算
+{{count}} + 10     // → 0 + 10 = 10 ✅ (数学运算正确)
+                   // 如果是 VNull.asNumber() → 0.0，结果一样但语义不清晰
+
+// 场景3：用户遍历所有结果
+FOR each item IN {{all_results}}  // 遍历空列表 ✅ (不会崩溃)
+                                 // 如果是 VNull.asList() → []，结果一样
+```
+
+### 3. 重试
+```
+模块返回 Failure
+    ↓
+等待重试间隔（默认 1000ms）
+    ↓
+重新执行模块
+    ↓
+如果仍然失败，继续重试（最多 N 次）
+    ↓
+如果所有重试都失败，按照"停止工作流"或"忽略错误继续"处理
+```
+
+**示例配置**：
+```
+┌─────────────────────────────────────┐
+│  查找图片模块                        │
+├─────────────────────────────────────┤
+│  模板图片: login_button.png         │
+│  相似度: 80%                         │
+│                                     │
+│  异常处理策略:                       │
+│  ● 重试 (3次，间隔1秒)               │
+│    ○ 停止工作流                      │
+│    ○ 忽略错误继续                    │
+└─────────────────────────────────────┘
+
+执行流程：
+1. 第一次执行：未找到图片 → Failure
+2. 等待 1 秒
+3. 第二次执行：未找到图片 → Failure
+4. 等待 1 秒
+5. 第三次执行：未找到图片 → Failure
+6. 等待 1 秒
+7. 第四次执行：找到图片 → Success ✅
+```
+
+---
+
+## 模块实现示例
+
+### ✅ 正确示例：查找类模块
+
+```kotlin
+class FindImageModule : BaseModule() {
+    override suspend fun execute(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ExecutionResult {
+        // ... 执行图片匹配 ...
+
+        if (matches.isEmpty()) {
+            // ✅ 正确：返回 Failure，并提供 partialOutputs
+            return ExecutionResult.Failure(
+                "未找到图片",
+                "在屏幕上未找到与模板图片匹配的区域。相似度要求: 80%。",
+                // 提供 partialOutputs，让"跳过此步骤继续"时有语义化的默认值
+                partialOutputs = mapOf(
+                    "count" to VNumber(0.0),              // 找到 0 个（语义化）
+                    "all_results" to emptyList<Any>(),   // 空列表（语义化）
+                    "first_result" to VNull             // 没有"第一个"
+                )
+            )
         }
-    } else {
-        evaluateTextCondition(text, operator, value1)
+
+        // ✅ 正确：找到匹配，返回 Success
+        return ExecutionResult.Success(mapOf(
+            "first_result" to bestMatch,
+            "all_results" to allMatches,
+            "count" to VNumber(matches.size.toDouble())
+        ))
     }
 }
 ```
 
-#### VNumber 转换失败
-当`VNumber.toDoubleValue()`返回null时（理论上不应发生，但为了防御性编程）：
+**用户的使用场景**：
+- 场景1：UI 还在加载，需要等待 → 配置"重试 3 次"
+- 场景2：图片可选，找不到也继续 → 配置"忽略错误继续"
+  - 此时 `{{count}}` = `0`（语义清晰）
+  - 此时 `{{all_results}}` = `[]`（可以安全遍历）
+  - 此时 `{{first_result}}` = `VNull`（可以用 IF 检测）
+- 场景3：图片必须存在 → 配置"停止工作流"
+
+### ❌ 错误示例：查找类模块
 
 ```kotlin
-// ✅ 正确处理
-val value = input1.toDoubleValue()
-if (value == null) false  // 所有数字操作都返回false
-else evaluateNumberCondition(value, operator, value1, value2)
+class FindImageModule : BaseModule() {
+    override suspend fun execute(...): ExecutionResult {
+        // ... 执行图片匹配 ...
+
+        if (matches.isEmpty()) {
+            // ❌ 错误：返回 Success + VNull
+            // 问题：
+            // 1. 无法触发重试机制
+            // 2. 用户无法通过"异常处理策略"控制行为
+            // 3. 失去了统一的错误处理机制
+            return ExecutionResult.Success(mapOf(
+                "first_result" to VNull,
+                "all_results" to emptyList<Any>()
+            ))
+        }
+    }
+}
+```
+
+### ✅ 正确示例：变量读取模块
+
+```kotlin
+class GetVariableModule : BaseModule() {
+    override suspend fun execute(...): ExecutionResult {
+        val variableValue = context.magicVariables["source"]
+
+        if (variableValue == null) {
+            // ✅ 正确：返回 Failure
+            // 用户可以：
+            // - 重试：变量可能稍后被设置
+            // - 忽略错误继续：输出 VNull + error
+            // - 停止工作流：变量必须存在
+            return ExecutionResult.Failure(
+                "变量不存在",
+                "找不到变量 '${sourceRef}' 的值"
+                // GetVariableModule 只有一个输出 value，不需要特殊的 partialOutputs
+                // 使用默认的 VNull 即可
+            )
+        }
+
+        return ExecutionResult.Success(mapOf("value" to variableValue))
+    }
+}
+```
+
+### ✅ 正确示例：网络模块
+
+```kotlin
+class NetworkModule : BaseModule() {
+    override suspend fun execute(...): ExecutionResult {
+        return try {
+            val response = httpClient.execute(request)
+            if (response.status == 200) {
+                // ✅ 正确：成功
+                ExecutionResult.Success(mapOf("result" to response.body))
+            } else {
+                // ✅ 正确：业务失败（HTTP 错误）
+                ExecutionResult.Failure(
+                    "请求失败",
+                    "HTTP ${response.status}: ${response.message}"
+                )
+            }
+        } catch (e: TimeoutException) {
+            // ✅ 正确：技术错误（超时）
+            ExecutionResult.Failure(
+                "网络超时",
+                "连接超时（${timeout}ms），请检查网络连接"
+            )
+        } catch (e: Exception) {
+            // ✅ 正确：技术错误（其他异常）
+            ExecutionResult.Failure(
+                "网络错误",
+                e.localizedMessage ?: "发生了未知错误"
+            )
+        }
+    }
+}
 ```
 
 ---
 
-## 各类型操作符支持矩阵
+## 容器访问的容错性
 
-### 文本类型 (VString, String)
+虽然业务失败返回 `Failure`，但容器访问仍然保持容错性：
 
-| 操作符 | 支持 | null/空值行为 |
-|--------|------|---------------|
-| 存在/不存在 | ✅ | 检查对象是否为null |
-| 为空/不为空 | ✅ | `""` → 为空 |
-| 等于/不等于 | ✅ | `null` → 转换为`""` |
-| 包含/不包含 | ✅ | `null` → 转换为`""` |
-| 开头是/结尾是 | ✅ | `null` → 转换为`""` |
-| 匹配正则 | ✅ | `null` → 转换为`""` |
+```kotlin
+// ✅ 正确：容器访问容错
+VList[index] 越界 → VNull
+VList.first (空列表) → VNull
+VList.last (空列表) → VNull
+VDictionary[key] 不存在 → VNull
+```
 
-### 数字类型 (VNumber, Number)
+**理由**：
+- 容器访问是数据操作，不应该抛出异常
+- 返回 `VNull` 允许链式访问：`{{list.first.length}}` → `VNull.getProperty("length")` → `VNull`
 
-| 操作符 | 支持 | null/无效值行为 |
-|--------|------|-----------------|
-| 存在/不存在 | ✅ | 检查对象是否为null |
-| 等于/不等于/大于/小于/... | ✅ | 转换失败 → false |
-| 介于 | ✅ | 任意值无效 → false |
+---
 
-### 布尔类型 (VBoolean, Boolean)
+## 与 IF 模块的配合
 
-| 操作符 | 支持 | null行为 |
-|--------|------|----------|
-| 存在/不存在 | ✅ | 检查对象是否为null |
-| 为真/为假 | ✅ | null → false |
+当用户选择"忽略错误继续"策略时，模块会输出 `error` 和 `success` 字段：
 
-### 列表类型 (VList, Collection)
+```kotlin
+// WorkflowExecutor 的 POLICY_SKIP 处理
+val skipOutputs = defaultOutputs.toMutableMap().apply {
+    put("error", VString(result.errorMessage))
+    put("success", VBoolean(false))
+}
+```
 
-| 操作符 | 支持 | 空列表行为 |
-|--------|------|-----------|
-| 存在/不存在 | ✅ | `VList([])` 存在 → true |
-| 为空/不为空 | ✅ | `VList([])` 为空 → true |
-| 包含/不包含 | ❌ | 不支持，返回false |
+**用户可以通过 IF 模块判断**：
 
-**注意**：列表不支持"包含"操作符，应使用循环或其他模块实现。
+```
+┌─────────────────────────────────────┐
+│  查找图片                            │
+│  策略：忽略错误继续                   │
+└──────────┬──────────────────────────┘
+           ↓
+    ┌──────────────┐
+    │  IF 模块     │
+    │              │
+    │  如果 {{error}} 不存在           │
+    │      → 找到图片，继续执行         │
+│                                       │
+    │  否则                           │
+    │      → 未找到图片，执行备用方案   │
+    └──────────────┘
+```
 
-### 字典类型 (VDictionary, Map)
+---
 
-| 操作符 | 支持 | 空字典行为 |
-|--------|------|-----------|
-| 存在/不存在 | ✅ | `VDictionary({})` 存在 → true |
-| 为空/不为空 | ✅ | `VDictionary({})` 为空 → true |
-| 包含/不包含 | ❌ | 不支持，返回false |
+## 迁移指南
 
-**注意**：字典不支持"包含"操作符来检查键，应使用`dictionary.hasKey`属性访问。
+### 现有模块需要修复的情况
 
-### UI元素类型 (VScreenElement)
+#### ❌ 错误示例1：未找到时返回 Success
+```kotlin
+// ❌ 错误：查找失败返回 Success
+override suspend fun execute(...): ExecutionResult {
+    val result = findSomething()
+    if (result == null) {
+        return ExecutionResult.Success(mapOf("value" to VNull))  // 错误！
+    }
+    return ExecutionResult.Success(mapOf("value" to result))
+}
+```
 
-| 操作符 | 支持 | text为null行为 |
-|--------|------|----------------|
-| 存在/不存在 | ✅ | 对象存在 → true |
-| 为空/不为空 | ✅ | null → 为空 → true |
-| 其他文本操作 | ✅ | null → 视为空字符串 |
+#### ✅ 正确示例1：未找到时返回 Failure
+```kotlin
+// ✅ 正确：查找失败返回 Failure
+override suspend fun execute(...): ExecutionResult {
+    val result = findSomething()
+    if (result == null) {
+        return ExecutionResult.Failure(
+            "未找到",
+            "找不到指定对象"
+        )
+    }
+    return ExecutionResult.Success(mapOf("value" to result))
+}
+```
+
+#### ❌ 错误示例2：吞掉异常
+```kotlin
+// ❌ 错误：捕获所有异常并返回 Success
+override suspend fun execute(...): ExecutionResult {
+    return try {
+        doSomething()
+        ExecutionResult.Success(mapOf("result" to value))
+    } catch (e: Exception) {
+        // 错误：吞掉异常，返回 Success + VNull
+        ExecutionResult.Success(mapOf("result" to VNull))
+    }
+}
+```
+
+#### ✅ 正确示例2：异常返回 Failure
+```kotlin
+// ✅ 正确：异常返回 Failure
+override suspend fun execute(...): ExecutionResult {
+    return try {
+        val value = doSomething()
+        ExecutionResult.Success(mapOf("result" to value))
+    } catch (e: Exception) {
+        ExecutionResult.Failure(
+            "操作失败",
+            e.localizedMessage ?: "发生了未知错误"
+        )
+    }
+}
+```
 
 ---
 
@@ -202,78 +463,45 @@ else evaluateNumberCondition(value, operator, value1, value2)
 所有新模块都应该遵循以下检查清单：
 
 ### ✅ 查找类模块
-- [ ] 返回单一对象：未找到返回`VNull`
-- [ ] 返回集合：未找到返回空容器（`VList([])`）
-- [ ] 文档化返回值约定
+- [ ] 找到目标时返回 `Success + 数据`
+- [ ] 未找到时返回 `Failure + 清晰的错误信息`
+- [ ] 错误信息包含帮助用户调试的细节（如：相似度要求、搜索文本）
+- [ ] **推荐**：提供 `partialOutputs`，包含语义化的默认值
+  - `count` → `VNumber(0)`
+  - `all_results` → `VList([])` 或 `emptyList<Any>()`
+  - `first_result` → `VNull`
+  - 其他结果类输出 → 根据语义选择默认值
 
-### ✅ 访问类模块
-- [ ] 索引越界返回`VNull`
-- [ ] Key不存在返回`VNull`
-- [ ] 属性访问失败返回`VNull`
+### ✅ 网络类模块
+- [ ] 成功时返回 `Success + 数据`
+- [ ] HTTP 错误返回 `Failure`
+- [ ] 超时返回 `Failure`
+- [ ] 其他异常返回 `Failure`
 
-### ✅ 转换类模块
-- [ ] 转换失败返回`VNull`（而非抛异常）
-- [ ] 文档化转换失败的条件
+### ✅ 文件类模块
+- [ ] 文件不存在返回 `Failure`
+- [ ] 权限拒绝返回 `Failure`
+- [ ] 读取失败返回 `Failure`
 
 ### ✅ 所有模块
-- [ ] 在`execute()`中捕获可能的异常
-- [ ] 返回`ExecutionResult.Failure`而非让异常传播
-- [ ] 提供清晰的错误消息
-
----
-
-## 迁移指南
-
-### 现有模块需要修复的情况
-
-#### ❌ 错误示例1：抛出异常
-```kotlin
-// ❌ 错误：可能抛出IndexOutOfBoundsException
-override suspend fun execute(...): ExecutionResult {
-    val list = getSomeList()
-    val first = list[0]  // 可能崩溃
-    return ExecutionResult.Success(mapOf("result" to first))
-}
-```
-
-#### ✅ 正确示例1：容错处理
-```kotlin
-// ✅ 正确：返回VNull
-override suspend fun execute(...): ExecutionResult {
-    val list = getSomeList()
-    val first = list.firstOrNull() ?: VNull
-    return ExecutionResult.Success(mapOf("result" to first))
-}
-```
-
-#### ❌ 错误示例2：未找到时返回null
-```kotlin
-// ❌ 错误：返回null会导致后续模块崩溃
-override suspend fun execute(...): ExecutionResult {
-    val element = findElement()
-    return ExecutionResult.Success(mapOf("result" to element))  // element可能是null
-}
-```
-
-#### ✅ 正确示例2：返回VNull
-```kotlin
-// ✅ 正确：明确返回VNull
-override suspend fun execute(...): ExecutionResult {
-    val element = findElement() ?: VNull
-    return ExecutionResult.Success(mapOf("result" to element))
-}
-```
+- [ ] 在 `execute()` 中捕获可能的异常
+- [ ] 返回 `ExecutionResult.Failure` 而非让异常传播
+- [ ] 提供清晰的错误信息（包含上下文）
+- [ ] **不要**返回 `Success + VNull` 来表示失败
+- [ ] **考虑**：对于有多个输出的模块，是否需要提供 `partialOutputs`
+  - 如果输出的语义在失败时有明确的默认值（如 `count=0`），应该提供
+  - 如果只有单一输出，可以不提供（使用默认的 `VNull`）
 
 ---
 
 ## 参考资料
 
 - [VObject语义规范](VOBJECT_SEMANTICS.md) - 详细的VObject类型系统说明
-- [Python Truth Value Testing](https://docs.python.org/3/library/stdtypes.html#truth-value-testing)
-- [Workflow Automation Best Practices](https://n8n.io/)
+- [WorkflowExecutor.kt 源码](../app/src/main/java/com/chaomixian/vflow/core/execution/WorkflowExecutor.kt) - 错误处理策略的实现
+- [n8n Error Handling](https://docs.n8n.io/flow-logic/error-handling/#error-data) - 工作流错误处理的最佳实践
 
 ---
 
-**版本**: 1.0.0
+**版本**: 2.0.0
 **最后更新**: 2025-01-23
 **维护者**: vFlow Team

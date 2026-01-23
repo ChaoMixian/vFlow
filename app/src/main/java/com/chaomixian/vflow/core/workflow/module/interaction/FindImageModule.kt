@@ -15,6 +15,7 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -155,10 +156,18 @@ class FindImageModule : BaseModule() {
         outputs["count"] = VNumber(matches.size.toDouble())
 
         if (matches.isEmpty()) {
-            onProgress(ProgressUpdate("未找到匹配图片"))
+            // 返回 Failure，让用户通过"异常处理策略"选择行为
+            // 用户可以选择：重试（UI 可能还在加载）、忽略错误继续、停止工作流
+            val similarityPercent = ((1.0 - maxDiffPercent) * 100).toInt()
             return ExecutionResult.Failure(
                 "未找到图片",
-                "在屏幕上未找到与模板图片匹配的区域。请检查模板图片是否正确，或降低匹配相似度要求。"
+                "在屏幕上未找到与模板图片匹配的区域。相似度要求: ${similarityPercent}%。请检查模板图片是否正确，或降低相似度要求。",
+                // 提供 partialOutputs，让"跳过此步骤继续"时有语义化的默认值
+                partialOutputs = mapOf(
+                    "count" to VNumber(0.0),              // 找到 0 个
+                    "all_results" to emptyList<Any>(),   // 空列表
+                    "first_result" to VNull             // 没有"第一个"
+                )
             )
         }
 

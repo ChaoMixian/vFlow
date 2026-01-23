@@ -209,8 +209,19 @@ enum class LoopAction {
 sealed class ExecutionResult {
     /** 表示模块成功执行。可以包含输出参数。 */
     data class Success(val outputs: Map<String, Any?> = emptyMap()) : ExecutionResult()
-    /** 表示模块执行失败。包含错误标题和详细信息。 */
-    data class Failure(val errorTitle: String, val errorMessage: String) : ExecutionResult()
+    /**
+     * 表示模块执行失败。
+     * @param errorTitle 错误标题
+     * @param errorMessage 错误详细信息
+     * @param partialOutputs 可选的部分输出。当"异常处理策略"为"跳过此步骤继续"时，
+     *                       这些输出会被使用（而不是默认的 VNull）。
+     *                       这允许模块在失败时提供语义化的默认值，如 count=0、list=[]。
+     */
+    data class Failure(
+        val errorTitle: String,
+        val errorMessage: String,
+        val partialOutputs: Map<String, Any?> = emptyMap()
+    ) : ExecutionResult()
     /** 表示模块执行完毕后发出一个控制信号，用于影响工作流的执行流程。 */
     data class Signal(val signal: ExecutionSignal) : ExecutionResult()
 }

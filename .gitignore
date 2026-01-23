@@ -28,3 +28,4 @@ local.properties
 
 # Release builds and modules
 /release/
+/application.backup

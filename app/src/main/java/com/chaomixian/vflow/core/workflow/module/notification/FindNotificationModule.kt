@@ -107,8 +107,19 @@ class FindNotificationModule : BaseModule() {
             }
         }
 
-        onProgress(ProgressUpdate("找到了 ${foundNotifications.size} 条通知。"))
+        if (foundNotifications.isEmpty()) {
+            // 返回 Failure，让用户通过"异常处理策略"选择行为
+            // 用户可以选择：重试（通知可能稍后到达）、忽略错误继续、停止工作流
+            return ExecutionResult.Failure(
+                "未找到通知",
+                "没有符合过滤条件的通知",
+                partialOutputs = mapOf(
+                    "notifications" to emptyList<Any>()   // 空列表（语义化）
+                )
+            )
+        }
 
+        onProgress(ProgressUpdate("找到了 ${foundNotifications.size} 条通知。"))
         return ExecutionResult.Success(mapOf("notifications" to VList(foundNotifications.map { VNotification(it) })))
     }
 }

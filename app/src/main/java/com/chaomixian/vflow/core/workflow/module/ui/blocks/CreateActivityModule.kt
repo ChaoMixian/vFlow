@@ -113,17 +113,24 @@ class ShowActivityModule : BaseModule() {
             onProgress(ProgressUpdate("等待用户操作..."))
             val event = UiSessionBus.waitForEvent(sessionId)
 
-            // 3. 处理系统事件（关闭、返回键）
+            // 3. 检查session是否已关闭
+            if (event == null) {
+                context.loopStack.pop()
+                val endPos = BlockNavigator.findEndBlockPosition(context.allSteps, context.currentStepIndex, ACTIVITY_PAIRING)
+                return ExecutionResult.Signal(ExecutionSignal.Jump(endPos))
+            }
+
+            // 4. 处理系统事件（关闭、返回键）
             if (event.type == "closed" || (destroyOnExit && event.type == "back_pressed")) {
                 context.loopStack.pop()
                 val endPos = BlockNavigator.findEndBlockPosition(context.allSteps, context.currentStepIndex, ACTIVITY_PAIRING)
                 return ExecutionResult.Signal(ExecutionSignal.Jump(endPos))
             }
 
-            // 4. 将事件存入上下文，供内部的监听模块使用
+            // 5. 将事件存入上下文，供内部的监听模块使用
             context.namedVariables[KEY_CURRENT_EVENT] = event
 
-            // 5. 将所有组件的值存入 namedVariables，方便其他模块使用
+            // 6. 将所有组件的值存入 namedVariables，方便其他模块使用
             event.allComponentValues.forEach { (componentId, value) ->
                 context.namedVariables["component_value.$componentId"] = value
             }
@@ -159,6 +166,13 @@ class ShowActivityModule : BaseModule() {
             // 为了复用代码，这里直接进入等待逻辑：
             onProgress(ProgressUpdate("界面已启动，等待操作..."))
             val event = UiSessionBus.waitForEvent(sessionId)
+
+            // 检查session是否已关闭
+            if (event == null) {
+                context.loopStack.pop()
+                val endPos = BlockNavigator.findEndBlockPosition(context.allSteps, context.currentStepIndex, ACTIVITY_PAIRING)
+                return ExecutionResult.Signal(ExecutionSignal.Jump(endPos))
+            }
 
             // 处理系统事件（关闭、返回键）
             if (event.type == "closed" || (destroyOnExit && event.type == "back_pressed")) {

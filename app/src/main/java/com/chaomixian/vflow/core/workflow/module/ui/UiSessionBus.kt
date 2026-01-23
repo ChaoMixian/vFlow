@@ -1,9 +1,9 @@
 // 文件: java/com/chaomixian/vflow/core/workflow/module/ui/UiSessionBus.kt
 package com.chaomixian.vflow.core.workflow.module.ui
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.ConcurrentHashMap
 
@@ -102,8 +102,30 @@ object UiSessionBus {
     fun getCommandFlow(sessionId: String) = sessionCommandFlows[sessionId]?.asSharedFlow()
 
     // Workflow 等待特定 Session 的事件
-    suspend fun waitForEvent(sessionId: String): UiEvent {
-        // 过滤出属于当前 Session 的事件，并取第一个
-        return _events.filter { it.sessionId == sessionId }.first()
+    suspend fun waitForEvent(sessionId: String): UiEvent? {
+        // 持续检查，直到有事件到来或session关闭
+        while (true) {
+            // 检查session是否仍然活跃
+            if (isSessionClosed(sessionId)) {
+                return null  // session已关闭，返回null
+            }
+
+            // 尝试获取事件（使用firstOrNull避免无限等待）
+            val event = try {
+                // 使用一个短暂的超时来避免阻塞
+                kotlinx.coroutines.withTimeoutOrNull(100) {
+                    _events.first { it.sessionId == sessionId }
+                }
+            } catch (e: Exception) {
+                null
+            }
+
+            if (event != null) {
+                return event
+            }
+
+            // 没有找到事件，等待一小段时间后重试
+            delay(100)
+        }
     }
 }

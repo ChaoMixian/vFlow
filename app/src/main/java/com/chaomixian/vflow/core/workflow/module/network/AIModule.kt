@@ -142,13 +142,17 @@ class AIModule : BaseModule() {
                 val jsonObject = gson.fromJson(responseStr, JsonObject::class.java)
                 val choices = jsonObject.getAsJsonArray("choices")
                 if (choices != null && choices.size() > 0) {
-                    val message = choices[0].asJsonObject.getAsJsonObject("message")
-                    val content = message.get("content").asString
-
-                    ExecutionResult.Success(mapOf(
-                        "result" to VString(content),
-                        "success" to VBoolean(true)
-                    ))
+                    val firstChoice = choices[0].asJsonObject
+                    val message = firstChoice.getAsJsonObject("message")
+                    if (message != null && message.has("content")) {
+                        val content = message.get("content").asString
+                        ExecutionResult.Success(mapOf(
+                            "result" to VString(content),
+                            "success" to VBoolean(true)
+                        ))
+                    } else {
+                        ExecutionResult.Failure("解析失败", "响应格式不符合预期: message.content 不存在")
+                    }
                 } else {
                     ExecutionResult.Failure("解析失败", "无法从响应中提取回答: $responseStr")
                 }

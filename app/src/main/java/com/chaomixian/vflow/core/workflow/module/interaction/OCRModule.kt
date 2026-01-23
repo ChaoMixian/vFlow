@@ -9,6 +9,7 @@ import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VImage
@@ -145,13 +146,20 @@ class OCRModule : BaseModule() {
             }
 
             if (matches.isEmpty()) {
-                onProgress(ProgressUpdate("未找到指定文字"))
-                return ExecutionResult.Success(mapOf(
-                    "success" to VBoolean(true),
-                    "found" to VBoolean(false),
-                    "count" to VNumber(0.0),
-                    "all_matches" to emptyList<Any>()
-                ))
+                // 返回 Failure，让用户通过"异常处理策略"选择行为
+                // 用户可以选择：重试（OCR 可能识别不准确）、忽略错误继续、停止工作流
+                return ExecutionResult.Failure(
+                    "未找到文字",
+                    "在图片中未找到指定文字: '$targetText'（语言: $language, 策略: $strategy）",
+                    // 提供 partialOutputs，让"跳过此步骤继续"时有语义化的默认值
+                    partialOutputs = mapOf(
+                        "success" to VBoolean(true),
+                        "found" to VBoolean(false),
+                        "count" to VNumber(0.0),           // 找到 0 个（语义化）
+                        "all_matches" to emptyList<Any>(), // 空列表（语义化）
+                        "first_match" to VNull             // 没有"第一个"
+                    )
+                )
             }
 
             // 应用排序策略

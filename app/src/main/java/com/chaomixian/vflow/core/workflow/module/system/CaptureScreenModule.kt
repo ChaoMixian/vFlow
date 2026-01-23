@@ -307,6 +307,11 @@ class CaptureScreenModule : BaseModule() {
                     val image = reader.acquireLatestImage()
                     if (image != null) {
                         val planes = image.planes
+                        if (planes.isEmpty()) {
+                            DebugLogger.e("CaptureScreenModule", "Image planes array is empty")
+                            deferred.complete(null)
+                            return@setOnImageAvailableListener
+                        }
                         val buffer = planes[0].buffer
                         val pixelStride = planes[0].pixelStride
                         val rowStride = planes[0].rowStride

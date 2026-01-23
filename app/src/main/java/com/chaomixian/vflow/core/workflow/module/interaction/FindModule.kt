@@ -12,6 +12,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VCoordinate
@@ -167,9 +168,18 @@ class FindTextModule : BaseModule() {
             outputs["count"] = VNumber(count.toDouble())
 
             if (nodes.isEmpty()) {
-                onProgress(ProgressUpdate("未在屏幕上找到匹配的文本。"))
-                outputs["all_results"] = emptyList<Any>()
-                return ExecutionResult.Success(outputs)
+                // 返回 Failure，让用户通过"异常处理策略"选择行为
+                // 用户可以选择：重试（UI 可能还在加载）、忽略错误继续、停止工作流
+                return ExecutionResult.Failure(
+                    "未找到文本",
+                    "未在屏幕上找到匹配的文本: '$targetText' (匹配模式: $matchModeStr)",
+                    // 提供 partialOutputs，让"跳过此步骤继续"时有语义化的默认值
+                    partialOutputs = mapOf(
+                        "count" to VNumber(0.0),              // 找到 0 个
+                        "all_results" to emptyList<Any>(),   // 空列表
+                        "first_result" to VNull             // 没有"第一个"
+                    )
+                )
             }
 
             // 转换所有节点为所需的输出格式（使用新的 VObject 类型）
@@ -187,7 +197,7 @@ class FindTextModule : BaseModule() {
             }
 
             outputs["all_results"] = allResultsList
-            outputs["first_result"] = allResultsList.first()
+            outputs["first_result"] = allResultsList.firstOrNull() ?: VNull  // 使用安全访问
 
             // 回收所有在 findNodesByText 中获取的节点副本
             nodes.forEach { it.recycle() }
