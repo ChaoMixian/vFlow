@@ -280,13 +280,34 @@ class ElseModule : BaseModule() {
 
     private fun findPreviousStepInSameBlock(steps: List<ActionStep>, startPosition: Int, targetId: String): String? {
         val pairingId = steps.getOrNull(startPosition)?.moduleId?.let { ModuleRegistry.getModule(it)?.blockBehavior?.pairingId } ?: return null
+
+        var nestingLevel = 0  // 嵌套层级计数器，用于处理 IF 内部的循环等嵌套结构
+
         for (i in (startPosition - 1) downTo 0) {
             val currentStep = steps[i]
             val currentModule = ModuleRegistry.getModule(currentStep.moduleId) ?: continue
-            if (currentModule.blockBehavior.pairingId == pairingId && currentModule.id == targetId) {
-                return currentStep.id
+            val behavior = currentModule.blockBehavior
+
+            if (behavior.pairingId == pairingId) {
+                // 处理同一配对ID的模块（IF/ELSE/ENDIF）
+                if (currentModule.id == targetId) {
+                    // 只有在当前层级（nestingLevel == 0）时才认为是找到目标
+                    if (nestingLevel == 0) return currentStep.id
+                }
+
+                // 更新嵌套层级
+                when (behavior.type) {
+                    BlockType.BLOCK_END -> nestingLevel++
+                    BlockType.BLOCK_START -> nestingLevel--
+                    else -> {}  // BLOCK_MIDDLE (ELSE) 不影响层级
+                }
+            } else if (behavior.type == BlockType.BLOCK_START) {
+                // 遇到其他类型的开始块（如 LOOP_START, WHILE_START 等），增加嵌套层级
+                nestingLevel++
+            } else if (behavior.type == BlockType.BLOCK_END) {
+                // 遇到其他类型的结束块（如 LOOP_END 等），减少嵌套层级
+                nestingLevel--
             }
-            if (currentModule.blockBehavior.type == BlockType.BLOCK_START && currentModule.blockBehavior.pairingId != pairingId) break
         }
         return null
     }
