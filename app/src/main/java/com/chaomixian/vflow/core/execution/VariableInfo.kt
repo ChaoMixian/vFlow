@@ -16,7 +16,8 @@ enum class VariableType(val displayName: String, val typeId: String) {
     BOOLEAN("布尔", "vflow.type.boolean"),
     DICTIONARY("字典", "vflow.type.dictionary"),
     LIST("列表", "vflow.type.list"),
-    IMAGE("图像", "vflow.type.image");
+    IMAGE("图像", "vflow.type.image"),
+    COORDINATE("坐标", "vflow.type.coordinate");
 
     companion object {
         /**

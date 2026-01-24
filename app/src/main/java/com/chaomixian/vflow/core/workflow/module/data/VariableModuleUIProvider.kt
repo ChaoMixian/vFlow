@@ -37,6 +37,8 @@ class VariableEditorViewHolder(
     var valueInputView: View? = null // 当前值输入视图的引用
     var dictionaryAdapter: DictionaryKVAdapter? = null // 如果类型是字典，则为该字典的适配器
     var listAdapter: ListItemAdapter? = null
+    var coordXInput: TextInputEditText? = null // 坐标类型的 X 输入框
+    var coordYInput: TextInputEditText? = null // 坐标类型的 Y 输入框
     var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // 用于存储魔法变量请求的回调
     var allSteps: List<ActionStep>? = null // 存储工作流步骤
 }
@@ -152,6 +154,32 @@ class VariableModuleUIProvider(
             }
             "字典" -> h.dictionaryAdapter?.getItemsAsMap()
             "列表" -> h.listAdapter?.getItems()
+            "坐标" -> {
+                val xText = h.coordXInput?.text?.toString()?.trim()
+                val yText = h.coordYInput?.text?.toString()?.trim()
+
+                val x = if (xText.isNullOrBlank()) 0 else {
+                    // 如果是变量引用，保持原样
+                    if (xText.isMagicVariable() || xText.isNamedVariable()) {
+                        xText
+                    } else {
+                        // 否则尝试转换为数字
+                        xText.toIntOrNull() ?: 0
+                    }
+                }
+
+                val y = if (yText.isNullOrBlank()) 0 else {
+                    // 如果是变量引用，保持原样
+                    if (yText.isMagicVariable() || yText.isNamedVariable()) {
+                        yText
+                    } else {
+                        // 否则尝试转换为数字
+                        yText.toIntOrNull() ?: 0
+                    }
+                }
+
+                mapOf("x" to x, "y" to y)
+            }
             "布尔" -> (h.valueInputView as? SwitchCompat)?.isChecked ?: false
             else -> {
                 val textInputLayout = h.valueInputView as? TextInputLayout
@@ -167,8 +195,10 @@ class VariableModuleUIProvider(
         holder.valueContainer.tag = null
         holder.dictionaryAdapter = null
         holder.listAdapter = null
+        holder.coordXInput = null
+        holder.coordYInput = null
 
-        // 检查是否为整个列表/字典赋值了变量
+        // 检查是否为整个列表/字典/坐标赋值了变量
         if (type != "文本" && currentValue is String && (currentValue.isMagicVariable() || currentValue.isNamedVariable())) {
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
             val pillText = pill.findViewById<TextView>(R.id.pill_text)
@@ -250,6 +280,101 @@ class VariableModuleUIProvider(
                 recyclerView.layoutManager = LinearLayoutManager(context)
                 addButton.setOnClickListener { listAdapter.addItem() }
                 editorView
+            }
+            "坐标" -> {
+                val coordContainer = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(0, (8 * context.resources.displayMetrics.density).toInt(), 0, 0)
+                }
+
+                // 解析当前坐标值
+                var currentX = ""
+                var currentY = ""
+                when (currentValue) {
+                    is Map<*, *> -> {
+                        currentX = currentValue["x"]?.toString() ?: "0"
+                        currentY = currentValue["y"]?.toString() ?: "0"
+                    }
+                    is List<*> -> {
+                        currentX = currentValue.getOrNull(0)?.toString() ?: "0"
+                        currentY = currentValue.getOrNull(1)?.toString() ?: "0"
+                    }
+                }
+
+                // 检查是否使用了变量引用
+                val xIsVariable = currentX.isMagicVariable() || currentX.isNamedVariable()
+                val yIsVariable = currentY.isMagicVariable() || currentY.isNamedVariable()
+
+                // X 坐标输入框
+                val xRow = LayoutInflater.from(context).inflate(R.layout.row_editor_input, coordContainer, false)
+                xRow.findViewById<TextView>(R.id.input_name).text = "X 坐标"
+
+                val xValueContainer = xRow.findViewById<ViewGroup>(R.id.input_value_container)
+                val xMagicButton = xRow.findViewById<ImageButton>(R.id.button_magic_variable)
+                xMagicButton.isVisible = true
+                xMagicButton.setOnClickListener {
+                    holder.onMagicVariableRequested?.invoke("value.x")
+                }
+
+                if (xIsVariable) {
+                    // 显示变量药丸
+                    val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, xValueContainer, false)
+                    val pillText = pill.findViewById<TextView>(R.id.pill_text)
+                    pillText.text = PillRenderer.getDisplayNameForVariableReference(currentX, holder.allSteps ?: emptyList())
+                    pill.setOnClickListener {
+                        holder.onMagicVariableRequested?.invoke("value.x")
+                    }
+                    xValueContainer.addView(pill)
+                } else {
+                    // 显示普通输入框
+                    val xInput = TextInputEditText(context).apply {
+                        setText(currentX)
+                        inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
+                    }
+                    val xInputLayout = TextInputLayout(context).apply {
+                        addView(xInput)
+                    }
+                    xValueContainer.addView(xInputLayout)
+                    holder.coordXInput = xInput
+                }
+
+                coordContainer.addView(xRow)
+
+                // Y 坐标输入框
+                val yRow = LayoutInflater.from(context).inflate(R.layout.row_editor_input, coordContainer, false)
+                yRow.findViewById<TextView>(R.id.input_name).text = "Y 坐标"
+
+                val yValueContainer = yRow.findViewById<ViewGroup>(R.id.input_value_container)
+                val yMagicButton = yRow.findViewById<ImageButton>(R.id.button_magic_variable)
+                yMagicButton.isVisible = true
+                yMagicButton.setOnClickListener {
+                    holder.onMagicVariableRequested?.invoke("value.y")
+                }
+
+                if (yIsVariable) {
+                    // 显示变量药丸
+                    val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, yValueContainer, false)
+                    val pillText = pill.findViewById<TextView>(R.id.pill_text)
+                    pillText.text = PillRenderer.getDisplayNameForVariableReference(currentY, holder.allSteps ?: emptyList())
+                    pill.setOnClickListener {
+                        holder.onMagicVariableRequested?.invoke("value.y")
+                    }
+                    yValueContainer.addView(pill)
+                } else {
+                    // 显示普通输入框
+                    val yInput = TextInputEditText(context).apply {
+                        setText(currentY)
+                        inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
+                    }
+                    val yInputLayout = TextInputLayout(context).apply {
+                        addView(yInput)
+                    }
+                    yValueContainer.addView(yInputLayout)
+                    holder.coordYInput = yInput
+                }
+
+                coordContainer.addView(yRow)
+                coordContainer
             }
             "布尔" -> SwitchCompat(context).apply {
                 text = "值"

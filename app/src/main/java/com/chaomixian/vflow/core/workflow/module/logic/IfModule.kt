@@ -180,6 +180,7 @@ class IfModule : BaseBlockModule() {
             VTypeRegistry.NUMBER.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_NUMBER
             VTypeRegistry.BOOLEAN.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_BOOLEAN
             VTypeRegistry.LIST.id, VTypeRegistry.DICTIONARY.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_COLLECTION
+            VTypeRegistry.COORDINATE.id, VTypeRegistry.IMAGE.id, VTypeRegistry.TIME.id, VTypeRegistry.DATE.id, VTypeRegistry.NOTIFICATION.id -> OPERATORS_FOR_ANY
             null -> OPERATORS_FOR_ANY
             else -> OPERATORS_FOR_ANY
         }.distinct()
@@ -244,7 +245,9 @@ class IfModule : BaseBlockModule() {
             "数字" -> VTypeRegistry.NUMBER.id
             "布尔" -> VTypeRegistry.BOOLEAN.id
             "字典" -> VTypeRegistry.DICTIONARY.id
+            "列表" -> VTypeRegistry.LIST.id
             "图像" -> VTypeRegistry.IMAGE.id
+            "坐标" -> VTypeRegistry.COORDINATE.id
             else -> null
         }
     }

@@ -10,6 +10,7 @@ import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -21,7 +22,7 @@ class CreateVariableModule : BaseModule() {
         iconRes = R.drawable.rounded_add_24,
         category = "数据"
     )
-    private val typeOptions = listOf("文本", "数字", "布尔", "字典", "列表", "图像")
+    private val typeOptions = listOf("文本", "数字", "布尔", "字典", "列表", "图像", "坐标")
 
     override val uiProvider: ModuleUIProvider? = VariableModuleUIProvider(typeOptions)
 
@@ -41,6 +42,7 @@ class CreateVariableModule : BaseModule() {
             "字典" -> VTypeRegistry.DICTIONARY.id
             "列表" -> VTypeRegistry.LIST.id
             "图像" -> VTypeRegistry.IMAGE.id
+            "坐标" -> VTypeRegistry.COORDINATE.id
             else -> VTypeRegistry.STRING.id
         }
         return listOf(OutputDefinition("variable", "变量值", outputTypeName))
@@ -64,9 +66,9 @@ class CreateVariableModule : BaseModule() {
             }
         }
 
-        // 如果是字典或列表，且不是单纯的变量引用
+        // 如果是字典、列表或坐标，且不是单纯的变量引用
         // 此时 VariableValueUIProvider 会显示详细预览列表，摘要中隐藏 value pill 以防重复
-        if ((type == "字典" || type == "列表") && !rawText.isMagicVariable() && !rawText.isNamedVariable()) {
+        if ((type == "字典" || type == "列表" || type == "坐标") && !rawText.isMagicVariable() && !rawText.isNamedVariable()) {
             return buildSimpleSummary(context, name, type)
         }
 
@@ -172,6 +174,34 @@ class CreateVariableModule : BaseModule() {
                 VList(list)
             }
             "图像" -> VImage(rawValue?.toString() ?: "")
+            "坐标" -> {
+                val coordValue = when (rawValue) {
+                    is VCoordinate -> rawValue
+                    is Map<*, *> -> {
+                        val x = (rawValue["x"] as? Number)?.toInt() ?: 0
+                        val y = (rawValue["y"] as? Number)?.toInt() ?: 0
+                        VCoordinate(x, y)
+                    }
+                    is List<*> -> {
+                        val x = (rawValue.getOrNull(0) as? Number)?.toInt() ?: 0
+                        val y = (rawValue.getOrNull(1) as? Number)?.toInt() ?: 0
+                        VCoordinate(x, y)
+                    }
+                    else -> {
+                        // 尝试从字符串解析 "x,y" 格式
+                        val str = rawValue?.toString() ?: ""
+                        val parts = str.split(",")
+                        if (parts.size == 2) {
+                            val x = parts[0].trim().toIntOrNull() ?: 0
+                            val y = parts[1].trim().toIntOrNull() ?: 0
+                            VCoordinate(x, y)
+                        } else {
+                            VCoordinate(0, 0)
+                        }
+                    }
+                }
+                coordValue
+            }
             else -> VString(rawValue?.toString() ?: "")
         }
 
