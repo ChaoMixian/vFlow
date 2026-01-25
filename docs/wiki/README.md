@@ -133,8 +133,33 @@ my_module.zip
 | `name` | string | 是 | 参数显示名称 |
 | `type` | string | 是 | 参数类型：`string`、`number`、`boolean`、`enum`、`any` |
 | `defaultValue` | any | 否 | 默认值 |
-| `options` | array | 否 | 枚举选项（type为enum时必填） |
+| `options` | array\<string\> | 否 | 枚举可选项列表。**当 type 为 "enum" 时必填**，值为字符串数组，例如：`["选项1", "选项2"]` |
 | `magic_variable` | boolean | 否 | 是否支持魔法变量输入，默认true |
+
+#### 枚举类型 (enum) 示例
+
+当参数类型为 `enum` 时，必须提供 `options` 字段，用户可以从预设的选项中选择：
+
+```json
+{
+  "inputs": [
+    {
+      "id": "operation_mode",
+      "name": "操作模式",
+      "type": "enum",
+      "options": ["追加", "覆盖", "删除"],
+      "defaultValue": "追加"
+    },
+    {
+      "id": "log_level",
+      "name": "日志级别",
+      "type": "enum",
+      "options": ["调试", "信息", "警告", "错误"],
+      "defaultValue": "信息"
+    }
+  ]
+}
+```
 
 ### 输出参数 (outputs)
 
@@ -641,6 +666,126 @@ vflow.device.toast({
 
 return {
     filled_count = count
+}
+```
+
+### 示例3：文件管理器（使用枚举参数）
+
+这个示例展示了如何使用 `enum` 类型参数让用户从预设选项中选择操作模式。
+
+**manifest.json:**
+
+```json
+{
+  "id": "user.file_manager",
+  "name": "文件管理器",
+  "description": "根据选择的模式对文件进行不同操作",
+  "category": "用户脚本",
+  "author": "YourName",
+  "version": "1.0.0",
+  "inputs": [
+    {
+      "id": "file_path",
+      "name": "文件路径",
+      "type": "string",
+      "defaultValue": "/sdcard/test.txt"
+    },
+    {
+      "id": "operation_mode",
+      "name": "操作模式",
+      "type": "enum",
+      "options": ["读取内容", "获取大小", "检查存在", "删除文件"],
+      "defaultValue": "读取内容",
+      "magic_variable": false
+    }
+  ],
+  "outputs": [
+    {
+      "id": "result",
+      "name": "操作结果",
+      "type": "text"
+    },
+    {
+      "id": "success",
+      "name": "是否成功",
+      "type": "boolean"
+    }
+  ],
+  "permissions": ["vflow.permission.SHIZUKU"]
+}
+```
+
+**script.lua:**
+
+```lua
+local file_path = inputs.file_path
+local mode = inputs.operation_mode
+local result = ""
+local success = false
+
+-- 根据用户选择的操作模式执行不同操作
+if mode == "读取内容" then
+    -- 使用 cat 命令读取文件
+    local cmd_result = vflow.shizuku.shell_command({
+        command = "cat '" .. file_path .. "'"
+    })
+
+    if cmd_result.success then
+        result = cmd_result.output
+        success = true
+    else
+        result = "读取失败: " .. cmd_result.error
+    end
+
+elseif mode == "获取大小" then
+    -- 使用 ls -l 获取文件大小
+    local cmd_result = vflow.shizuku.shell_command({
+        command = "ls -l '" .. file_path .. "'"
+    })
+
+    if cmd_result.success then
+        -- 解析输出获取大小信息
+        result = cmd_result.output
+        success = true
+    else
+        result = "获取失败: " .. cmd_result.error
+    end
+
+elseif mode == "检查存在" then
+    -- 使用 test 命令检查文件是否存在
+    local cmd_result = vflow.shizuku.shell_command({
+        command = "test -f '" .. file_path .. "' && echo 'exists' || echo 'not_exists'"
+    })
+
+    if cmd_result.output:match("exists") then
+        result = "文件存在"
+        success = true
+    else
+        result = "文件不存在"
+    end
+
+elseif mode == "删除文件" then
+    -- 使用 rm 命令删除文件
+    local cmd_result = vflow.shizuku.shell_command({
+        command = "rm '" .. file_path .. "'"
+    })
+
+    if cmd_result.success then
+        result = "文件已删除"
+        success = true
+    else
+        result = "删除失败: " .. cmd_result.error
+    end
+end
+
+-- 显示操作结果
+vflow.device.toast({
+    message = mode .. " - " .. (success and "成功" or "失败")
+})
+
+return {
+    result = result,
+    success = success
 }
 ```
 
