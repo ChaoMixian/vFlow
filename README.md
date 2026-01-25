@@ -1,5 +1,13 @@
 # vFlow - 强大的 Android 可视化工作流自动化工具
 
+[![Latest Release](https://img.shields.io/github/v/release/ChaoMixian/vFlow?display_name=tag&style=flat-square)](https://github.com/ChaoMixian/vFlow/releases/latest)
+[![GitHub Stars](https://img.shields.io/github/stars/ChaoMixian/vFlow?style=flat-square)](https://github.com/ChaoMixian/vFlow/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/ChaoMixian/vFlow?style=flat-square)](https://github.com/ChaoMixian/vFlow/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/ChaoMixian/vFlow?style=flat-square)](https://github.com/ChaoMixian/vFlow/issues)
+[![License](https://img.shields.io/github/license/ChaoMixian/vFlow?style=flat-square)](LICENSE)
+[![API](https://img.shields.io/badge/API-21%2B-brightgreen?style=flat-square)](https://android-arsenal.com/api?level=21)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.0-blue?style=flat-square&logo=kotlin)](https://kotlinlang.org)
+
 **vFlow** 是一款为 Android 平台设计的、强大且高度可扩展的自动化工具。它允许你通过图形化界面，将一系列“动作模块”自由组合成强大的“工作流”，从而自动完成各种日常的、重复性的屏幕操作任务。
 
 ## ✨ 项目简介
