@@ -30,9 +30,11 @@ import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
+import android.util.Base64
 
 class FindImageModuleUIProvider : ModuleUIProvider {
 
@@ -178,12 +180,12 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         onStartActivityForResult(intent) { resultCode, data ->
             if (resultCode == Activity.RESULT_OK && data?.data != null) {
                 val uri = data.data!!
-                // 复制图片到应用缓存目录
+                // 编码图片为 Base64
                 holder.scope?.launch {
-                    val savedUri = copyImageToCache(context, uri)
-                    if (savedUri != null) {
-                        holder.templateUri = savedUri.toString()
-                        updateImagePreview(context, holder, savedUri.toString())
+                    val base64String = encodeImageToBase64(context, uri)
+                    if (base64String != null) {
+                        holder.templateUri = base64String
+                        updateImagePreview(context, holder, base64String)
                         holder.onParametersChangedCallback?.invoke()
                     }
                 }
@@ -223,6 +225,11 @@ class FindImageModuleUIProvider : ModuleUIProvider {
                 val overlay = ScreenCaptureOverlay(context, cacheDir)
                 val resultUri = overlay.captureAndCrop()
 
+                // 将 URI 转换为 Base64
+                val base64String = if (resultUri != null) {
+                    uriToBase64(resultUri)
+                } else null
+
                 // 确保在主线程更新 UI
                 withContext(Dispatchers.Main) {
                     // 恢复 Activity 到前台
@@ -236,9 +243,9 @@ class FindImageModuleUIProvider : ModuleUIProvider {
                     val ctx = contextRef.get()
                     val h = holderRef.get()
 
-                    if (ctx != null && h != null && resultUri != null) {
-                        h.templateUri = resultUri.toString()
-                        updateImagePreview(ctx, h, resultUri.toString())
+                    if (ctx != null && h != null && base64String != null) {
+                        h.templateUri = base64String
+                        updateImagePreview(ctx, h, base64String)
                         h.onParametersChangedCallback?.invoke()
                     }
                 }
@@ -261,7 +268,27 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         }
     }
 
-    private suspend fun copyImageToCache(context: Context, sourceUri: Uri): Uri? {
+    private suspend fun uriToBase64(uri: Uri): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val bitmap = BitmapFactory.decodeFile(uri.path)
+                if (bitmap == null) return@withContext null
+
+                val outputStream = ByteArrayOutputStream()
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                val byteArray = outputStream.toByteArray()
+                val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
+                bitmap.recycle()
+
+                base64String
+            } catch (e: Exception) {
+                DebugLogger.e("FindImageModuleUIProvider", "URI 转 Base64 失败", e)
+                null
+            }
+        }
+    }
+
+    private suspend fun encodeImageToBase64(context: Context, sourceUri: Uri): String? {
         return withContext(Dispatchers.IO) {
             try {
                 val inputStream = context.contentResolver.openInputStream(sourceUri) ?: return@withContext null
@@ -270,31 +297,47 @@ class FindImageModuleUIProvider : ModuleUIProvider {
 
                 if (bitmap == null) return@withContext null
 
-                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.getDefault()).format(Date())
-                val outputFile = File(context.cacheDir, "template_$timestamp.png")
-                FileOutputStream(outputFile).use { fos ->
-                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, fos)
-                }
+                // 将 Bitmap 编码为 Base64
+                val outputStream = ByteArrayOutputStream()
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                val byteArray = outputStream.toByteArray()
+                val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
                 bitmap.recycle()
 
-                Uri.fromFile(outputFile)
+                base64String
             } catch (e: Exception) {
-                DebugLogger.e("FindImageModuleUIProvider", "复制图片失败", e)
+                DebugLogger.e("FindImageModuleUIProvider", "编码图片失败", e)
                 null
             }
         }
     }
 
-    private fun updateImagePreview(context: Context, holder: ViewHolder, uriString: String) {
-        if (uriString.isEmpty()) {
+    private fun updateImagePreview(context: Context, holder: ViewHolder, dataString: String) {
+        if (dataString.isEmpty()) {
             holder.ivTemplatePreview.isVisible = false
             holder.layoutPlaceholder.isVisible = true
         } else {
             holder.ivTemplatePreview.isVisible = true
             holder.layoutPlaceholder.isVisible = false
-            holder.ivTemplatePreview.load(Uri.parse(uriString)) {
-                crossfade(true)
-                error(R.drawable.rounded_broken_image_24)
+
+            // 判断是 Base64 还是旧格式的 URI
+            if (dataString.startsWith("data:image") || dataString.length > 1000) {
+                // Base64 格式: "data:image/png;base64,{base64_string}"
+                val base64String = if (dataString.startsWith("data:image")) {
+                    dataString
+                } else {
+                    "data:image/png;base64,$dataString"
+                }
+                holder.ivTemplatePreview.load(base64String) {
+                    crossfade(true)
+                    error(R.drawable.rounded_broken_image_24)
+                }
+            } else {
+                // 旧格式 URI
+                holder.ivTemplatePreview.load(Uri.parse(dataString)) {
+                    crossfade(true)
+                    error(R.drawable.rounded_broken_image_24)
+                }
             }
         }
     }

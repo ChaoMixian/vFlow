@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import android.util.Base64
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -192,25 +193,38 @@ class FindImageModule : BaseModule() {
         return ExecutionResult.Success(outputs)
     }
 
-    private fun loadBitmap(context: Context, uriString: String): Bitmap? {
+    private fun loadBitmap(context: Context, dataString: String): Bitmap? {
         return try {
-            val uri = Uri.parse(uriString)
-            when {
-                uri.scheme == "file" -> BitmapFactory.decodeFile(uri.path)
-                uri.scheme == "content" -> {
-                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        BitmapFactory.decodeStream(inputStream)
-                    }
+            // 判断是 Base64 还是旧格式的 URI
+            if (dataString.startsWith("data:image") || dataString.length > 1000) {
+                // Base64 格式: "data:image/png;base64,{base64_string}" 或纯 Base64 字符串
+                val base64Data = if (dataString.startsWith("data:image")) {
+                    dataString.substringAfter("base64,")
+                } else {
+                    dataString
                 }
-                uriString.startsWith("/") -> BitmapFactory.decodeFile(uriString)
-                else -> {
-                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        BitmapFactory.decodeStream(inputStream)
+                val byteArray = Base64.decode(base64Data, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+            } else {
+                // 旧格式 URI
+                val uri = Uri.parse(dataString)
+                when {
+                    uri.scheme == "file" -> BitmapFactory.decodeFile(uri.path)
+                    uri.scheme == "content" -> {
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            BitmapFactory.decodeStream(inputStream)
+                        }
+                    }
+                    dataString.startsWith("/") -> BitmapFactory.decodeFile(dataString)
+                    else -> {
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            BitmapFactory.decodeStream(inputStream)
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
-            DebugLogger.e("FindImageModule", "加载图片失败: $uriString", e)
+            DebugLogger.e("FindImageModule", "加载图片失败: $dataString", e)
             null
         }
     }
