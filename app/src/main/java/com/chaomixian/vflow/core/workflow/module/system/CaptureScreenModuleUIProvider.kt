@@ -19,6 +19,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
@@ -110,33 +111,45 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
     }
 
     private fun selectRegion(context: Context, holder: ViewHolder) {
+        DebugLogger.i("CaptureScreenModuleUIProvider", "用户点击区域选择按钮")
+
         // 检查悬浮窗权限
         if (!PermissionManager.isGranted(context, PermissionManager.OVERLAY)) {
+            DebugLogger.w("CaptureScreenModuleUIProvider", "悬浮窗权限未授予")
             Toast.makeText(context, "需要悬浮窗权限才能选择区域", Toast.LENGTH_SHORT).show()
             return
         }
+        DebugLogger.i("CaptureScreenModuleUIProvider", "悬浮窗权限检查通过")
 
         // 检查 Shell 权限
         val shellPermissions = ShellManager.getRequiredPermissions(context)
         val hasShellPermission = shellPermissions.all { PermissionManager.isGranted(context, it) }
         if (!hasShellPermission) {
+            DebugLogger.w("CaptureScreenModuleUIProvider", "Shell 权限未授予: $shellPermissions")
             Toast.makeText(context, "需要 Shizuku 或 Root 权限才能截图", Toast.LENGTH_SHORT).show()
             return
         }
+        DebugLogger.i("CaptureScreenModuleUIProvider", "Shell 权限检查通过")
 
         // 使用弱引用避免内存泄漏
         val contextRef = WeakReference(context)
         val holderRef = WeakReference(holder)
         val activity = context as? Activity
+        DebugLogger.i("CaptureScreenModuleUIProvider", "开始区域选择流程，activity: ${activity?.javaClass?.simpleName}")
 
         holder.scope?.launch {
             try {
                 // 最小化当前 Activity
                 activity?.moveTaskToBack(true)
+                DebugLogger.i("CaptureScreenModuleUIProvider", "Activity 已移至后台")
 
-                val cacheDir = context.cacheDir
-                val overlay = RegionSelectionOverlay(context, cacheDir)
+                // 使用外部存储目录，确保 shell 可以写入
+                val screenshotDir = StorageManager.tempDir
+                DebugLogger.i("CaptureScreenModuleUIProvider", "创建 RegionSelectionOverlay，使用目录: ${screenshotDir.absolutePath}")
+                val overlay = RegionSelectionOverlay(context, screenshotDir)
                 val result = overlay.captureAndSelectRegion()
+
+                DebugLogger.i("CaptureScreenModuleUIProvider", "区域选择流程结束，result: $result")
 
                 withContext(Dispatchers.Main) {
                     // 恢复 Activity
@@ -145,6 +158,7 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
                             flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
                         }
                         act.startActivity(intent)
+                        DebugLogger.i("CaptureScreenModuleUIProvider", "Activity 已恢复至前台")
                     }
 
                     val ctx = contextRef.get()
@@ -168,6 +182,7 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
                         updateRegionInfo(h, result.region)
 
                         h.onParametersChangedCallback?.invoke()
+                        DebugLogger.i("CaptureScreenModuleUIProvider", "区域信息已更新")
                     }
                 }
             } catch (e: Exception) {

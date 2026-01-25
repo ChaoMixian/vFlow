@@ -246,17 +246,20 @@ class CaptureScreenModule : BaseModule() {
         val path = cacheFile.absolutePath
 
         val command = "screencap -p \"$path\""
+        DebugLogger.i("CaptureScreenModule", "执行 Shell 截图命令: $command")
 
         return withContext(Dispatchers.IO) {
             try {
                 // 使用 ShellManager 自动选择最佳方式 (Root/Shizuku)
                 val result = ShellManager.execShellCommand(context, command, ShellManager.ShellMode.AUTO)
+                DebugLogger.i("CaptureScreenModule", "Shell 截图命令执行结果: $result")
 
                 // 检查文件是否存在且大小正常 (忽略 ShellManager 的文本返回值，只看文件结果)
                 if (cacheFile.exists() && cacheFile.length() > 0) {
+                    DebugLogger.i("CaptureScreenModule", "Shell 截图成功: ${cacheFile.length()} 字节")
                     Uri.fromFile(cacheFile)
                 } else {
-                    DebugLogger.w("CaptureScreenModule", "Shell 截图未生成文件: $result")
+                    DebugLogger.w("CaptureScreenModule", "Shell 截图未生成文件: exists=${cacheFile.exists()}, length=${cacheFile.length()}, result=$result")
                     null
                 }
             } catch (e: Exception) {

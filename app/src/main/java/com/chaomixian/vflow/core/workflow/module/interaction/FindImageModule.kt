@@ -236,13 +236,18 @@ class FindImageModule : BaseModule() {
         val path = cacheFile.absolutePath
 
         val command = "screencap -p \"$path\""
+        DebugLogger.i("FindImageModule", "执行截图命令: $command")
 
         return withContext(Dispatchers.IO) {
             try {
-                ShellManager.execShellCommand(context, command, ShellManager.ShellMode.AUTO)
+                val result = ShellManager.execShellCommand(context, command, ShellManager.ShellMode.AUTO)
+                DebugLogger.i("FindImageModule", "截图命令执行结果: $result")
+
                 if (cacheFile.exists() && cacheFile.length() > 0) {
+                    DebugLogger.i("FindImageModule", "截图成功: ${cacheFile.length()} 字节")
                     Uri.fromFile(cacheFile)
                 } else {
+                    DebugLogger.w("FindImageModule", "截图文件不存在或为空: exists=${cacheFile.exists()}, length=${cacheFile.length()}")
                     null
                 }
             } catch (e: Exception) {

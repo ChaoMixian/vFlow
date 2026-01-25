@@ -144,7 +144,9 @@ class RegionSelectionOverlay(
         }
 
         try {
+            DebugLogger.i("RegionSelectionOverlay", "准备添加悬浮按钮，layoutParams: $layoutParams")
             windowManager.addView(fabRoot, layoutParams)
+            DebugLogger.i("RegionSelectionOverlay", "悬浮按钮添加成功")
         } catch (e: Exception) {
             DebugLogger.e("RegionSelectionOverlay", "添加悬浮按钮失败", e)
             resultDeferred?.complete(null)
@@ -159,11 +161,21 @@ class RegionSelectionOverlay(
             val path = cacheFile.absolutePath
 
             val command = "screencap -p \"$path\""
-            ShellManager.execShellCommand(appContext, command, ShellManager.ShellMode.AUTO)
+            DebugLogger.i("RegionSelectionOverlay", "执行截图命令: $command")
+            val result = ShellManager.execShellCommand(appContext, command, ShellManager.ShellMode.AUTO)
+            DebugLogger.i("RegionSelectionOverlay", "截图命令执行结果: $result")
 
             if (cacheFile.exists() && cacheFile.length() > 0) {
+                DebugLogger.i("RegionSelectionOverlay", "截图文件大小: ${cacheFile.length()} 字节")
                 screenshotBitmap = BitmapFactory.decodeFile(path)
                 screenshotUri = Uri.fromFile(cacheFile)
+                if (screenshotBitmap != null) {
+                    DebugLogger.i("RegionSelectionOverlay", "截图成功: ${screenshotBitmap!!.width}x${screenshotBitmap!!.height}")
+                } else {
+                    DebugLogger.e("RegionSelectionOverlay", "BitmapFactory 解码失败，文件可能损坏")
+                }
+            } else {
+                DebugLogger.e("RegionSelectionOverlay", "截图文件不存在或为空: exists=${cacheFile.exists()}, length=${cacheFile.length()}, result=$result")
             }
         }
 
@@ -172,27 +184,35 @@ class RegionSelectionOverlay(
                 showCropView()
             }
         } else {
+            DebugLogger.e("RegionSelectionOverlay", "截图失败，无法继续")
             resultDeferred?.complete(null)
         }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun showCropView() {
-        val bitmap = screenshotBitmap ?: return
+        val bitmap = screenshotBitmap ?: run {
+            DebugLogger.e("RegionSelectionOverlay", "showCropView: screenshotBitmap 为 null")
+            return
+        }
+
+        DebugLogger.i("RegionSelectionOverlay", "开始显示裁剪视图，bitmap: ${bitmap.width}x${bitmap.height}")
 
         // 移除悬浮按钮
         try {
             if (fabRoot != null) {
                 windowManager.removeView(fabRoot)
                 fabRoot = null
+                DebugLogger.i("RegionSelectionOverlay", "悬浮按钮已移除")
             }
         } catch (e: Exception) {
-            // 忽略
+            DebugLogger.e("RegionSelectionOverlay", "移除悬浮按钮失败", e)
         }
 
         val metrics = DisplayMetrics()
         @Suppress("DEPRECATION")
         windowManager.defaultDisplay.getRealMetrics(metrics)
+        DebugLogger.i("RegionSelectionOverlay", "屏幕尺寸: ${metrics.widthPixels}x${metrics.heightPixels}")
 
         // 使用 appContext 创建容器
         cropRoot = FrameLayout(appContext).apply {
@@ -288,7 +308,9 @@ class RegionSelectionOverlay(
         }
 
         try {
+            DebugLogger.i("RegionSelectionOverlay", "准备添加裁剪视图，layoutParams: $layoutParams")
             windowManager.addView(cropRoot, layoutParams)
+            DebugLogger.i("RegionSelectionOverlay", "裁剪视图添加成功")
         } catch (e: Exception) {
             DebugLogger.e("RegionSelectionOverlay", "添加裁剪视图失败", e)
             resultDeferred?.complete(null)

@@ -19,6 +19,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
@@ -194,19 +195,25 @@ class FindImageModuleUIProvider : ModuleUIProvider {
     }
 
     private fun captureAndCropScreen(context: Context, holder: ViewHolder) {
+        DebugLogger.i("FindImageModuleUIProvider", "用户点击截图按钮")
+
         // 检查悬浮窗权限
         if (!PermissionManager.isGranted(context, PermissionManager.OVERLAY)) {
+            DebugLogger.w("FindImageModuleUIProvider", "悬浮窗权限未授予")
             Toast.makeText(context, "需要悬浮窗权限才能截图", Toast.LENGTH_SHORT).show()
             return
         }
+        DebugLogger.i("FindImageModuleUIProvider", "悬浮窗权限检查通过")
 
         // 检查 Shell 权限
         val shellPermissions = ShellManager.getRequiredPermissions(context)
         val hasShellPermission = shellPermissions.all { PermissionManager.isGranted(context, it) }
         if (!hasShellPermission) {
+            DebugLogger.w("FindImageModuleUIProvider", "Shell 权限未授予: $shellPermissions")
             Toast.makeText(context, "需要 Shizuku 或 Root 权限才能截图", Toast.LENGTH_SHORT).show()
             return
         }
+        DebugLogger.i("FindImageModuleUIProvider", "Shell 权限检查通过")
 
         // 使用弱引用避免内存泄漏
         val contextRef = WeakReference(context)
@@ -214,21 +221,31 @@ class FindImageModuleUIProvider : ModuleUIProvider {
 
         // 保存 Activity 引用，用于截图完成后恢复
         val activity = context as? Activity
+        DebugLogger.i("FindImageModuleUIProvider", "开始截图流程，activity: ${activity?.javaClass?.simpleName}")
 
         holder.scope?.launch {
             try {
                 // 最小化当前 Activity，让用户看到要截图的内容
                 activity?.moveTaskToBack(true)
+                DebugLogger.i("FindImageModuleUIProvider", "Activity 已移至后台")
 
-                val cacheDir = context.cacheDir
+                // 使用外部存储目录，确保 shell 可以写入
+                val screenshotDir = StorageManager.tempDir
+                DebugLogger.i("FindImageModuleUIProvider", "创建 ScreenCaptureOverlay，使用目录: ${screenshotDir.absolutePath}")
                 // 使用原始 context（Activity context）以保持 Material 主题
-                val overlay = ScreenCaptureOverlay(context, cacheDir)
+                val overlay = ScreenCaptureOverlay(context, screenshotDir)
                 val resultUri = overlay.captureAndCrop()
+
+                DebugLogger.i("FindImageModuleUIProvider", "截图流程结束，resultUri: $resultUri")
 
                 // 将 URI 转换为 Base64
                 val base64String = if (resultUri != null) {
+                    DebugLogger.i("FindImageModuleUIProvider", "开始将 URI 转换为 Base64")
                     uriToBase64(resultUri)
-                } else null
+                } else {
+                    DebugLogger.w("FindImageModuleUIProvider", "截图被取消或失败")
+                    null
+                }
 
                 // 确保在主线程更新 UI
                 withContext(Dispatchers.Main) {
@@ -238,6 +255,7 @@ class FindImageModuleUIProvider : ModuleUIProvider {
                             flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
                         }
                         act.startActivity(intent)
+                        DebugLogger.i("FindImageModuleUIProvider", "Activity 已恢复至前台")
                     }
 
                     val ctx = contextRef.get()
@@ -247,6 +265,7 @@ class FindImageModuleUIProvider : ModuleUIProvider {
                         h.templateUri = base64String
                         updateImagePreview(ctx, h, base64String)
                         h.onParametersChangedCallback?.invoke()
+                        DebugLogger.i("FindImageModuleUIProvider", "图片预览已更新")
                     }
                 }
             } catch (e: Exception) {
