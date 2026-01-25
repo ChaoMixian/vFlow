@@ -334,6 +334,8 @@ class UiInspectorService : Service() {
         list.add(InspectorItem.Property("控件类型", node.className?.toString() ?: "未知"))
 
         list.add(InspectorItem.Header("布局坐标"))
+        list.add(InspectorItem.Property("左上坐标", "${rect.left},${rect.top}"))
+        list.add(InspectorItem.Property("右下坐标", "${rect.right},${rect.bottom}"))
         list.add(InspectorItem.Property("中心点", "${rect.centerX()},${rect.centerY()}"))
         list.add(InspectorItem.Property("坐标 X", rect.left.toString()))
         list.add(InspectorItem.Property("坐标 Y", rect.top.toString()))

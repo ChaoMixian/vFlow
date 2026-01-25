@@ -2,7 +2,9 @@
 package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
+import android.provider.MediaStore
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
@@ -12,6 +14,7 @@ import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -51,6 +54,8 @@ class OCRModule : BaseModule() {
         // 高级选项
         InputDefinition("language", "识别语言", ParameterType.ENUM, "中英混合", options = languageOptions, acceptsMagicVariable = false, isHidden = true),
         InputDefinition("search_strategy", "查找策略", ParameterType.ENUM, "默认 (从上到下)", options = strategyOptions, acceptsMagicVariable = false, isHidden = true),
+        InputDefinition("region_top_left", "识别区域-左上坐标", ParameterType.STRING, "", acceptsMagicVariable = true, isHidden = true),
+        InputDefinition("region_bottom_right", "识别区域-右下坐标", ParameterType.STRING, "", acceptsMagicVariable = true, isHidden = true),
         // 用于保存"更多设置"开关的状态
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
     )
@@ -70,9 +75,11 @@ class OCRModule : BaseModule() {
             listOf(
                 OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
                 OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
+                OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id),
                 OutputDefinition("first_match", "第一个结果 (元素)", VTypeRegistry.UI_ELEMENT.id),
-                OutputDefinition("all_matches", "所有结果 (列表)", VTypeRegistry.LIST.id),
-                OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id)
+                OutputDefinition("first_center", "第一个结果 (坐标)", VTypeRegistry.COORDINATE.id),
+                OutputDefinition("all_matches", "所有结果 (元素列表)", VTypeRegistry.LIST.id),
+                OutputDefinition("all_centers", "所有结果 (坐标列表)", VTypeRegistry.LIST.id)
             )
         }
     }
@@ -102,6 +109,17 @@ class OCRModule : BaseModule() {
         val rawTargetText = context.variables["target_text"]?.toString() ?: ""
         val targetText = VariableResolver.resolve(rawTargetText, context)
 
+        // 获取识别区域参数
+        val rawTopLeft = context.variables["region_top_left"]?.toString()
+        val rawBottomRight = context.variables["region_bottom_right"]?.toString()
+        val topLeft = parseCoordinate(rawTopLeft, context)
+        val bottomRight = parseCoordinate(rawBottomRight, context)
+
+        // 验证区域参数
+        if ((topLeft != null) != (bottomRight != null)) {
+            return ExecutionResult.Failure("参数错误", "识别区域需要同时设置左上和右下坐标。")
+        }
+
         if (mode == "查找文本" && targetText.isEmpty()) {
             return ExecutionResult.Failure("参数错误", "查找内容不能为空。")
         }
@@ -116,7 +134,13 @@ class OCRModule : BaseModule() {
 
         try {
             onProgress(ProgressUpdate("正在处理图片..."))
-            val inputImage = InputImage.fromFilePath(appContext, Uri.parse(imageVar.uriString))
+            val inputImage = if (topLeft != null && bottomRight != null) {
+                // 使用区域识别
+                createInputImageWithRegion(appContext, Uri.parse(imageVar.uriString), topLeft, bottomRight)
+            } else {
+                // 全屏识别
+                InputImage.fromFilePath(appContext, Uri.parse(imageVar.uriString))
+            }
 
             onProgress(ProgressUpdate("正在识别文字..."))
             val result: Text = recognizer.process(inputImage).await()
@@ -139,7 +163,18 @@ class OCRModule : BaseModule() {
                 for (line in block.lines) {
                     if (line.text.contains(targetText, ignoreCase = true)) {
                         line.boundingBox?.let { rect ->
-                            matches.add(VScreenElement(rect, line.text))
+                            // 如果使用了区域识别，需要将坐标转换回原始图片坐标系
+                            val adjustedRect = if (topLeft != null && bottomRight != null) {
+                                android.graphics.Rect(
+                                    rect.left + topLeft.first,
+                                    rect.top + topLeft.second,
+                                    rect.right + topLeft.first,
+                                    rect.bottom + topLeft.second
+                                )
+                            } else {
+                                rect
+                            }
+                            matches.add(VScreenElement(adjustedRect, line.text))
                         }
                     }
                 }
@@ -155,9 +190,11 @@ class OCRModule : BaseModule() {
                     partialOutputs = mapOf(
                         "success" to VBoolean(true),
                         "found" to VBoolean(false),
-                        "count" to VNumber(0.0),           // 找到 0 个（语义化）
-                        "all_matches" to emptyList<Any>(), // 空列表（语义化）
-                        "first_match" to VNull             // 没有"第一个"
+                        "count" to VNumber(0.0),              // 找到 0 个（语义化）
+                        "all_matches" to emptyList<Any>(),    // 空列表（语义化）
+                        "first_match" to VNull,              // 没有"第一个"
+                        "all_centers" to emptyList<Any>(),   // 空列表（语义化）
+                        "first_center" to VNull              // 没有"第一个"
                     )
                 )
             }
@@ -165,8 +202,17 @@ class OCRModule : BaseModule() {
             // 应用排序策略
             val sortedMatches = when (strategy) {
                 "最接近中心" -> {
-                    val cx = inputImage.width / 2
-                    val cy = inputImage.height / 2
+                    // 如果使用了区域识别，中心点应该是识别区域的中心（在原始图片坐标系中）
+                    val cx = if (topLeft != null && bottomRight != null) {
+                        (topLeft.first + bottomRight.first) / 2
+                    } else {
+                        inputImage.width / 2
+                    }
+                    val cy = if (topLeft != null && bottomRight != null) {
+                        (topLeft.second + bottomRight.second) / 2
+                    } else {
+                        inputImage.height / 2
+                    }
                     matches.sortedBy { elem ->
                         val dx = elem.bounds.centerX() - cx
                         val dy = elem.bounds.centerY() - cy
@@ -182,6 +228,9 @@ class OCRModule : BaseModule() {
             }
 
             val firstMatch = sortedMatches.first()
+            val firstCenter = VCoordinate(firstMatch.bounds.centerX(), firstMatch.bounds.centerY())
+            val allCenters = sortedMatches.map { VCoordinate(it.bounds.centerX(), it.bounds.centerY()) }
+
             onProgress(ProgressUpdate("找到 ${matches.size} 个结果，第一个位于 (${firstMatch.bounds.centerX()}, ${firstMatch.bounds.centerY()})"))
 
             return ExecutionResult.Success(mapOf(
@@ -189,7 +238,9 @@ class OCRModule : BaseModule() {
                 "found" to VBoolean(true),
                 "count" to VNumber(matches.size.toDouble()),
                 "first_match" to firstMatch,
-                "all_matches" to sortedMatches
+                "first_center" to firstCenter,
+                "all_matches" to sortedMatches,
+                "all_centers" to allCenters
             ))
 
         } catch (e: IOException) {
@@ -198,6 +249,68 @@ class OCRModule : BaseModule() {
             return ExecutionResult.Failure("OCR 识别异常", e.message ?: "发生了未知错误")
         } finally {
             recognizer.close()
+        }
+    }
+
+    /**
+     * 解析坐标字符串
+     * 支持格式: "x,y" 或变量引用
+     */
+    private fun parseCoordinate(raw: String?, context: ExecutionContext): Pair<Int, Int>? {
+        if (raw.isNullOrBlank()) return null
+
+        // 解析变量引用
+        val resolved = VariableResolver.resolve(raw, context)
+
+        // 解析坐标格式 "x,y"
+        val parts = resolved.split(",")
+        if (parts.size != 2) return null
+
+        val x = parts[0].trim().toIntOrNull() ?: return null
+        val y = parts[1].trim().toIntOrNull() ?: return null
+
+        return Pair(x, y)
+    }
+
+    /**
+     * 创建带区域裁剪的 InputImage
+     */
+    private suspend fun createInputImageWithRegion(
+        context: Context,
+        uri: Uri,
+        topLeft: Pair<Int, Int>,
+        bottomRight: Pair<Int, Int>
+    ): InputImage {
+        // 加载完整图片
+        val bitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
+            android.graphics.ImageDecoder.decodeBitmap(source)
+        } else {
+            @Suppress("DEPRECATION")
+            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+        }
+
+        try {
+            // 计算裁剪区域
+            val left = topLeft.first.coerceAtLeast(0)
+            val top = topLeft.second.coerceAtLeast(0)
+            val right = bottomRight.first.coerceAtMost(bitmap.width)
+            val bottom = bottomRight.second.coerceAtMost(bitmap.height)
+
+            if (left >= right || top >= bottom) {
+                throw IllegalArgumentException("识别区域无效: ($left,$top)-($right,$bottom)")
+            }
+
+            val width = right - left
+            val height = bottom - top
+
+            // 裁剪Bitmap
+            val croppedBitmap = Bitmap.createBitmap(bitmap, left, top, width, height)
+
+            return InputImage.fromBitmap(croppedBitmap, 0)
+        } finally {
+            // 回收原始Bitmap
+            bitmap.recycle()
         }
     }
 }

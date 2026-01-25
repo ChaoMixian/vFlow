@@ -83,7 +83,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="更多设置 (语言、策略)"
+                android:text="更多设置 (语言、策略、识别区域)"
                 android:textAppearance="?attr/textAppearanceLabelLarge" />
 
             <ImageView
@@ -127,6 +127,33 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="识别区域（可选）"
+                android:textAppearance="?attr/textAppearanceLabelMedium" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="留空则识别全屏。格式：x,y"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <FrameLayout
+                android:id="@+id/container_region_top_left"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" />
+
+            <FrameLayout
+                android:id="@+id/container_region_bottom_right"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
