@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.view.KeyCharacterMap
 import com.chaomixian.vflow.server.wrappers.ServiceWrapper
 import org.json.JSONObject
+import org.json.JSONArray
 import java.lang.reflect.Method
 
 class IInputManagerWrapper : ServiceWrapper("input", "android.hardware.input.IInputManager\$Stub") {
@@ -47,6 +48,13 @@ class IInputManagerWrapper : ServiceWrapper("input", "android.hardware.input.IIn
             "inputText" -> {
                 inputText(params.getString("text"))
                 result.put("success", true)
+            }
+            "replaySequence" -> {
+                val success = replaySequence(
+                    params.getString("sequence"),
+                    params.optDouble("speedMultiplier", 1.0).toFloat()
+                )
+                result.put("success", success)
             }
             else -> {
                 result.put("success", false)
@@ -130,6 +138,67 @@ class IInputManagerWrapper : ServiceWrapper("input", "android.hardware.input.IIn
             for (e in events) {
                 inject(e)
             }
+        }
+    }
+
+    /**
+     * 回放触摸序列
+     * @param sequenceJson JSON格式的触摸序列数据
+     * @param speedMultiplier 回放速度倍率，1.0为正常速度
+     * @return 是否成功回放
+     */
+    fun replaySequence(sequenceJson: String, speedMultiplier: Float = 1.0f): Boolean {
+        return try {
+            // 解析JSON数据
+            val jsonData = JSONObject(sequenceJson)
+            val eventsArray = jsonData.optJSONArray("events") ?: return false
+
+            if (eventsArray.length() == 0) {
+                return false
+            }
+
+            val now = SystemClock.uptimeMillis()
+
+            // 回放所有事件
+            for (i in 0 until eventsArray.length()) {
+                val eventJson = eventsArray.getJSONObject(i)
+
+                val action = eventJson.getInt("action")
+                val x = eventJson.getDouble("x").toFloat()
+                val y = eventJson.getDouble("y").toFloat()
+                val timestamp = eventJson.getLong("timestamp")
+
+                // 计算延迟时间（考虑速度倍率）
+                val adjustedDelay = (timestamp / speedMultiplier).toLong()
+
+                // 创建并注入触摸事件
+                val motionEvent = MotionEvent.obtain(
+                    now,
+                    now + adjustedDelay,
+                    action,
+                    x,
+                    y,
+                    0
+                )
+                motionEvent.source = SOURCE_TOUCHSCREEN
+                inject(motionEvent)
+                motionEvent.recycle()
+
+                // 如果不是最后一个事件，需要等待
+                if (i < eventsArray.length() - 1) {
+                    val nextEventJson = eventsArray.getJSONObject(i + 1)
+                    val nextTimestamp = nextEventJson.getLong("timestamp")
+                    val delayBetweenEvents = ((nextTimestamp - timestamp) / speedMultiplier).toLong()
+                    if (delayBetweenEvents > 0) {
+                        Thread.sleep(delayBetweenEvents)
+                    }
+                }
+            }
+
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 }

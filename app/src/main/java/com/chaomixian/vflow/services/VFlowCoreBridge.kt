@@ -599,4 +599,21 @@ object VFlowCoreBridge {
             false
         }
     }
+
+    /**
+     * 回放触摸序列
+     * @param touchSequenceJson JSON格式的触摸序列数据
+     * @param speedMultiplier 回放速度倍率，1.0为正常速度
+     * @return 是否成功回放
+     */
+    fun replayTouchSequence(touchSequenceJson: String, speedMultiplier: Float = 1.0f): Boolean {
+        val req = JSONObject()
+            .put("target", "input")
+            .put("method", "replaySequence")
+            .put("params", JSONObject().apply {
+                put("sequence", touchSequenceJson)
+                put("speedMultiplier", speedMultiplier)
+            })
+        return sendRaw(req)?.optBoolean("success") ?: false
+    }
 }

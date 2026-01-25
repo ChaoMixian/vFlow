@@ -173,6 +173,7 @@ object ModuleRegistry {
         register(CoreScreenOperationModule())     // 屏幕操作（点击/滑动）
         register(CoreInputTextModule())           // 输入文本
         register(CorePressKeyModule())            // 按键
+        register(CoreTouchReplayModule())         // 触摸回放
         // 应用管理组
         register(CoreForceStopAppModule())        // 强制停止应用
         // 系统控制组
