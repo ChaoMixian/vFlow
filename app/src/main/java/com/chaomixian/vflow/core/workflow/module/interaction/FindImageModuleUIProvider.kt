@@ -322,15 +322,23 @@ class FindImageModuleUIProvider : ModuleUIProvider {
 
             // 判断是 Base64 还是旧格式的 URI
             if (dataString.startsWith("data:image") || dataString.length > 1000) {
-                // Base64 格式: "data:image/png;base64,{base64_string}"
-                val base64String = if (dataString.startsWith("data:image")) {
-                    dataString
-                } else {
-                    "data:image/png;base64,$dataString"
-                }
-                holder.ivTemplatePreview.load(base64String) {
-                    crossfade(true)
-                    error(R.drawable.rounded_broken_image_24)
+                // Base64 格式: 解码为 Bitmap 后显示
+                try {
+                    val base64Data = if (dataString.startsWith("data:image")) {
+                        dataString.substringAfter("base64,")
+                    } else {
+                        dataString
+                    }
+                    val byteArray = Base64.decode(base64Data, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+                    if (bitmap != null) {
+                        holder.ivTemplatePreview.setImageBitmap(bitmap)
+                    } else {
+                        holder.ivTemplatePreview.setImageResource(R.drawable.rounded_broken_image_24)
+                    }
+                } catch (e: Exception) {
+                    DebugLogger.e("FindImageModuleUIProvider", "加载 Base64 图片失败", e)
+                    holder.ivTemplatePreview.setImageResource(R.drawable.rounded_broken_image_24)
                 }
             } else {
                 // 旧格式 URI
