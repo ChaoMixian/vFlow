@@ -1,10 +1,8 @@
 // 文件: CaptureScreenModuleUIProvider.kt
 package com.chaomixian.vflow.core.workflow.module.system
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
@@ -134,15 +132,9 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
         // 使用弱引用避免内存泄漏
         val contextRef = WeakReference(context)
         val holderRef = WeakReference(holder)
-        val activity = context as? Activity
-        DebugLogger.i("CaptureScreenModuleUIProvider", "开始区域选择流程，activity: ${activity?.javaClass?.simpleName}")
 
         holder.scope?.launch {
             try {
-                // 最小化当前 Activity
-                activity?.moveTaskToBack(true)
-                DebugLogger.i("CaptureScreenModuleUIProvider", "Activity 已移至后台")
-
                 // 使用外部存储目录，确保 shell 可以写入
                 val screenshotDir = StorageManager.tempDir
                 DebugLogger.i("CaptureScreenModuleUIProvider", "创建 RegionSelectionOverlay，使用目录: ${screenshotDir.absolutePath}")
@@ -152,15 +144,6 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
                 DebugLogger.i("CaptureScreenModuleUIProvider", "区域选择流程结束，result: $result")
 
                 withContext(Dispatchers.Main) {
-                    // 恢复 Activity
-                    activity?.let { act ->
-                        val intent = Intent(act, act::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        }
-                        act.startActivity(intent)
-                        DebugLogger.i("CaptureScreenModuleUIProvider", "Activity 已恢复至前台")
-                    }
-
                     val ctx = contextRef.get()
                     val h = holderRef.get()
 
@@ -188,13 +171,6 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
             } catch (e: Exception) {
                 DebugLogger.e("CaptureScreenModuleUIProvider", "区域选择失败", e)
                 withContext(Dispatchers.Main) {
-                    activity?.let { act ->
-                        val intent = Intent(act, act::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        }
-                        act.startActivity(intent)
-                    }
-
                     contextRef.get()?.let {
                         Toast.makeText(it, "区域选择失败: ${e.message}", Toast.LENGTH_SHORT).show()
                     }

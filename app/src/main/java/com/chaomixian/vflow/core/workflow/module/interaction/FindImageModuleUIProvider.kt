@@ -219,16 +219,8 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         val contextRef = WeakReference(context)
         val holderRef = WeakReference(holder)
 
-        // 保存 Activity 引用，用于截图完成后恢复
-        val activity = context as? Activity
-        DebugLogger.i("FindImageModuleUIProvider", "开始截图流程，activity: ${activity?.javaClass?.simpleName}")
-
         holder.scope?.launch {
             try {
-                // 最小化当前 Activity，让用户看到要截图的内容
-                activity?.moveTaskToBack(true)
-                DebugLogger.i("FindImageModuleUIProvider", "Activity 已移至后台")
-
                 // 使用外部存储目录，确保 shell 可以写入
                 val screenshotDir = StorageManager.tempDir
                 DebugLogger.i("FindImageModuleUIProvider", "创建 ScreenCaptureOverlay，使用目录: ${screenshotDir.absolutePath}")
@@ -249,15 +241,6 @@ class FindImageModuleUIProvider : ModuleUIProvider {
 
                 // 确保在主线程更新 UI
                 withContext(Dispatchers.Main) {
-                    // 恢复 Activity 到前台
-                    activity?.let { act ->
-                        val intent = Intent(act, act::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        }
-                        act.startActivity(intent)
-                        DebugLogger.i("FindImageModuleUIProvider", "Activity 已恢复至前台")
-                    }
-
                     val ctx = contextRef.get()
                     val h = holderRef.get()
 
@@ -271,14 +254,6 @@ class FindImageModuleUIProvider : ModuleUIProvider {
             } catch (e: Exception) {
                 DebugLogger.e("FindImageModuleUIProvider", "截图失败", e)
                 withContext(Dispatchers.Main) {
-                    // 恢复 Activity 到前台
-                    activity?.let { act ->
-                        val intent = Intent(act, act::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        }
-                        act.startActivity(intent)
-                    }
-
                     contextRef.get()?.let {
                         Toast.makeText(it, "截图失败: ${e.message}", Toast.LENGTH_SHORT).show()
                     }

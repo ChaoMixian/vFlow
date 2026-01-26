@@ -2,14 +2,12 @@
 
 package com.chaomixian.vflow.core.workflow.module.core
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
@@ -20,7 +18,6 @@ import com.chaomixian.vflow.ui.overlay.TouchRecordOverlay
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -109,27 +106,15 @@ class CoreTouchReplayModuleUIProvider : ModuleUIProvider {
             return
         }
 
-        val activity = context as? Activity
         val holderRef = WeakReference(holder)
         val contextRef = WeakReference(context)
 
         holder.scope?.launch {
             try {
-                // 最小化 Activity
-                activity?.moveTaskToBack(true)
-
                 val overlay = TouchRecordOverlay(context, showHint = true)
                 val result = overlay.startRecording()
 
                 withContext(Dispatchers.Main) {
-                    // 恢复 Activity
-                    activity?.let {
-                        val intent = Intent(it, it::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                        }
-                        it.startActivity(intent)
-                    }
-
                     val h = holderRef.get()
                     if (h != null && result != null) {
                         h.recordingData = result.toJson()
@@ -150,13 +135,6 @@ class CoreTouchReplayModuleUIProvider : ModuleUIProvider {
                 withContext(Dispatchers.Main) {
                     contextRef.get()?.let {
                         Toast.makeText(it, "录制失败：${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                    // 恢复 Activity
-                    activity?.let {
-                        val intent = Intent(it, it::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                        }
-                        it.startActivity(intent)
                     }
                 }
             }

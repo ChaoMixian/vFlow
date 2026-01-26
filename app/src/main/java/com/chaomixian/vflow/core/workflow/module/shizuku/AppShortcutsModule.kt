@@ -83,7 +83,7 @@ class WeChatShortcutsModule : BaseShortcutModule() {
 
     private val actions = mapOf(
         "收款码" to "am start -n com.tencent.mm/.plugin.collect.ui.CollectMainUI",
-        "付款码" to "am start -n com.tencent.mm/.plugin.collect.ui.CollectMainUI"
+        "付款码" to "am start -n com.tencent.mm/.plugin.offline.ui.WalletOfflineCoinPurseUI"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(
