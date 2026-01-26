@@ -24,6 +24,9 @@ import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.overlay.RegionSelectionOverlay
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.*
 import java.io.File
 import java.lang.ref.WeakReference
@@ -80,9 +83,9 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
             updateRegionInfo(holder, region)
         }
 
-        // 点击预览区域也可以选择区域
+        // 点击预览区域弹出输入框
         holder.cardRegionPreview.setOnClickListener {
-            selectRegion(context, holder)
+            showRegionInputDialog(context, holder)
         }
 
         // 选择区域按钮
@@ -106,6 +109,63 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
         return mapOf("region" to h.region)
+    }
+
+    /**
+     * 显示区域输入对话框
+     */
+    private fun showRegionInputDialog(context: Context, holder: ViewHolder) {
+        // 创建输入框
+        val textInputLayout = TextInputLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            hint = "区域坐标 (left,top,right,bottom)"
+        }
+
+        val textInputEditText = TextInputEditText(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            setText(holder.region)
+        }
+
+        textInputLayout.addView(textInputEditText)
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle("设置截屏区域")
+            .setMessage("请输入区域坐标\n例如：100,100,500,600")
+            .setView(textInputLayout)
+            .setPositiveButton("确定") { dialog, _ ->
+                val input = textInputEditText.text?.toString()?.trim() ?: ""
+                if (input.isNotEmpty()) {
+                    // 验证格式
+                    val parts = input.split(",")
+                    if (parts.size == 4 && parts.all { it.trim().toIntOrNull() != null }) {
+                        holder.region = input
+                        updateRegionInfo(holder, input)
+                        holder.onParametersChangedCallback?.invoke()
+                        dialog.dismiss()
+                    } else {
+                        textInputLayout.error = "格式错误，请输入4个数字，用逗号分隔"
+                    }
+                } else {
+                    holder.region = ""
+                    holder.screenshotUri = null
+                    holder.ivRegionPreview.isVisible = false
+                    holder.layoutPlaceholder.isVisible = true
+                    holder.layoutRegionInfo.isVisible = false
+                    holder.onParametersChangedCallback?.invoke()
+                    dialog.dismiss()
+                }
+            }
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun selectRegion(context: Context, holder: ViewHolder) {
