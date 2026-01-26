@@ -88,7 +88,7 @@ class FindTextModule : BaseModule() {
         val resultTypeName = when (format) {
             "坐标" -> VTypeRegistry.COORDINATE.id  // 使用新的 VCoordinate 类型 ID
             "视图ID" -> VTypeRegistry.STRING.id
-            else -> VTypeRegistry.UI_ELEMENT.id  // 使用新的 VScreenElement 类型 ID
+            else -> VTypeRegistry.SCREEN_ELEMENT.id  // 使用新的 VScreenElement 类型 ID
         }
 
         // 定义所有输出
@@ -184,15 +184,14 @@ class FindTextModule : BaseModule() {
 
             // 转换所有节点为所需的输出格式（使用新的 VObject 类型）
             val allResultsList = nodes.map { node ->
-                val bounds = Rect()
-                node.getBoundsInScreen(bounds)
                 when (outputFormat) {
-                    "坐标" -> VCoordinate(bounds.centerX(), bounds.centerY())
+                    "坐标" -> {
+                        val bounds = Rect()
+                        node.getBoundsInScreen(bounds)
+                        VCoordinate(bounds.centerX(), bounds.centerY())
+                    }
                     "视图ID" -> VString(node.viewIdResourceName ?: "")
-                    else -> VScreenElement(
-                        bounds = bounds,
-                        text = node.text?.toString() ?: node.contentDescription?.toString()
-                    )
+                    else -> VScreenElement.fromAccessibilityNode(node)
                 }
             }
 

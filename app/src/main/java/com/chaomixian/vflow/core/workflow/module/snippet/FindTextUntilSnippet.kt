@@ -56,7 +56,7 @@ class FindTextUntilSnippet : BaseModule() {
             OutputDefinition(
                 "result",
                 "找到的元素",
-                VTypeRegistry.UI_ELEMENT.id
+                VTypeRegistry.SCREEN_ELEMENT.id
             )
         )
     }

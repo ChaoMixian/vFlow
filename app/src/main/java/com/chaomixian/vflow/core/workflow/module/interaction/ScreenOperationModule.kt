@@ -59,8 +59,8 @@ class ScreenOperationModule : BaseModule() {
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("operation_type", "类型", ParameterType.ENUM, "点击", options = listOf("点击", "长按", "滑动"), acceptsMagicVariable = false),
-        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.UI_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)),
-        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.UI_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id), isHidden = false),
+        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.SCREEN_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)),
+        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.SCREEN_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id), isHidden = false),
         InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), isHidden = false),
         InputDefinition("execution_mode", "执行方式", ParameterType.ENUM, "自动", options = executionModeOptions, acceptsMagicVariable = false, isHidden = false),
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)

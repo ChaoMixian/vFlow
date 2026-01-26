@@ -60,7 +60,7 @@ class FindTextUntilModule : BaseModule() {
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("success", "是否找到", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("element", "找到的元素", VTypeRegistry.UI_ELEMENT.id),
+        OutputDefinition("element", "找到的元素", VTypeRegistry.SCREEN_ELEMENT.id),
         OutputDefinition("coordinate", "中心坐标", VTypeRegistry.COORDINATE.id)
     )
 
@@ -111,9 +111,7 @@ class FindTextUntilModule : BaseModule() {
                 if (root != null) {
                     val node = findNode(root, targetText, matchMode)
                     if (node != null) {
-                        val bounds = Rect()
-                        node.getBoundsInScreen(bounds)
-                        foundElement = VScreenElement(bounds, node.text?.toString() ?: node.contentDescription?.toString())
+                        foundElement = VScreenElement.fromAccessibilityNode(node)
                         node.recycle()
                     }
                 }
@@ -201,7 +199,27 @@ class FindTextUntilModule : BaseModule() {
                         if (isMatch) {
                             val rect = line.boundingBox
                             if (rect != null) {
-                                return VScreenElement(rect, lineText)
+                                // OCR 结果不是无障碍节点，创建最小化的 VScreenElement
+                                return VScreenElement(
+                                    bounds = rect,
+                                    text = lineText,
+                                    contentDescription = null,
+                                    viewId = null,
+                                    className = null,
+                                    isClickable = false,
+                                    isEnabled = true,
+                                    isCheckable = false,
+                                    isChecked = false,
+                                    isFocusable = false,
+                                    isFocused = false,
+                                    isScrollable = false,
+                                    isLongClickable = false,
+                                    isSelected = false,
+                                    isEditable = false,
+                                    depth = 0,
+                                    childCount = 0,
+                                    accessibilityId = null
+                                )
                             }
                         }
                     }

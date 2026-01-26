@@ -60,14 +60,29 @@ object VTypeRegistry {
         VPropertyDef("minute", "分", ANY)
     ))
 
-    val UI_ELEMENT = SimpleVType("vflow.type.screen_element", "界面元素", ANY, listOf(
+    val SCREEN_ELEMENT = SimpleVType("vflow.type.screen_element", "屏幕控件", ANY, listOf(
+        // 文本属性
         VPropertyDef("text", "文本内容", ANY),
+        VPropertyDef("content_description", "内容描述", ANY),
+        // 标识属性
+        VPropertyDef("id", "控件ID", ANY),
+        VPropertyDef("class", "类名", ANY),
+        // 位置属性
         VPropertyDef("center_x", "中心 X", ANY),
         VPropertyDef("center_y", "中心 Y", ANY),
         VPropertyDef("left", "左边界", ANY),
         VPropertyDef("top", "上边界", ANY),
+        VPropertyDef("right", "右边界", ANY),
+        VPropertyDef("bottom", "下边界", ANY),
+        // 尺寸属性
         VPropertyDef("width", "宽度", ANY),
-        VPropertyDef("height", "高度", ANY)
+        VPropertyDef("height", "高度", ANY),
+        // 交互状态
+        VPropertyDef("clickable", "可点击", ANY),
+        VPropertyDef("enabled", "已启用", ANY),
+        VPropertyDef("checkable", "可勾选", ANY),
+        VPropertyDef("checked", "已勾选", ANY),
+        VPropertyDef("editable", "可编辑", ANY)
     ))
 
     val UI_COMPONENT = SimpleVType("vflow.type.uicomponent", "UI组件", ANY, listOf(
@@ -190,13 +205,18 @@ object VTypeRegistry {
                     else -> null
                 }
             }
-            UI_ELEMENT.id, UI_COMPONENT.id -> {
+            SCREEN_ELEMENT.id, UI_COMPONENT.id -> {
                 when (propertyName) {
-                    "text", "文本内容", "id", "type", "类型", "label", "标签", "placeholder", "占位符",
-                    "package", "应用包名", "title", "标题", "content", "内容" -> STRING
-                    "center_x", "center_y", "left", "top", "width", "宽度", "height", "高度", "x", "y" -> NUMBER
+                    "text", "文本内容", "content_description", "id", "type", "类型", "label", "标签", "placeholder", "占位符",
+                    "package", "应用包名", "title", "标题", "content", "内容", "class", "className", "viewId" -> STRING
+                    "center_x", "center_y", "left", "top", "right", "bottom", "width", "宽度", "height", "高度", "x", "y",
+                    "depth", "child_count", "childCount", "accessibility_id" -> NUMBER
                     "value", "值", "defaultvalue", "默认值" -> ANY
-                    "required", "必填", "triggerEvent", "触发事件", "istext", "isbutton", "isinput", "isswitch" -> BOOLEAN
+                    "required", "必填", "triggerEvent", "触发事件", "istext", "isbutton", "isinput", "isswitch",
+                    "clickable", "isClickable", "enabled", "isEnabled", "checkable", "isCheckable",
+                    "checked", "isChecked", "focusable", "isFocusable", "focused", "isFocused",
+                    "scrollable", "isScrollable", "long_clickable", "isLongClickable",
+                    "selected", "isSelected", "editable", "isEditable" -> BOOLEAN
                     else -> null
                 }
             }
@@ -278,7 +298,7 @@ object VTypeRegistry {
             IMAGE.id -> IMAGE
             DATE.id -> DATE
             TIME.id -> TIME
-            UI_ELEMENT.id -> UI_ELEMENT
+            SCREEN_ELEMENT.id -> SCREEN_ELEMENT
             UI_COMPONENT.id -> UI_COMPONENT
             COORDINATE.id -> COORDINATE
             COORDINATE_REGION.id -> COORDINATE_REGION

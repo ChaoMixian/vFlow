@@ -80,6 +80,24 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
                 out.name("bottom").value(value.bounds.bottom)
                 out.endObject()
                 out.name("text").value(value.text ?: "")
+                out.name("content_description").value(value.contentDescription ?: "")
+                out.name("view_id").value(value.viewId ?: "")
+                out.name("class_name").value(value.className ?: "")
+                out.name("is_clickable").value(value.isClickable)
+                out.name("is_enabled").value(value.isEnabled)
+                out.name("is_checkable").value(value.isCheckable)
+                out.name("is_checked").value(value.isChecked)
+                out.name("is_focusable").value(value.isFocusable)
+                out.name("is_focused").value(value.isFocused)
+                out.name("is_scrollable").value(value.isScrollable)
+                out.name("is_long_clickable").value(value.isLongClickable)
+                out.name("is_selected").value(value.isSelected)
+                out.name("is_editable").value(value.isEditable)
+                out.name("depth").value(value.depth)
+                out.name("child_count").value(value.childCount)
+                out.name("accessibility_id").apply {
+                    value.accessibilityId?.let { value(it) } ?: nullValue()
+                }
                 out.endObject()
             }
             is VNotification -> {
@@ -234,15 +252,34 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
                     VNull
                 }
             }
-            VTypeRegistry.UI_ELEMENT.id -> {
+            VTypeRegistry.SCREEN_ELEMENT.id -> {
                 if (rawValue is Map<*, *>) {
                     val boundsMap = rawValue["bounds"] as? Map<*, *>
                     val left = (boundsMap?.get("left") as? Number)?.toInt() ?: 0
                     val top = (boundsMap?.get("top") as? Number)?.toInt() ?: 0
                     val right = (boundsMap?.get("right") as? Number)?.toInt() ?: 0
                     val bottom = (boundsMap?.get("bottom") as? Number)?.toInt() ?: 0
-                    val text = rawValue["text"] as? String
-                    VScreenElement(Rect(left, top, right, bottom), text)
+
+                    VScreenElement(
+                        bounds = Rect(left, top, right, bottom),
+                        text = rawValue["text"] as? String,
+                        contentDescription = rawValue["content_description"] as? String,
+                        viewId = rawValue["view_id"] as? String,
+                        className = rawValue["class_name"] as? String,
+                        isClickable = rawValue["is_clickable"] as? Boolean ?: false,
+                        isEnabled = rawValue["is_enabled"] as? Boolean ?: true,
+                        isCheckable = rawValue["is_checkable"] as? Boolean ?: false,
+                        isChecked = rawValue["is_checked"] as? Boolean ?: false,
+                        isFocusable = rawValue["is_focusable"] as? Boolean ?: false,
+                        isFocused = rawValue["is_focused"] as? Boolean ?: false,
+                        isScrollable = rawValue["is_scrollable"] as? Boolean ?: false,
+                        isLongClickable = rawValue["is_long_clickable"] as? Boolean ?: false,
+                        isSelected = rawValue["is_selected"] as? Boolean ?: false,
+                        isEditable = rawValue["is_editable"] as? Boolean ?: false,
+                        depth = (rawValue["depth"] as? Number)?.toInt() ?: 0,
+                        childCount = (rawValue["child_count"] as? Number)?.toInt() ?: 0,
+                        accessibilityId = (rawValue["accessibility_id"] as? Number)?.toInt()
+                    )
                 } else {
                     VNull
                 }

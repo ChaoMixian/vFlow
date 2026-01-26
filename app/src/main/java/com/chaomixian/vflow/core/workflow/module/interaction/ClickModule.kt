@@ -48,7 +48,7 @@ class ClickModule : BaseModule() {
             staticType = ParameterType.STRING, // 静态类型为字符串，实际可以是多种动态类型
             acceptsMagicVariable = true,       // 允许使用魔法变量
             acceptedMagicVariableTypes = setOf( // 定义接受的魔法变量类型
-                VTypeRegistry.UI_ELEMENT.id,
+                VTypeRegistry.SCREEN_ELEMENT.id,
                 VTypeRegistry.COORDINATE.id,
                 VTypeRegistry.STRING.id
             ),
