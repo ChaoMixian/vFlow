@@ -19,6 +19,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import android.view.View
 import android.widget.TextView
+import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -64,8 +65,8 @@ class DynamicUiActivity : BaseActivity() {
 
         val toolbar = MaterialToolbar(this).apply {
             this.title = title
-            // 使用应用主题色
-            setBackgroundColor(getColor(com.google.android.material.R.color.material_dynamic_primary95))
+            // 使用 Material3 主题色 - 自动适配深色/浅色模式
+            setBackgroundColor(MaterialColors.getColor(this@DynamicUiActivity, com.google.android.material.R.attr.colorSurfaceVariant, 0))
             setNavigationIcon(com.google.android.material.R.drawable.material_ic_keyboard_arrow_left_black_24dp)
             setNavigationOnClickListener {
                 handleBackPress()
