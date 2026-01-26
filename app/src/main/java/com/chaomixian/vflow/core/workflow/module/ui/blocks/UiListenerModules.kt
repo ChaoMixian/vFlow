@@ -134,12 +134,23 @@ class UpdateUiComponentModule : BaseModule() {
             else -> context.variables["target_id"]?.toString() ?: ""
         }
 
+        // 验证 targetId 不为空
+        if (targetId.isEmpty()) {
+            return ExecutionResult.Failure("参数错误", "目标组件 ID 不能为空")
+        }
+
         val payload = mutableMapOf<String, Any?>()
 
         // 解析 text 参数（支持魔法变量、命名变量和组件属性）
-        val rawText = context.variables["text"]?.toString()
+        // 使用 getVariable 自动从 magicVariables 和 variables 中查找
+        val rawText = context.getVariable("text")?.toString()
         if (!rawText.isNullOrEmpty()) {
-            val resolvedText = com.chaomixian.vflow.core.execution.VariableResolver.resolve(rawText, context)
+            // getVariable 已经解析过魔法变量了，但如果返回的还是魔法变量引用，再次解析
+            val resolvedText = if (com.chaomixian.vflow.core.execution.VariableResolver.hasVariableReference(rawText)) {
+                com.chaomixian.vflow.core.execution.VariableResolver.resolve(rawText, context)
+            } else {
+                rawText
+            }
             payload["text"] = resolvedText
         }
 

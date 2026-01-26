@@ -5,7 +5,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * UI 事件
@@ -60,9 +62,8 @@ data class UiCommand(
  * 6. 最后调用 unregisterSession() 清理会话
  */
 object UiSessionBus {
-    // 全局事件流（UI -> Workflow）
-    private val _events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 20)
-    val events = _events.asSharedFlow()
+    // 每个 Session 的事件流（UI -> Workflow）- 改为独立通道，避免事件混淆
+    private val sessionEventFlows = ConcurrentHashMap<String, MutableSharedFlow<UiEvent>>()
 
     // 每个 Session 的指令流（Workflow -> UI）
     private val sessionCommandFlows = ConcurrentHashMap<String, MutableSharedFlow<UiCommand>>()
@@ -71,11 +72,21 @@ object UiSessionBus {
     private val activeSessions = ConcurrentHashMap<String, Boolean>()
 
     fun registerSession(sessionId: String) {
-        sessionCommandFlows[sessionId] = MutableSharedFlow(extraBufferCapacity = 10)
+        sessionEventFlows[sessionId] = MutableSharedFlow(
+            replay = 0,  // 不重放，每次只接收新事件
+            extraBufferCapacity = 50,  // 增加缓冲到 50 个事件，避免快速点击时丢失
+            onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST  // 缓冲满时丢弃最旧的事件
+        )
+        sessionCommandFlows[sessionId] = MutableSharedFlow(
+            replay = 0,
+            extraBufferCapacity = 50,
+            onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+        )
         activeSessions[sessionId] = true
     }
 
     fun unregisterSession(sessionId: String) {
+        sessionEventFlows.remove(sessionId)
         sessionCommandFlows.remove(sessionId)
         activeSessions.remove(sessionId)
     }
@@ -88,14 +99,23 @@ object UiSessionBus {
         activeSessions[sessionId] = false
     }
 
-    // UI -> Workflow: 发送事件
+    // UI -> Workflow: 发送事件到指定 session 的通道
     suspend fun emitEvent(event: UiEvent) {
-        _events.emit(event)
+        val flow = sessionEventFlows[event.sessionId]
+        if (flow != null) {
+            android.util.Log.d("UiSessionBus", "发送事件: ${event.elementId} - ${event.type}")
+            flow.emit(event)
+        } else {
+            android.util.Log.e("UiSessionBus", "事件流不存在: ${event.sessionId}")
+        }
     }
 
     // Workflow -> UI: 发送指令
     suspend fun sendCommand(sessionId: String, command: UiCommand) {
-        sessionCommandFlows[sessionId]?.emit(command)
+        val flow = sessionCommandFlows[sessionId]
+        if (flow != null) {
+            flow.emit(command)
+        }
     }
 
     // UI 监听指令
@@ -103,29 +123,37 @@ object UiSessionBus {
 
     // Workflow 等待特定 Session 的事件
     suspend fun waitForEvent(sessionId: String): UiEvent? {
-        // 持续检查，直到有事件到来或session关闭
-        while (true) {
-            // 检查session是否仍然活跃
-            if (isSessionClosed(sessionId)) {
-                return null  // session已关闭，返回null
-            }
-
-            // 尝试获取事件（使用firstOrNull避免无限等待）
-            val event = try {
-                // 使用一个短暂的超时来避免阻塞
-                kotlinx.coroutines.withTimeoutOrNull(100) {
-                    _events.first { it.sessionId == sessionId }
-                }
-            } catch (e: Exception) {
-                null
-            }
-
-            if (event != null) {
-                return event
-            }
-
-            // 没有找到事件，等待一小段时间后重试
-            delay(100)
+        val flow = sessionEventFlows[sessionId]
+        if (flow == null) {
+            android.util.Log.e("UiSessionBus", "事件流不存在: $sessionId")
+            return null
         }
+
+        android.util.Log.d("UiSessionBus", "开始等待事件: $sessionId")
+
+        // 直接阻塞等待事件，直到 session 关闭
+        while (!isSessionClosed(sessionId)) {
+            try {
+                // first() 会挂起直到有事件到达，不会丢失缓冲区中的事件
+                val event = flow.first()
+                android.util.Log.d("UiSessionBus", "接收到事件: ${event.elementId} - ${event.type} (session: $sessionId)")
+                return event
+            } catch (e: CancellationException) {
+                // 协程被取消，检查 session 状态后决定是否继续等待
+                android.util.Log.d("UiSessionBus", "等待被取消，检查 session 状态: $sessionId")
+                if (isSessionClosed(sessionId)) {
+                    android.util.Log.d("UiSessionBus", "Session 已关闭，退出: $sessionId")
+                    return null
+                }
+                // Session 仍然活跃，重新进入循环等待
+            } catch (e: Exception) {
+                // 其他异常，记录日志并返回 null
+                android.util.Log.e("UiSessionBus", "等待事件异常: ${e.message}", e)
+                return null
+            }
+        }
+
+        android.util.Log.d("UiSessionBus", "Session 已关闭，退出等待: $sessionId")
+        return null
     }
 }

@@ -149,6 +149,9 @@ class ShowActivityModule : BaseModule() {
 
             onProgress(ProgressUpdate("正在启动界面..."))
 
+            // 先注册 Session（必须在 startActivity 之前，否则 Activity 的命令监听器无法获取到 flow）
+            UiSessionBus.registerSession(sessionId)
+
             // 启动 Activity
             val intent = Intent(context.applicationContext, DynamicUiActivity::class.java).apply {
                 putExtra(DynamicUiActivity.EXTRA_TITLE, title)
@@ -159,8 +162,7 @@ class ShowActivityModule : BaseModule() {
             }
             context.applicationContext.startActivity(intent)
 
-            // 注册 Session 并进入循环栈
-            UiSessionBus.registerSession(sessionId)
+            // 进入循环栈
             context.loopStack.push(UiLoopState(sessionId))
 
             // 为了复用代码，这里直接进入等待逻辑：

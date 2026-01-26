@@ -169,6 +169,9 @@ class ShowFloatWindowModule : BaseModule() {
 
             onProgress(ProgressUpdate("正在启动悬浮窗..."))
 
+            // 先注册 Session（必须在 startService 之前，否则 Service 的命令监听器无法获取到 flow）
+            UiSessionBus.registerSession(sessionId)
+
             // 启动悬浮窗服务
             val intent = Intent(context.applicationContext, DynamicFloatWindowService::class.java).apply {
                 putExtra(DynamicFloatWindowService.EXTRA_ELEMENTS, ArrayList(elements))
@@ -180,8 +183,7 @@ class ShowFloatWindowModule : BaseModule() {
             }
             context.applicationContext.startService(intent)
 
-            // 注册 Session 并进入循环栈
-            UiSessionBus.registerSession(sessionId)
+            // 进入循环栈
             context.loopStack.push(UiLoopState(sessionId))
 
             // 为了复用代码，这里直接进入等待逻辑：

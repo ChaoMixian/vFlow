@@ -17,6 +17,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.module.ui.UiEvent
 import com.chaomixian.vflow.core.workflow.module.ui.UiSessionBus
@@ -28,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 动态悬浮窗服务
@@ -177,12 +179,18 @@ class DynamicFloatWindowService : Service() {
                         initialY = windowParams.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
-                        return true
+                        return true  // 消费 DOWN 事件，准备处理拖拽
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        windowParams.x = initialX + (event.rawX - initialTouchX).toInt()
-                        windowParams.y = initialY + (event.rawY - initialTouchY).toInt()
-                        windowManager.updateViewLayout(floatView, windowParams)
+                        val deltaX = event.rawX - initialTouchX
+                        val deltaY = event.rawY - initialTouchY
+
+                        // 只有移动超过阈值才真正开始拖拽（避免误判点击）
+                        if (kotlin.math.abs(deltaX) > 10 || kotlin.math.abs(deltaY) > 10) {
+                            windowParams.x = initialX + deltaX.toInt()
+                            windowParams.y = initialY + deltaY.toInt()
+                            windowManager.updateViewLayout(floatView, windowParams)
+                        }
                         return true
                     }
                     else -> return false
@@ -203,12 +211,18 @@ class DynamicFloatWindowService : Service() {
                         initialY = windowParams.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
-                        return true
+                        return true  // 消费 DOWN 事件，准备处理拖拽
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        windowParams.x = initialX + (event.rawX - initialTouchX).toInt()
-                        windowParams.y = initialY + (event.rawY - initialTouchY).toInt()
-                        windowManager.updateViewLayout(floatView, windowParams)
+                        val deltaX = event.rawX - initialTouchX
+                        val deltaY = event.rawY - initialTouchY
+
+                        // 只有移动超过阈值才真正开始拖拽（避免误判点击）
+                        if (kotlin.math.abs(deltaX) > 10 || kotlin.math.abs(deltaY) > 10) {
+                            windowParams.x = initialX + deltaX.toInt()
+                            windowParams.y = initialY + deltaY.toInt()
+                            windowManager.updateViewLayout(floatView, windowParams)
+                        }
                         return true
                     }
                     else -> return false
@@ -273,8 +287,89 @@ class DynamicFloatWindowService : Service() {
      * 处理更新命令
      */
     private suspend fun handleUpdateCommand(cmd: com.chaomixian.vflow.core.workflow.module.ui.UiCommand) {
-        // TODO: 实现组件更新逻辑
-        // 可以参考 DynamicUiActivity 中的实现
+        val targetId = cmd.targetId
+        if (targetId != null) {
+            val view = DynamicUiRenderer.getView(targetId)
+            if (view != null) {
+                // 在主线程更新 UI
+                withContext(Dispatchers.Main) {
+                    updateViewProperties(view, cmd.payload)
+                }
+            }
+        }
+    }
+
+    /**
+     * 更新视图属性
+     * 与 DynamicUiActivity.updateViewProperties 保持一致
+     */
+    private fun updateViewProperties(view: android.view.View, payload: Map<String, Any?>) {
+        val newText = payload["text"] as? String
+        val newEnabled = payload["enabled"] as? Boolean
+        val newVisible = payload["visible"] as? Boolean
+        val newChecked = payload["checked"] as? Boolean
+
+        // 布局属性
+        val padding = payload["padding"] as? Number
+        val margin = payload["margin"] as? Number
+        val textSize = payload["textSize"] as? Number
+        val background = payload["background"] as? String
+
+        // 应用可见性
+        if (newVisible != null) view.visibility = if (newVisible) android.view.View.VISIBLE else android.view.View.GONE
+
+        // 应用启用状态
+        if (newEnabled != null) view.isEnabled = newEnabled
+
+        // 应用内边距
+        if (padding != null) {
+            val p = padding.toInt()
+            view.setPadding(p, p, p, p)
+        }
+
+        // 应用外边距
+        if (margin != null) {
+            val m = margin.toInt()
+            (view.layoutParams as? android.widget.LinearLayout.LayoutParams)?.let {
+                it.setMargins(m, m, m, m)
+                view.layoutParams = it
+            }
+        }
+
+        // 应用背景色（支持颜色名称或十六进制）
+        if (background != null) {
+            try {
+                val color = when {
+                    background.startsWith("#") -> android.graphics.Color.parseColor(background)
+                    else -> android.graphics.Color.parseColor("#$background")
+                }
+                view.setBackgroundColor(color)
+            } catch (e: Exception) {
+                // 忽略无效的颜色值
+            }
+        }
+
+        // 应用组件特定的属性
+        when (view) {
+            is TextView -> { // 包含 Button 和 MaterialSwitch 的文本
+                if (newText != null) view.text = newText
+                if (textSize != null) view.textSize = textSize.toFloat()
+            }
+            is TextInputEditText -> {
+                if (newText != null && newText != view.text.toString()) {
+                    view.setText(newText)
+                    // 移动光标到末尾
+                    view.setSelection(newText.length)
+                }
+                if (textSize != null) view.textSize = textSize.toFloat()
+            }
+            is MaterialSwitch -> {
+                if (newText != null) view.text = newText
+                if (newChecked != null && newChecked != view.isChecked) {
+                    view.isChecked = newChecked
+                }
+            }
+        }
     }
 
     /**

@@ -107,8 +107,9 @@ object DynamicUiRenderer {
                         if (element.triggerEvent && lifecycleScope != null && sessionId != null) {
                             addTextChangedListener(object : TextWatcher {
                                 override fun afterTextChanged(s: Editable?) {
-                                    lifecycleScope.launch(Dispatchers.IO) {
-                                        val allValues = collectAllValues()
+                                    // 立即发送事件，避免 IO 调度延迟
+                                    val allValues = collectAllValues()
+                                    lifecycleScope.launch {
                                         UiSessionBus.emitEvent(UiEvent(sessionId, element.id, "change", s.toString(), allValues))
                                     }
                                 }
@@ -145,8 +146,9 @@ object DynamicUiRenderer {
 
                         if (element.triggerEvent && lifecycleScope != null && sessionId != null) {
                             setOnCheckedChangeListener { _, isChecked ->
-                                lifecycleScope.launch(Dispatchers.IO) {
-                                    val allValues = collectAllValues()
+                                // 立即发送事件，避免 IO 调度延迟
+                                val allValues = collectAllValues()
+                                lifecycleScope.launch {
                                     UiSessionBus.emitEvent(UiEvent(sessionId, element.id, "change", isChecked, allValues))
                                 }
                             }
@@ -159,10 +161,12 @@ object DynamicUiRenderer {
                     val button = MaterialButton(context).apply {
                         text = element.label
                         setOnClickListener {
+                            android.util.Log.d("DynamicUiRenderer", "按钮点击: ${element.id}")
                             if (element.triggerEvent && lifecycleScope != null && sessionId != null) {
-                                // 交互按钮：发送事件
-                                lifecycleScope.launch(Dispatchers.IO) {
-                                    val allValues = collectAllValues()
+                                // 交互按钮：立即在主线程发送事件，避免调度延迟
+                                val allValues = collectAllValues()
+                                android.util.Log.d("DynamicUiRenderer", "准备发送事件: ${element.id}")
+                                lifecycleScope.launch {
                                     UiSessionBus.emitEvent(UiEvent(sessionId, element.id, "click", null, allValues))
                                 }
                             } else {
