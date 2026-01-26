@@ -87,6 +87,14 @@ data class VScreenElement(
             })
 
             // === 位置属性 ===
+            register("center", "center_point", getter = { host ->
+                val element = host as VScreenElement
+                VCoordinate(element.centerX, element.centerY)
+            })
+            register("region", "bounds", getter = { host ->
+                val element = host as VScreenElement
+                VCoordinateRegion.fromRect(element.bounds)
+            })
             register("x", "center_x", getter = { host ->
                 VNumber((host as VScreenElement).centerX.toDouble())
             })

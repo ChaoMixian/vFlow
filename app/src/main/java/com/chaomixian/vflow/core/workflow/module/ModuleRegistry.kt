@@ -82,6 +82,7 @@ object ModuleRegistry {
 
         // 界面交互
         register(FindTextModule())
+        register(FindElementModule())
         register(ClickModule())
         register(ScreenOperationModule())
         register(SendKeyEventModule())

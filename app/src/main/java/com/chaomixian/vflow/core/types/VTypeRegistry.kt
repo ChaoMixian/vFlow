@@ -68,6 +68,8 @@ object VTypeRegistry {
         VPropertyDef("id", "控件ID", ANY),
         VPropertyDef("class", "类名", ANY),
         // 位置属性
+        VPropertyDef("center", "中心点", ANY),
+        VPropertyDef("region", "区域", ANY),
         VPropertyDef("center_x", "中心 X", ANY),
         VPropertyDef("center_y", "中心 Y", ANY),
         VPropertyDef("left", "左边界", ANY),
@@ -209,6 +211,8 @@ object VTypeRegistry {
                 when (propertyName) {
                     "text", "文本内容", "content_description", "id", "type", "类型", "label", "标签", "placeholder", "占位符",
                     "package", "应用包名", "title", "标题", "content", "内容", "class", "className", "viewId" -> STRING
+                    "center", "center_point" -> COORDINATE
+                    "region", "bounds" -> COORDINATE_REGION
                     "center_x", "center_y", "left", "top", "right", "bottom", "width", "宽度", "height", "高度", "x", "y",
                     "depth", "child_count", "childCount", "accessibility_id" -> NUMBER
                     "value", "值", "defaultvalue", "默认值" -> ANY
@@ -228,7 +232,11 @@ object VTypeRegistry {
             }
             COORDINATE_REGION.id -> {
                 when (propertyName) {
-                    "left", "top", "right", "bottom", "width", "w", "height", "h", "center_x", "x", "center_y", "y" -> NUMBER
+                    "left", "top", "right", "bottom" -> NUMBER
+                    "width", "w" -> NUMBER  // width支持别名w
+                    "height", "h" -> NUMBER  // height支持别名h
+                    "center_x", "x" -> NUMBER
+                    "center_y", "y" -> NUMBER
                     "center", "center_point" -> COORDINATE
                     "as_string", "string" -> STRING
                     "is_empty", "isEmpty", "is_valid", "isValid" -> BOOLEAN

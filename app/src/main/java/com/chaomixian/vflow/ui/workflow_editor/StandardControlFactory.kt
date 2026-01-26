@@ -111,7 +111,8 @@ object StandardControlFactory {
             else -> createTextInputLayout(
                 context,
                 inputDef.staticType == ParameterType.NUMBER,
-                currentValue
+                currentValue,
+                inputDef.hint
             )
         }
     }
@@ -167,10 +168,11 @@ object StandardControlFactory {
     fun createTextInputLayout(
         context: Context,
         isNumber: Boolean,
-        currentValue: Any?
+        currentValue: Any?,
+        hint: String? = null
     ): TextInputLayout {
         return TextInputLayout(context).apply {
-            hint = "值"
+            this.hint = hint ?: "值"
             val editText = TextInputEditText(context).apply {
                 val valueToDisplay = when (currentValue) {
                     is Number -> if (currentValue.toDouble() == currentValue.toLong().toDouble()) {
