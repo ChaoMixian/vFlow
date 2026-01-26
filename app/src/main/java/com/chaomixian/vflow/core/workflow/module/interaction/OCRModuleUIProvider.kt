@@ -43,13 +43,12 @@ class OCRModuleUIProvider : ModuleUIProvider {
         val strategySpinner: Spinner = view.findViewById(R.id.spinner_strategy)
         val strategyLabel: TextView = view.findViewById(R.id.tv_strategy_label)
 
-        // 坐标输入容器（动态创建视图）
-        val regionTopLeftContainer: FrameLayout = view.findViewById(R.id.container_region_top_left)
-        val regionBottomRightContainer: FrameLayout = view.findViewById(R.id.container_region_bottom_right)
+        // 识别区域容器
+        val regionContainer: FrameLayout = view.findViewById(R.id.container_region)
     }
 
     override fun getHandledInputIds(): Set<String> {
-        return setOf("mode", "target_text", "language", "search_strategy", "region_top_left", "region_bottom_right", "show_advanced")
+        return setOf("mode", "target_text", "language", "search_strategy", "region", "show_advanced")
     }
 
     override fun createPreview(
@@ -84,25 +83,15 @@ class OCRModuleUIProvider : ModuleUIProvider {
         holder.advancedContainer.isVisible = showAdvanced
         holder.expandArrow.rotation = if (showAdvanced) 180f else 0f
 
-        // 动态创建坐标输入视图
-        createCoordinateInputView(
+        // 创建识别区域输入视图（魔法变量选择器）
+        createRegionInputView(
             context,
-            holder.regionTopLeftContainer,
-            currentParameters["region_top_left"] as? String ?: "",
-            "左上坐标 (x,y)",
+            holder.regionContainer,
+            currentParameters["region"] as? String ?: "",
+            "选择识别区域变量",
             allSteps,
             onMagicVariableRequested,
-            "region_top_left",
-            onParametersChanged
-        )
-        createCoordinateInputView(
-            context,
-            holder.regionBottomRightContainer,
-            currentParameters["region_bottom_right"] as? String ?: "",
-            "右下坐标 (x,y)",
-            allSteps,
-            onMagicVariableRequested,
-            "region_bottom_right",
+            "region",
             onParametersChanged
         )
 
@@ -142,11 +131,11 @@ class OCRModuleUIProvider : ModuleUIProvider {
     }
 
     /**
-     * 动态创建坐标输入视图
-     * - 如果值是变量引用，显示为 pill
-     * - 否则显示为输入框
+     * 创建识别区域输入视图
+     * - 支持手动输入坐标字符串（格式：left,top,right,bottom）
+     * - 支持选择变量（VCoordinateRegion 或 VString）
      */
-    private fun createCoordinateInputView(
+    private fun createRegionInputView(
         context: Context,
         container: ViewGroup,
         currentValue: String,
@@ -158,63 +147,43 @@ class OCRModuleUIProvider : ModuleUIProvider {
     ) {
         container.removeAllViews()
 
-        if (StandardControlFactory.isVariableReference(currentValue)) {
-            // 创建包含pill和按钮的水平布局
-            val row = LinearLayout(context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-            }
+        // 创建包含输入框/变量显示和按钮的水平布局
+        val row = LinearLayout(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
 
-            // 创建 pill 视图
+        if (StandardControlFactory.isVariableReference(currentValue)) {
+            // 已选择变量：显示 pill
             val pill = StandardControlFactory.createVariablePill(
                 context,
-                row,  // 使用 row 作为 parent
+                row,
                 currentValue,
                 allSteps,
                 onClick = { onMagicVariableRequested?.invoke(inputId) }
             )
-            // 保存原始变量引用到 tag，方便后续读取
             pill.tag = currentValue
 
-            // 变量按钮（用于切换变量）
-            val magicButton = ImageButton(context, null, android.R.attr.borderlessButtonStyle).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    dpToPx(context, 48),
-                    dpToPx(context, 48)
-                ).apply {
-                    leftMargin = dpToPx(context, 4)
-                }
-                setImageResource(R.drawable.rounded_dataset_24)
-                // 使用主题的 colorPrimary 颜色
-                imageTintList = context.obtainStyledAttributes(intArrayOf(android.R.attr.colorPrimary)).getColorStateList(0)
-                contentDescription = "切换变量"
-                setOnClickListener { onMagicVariableRequested?.invoke(inputId) }
+            // 切换变量按钮
+            val magicButton = createMagicButton(context, "切换变量") {
+                onMagicVariableRequested?.invoke(inputId)
             }
 
             row.addView(pill)
             row.addView(magicButton)
-            container.addView(row)
         } else {
-            // 创建输入框（带变量按钮）
-            val row = LinearLayout(context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                orientation = LinearLayout.HORIZONTAL
-            }
-
+            // 未选择变量：显示输入框
             val inputLayout = TextInputLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     0,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     1f
                 )
-                this.hint = hint
+                this.hint = "左上,右下坐标 (x1,y1,x2,y2)"
             }
 
             val editText = TextInputEditText(context).apply {
@@ -223,32 +192,41 @@ class OCRModuleUIProvider : ModuleUIProvider {
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
                 setText(currentValue)
-                // 允许输入数字、逗号和负号（用于坐标格式 x,y）
                 inputType = android.text.InputType.TYPE_CLASS_TEXT
+                // 允许输入数字、逗号
             }
 
             inputLayout.addView(editText)
             row.addView(inputLayout)
 
             // 变量按钮
-            val magicButton = ImageButton(context, null, android.R.attr.borderlessButtonStyle).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    dpToPx(context, 48),
-                    dpToPx(context, 48)
-                ).apply {
-                    leftMargin = dpToPx(context, 4)
-                }
-                setImageResource(R.drawable.rounded_dataset_24)
-                // 使用主题的 colorPrimary 颜色
-                imageTintList = context.obtainStyledAttributes(intArrayOf(android.R.attr.colorPrimary)).getColorStateList(0)
-                contentDescription = "选择变量"
-                setOnClickListener { onMagicVariableRequested?.invoke(inputId) }
+            val magicButton = createMagicButton(context, "选择变量") {
+                onMagicVariableRequested?.invoke(inputId)
             }
 
             row.addView(magicButton)
-            container.addView(row)
 
             editText.doAfterTextChanged { onParametersChanged() }
+        }
+
+        container.addView(row)
+    }
+
+    /**
+     * 创建魔法变量按钮
+     */
+    private fun createMagicButton(context: Context, contentDescription: String, onClick: () -> Unit): ImageButton {
+        return ImageButton(context, null, android.R.attr.borderlessButtonStyle).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                dpToPx(context, 48),
+                dpToPx(context, 48)
+            ).apply {
+                leftMargin = dpToPx(context, 4)
+            }
+            setImageResource(R.drawable.rounded_dataset_24)
+            imageTintList = context.obtainStyledAttributes(intArrayOf(android.R.attr.colorPrimary)).getColorStateList(0)
+            this.contentDescription = contentDescription
+            setOnClickListener { onClick() }
         }
     }
 
@@ -258,34 +236,32 @@ class OCRModuleUIProvider : ModuleUIProvider {
         val language = h.languageSpinner.selectedItem?.toString() ?: "中英混合"
         val strategy = h.strategySpinner.selectedItem?.toString() ?: "默认 (从上到下)"
 
-        // 读取坐标值
-        val regionTopLeft = readCoordinateValue(h.regionTopLeftContainer)
-        val regionBottomRight = readCoordinateValue(h.regionBottomRightContainer)
+        // 读取识别区域变量
+        val region = readRegionValue(h.regionContainer)
 
         return mapOf(
             "mode" to mode,
             "target_text" to h.targetTextEdit.text.toString(),
             "language" to language,
             "search_strategy" to strategy,
-            "region_top_left" to regionTopLeft,
-            "region_bottom_right" to regionBottomRight,
+            "region" to region,
             "show_advanced" to h.advancedContainer.isVisible
         )
     }
 
     /**
-     * 从坐标容器中读取值
+     * 从识别区域容器中读取值
+     * - 如果是变量 pill，返回变量引用字符串
+     * - 如果是输入框，返回输入的文本
      */
-    private fun readCoordinateValue(container: ViewGroup): String {
+    private fun readRegionValue(container: ViewGroup): String {
         if (container.childCount == 0) return ""
 
         val child = container.getChildAt(0)
-
-        // 现在所有情况都是 LinearLayout (row)
         if (child is LinearLayout && child.childCount > 0) {
             val firstChild = child.getChildAt(0)
 
-            // 如果包含 pill_text TextView，则是 pill 视图
+            // 如果包含 pill_text TextView，则是 pill 视图（已选择变量）
             val pillText = firstChild.findViewById<TextView>(R.id.pill_text)
             if (pillText != null) {
                 // 通过 tag 获取原始变量引用

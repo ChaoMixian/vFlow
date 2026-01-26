@@ -90,6 +90,18 @@ object VTypeRegistry {
         VPropertyDef("y", "Y 坐标", ANY)
     ))
 
+    val COORDINATE_REGION = SimpleVType("vflow.type.coordinate_region", "坐标区域", ANY, listOf(
+        VPropertyDef("left", "左边界", ANY),
+        VPropertyDef("top", "上边界", ANY),
+        VPropertyDef("right", "右边界", ANY),
+        VPropertyDef("bottom", "下边界", ANY),
+        VPropertyDef("width", "宽度", ANY),
+        VPropertyDef("height", "高度", ANY),
+        VPropertyDef("center", "中心点", COORDINATE),
+        VPropertyDef("center_x", "中心 X", ANY),
+        VPropertyDef("center_y", "中心 Y", ANY)
+    ))
+
     val NOTIFICATION = SimpleVType("vflow.type.notification_object", "通知", ANY, listOf(
         VPropertyDef("title", "标题", ANY),
         VPropertyDef("content", "内容", ANY),
@@ -194,6 +206,15 @@ object VTypeRegistry {
                     else -> null
                 }
             }
+            COORDINATE_REGION.id -> {
+                when (propertyName) {
+                    "left", "top", "right", "bottom", "width", "w", "height", "h", "center_x", "x", "center_y", "y" -> NUMBER
+                    "center", "center_point" -> COORDINATE
+                    "as_string", "string" -> STRING
+                    "is_empty", "isEmpty", "is_valid", "isValid" -> BOOLEAN
+                    else -> null
+                }
+            }
             NOTIFICATION.id -> {
                 when (propertyName) {
                     "title", "标题", "content", "内容", "package", "应用包名", "id", "通知 ID" -> STRING
@@ -260,6 +281,7 @@ object VTypeRegistry {
             UI_ELEMENT.id -> UI_ELEMENT
             UI_COMPONENT.id -> UI_COMPONENT
             COORDINATE.id -> COORDINATE
+            COORDINATE_REGION.id -> COORDINATE_REGION
             NOTIFICATION.id -> NOTIFICATION
             else -> ANY
         }

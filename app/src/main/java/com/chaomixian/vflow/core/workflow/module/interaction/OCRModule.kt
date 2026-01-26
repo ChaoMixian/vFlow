@@ -12,11 +12,11 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNull
-import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VCoordinate
+import com.chaomixian.vflow.core.types.complex.VCoordinateRegion
 import com.chaomixian.vflow.core.types.complex.VImage
-import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.mlkit.vision.common.InputImage
@@ -54,8 +54,7 @@ class OCRModule : BaseModule() {
         // 高级选项
         InputDefinition("language", "识别语言", ParameterType.ENUM, "中英混合", options = languageOptions, acceptsMagicVariable = false, isHidden = true),
         InputDefinition("search_strategy", "查找策略", ParameterType.ENUM, "默认 (从上到下)", options = strategyOptions, acceptsMagicVariable = false, isHidden = true),
-        InputDefinition("region_top_left", "识别区域-左上坐标", ParameterType.STRING, "", acceptsMagicVariable = true, isHidden = true),
-        InputDefinition("region_bottom_right", "识别区域-右下坐标", ParameterType.STRING, "", acceptsMagicVariable = true, isHidden = true),
+        InputDefinition("region", "识别区域", ParameterType.ANY, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id), isHidden = true),
         // 用于保存"更多设置"开关的状态
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
     )
@@ -76,10 +75,10 @@ class OCRModule : BaseModule() {
                 OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
                 OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
                 OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id),
-                OutputDefinition("first_match", "第一个结果 (元素)", VTypeRegistry.UI_ELEMENT.id),
-                OutputDefinition("first_center", "第一个结果 (坐标)", VTypeRegistry.COORDINATE.id),
-                OutputDefinition("all_matches", "所有结果 (元素列表)", VTypeRegistry.LIST.id),
-                OutputDefinition("all_centers", "所有结果 (坐标列表)", VTypeRegistry.LIST.id)
+                OutputDefinition("first_match", "第一个结果 (区域)", VTypeRegistry.COORDINATE_REGION.id),
+                OutputDefinition("first_center", "第一个结果 (中心坐标)", VTypeRegistry.COORDINATE.id),
+                OutputDefinition("all_matches", "所有结果 (区域列表)", VTypeRegistry.LIST.id),
+                OutputDefinition("all_centers", "所有结果 (中心坐标列表)", VTypeRegistry.LIST.id)
             )
         }
     }
@@ -109,11 +108,10 @@ class OCRModule : BaseModule() {
         val rawTargetText = context.variables["target_text"]?.toString() ?: ""
         val targetText = VariableResolver.resolve(rawTargetText, context)
 
-        // 获取识别区域参数
-        val rawTopLeft = context.variables["region_top_left"]?.toString()
-        val rawBottomRight = context.variables["region_bottom_right"]?.toString()
-        val topLeft = parseCoordinate(rawTopLeft, context)
-        val bottomRight = parseCoordinate(rawBottomRight, context)
+        // 获取识别区域参数（支持多种输入方式）
+        val region = parseRegionParameter(context)
+        val topLeft = if (region != null) Pair(region.left, region.top) else null
+        val bottomRight = if (region != null) Pair(region.right, region.bottom) else null
 
         // 验证区域参数
         if ((topLeft != null) != (bottomRight != null)) {
@@ -155,9 +153,9 @@ class OCRModule : BaseModule() {
                 ))
             }
 
-            // 处理结果 - 查找文本模式（使用新的 VScreenElement 类型）
+            // 处理结果 - 查找文本模式（使用 VCoordinateRegion 类型）
             onProgress(ProgressUpdate("正在查找匹配项: $targetText"))
-            val matches = mutableListOf<VScreenElement>()
+            val matches = mutableListOf<VCoordinateRegion>()
 
             for (block in result.textBlocks) {
                 for (line in block.lines) {
@@ -174,7 +172,7 @@ class OCRModule : BaseModule() {
                             } else {
                                 rect
                             }
-                            matches.add(VScreenElement(adjustedRect, line.text))
+                            matches.add(VCoordinateRegion.fromRect(adjustedRect))
                         }
                     }
                 }
@@ -214,24 +212,24 @@ class OCRModule : BaseModule() {
                         inputImage.height / 2
                     }
                     matches.sortedBy { elem ->
-                        val dx = elem.bounds.centerX() - cx
-                        val dy = elem.bounds.centerY() - cy
+                        val dx = elem.centerX - cx
+                        val dy = elem.centerY - cy
                         dx.toDouble().pow(2) + dy.toDouble().pow(2)
                     }
                 }
                 "置信度最高" -> {
-                    matches.sortedBy { it.bounds.top } // 暂回退到默认排序
+                    matches.sortedBy { it.top } // 暂回退到默认排序
                 }
                 else -> { // "默认 (从上到下)"
-                    matches.sortedWith(compareBy({ it.bounds.top }, { it.bounds.left }))
+                    matches.sortedWith(compareBy({ it.top }, { it.left }))
                 }
             }
 
             val firstMatch = sortedMatches.first()
-            val firstCenter = VCoordinate(firstMatch.bounds.centerX(), firstMatch.bounds.centerY())
-            val allCenters = sortedMatches.map { VCoordinate(it.bounds.centerX(), it.bounds.centerY()) }
+            val firstCenter = VCoordinate(firstMatch.centerX, firstMatch.centerY)
+            val allCenters = sortedMatches.map { VCoordinate(it.centerX, it.centerY) }
 
-            onProgress(ProgressUpdate("找到 ${matches.size} 个结果，第一个位于 (${firstMatch.bounds.centerX()}, ${firstMatch.bounds.centerY()})"))
+            onProgress(ProgressUpdate("找到 ${matches.size} 个结果，第一个位于 (${firstMatch.centerX}, ${firstMatch.centerY})"))
 
             return ExecutionResult.Success(mapOf(
                 "success" to VBoolean(true),
@@ -253,23 +251,56 @@ class OCRModule : BaseModule() {
     }
 
     /**
-     * 解析坐标字符串
-     * 支持格式: "x,y" 或变量引用
+     * 解析识别区域参数（支持多种输入方式）
+     * 1. VCoordinateRegion 变量
+     * 2. VString 变量（包含坐标文本，格式：x1,y1,x2,y2）
+     * 3. 手动输入的坐标字符串（格式：x1,y1,x2,y2）
      */
-    private fun parseCoordinate(raw: String?, context: ExecutionContext): Pair<Int, Int>? {
-        if (raw.isNullOrBlank()) return null
+    private fun parseRegionParameter(context: ExecutionContext): VCoordinateRegion? {
+        // 优先尝试从 magicVariables 获取 VCoordinateRegion
+        val magicRegion = context.magicVariables["region"] as? VCoordinateRegion
+        if (magicRegion != null) return magicRegion
 
-        // 解析变量引用
-        val resolved = VariableResolver.resolve(raw, context)
+        // 尝试从 variables 获取字符串（可能是变量引用或手动输入）
+        val rawRegion = context.variables["region"]?.toString()
+        if (rawRegion.isNullOrBlank()) return null
 
-        // 解析坐标格式 "x,y"
-        val parts = resolved.split(",")
-        if (parts.size != 2) return null
+        // 如果是变量引用，解析变量
+        val resolvedText = if (rawRegion.startsWith("{{") && rawRegion.endsWith("}}")) {
+            // 变量引用：使用 VariableResolver.resolveValue 获取变量值
+            val resolvedValue = VariableResolver.resolveValue(rawRegion, context)
 
-        val x = parts[0].trim().toIntOrNull() ?: return null
-        val y = parts[1].trim().toIntOrNull() ?: return null
+            when (resolvedValue) {
+                is VCoordinateRegion -> return resolvedValue
+                is VString -> resolvedValue.raw
+                is String -> resolvedValue  // 可能直接返回字符串
+                else -> null
+            }
+        } else {
+            // 手动输入的字符串
+            rawRegion
+        }
 
-        return Pair(x, y)
+        // 解析坐标字符串（格式：x1,y1,x2,y2）
+        return parseCoordinateString(resolvedText)
+    }
+
+    /**
+     * 解析坐标字符串
+     * 支持格式：x1,y1,x2,y2 或 x1,y1,x2,y2（逗号分隔的四个数字）
+     */
+    private fun parseCoordinateString(text: String?): VCoordinateRegion? {
+        if (text.isNullOrBlank()) return null
+
+        val parts = text.split(",")
+        if (parts.size != 4) return null
+
+        val left = parts[0].trim().toIntOrNull() ?: return null
+        val top = parts[1].trim().toIntOrNull() ?: return null
+        val right = parts[2].trim().toIntOrNull() ?: return null
+        val bottom = parts[3].trim().toIntOrNull() ?: return null
+
+        return VCoordinateRegion(left, top, right, bottom)
     }
 
     /**

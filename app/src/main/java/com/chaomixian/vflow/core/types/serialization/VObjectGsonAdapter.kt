@@ -61,6 +61,14 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
                 out.name("y").value(value.y)
                 out.endObject()
             }
+            is VCoordinateRegion -> {
+                out.name("value").beginObject()
+                out.name("left").value(value.left)
+                out.name("top").value(value.top)
+                out.name("right").value(value.right)
+                out.name("bottom").value(value.bottom)
+                out.endObject()
+            }
             is VDate -> out.name("value").value(value.dateString)
             is VTime -> out.name("value").value(value.timeString)
             is VScreenElement -> {
@@ -215,6 +223,17 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
                     VNull
                 }
             }
+            VTypeRegistry.COORDINATE_REGION.id -> {
+                if (rawValue is Map<*, *>) {
+                    val left = (rawValue["left"] as? Number)?.toInt() ?: 0
+                    val top = (rawValue["top"] as? Number)?.toInt() ?: 0
+                    val right = (rawValue["right"] as? Number)?.toInt() ?: 0
+                    val bottom = (rawValue["bottom"] as? Number)?.toInt() ?: 0
+                    VCoordinateRegion(left, top, right, bottom)
+                } else {
+                    VNull
+                }
+            }
             VTypeRegistry.UI_ELEMENT.id -> {
                 if (rawValue is Map<*, *>) {
                     val boundsMap = rawValue["bounds"] as? Map<*, *>
@@ -224,6 +243,47 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
                     val bottom = (boundsMap?.get("bottom") as? Number)?.toInt() ?: 0
                     val text = rawValue["text"] as? String
                     VScreenElement(Rect(left, top, right, bottom), text)
+                } else {
+                    VNull
+                }
+            }
+            VTypeRegistry.NOTIFICATION.id -> {
+                if (rawValue is Map<*, *>) {
+                    val id = rawValue["id"]?.toString() ?: ""
+                    val title = rawValue["title"]?.toString() ?: ""
+                    val content = rawValue["content"]?.toString() ?: ""
+                    val packageName = rawValue["package"]?.toString() ?: ""
+                    val notification = NotificationObject(
+                        id = id,
+                        packageName = packageName,
+                        title = title,
+                        content = content
+                    )
+                    VNotification(notification)
+                } else {
+                    VNull
+                }
+            }
+            VTypeRegistry.UI_COMPONENT.id -> {
+                if (rawValue is Map<*, *>) {
+                    val id = rawValue["id"]?.toString() ?: ""
+                    val typeStr = rawValue["type"]?.toString() ?: "text"
+                    val label = rawValue["label"]?.toString() ?: ""
+                    val type = try {
+                        com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.valueOf(typeStr.uppercase())
+                    } catch (e: IllegalArgumentException) {
+                        com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.TEXT
+                    }
+                    val element = com.chaomixian.vflow.core.workflow.module.ui.model.UiElement(
+                        id = id,
+                        type = type,
+                        label = label,
+                        defaultValue = "",
+                        placeholder = "",
+                        isRequired = false,
+                        triggerEvent = true
+                    )
+                    VUiComponent(element)
                 } else {
                     VNull
                 }

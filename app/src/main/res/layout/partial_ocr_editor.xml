@@ -139,18 +139,12 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="留空则识别全屏。格式：x,y"
+                android:text="留空则识别全屏"
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <FrameLayout
-                android:id="@+id/container_region_top_left"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
-
-            <FrameLayout
-                android:id="@+id/container_region_bottom_right"
+                android:id="@+id/container_region"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp" />
