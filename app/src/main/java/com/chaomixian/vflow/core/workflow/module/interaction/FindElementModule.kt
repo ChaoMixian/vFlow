@@ -12,6 +12,7 @@ import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VCoordinateRegion
 import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
@@ -152,7 +153,7 @@ class FindElementModule : BaseModule() {
         val className = context.variables["class_name"]?.toString()
         val classMatchMode = context.variables["class_match_mode"] as? String ?: "完全匹配"
 
-        val searchRegion = context.variables["search_region"] as? com.chaomixian.vflow.core.types.complex.VCoordinateRegion
+        val searchRegion = context.variables["search_region"] as? VCoordinateRegion
 
         val clickable = parseBooleanFilter(context.variables["clickable"]?.toString())
         val enabled = parseBooleanFilter(context.variables["enabled"]?.toString())
@@ -166,19 +167,24 @@ class FindElementModule : BaseModule() {
         val resultSelection = context.variables["result_selection"] as? String ?: "第一个"
 
         // === 检查是否至少有一个查找条件 ===
-        val hasCondition = !text.isNullOrEmpty() ||
-                !viewId.isNullOrEmpty() ||
-                !className.isNullOrEmpty() ||
-                searchRegion != null ||
-                clickable != null ||
-                enabled != null ||
-                checkable != null ||
-                checked != null ||
-                editable != null ||
-                focusable != null ||
-                scrollable != null
+        // 注意：search_region 的默认值是空字符串，不是 null，所以需要特别处理
+        val hasTextCondition = !text.isNullOrEmpty()
+        val hasIdCondition = !viewId.isNullOrEmpty()
+        val hasClassCondition = !className.isNullOrEmpty()
+        val hasRegionCondition = searchRegion != null
+        val hasBooleanCondition = clickable != null || enabled != null ||
+                checkable != null || checked != null || editable != null ||
+                focusable != null || scrollable != null
 
-        if (!hasCondition) {
+        // 检查是否有任何非空、非默认值的参数
+        // 排除有默认值的参数（depth_limit, text_match_mode, id_match_mode, class_match_mode, result_selection）
+        val hasValidParameter = context.variables.entries.any { (key, value) ->
+            value != null && value != "" &&
+            key !in setOf("depth_limit", "text_match_mode", "id_match_mode", "class_match_mode", "result_selection")
+        }
+
+        if (!hasTextCondition && !hasIdCondition && !hasClassCondition &&
+            !hasRegionCondition && !hasBooleanCondition && !hasValidParameter) {
             return ExecutionResult.Failure("参数错误", "请至少设置一个查找条件")
         }
 
