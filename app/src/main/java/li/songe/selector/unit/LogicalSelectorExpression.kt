@@ -1,0 +1,72 @@
+package li.songe.selector.unit
+
+import li.songe.selector.FastQuery
+import li.songe.selector.MatchOption
+import li.songe.selector.QueryContext
+import li.songe.selector.Transform
+import li.songe.selector.TypeInfo
+import li.songe.selector.connect.ConnectSegment
+import li.songe.selector.property.BinaryExpression
+
+
+data class LogicalSelectorExpression(
+    val left: SelectorExpression,
+    val operator: SelectorLogicalOperator,
+    val right: SelectorExpression,
+) : SelectorExpression() {
+    override fun stringify(): String {
+        val leftStr = if (
+            left is UnitSelectorExpression || (left is LogicalSelectorExpression && left.operator != operator)
+        ) {
+            "(${left.stringify()})"
+        } else {
+            left.stringify()
+        }
+        val rightStr = if (
+            right is UnitSelectorExpression || (right is LogicalSelectorExpression && right.operator != operator)
+        ) {
+            "(${right.stringify()})"
+        } else {
+            right.stringify()
+        }
+        return "$leftStr ${operator.stringify()} $rightStr"
+    }
+
+    override fun <T> match(
+        context: QueryContext<T>,
+        transform: Transform<T>,
+        option: MatchOption
+    ): T? {
+        return operator.match(context, transform, option, this)
+    }
+
+    override fun <T> matchContext(
+        context: QueryContext<T>,
+        transform: Transform<T>,
+        option: MatchOption
+    ) = operator.matchContext(context, transform, option, this)
+
+    override fun isSlow(
+        matchOption: MatchOption
+    ) = left.isSlow(matchOption) || right.isSlow(matchOption)
+
+    override fun checkType(typeInfo: TypeInfo) {
+        left.checkType(typeInfo)
+        right.checkType(typeInfo)
+    }
+
+    override val isMatchRoot: Boolean
+        get() = when (operator) {
+            SelectorLogicalOperator.AndOperator -> left.isMatchRoot || right.isMatchRoot
+            SelectorLogicalOperator.OrOperator -> left.isMatchRoot && right.isMatchRoot
+        }
+
+    override val fastQueryList: List<FastQuery>
+        get() = left.fastQueryList + right.fastQueryList
+
+    override val binaryExpressionList: List<BinaryExpression>
+        get() = left.binaryExpressionList + right.binaryExpressionList
+
+    override val connectSegmentList: List<ConnectSegment>
+        get() = left.connectSegmentList + right.connectSegmentList
+}
