@@ -110,11 +110,17 @@ data class VariableInfo(
         fun fromMagicVariable(stepId: String, outputId: String, allSteps: List<ActionStep>): VariableInfo? {
             val sourceStep = allSteps.find { it.id == stepId } ?: return null
             val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
-            val outputDef = sourceModule.getOutputs(sourceStep).find { it.id == outputId } ?: return null
+            // 使用 getDynamicOutputs 而不是 getOutputs，以获取动态类型信息
+            val outputDefs = sourceModule.getDynamicOutputs(sourceStep, allSteps)
+            val outputDef = outputDefs.find { it.id == outputId } ?: return null
+
+            // 如果输出有 listElementType，则使用它作为 typeId
+            // 这样对于 ForEach 的"重复项目"，typeId 会是实际的元素类型（如 SCREEN_ELEMENT）
+            val actualTypeId = outputDef.listElementType ?: outputDef.typeName
 
             return VariableInfo(
                 sourceName = outputDef.name,
-                typeId = outputDef.typeName,
+                typeId = actualTypeId,
                 sourceModuleId = sourceStep.moduleId,
                 sourceStepId = stepId
             )

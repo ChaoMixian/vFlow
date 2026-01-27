@@ -36,6 +36,16 @@ interface ActionModule {
     fun getOutputs(step: ActionStep? = null): List<OutputDefinition>
 
     /**
+     * 获取模块的动态输出参数定义。
+     * 允许模块根据当前步骤的参数状态或整个工作流的上下文来动态调整其输出项。
+     * 例如，ForEach 模块可以根据输入列表的类型来确定输出的"重复项目"的类型。
+     * @param step 当前正在编辑或执行的步骤，包含其参数。
+     * @param allSteps 整个工作流的步骤列表，可用于上下文分析（例如，解析魔法变量的类型）。
+     * @return 根据当前状态生成的输出参数定义列表。
+     */
+    fun getDynamicOutputs(step: ActionStep?, allSteps: List<ActionStep>?): List<OutputDefinition>
+
+    /**
      * 获取模块的静态输入参数定义。
      * 这些是模块固有的输入，不随上下文变化（除非被 getDynamicInputs 覆盖）。
      * @return 静态输入参数定义列表。

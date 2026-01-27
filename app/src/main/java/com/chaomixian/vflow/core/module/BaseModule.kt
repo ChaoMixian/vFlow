@@ -34,6 +34,18 @@ abstract class BaseModule : ActionModule {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     /**
+     * 定义模块的动态输出参数。
+     * 默认实现直接返回 getOutputs() 的结果，适用于输出参数固定的模块。
+     * 需要根据上下文动态改变输出参数的模块（如 ForEachModule）应重写此方法。
+     * @param step 当前动作步骤实例。
+     * @param allSteps 工作流中的所有动作步骤列表，可用于上下文判断。
+     * @return 动态输出参数定义列表。
+     */
+    override fun getDynamicOutputs(step: ActionStep?, allSteps: List<ActionStep>?): List<OutputDefinition> {
+        return getOutputs(step) // 默认返回静态输出
+    }
+
+    /**
      * 定义模块的动态输入参数。
      * 默认实现直接返回 getInputs() 的结果，适用于输入参数固定的模块。
      * 需要根据上下文动态改变输入参数的模块（如 IfModule）应重写此方法。

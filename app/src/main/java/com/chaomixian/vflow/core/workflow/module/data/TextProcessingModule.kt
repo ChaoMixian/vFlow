@@ -72,7 +72,7 @@ class TextProcessingModule : BaseModule() {
         val operation = step?.parameters?.get("operation") as? String ?: "拼接"
         return when (operation) {
             "拼接", "替换" -> listOf(OutputDefinition("result_text", "结果文本", VTypeRegistry.STRING.id))
-            "分割", "正则提取" -> listOf(OutputDefinition("result_list", "结果列表", VTypeRegistry.LIST.id))
+            "分割", "正则提取" -> listOf(OutputDefinition("result_list", "结果列表", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.STRING.id))
             else -> emptyList()
         }
     }

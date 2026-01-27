@@ -38,9 +38,61 @@ class ForEachModule : BaseBlockModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("item", "重复项目", "vflow.type.any"), // 项目类型是任意的，因为列表可以包含任何类型
+        OutputDefinition("item", "重复项目", "vflow.type.any"), // 默认类型，实际类型由 getDynamicOutputs 确定
         OutputDefinition("index", "重复索引", VTypeRegistry.NUMBER.id)
     )
+
+    /**
+     * 动态获取输出参数，根据输入列表的类型推断"重复项目"的类型
+     */
+    override fun getDynamicOutputs(step: ActionStep?, allSteps: List<ActionStep>?): List<OutputDefinition> {
+        // 尝试从输入参数推断列表元素的类型
+        val listElementType = inferListElementType(step, allSteps)
+
+        return listOf(
+            OutputDefinition("item", "重复项目", listElementType ?: "vflow.type.any"),
+            OutputDefinition("index", "重复索引", VTypeRegistry.NUMBER.id)
+        )
+    }
+
+    /**
+     * 推断列表元素的类型
+     * 从输入参数中解析变量引用，找到对应的输出，如果该输出是 LIST 类型且有 listElementType，则返回它
+     */
+    private fun inferListElementType(step: ActionStep?, allSteps: List<ActionStep>?): String? {
+        if (step == null || allSteps == null) return null
+
+        val inputListValue = step.parameters["input_list"] as? String ?: return null
+
+        // 检查是否是魔法变量引用 (格式: {{stepId.outputId}})
+        if (!inputListValue.startsWith("{{") || !inputListValue.endsWith("}}")) {
+            return null
+        }
+
+        val content = inputListValue.removeSurrounding("{{", "}}")
+        val parts = content.split('.')
+        if (parts.size < 2) return null
+
+        val sourceStepId = parts[0]
+        val sourceOutputId = parts[1]
+
+        // 查找源步骤
+        val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
+        val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
+
+        // 获取源模块的输出定义
+        val sourceOutputs = sourceModule.getDynamicOutputs(sourceStep, allSteps)
+        val sourceOutput = sourceOutputs.find { it.id == sourceOutputId } ?: return null
+
+        // 如果源输出是 LIST 类型且有 listElementType，则返回它
+        return if (sourceOutput.typeName == VTypeRegistry.LIST.id) {
+            sourceOutput.listElementType
+        } else {
+            // 如果源输出不是 LIST 类型，但用户使用了它作为列表输入
+            // 则返回该输出本身的类型作为列表元素类型
+            sourceOutput.typeName
+        }
+    }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val listPill = PillUtil.createPillFromParam(

@@ -79,7 +79,9 @@ class FindImageModule : BaseModule() {
 
         return listOf(
             OutputDefinition("first_result", "最相似坐标", VTypeRegistry.COORDINATE.id, conditions),
-            OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, conditions),
+            OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.COORDINATE.id,
+                conditionalOptions = conditions
+            ),
             OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions)
         )
     }

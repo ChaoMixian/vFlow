@@ -643,7 +643,7 @@ class WorkflowEditorActivity : BaseActivity() {
             // 跳过循环头本身，避免引用自己
             if (module.id == LOOP_START_ID || module.id == FOREACH_START_ID) continue
 
-            val outputs = module.getOutputs(step).filter { outputDef ->
+            val outputs = module.getDynamicOutputs(step, actionSteps).filter { outputDef ->
                 VTypeRegistry.isTypeOrAnyPropertyAccepted(
                     outputDef.typeName,
                     targetInputDef.acceptedMagicVariableTypes
@@ -670,7 +670,7 @@ class WorkflowEditorActivity : BaseActivity() {
             val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId) as? LoopModule
             if (loopModule != null) {
                 val groupName = "#${actionSteps.indexOf(enclosingLoopStep)} ${loopModule.metadata.name}"
-                val items = loopModule.getOutputs(enclosingLoopStep).map { outputDef ->
+                val items = loopModule.getDynamicOutputs(enclosingLoopStep, actionSteps).map { outputDef ->
                     MagicVariableItem(
                         variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
                         variableName = outputDef.name,
@@ -687,12 +687,18 @@ class WorkflowEditorActivity : BaseActivity() {
             val forEachModule = ModuleRegistry.getModule(enclosingForEachStep.moduleId) as? ForEachModule
             if (forEachModule != null) {
                 val groupName = "#${actionSteps.indexOf(enclosingForEachStep)} ${forEachModule.metadata.name}"
-                val items = forEachModule.getOutputs(enclosingForEachStep).map { outputDef ->
+                val items = forEachModule.getDynamicOutputs(enclosingForEachStep, actionSteps).map { outputDef ->
+                    // 使用 listElementType 作为类型描述（如果有的话）
+                    val typeDescription = when {
+                        outputDef.listElementType != null -> "(${outputDef.listElementType.split('.').last()})"
+                        outputDef.typeName == "vflow.type.any" -> ""
+                        else -> "(${outputDef.typeName.split('.').last()})"
+                    }
                     MagicVariableItem(
                         variableReference = "{{${enclosingForEachStep.id}.${outputDef.id}}}",
                         variableName = outputDef.name,
-                        originDescription = if (outputDef.typeName == "vflow.type.any") "" else "(${outputDef.typeName.split('.').last()})",
-                        typeId = outputDef.typeName
+                        originDescription = typeDescription,
+                        typeId = outputDef.listElementType ?: outputDef.typeName
                     )
                 }
                 groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)

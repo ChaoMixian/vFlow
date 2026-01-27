@@ -41,7 +41,8 @@ data class ModuleInput(
 data class ModuleOutput(
     val id: String,
     val name: String,
-    val type: String
+    val type: String,
+    val listElementType: String? = null
 ) : Parcelable
 
 /**

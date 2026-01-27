@@ -77,8 +77,8 @@ class OCRModule : BaseModule() {
                 OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id),
                 OutputDefinition("first_match", "第一个结果 (区域)", VTypeRegistry.COORDINATE_REGION.id),
                 OutputDefinition("first_center", "第一个结果 (中心坐标)", VTypeRegistry.COORDINATE.id),
-                OutputDefinition("all_matches", "所有结果 (区域列表)", VTypeRegistry.LIST.id),
-                OutputDefinition("all_centers", "所有结果 (中心坐标列表)", VTypeRegistry.LIST.id)
+                OutputDefinition("all_matches", "所有结果 (区域列表)", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.COORDINATE_REGION.id),
+                OutputDefinition("all_centers", "所有结果 (中心坐标列表)", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.COORDINATE.id)
             )
         }
     }

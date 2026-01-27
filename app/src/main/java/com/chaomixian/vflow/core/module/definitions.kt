@@ -148,12 +148,16 @@ data class ConditionalOption(val displayName: String, val value: String) : Parce
  * @param name 输出参数在UI中显示的名称。
  * @param typeName 输出参数的类型名称 (例如 TextVariable.TYPE_NAME)。
  * @param conditionalOptions 如果此输出可以作为条件分支的依据，这里定义了可供选择的条件及其对应的值。
+ * @param listElementType 如果 typeName 是列表类型，此字段指定列表元素的类型（可选）。
+ *                         例如：typeName = "vflow.type.list", listElementType = "vflow.type.screen_element"
+ *                         表示输出是 List<VScreenElement>
  */
 data class OutputDefinition(
     val id: String,
     val name: String,
     val typeName: String,
-    val conditionalOptions: List<ConditionalOption>? = null
+    val conditionalOptions: List<ConditionalOption>? = null,
+    val listElementType: String? = null
 )
 
 /**

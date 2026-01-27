@@ -32,7 +32,7 @@ class FindNotificationModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("notifications", "找到的通知", VTypeRegistry.LIST.id)
+        OutputDefinition("notifications", "找到的通知", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.NOTIFICATION.id)
     )
 
     /**

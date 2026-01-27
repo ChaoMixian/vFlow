@@ -77,7 +77,7 @@ class FindElementModule : BaseModule() {
         OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
         OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id),
         OutputDefinition("element", "选中的控件", VTypeRegistry.SCREEN_ELEMENT.id),
-        OutputDefinition("all_elements", "所有控件", VTypeRegistry.LIST.id)
+        OutputDefinition("all_elements", "所有控件", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.SCREEN_ELEMENT.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
