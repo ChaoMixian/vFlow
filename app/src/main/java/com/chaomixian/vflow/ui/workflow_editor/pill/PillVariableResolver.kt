@@ -76,12 +76,18 @@ object PillVariableResolver {
             PillTheme.getColor(context, R.color.variable_pill_color)
         }
 
+        // 获取步骤序号（用于标识来源）
+        val stepIndex = varInfo.sourceStepId?.let { stepId ->
+            allSteps.indexOfFirst { it.id == stepId }
+        } ?: -1
+
         // 构建显示名称（使用本地化属性名）
+        val stepPrefix = if (stepIndex >= 0) "#$stepIndex " else ""
         val displayName = if (propertyName != null) {
             val localizedPropName = varInfo.getPropertyDisplayName(context, propertyName)
-            "${varInfo.sourceName} 的 $localizedPropName"
+            "${stepPrefix}${varInfo.sourceName} 的 $localizedPropName"
         } else {
-            varInfo.sourceName
+            "${stepPrefix}${varInfo.sourceName}"
         }
 
         return ResolvedInfo(displayName, color, propertyName)
