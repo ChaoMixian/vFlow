@@ -235,8 +235,14 @@ class WorkflowsFloatPanelService : Service() {
      * 执行工作流
      */
     private fun executeWorkflow(workflow: Workflow) {
-        Toast.makeText(this, "执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
-        WorkflowExecutor.execute(workflow, this)
+        // 重新加载工作流最新版本，避免使用旧缓存
+        val latestWorkflow = workflowManager.getWorkflow(workflow.id)
+        if (latestWorkflow == null) {
+            Toast.makeText(this, "工作流不存在", Toast.LENGTH_SHORT).show()
+            return
+        }
+        Toast.makeText(this, "执行: ${latestWorkflow.name}", Toast.LENGTH_SHORT).show()
+        WorkflowExecutor.execute(latestWorkflow, this)
         adapter.notifyDataSetChanged()
     }
 
