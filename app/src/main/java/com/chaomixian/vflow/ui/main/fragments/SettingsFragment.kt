@@ -157,6 +157,13 @@ class SettingsFragment : Fragment() {
             autoEnableAccessibilitySwitch.text = getString(R.string.settings_switch_auto_accessibility_unavailable)
         }
 
+        // 禁用变量类型限制开关逻辑
+        val disableTypeFilterSwitch = view.findViewById<MaterialSwitch>(R.id.switch_disable_type_filter)
+        disableTypeFilterSwitch.isChecked = prefs.getBoolean("disableTypeFilter", false)
+        disableTypeFilterSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean("disableTypeFilter", isChecked) }
+        }
+
         // 权限与 Shell 设置
         val shellModeToggle = view.findViewById<MaterialButtonToggleGroup>(R.id.toggle_shell_mode)
         val defaultMode = prefs.getString("default_shell_mode", "shizuku")

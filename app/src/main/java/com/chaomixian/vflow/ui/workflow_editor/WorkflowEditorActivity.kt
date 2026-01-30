@@ -636,6 +636,8 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         // --- 按步骤分组收集魔法变量 ---
+        val prefs = getSharedPreferences("vFlowPrefs", MODE_PRIVATE)
+        val disableTypeFilter = prefs.getBoolean("disableTypeFilter", false)
         val groupedStepOutputs = mutableMapOf<String, MutableList<MagicVariableItem>>()
 
         for (i in 0 until editingStepPosition) {
@@ -645,10 +647,15 @@ class WorkflowEditorActivity : BaseActivity() {
             if (module.id == LOOP_START_ID || module.id == FOREACH_START_ID) continue
 
             val outputs = module.getDynamicOutputs(step, actionSteps).filter { outputDef ->
-                VTypeRegistry.isTypeOrAnyPropertyAccepted(
-                    outputDef.typeName,
-                    targetInputDef.acceptedMagicVariableTypes
-                )
+                // 当禁用类型限制时，不过滤变量
+                if (disableTypeFilter) {
+                    true
+                } else {
+                    VTypeRegistry.isTypeOrAnyPropertyAccepted(
+                        outputDef.typeName,
+                        targetInputDef.acceptedMagicVariableTypes
+                    )
+                }
             }
 
             if (outputs.isNotEmpty()) {
@@ -715,7 +722,8 @@ class WorkflowEditorActivity : BaseActivity() {
             namedVariables,
             acceptsMagicVariable = targetInputDef.acceptsMagicVariable,
             acceptsNamedVariable = targetInputDef.acceptsNamedVariable,
-            acceptedMagicVariableTypes = targetInputDef.acceptedMagicVariableTypes
+            acceptedMagicVariableTypes = targetInputDef.acceptedMagicVariableTypes,
+            disableTypeFilter = disableTypeFilter
         )
 
         picker.onSelection = { selectedItem ->
