@@ -456,7 +456,8 @@ class WorkflowEditorActivity : BaseActivity() {
 
     /** 提取一个辅助函数以分组形式获取所有可用的命名变量 */
     private fun getAvailableNamedVariables(upToPosition: Int): Map<String, List<MagicVariableItem>> {
-        val availableNamedVariables = mutableMapOf<String, MagicVariableItem>()
+        // 使用 LinkedHashMap 确保变量按定义顺序排列
+        val availableNamedVariables = linkedMapOf<String, MagicVariableItem>()
         actionSteps.subList(0, upToPosition)
             .filter { it.moduleId == CreateVariableModule().id }
             .forEach { step ->
@@ -638,9 +639,11 @@ class WorkflowEditorActivity : BaseActivity() {
         // --- 按步骤分组收集魔法变量 ---
         val prefs = getSharedPreferences("vFlowPrefs", MODE_PRIVATE)
         val disableTypeFilter = prefs.getBoolean("disableTypeFilter", false)
-        val groupedStepOutputs = mutableMapOf<String, MutableList<MagicVariableItem>>()
+        // 使用 LinkedHashMap 确保步骤按倒序排列（序号大的在上面）
+        val groupedStepOutputs = linkedMapOf<String, MutableList<MagicVariableItem>>()
 
-        for (i in 0 until editingStepPosition) {
+        // 倒序遍历：先添加后面的步骤
+        for (i in (editingStepPosition - 1) downTo 0) {
             val step = actionSteps[i]
             val module = ModuleRegistry.getModule(step.moduleId) ?: continue
             // 跳过循环头本身，避免引用自己
@@ -672,12 +675,16 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
 
-        // --- 动态添加循环变量 ---
+        // --- 获取命名变量 ---
+        val namedVariables = getAvailableNamedVariables(editingStepPosition)
+
+        // --- 动态添加循环变量（先添加，这样倒序时显示在最上面）---
         val enclosingLoopStep = findEnclosingLoopStartStep(editingStepPosition, LOOP_PAIRING_ID)
         if (enclosingLoopStep != null) {
             val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId) as? LoopModule
             if (loopModule != null) {
-                val groupName = "#${actionSteps.indexOf(enclosingLoopStep)} ${loopModule.metadata.getLocalizedName(this)}"
+                val loopIndex = actionSteps.indexOf(enclosingLoopStep)
+                val groupName = "#$loopIndex ${loopModule.metadata.getLocalizedName(this)}"
                 val items = loopModule.getDynamicOutputs(enclosingLoopStep, actionSteps).map { outputDef ->
                     MagicVariableItem(
                         variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
@@ -694,7 +701,8 @@ class WorkflowEditorActivity : BaseActivity() {
         if (enclosingForEachStep != null) {
             val forEachModule = ModuleRegistry.getModule(enclosingForEachStep.moduleId) as? ForEachModule
             if (forEachModule != null) {
-                val groupName = "#${actionSteps.indexOf(enclosingForEachStep)} ${forEachModule.metadata.getLocalizedName(this)}"
+                val forEachIndex = actionSteps.indexOf(enclosingForEachStep)
+                val groupName = "#$forEachIndex ${forEachModule.metadata.getLocalizedName(this)}"
                 val items = forEachModule.getDynamicOutputs(enclosingForEachStep, actionSteps).map { outputDef ->
                     // 使用 listElementType 作为类型描述（如果有的话）
                     val typeDescription = when {
@@ -712,9 +720,6 @@ class WorkflowEditorActivity : BaseActivity() {
                 groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
             }
         }
-
-        // --- 获取命名变量 ---
-        val namedVariables = getAvailableNamedVariables(editingStepPosition)
 
         // --- 启动选择器 ---
         val picker = MagicVariablePickerSheet.newInstance(

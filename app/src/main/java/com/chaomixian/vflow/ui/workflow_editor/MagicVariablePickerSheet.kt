@@ -84,26 +84,30 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         val acceptsMagic = arguments?.getBoolean("acceptsMagic", true) ?: true
         val acceptsNamed = arguments?.getBoolean("acceptsNamed", true) ?: true
 
+        // Bundle 序列化会丢失 Map 顺序，需要手动排序
+        @Suppress("UNCHECKED_CAST")
+        val namedVariables = arguments?.getSerializable("namedVariables") as? Map<String, List<MagicVariableItem>> ?: emptyMap()
+        @Suppress("UNCHECKED_CAST")
+        val stepVariables = arguments?.getSerializable("stepVariables") as? Map<String, List<MagicVariableItem>> ?: emptyMap()
+
         // 将分组数据转换为 RecyclerView 的列表项
         val items = mutableListOf<PickerListItem>().apply {
             add(PickerListItem.ClearAction) // 总是添加“清除”选项
 
-            // 添加命名变量分组
+            // 添加命名变量分组（按原顺序）
             if (acceptsNamed) {
-                @Suppress("UNCHECKED_CAST")
-                val namedVariables = arguments?.getSerializable("namedVariables") as? Map<String, List<MagicVariableItem>>
-                namedVariables?.forEach { (groupName, variableList) ->
+                namedVariables.forEach { (groupName, variableList) ->
                     add(PickerListItem.VariableGroup(groupName, variableList))
                 }
             }
 
-            // 添加步骤输出变量分组
+            // 添加步骤输出变量分组（按序号倒序排列）
             if (acceptsMagic) {
-                @Suppress("UNCHECKED_CAST")
-                val stepVariables = arguments?.getSerializable("stepVariables") as? Map<String, List<MagicVariableItem>>
-                stepVariables?.forEach { (groupName, variableList) ->
-                    add(PickerListItem.VariableGroup(groupName, variableList))
-                }
+                stepVariables.entries
+                    .sortedByDescending { entry -> entry.key.substringAfter("#").substringBefore(" ").toIntOrNull() ?: 0 }
+                    .forEach { (groupName, variableList) ->
+                        add(PickerListItem.VariableGroup(groupName, variableList))
+                    }
             }
         }
 
