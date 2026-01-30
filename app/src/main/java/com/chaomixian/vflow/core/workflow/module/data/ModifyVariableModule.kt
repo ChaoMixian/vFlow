@@ -4,10 +4,12 @@ package com.chaomixian.vflow.core.workflow.module.data
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
+import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 
 class ModifyVariableModule : BaseModule() {
     override val id = "vflow.variable.modify"
@@ -19,6 +21,8 @@ class ModifyVariableModule : BaseModule() {
         iconRes = R.drawable.ic_variable_type,
         category = "数据"
     )
+
+    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("newValue")
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -37,7 +41,8 @@ class ModifyVariableModule : BaseModule() {
             staticType = ParameterType.ANY,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptsNamedVariable = true // 新值可以接受两种变量
+            acceptsNamedVariable = true, // 新值可以接受两种变量
+            supportsRichText = true
         )
     )
 
@@ -48,6 +53,15 @@ class ModifyVariableModule : BaseModule() {
             step.parameters["variable"], // 使用新的 ID "variable"
             getInputs().find { it.id == "variable" }
         )
+
+        // 如果新值是复杂内容，RichTextUIProvider 会显示预览，这里只显示变量名
+        val rawValue = step.parameters["newValue"]?.toString() ?: ""
+        if (VariableResolver.isComplex(rawValue)) {
+            val prefix = context.getString(R.string.summary_vflow_variable_modify_prefix)
+            val middle = context.getString(R.string.summary_vflow_variable_modify_middle)
+            return PillUtil.buildSpannable(context, prefix, namePill, middle)
+        }
+
         val valuePill = PillUtil.createPillFromParam(
             step.parameters["newValue"],
             getInputs().find { it.id == "newValue" }
