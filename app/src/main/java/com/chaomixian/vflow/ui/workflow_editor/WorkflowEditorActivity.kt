@@ -920,7 +920,8 @@ class WorkflowEditorActivity : BaseActivity() {
 
                 // 无效移动检查
                 if (fromPos <= 0 || toPos < 0 || fromPos == toPos) {
-                    recalculateAndNotify()
+                    // 延迟执行，避免 RecyclerView 布局冲突
+                    this@WorkflowEditorActivity.recyclerView.post { recalculateAndNotify() }
                     return
                 }
 
@@ -935,7 +936,8 @@ class WorkflowEditorActivity : BaseActivity() {
                     actionSteps.clear()
                     actionSteps.addAll(originalList)
                 }
-                recalculateAndNotify()
+                // 延迟执行，避免 RecyclerView 布局冲突
+                this@WorkflowEditorActivity.recyclerView.post { recalculateAndNotify() }
             }
 
             /**
