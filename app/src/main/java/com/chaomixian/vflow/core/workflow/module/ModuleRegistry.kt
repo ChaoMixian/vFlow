@@ -90,6 +90,9 @@ object ModuleRegistry {
         register(SmsTriggerModule(), context)
         register(NotificationTriggerModule(), context)
 
+        // 触发器 - 元素触发
+        register(ElementTriggerModule(), context)
+
         // 界面交互
         register(FindTextModule(), context)
         register(FindElementModule(), context)

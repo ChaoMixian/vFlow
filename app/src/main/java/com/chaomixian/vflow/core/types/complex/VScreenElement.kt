@@ -43,7 +43,7 @@ data class VScreenElement(
 
     // === 其他信息 ===
     val accessibilityId: Int? // 无障碍节点 ID
-) : EnhancedBaseVObject() {
+) : android.os.Parcelable, EnhancedBaseVObject() {
     override val type = VTypeRegistry.SCREEN_ELEMENT
     override val raw: Any = this
     override val propertyRegistry = Companion.registry
@@ -200,5 +200,69 @@ data class VScreenElement(
                 accessibilityId = node.uniqueId?.toIntOrNull()
             )
         }
+
+        /**
+         * Parcelable.Creator 实现
+         */
+        val CREATOR: android.os.Parcelable.Creator<VScreenElement> = object : android.os.Parcelable.Creator<VScreenElement> {
+            override fun createFromParcel(parcel: android.os.Parcel): VScreenElement {
+                val left = parcel.readInt()
+                val top = parcel.readInt()
+                val right = parcel.readInt()
+                val bottom = parcel.readInt()
+                val bounds = Rect(left, top, right, bottom)
+
+                return VScreenElement(
+                    bounds = bounds,
+                    text = parcel.readString(),
+                    contentDescription = parcel.readString(),
+                    viewId = parcel.readString(),
+                    className = parcel.readString(),
+                    isClickable = parcel.readByte() != 0.toByte(),
+                    isEnabled = parcel.readByte() != 0.toByte(),
+                    isCheckable = parcel.readByte() != 0.toByte(),
+                    isChecked = parcel.readByte() != 0.toByte(),
+                    isFocusable = parcel.readByte() != 0.toByte(),
+                    isFocused = parcel.readByte() != 0.toByte(),
+                    isScrollable = parcel.readByte() != 0.toByte(),
+                    isLongClickable = parcel.readByte() != 0.toByte(),
+                    isSelected = parcel.readByte() != 0.toByte(),
+                    isEditable = parcel.readByte() != 0.toByte(),
+                    depth = parcel.readInt(),
+                    childCount = parcel.readInt(),
+                    accessibilityId = parcel.readValue(Int::class.java.classLoader) as? Int
+                )
+            }
+
+            override fun newArray(size: Int): Array<VScreenElement?> {
+                return arrayOfNulls(size)
+            }
+        }
     }
+
+    override fun writeToParcel(parcel: android.os.Parcel, flags: Int) {
+        parcel.writeInt(bounds.left)
+        parcel.writeInt(bounds.top)
+        parcel.writeInt(bounds.right)
+        parcel.writeInt(bounds.bottom)
+        parcel.writeString(text)
+        parcel.writeString(contentDescription)
+        parcel.writeString(viewId)
+        parcel.writeString(className)
+        parcel.writeByte(if (isClickable) 1 else 0)
+        parcel.writeByte(if (isEnabled) 1 else 0)
+        parcel.writeByte(if (isCheckable) 1 else 0)
+        parcel.writeByte(if (isChecked) 1 else 0)
+        parcel.writeByte(if (isFocusable) 1 else 0)
+        parcel.writeByte(if (isFocused) 1 else 0)
+        parcel.writeByte(if (isScrollable) 1 else 0)
+        parcel.writeByte(if (isLongClickable) 1 else 0)
+        parcel.writeByte(if (isSelected) 1 else 0)
+        parcel.writeByte(if (isEditable) 1 else 0)
+        parcel.writeInt(depth)
+        parcel.writeInt(childCount)
+        parcel.writeValue(accessibilityId)
+    }
+
+    override fun describeContents(): Int = 0
 }

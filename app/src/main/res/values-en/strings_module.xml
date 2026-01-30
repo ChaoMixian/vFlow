@@ -377,6 +377,12 @@
     <string name="summary_vflow_trigger_notification_suffix"> notification</string>
     <string name="msg_vflow_trigger_notification_received">Notification received</string>
 
+    <!-- vflow.trigger.element - Element Trigger -->
+    <string name="module_vflow_trigger_element_name">Element Trigger</string>
+    <string name="module_vflow_trigger_element_desc">Trigger workflow when UI element matching the selector appears</string>
+    <string name="summary_vflow_trigger_element_prefix">When</string>
+    <string name="summary_vflow_trigger_element_suffix"> appears</string>
+
     <!-- vflow.trigger.sms - SMS Trigger -->
     <string name="module_vflow_trigger_sms_name">SMS Trigger</string>
     <string name="module_vflow_trigger_sms_desc">Trigger workflow when SMS meeting specific criteria is received</string>

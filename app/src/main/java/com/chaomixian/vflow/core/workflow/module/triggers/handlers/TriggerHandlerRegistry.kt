@@ -33,6 +33,7 @@ object TriggerHandlerRegistry {
         register(BluetoothTriggerModule().id) { BluetoothTriggerHandler() }
         register(SmsTriggerModule().id) { SmsTriggerHandler() }
         register(NotificationTriggerModule().id) { NotificationTriggerHandler() }
+        register(ElementTriggerModule().id) { ElementTriggerHandler() }
 
     }
 

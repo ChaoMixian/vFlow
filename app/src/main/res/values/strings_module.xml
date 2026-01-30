@@ -328,6 +328,10 @@
     <string name="summary_vflow_trigger_notification_any">任意</string>
     <string name="summary_vflow_trigger_notification_suffix"> 的通知时</string>
     <string name="msg_vflow_trigger_notification_received">通知已收到</string>
+    <string name="module_vflow_trigger_element_name">元素触发</string>
+    <string name="module_vflow_trigger_element_desc">当页面上出现匹配选择器的控件时触发工作流</string>
+    <string name="summary_vflow_trigger_element_prefix">当出现 </string>
+    <string name="summary_vflow_trigger_element_suffix"> 时触发</string>
     <string name="module_vflow_trigger_sms_name">短信触发</string>
     <string name="module_vflow_trigger_sms_desc">当收到满足特定条件的短信时触发工作流</string>
     <string name="param_vflow_trigger_sms_sender_filter_type_name">发件人条件</string>

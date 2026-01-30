@@ -20,6 +20,10 @@ object ServiceStateBus {
     private val _windowChangeEventFlow = MutableSharedFlow<Pair<String, String>>()
     val windowChangeEventFlow = _windowChangeEventFlow.asSharedFlow()
 
+    // 创建一个 SharedFlow 用于广播窗口内容变化事件 (包名, 类名)
+    private val _windowContentChangedFlow = MutableSharedFlow<Pair<String, String>>()
+    val windowContentChangedFlow = _windowContentChangedFlow.asSharedFlow()
+
     // 缓存最后一个窗口类名，供 UIInspector 使用
     var lastWindowClassName: String? = null
         private set
@@ -48,6 +52,14 @@ object ServiceStateBus {
     suspend fun postWindowChangeEvent(packageName: String, className: String) {
         lastWindowClassName = className
         _windowChangeEventFlow.emit(packageName to className)
+    }
+
+    /**
+     * 由 AccessibilityService 调用，用于发出窗口内容变化事件。
+     */
+    suspend fun postWindowContentChanged(packageName: String, className: String) {
+        lastWindowClassName = className
+        _windowContentChangedFlow.emit(packageName to className)
     }
 
 

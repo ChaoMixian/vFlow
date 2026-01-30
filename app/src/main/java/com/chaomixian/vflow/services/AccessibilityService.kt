@@ -29,15 +29,23 @@ class AccessibilityService : AccessibilityService() {
      * 而不是发送广播。
      */
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName?.toString()
-            val className = event.className?.toString()
+        val packageName = event.packageName?.toString()
+        val className = event.className?.toString()
 
-            if (packageName != null && className != null) {
-                // 在协程中发出事件
-                serviceScope.launch {
-                    ServiceStateBus.postWindowChangeEvent(packageName, className)
-                }
+        if (packageName == null || className == null) return
+
+        // TYPE_WINDOW_STATE_CHANGED: 窗口状态变化（Activity切换、Dialog显示等）
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            serviceScope.launch {
+                ServiceStateBus.postWindowChangeEvent(packageName, className)
+            }
+        }
+
+        // TYPE_WINDOW_CONTENT_CHANGED: 窗口内容变化（控件出现/消失/更新）
+        // 用于检测 vFlow 应用自己界面上的控件变化
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            serviceScope.launch {
+                ServiceStateBus.postWindowContentChanged(packageName, className)
             }
         }
     }
