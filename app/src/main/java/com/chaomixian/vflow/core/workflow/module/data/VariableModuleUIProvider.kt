@@ -39,6 +39,8 @@ class VariableEditorViewHolder(
     var listAdapter: ListItemAdapter? = null
     var coordXInput: TextInputEditText? = null // 坐标类型的 X 输入框
     var coordYInput: TextInputEditText? = null // 坐标类型的 Y 输入框
+    var coordXVariable: String? = null // 坐标类型的 X 变量引用
+    var coordYVariable: String? = null // 坐标类型的 Y 变量引用
     var onMagicVariableRequested: ((inputId: String) -> Unit)? = null // 用于存储魔法变量请求的回调
     var allSteps: List<ActionStep>? = null // 存储工作流步骤
 }
@@ -155,10 +157,11 @@ class VariableModuleUIProvider(
             "字典" -> h.dictionaryAdapter?.getItemsAsMap()
             "列表" -> h.listAdapter?.getItems()
             "坐标" -> {
-                val xText = h.coordXInput?.text?.toString()?.trim()
-                val yText = h.coordYInput?.text?.toString()?.trim()
+                // 优先使用 coordXVariable/coordYVariable（当显示变量药丸时）
+                val xText = h.coordXVariable ?: h.coordXInput?.text?.toString()?.trim() ?: ""
+                val yText = h.coordYVariable ?: h.coordYInput?.text?.toString()?.trim() ?: ""
 
-                val x = if (xText.isNullOrBlank()) 0 else {
+                val x = if (xText.isBlank()) 0 else {
                     // 如果是变量引用，保持原样
                     if (xText.isMagicVariable() || xText.isNamedVariable()) {
                         xText
@@ -168,7 +171,7 @@ class VariableModuleUIProvider(
                     }
                 }
 
-                val y = if (yText.isNullOrBlank()) 0 else {
+                val y = if (yText.isBlank()) 0 else {
                     // 如果是变量引用，保持原样
                     if (yText.isMagicVariable() || yText.isNamedVariable()) {
                         yText
@@ -197,6 +200,8 @@ class VariableModuleUIProvider(
         holder.listAdapter = null
         holder.coordXInput = null
         holder.coordYInput = null
+        holder.coordXVariable = null
+        holder.coordYVariable = null
 
         // 检查是否为整个列表/字典/坐标赋值了变量
         if (type != "文本" && currentValue is String && (currentValue.isMagicVariable() || currentValue.isNamedVariable())) {
@@ -325,6 +330,7 @@ class VariableModuleUIProvider(
                         holder.onMagicVariableRequested?.invoke("value.x")
                     }
                     xValueContainer.addView(pill)
+                    holder.coordXVariable = currentX
                 } else {
                     // 显示普通输入框
                     val xInput = TextInputEditText(context).apply {
@@ -360,6 +366,7 @@ class VariableModuleUIProvider(
                         holder.onMagicVariableRequested?.invoke("value.y")
                     }
                     yValueContainer.addView(pill)
+                    holder.coordYVariable = currentY
                 } else {
                     // 显示普通输入框
                     val yInput = TextInputEditText(context).apply {

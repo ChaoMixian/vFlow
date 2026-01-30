@@ -200,16 +200,35 @@ class CreateVariableModule : BaseModule() {
             }
             "图像" -> VImage(rawValue?.toString() ?: "")
             "坐标" -> {
+                fun resolveCoordValue(value: Any?): Int {
+                    return when (value) {
+                        is Number -> value.toInt()
+                        is String -> {
+                            if (value.isMagicVariable() || value.isNamedVariable()) {
+                                // 解析变量引用
+                                val resolved = VariableResolver.resolveValue(value, context)
+                                when (resolved) {
+                                    is Number -> resolved.toInt()
+                                    else -> resolved.toString().toIntOrNull() ?: 0
+                                }
+                            } else {
+                                value.toIntOrNull() ?: 0
+                            }
+                        }
+                        else -> 0
+                    }
+                }
+
                 val coordValue = when (rawValue) {
                     is VCoordinate -> rawValue
                     is Map<*, *> -> {
-                        val x = (rawValue["x"] as? Number)?.toInt() ?: 0
-                        val y = (rawValue["y"] as? Number)?.toInt() ?: 0
+                        val x = resolveCoordValue(rawValue["x"])
+                        val y = resolveCoordValue(rawValue["y"])
                         VCoordinate(x, y)
                     }
                     is List<*> -> {
-                        val x = (rawValue.getOrNull(0) as? Number)?.toInt() ?: 0
-                        val y = (rawValue.getOrNull(1) as? Number)?.toInt() ?: 0
+                        val x = resolveCoordValue(rawValue.getOrNull(0))
+                        val y = resolveCoordValue(rawValue.getOrNull(1))
                         VCoordinate(x, y)
                     }
                     else -> {
