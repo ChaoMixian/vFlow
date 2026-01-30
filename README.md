@@ -1,5 +1,7 @@
 # vFlow - 强大的 Android 可视化工作流自动化工具
 
+[English](README_EN.md)
+
 [![Latest Release](https://img.shields.io/github/v/release/ChaoMixian/vFlow?display_name=tag&style=flat-square)](https://github.com/ChaoMixian/vFlow/releases/latest)
 [![GitHub Stars](https://img.shields.io/github/stars/ChaoMixian/vFlow?style=flat-square)](https://github.com/ChaoMixian/vFlow/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/ChaoMixian/vFlow?style=flat-square)](https://github.com/ChaoMixian/vFlow/network/members)
