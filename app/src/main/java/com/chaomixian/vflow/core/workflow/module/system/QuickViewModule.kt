@@ -117,8 +117,8 @@ class QuickViewModule : BaseModule() {
                 is VString -> content.raw
                 is VNumber -> content.raw.toString()
                 is VBoolean -> content.raw.toString()
-                is VDictionary -> content.raw.entries.joinToString("\n") { "${it.key}: ${it.value}" }
-                is VList -> content.raw.joinToString("\n")
+                is VDictionary -> content.raw.entries.joinToString("\n") { "${it.key}: ${it.value.asString()}" }
+                is VList -> content.raw.joinToString("\n") { it.asString() }
                 is String -> content  // 已经是解析后的字符串
                 null -> "[空值]"
                 else -> content.toString()
