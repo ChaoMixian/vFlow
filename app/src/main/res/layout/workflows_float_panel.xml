@@ -3,7 +3,7 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="280dp"
+    android:layout_width="200dp"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
     app:cardBackgroundColor="?attr/colorSurface"
@@ -12,7 +12,7 @@
     app:strokeWidth="0dp">
 
     <LinearLayout
-        android:layout_width="280dp"
+        android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
@@ -20,7 +20,7 @@
         <LinearLayout
             android:id="@+id/drag_handle"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="36dp"
             android:background="@drawable/float_window_header_background"
             android:gravity="center_vertical"
             android:orientation="horizontal"
@@ -30,9 +30,9 @@
             <!-- 图标 -->
             <ImageView
                 android:id="@+id/drag_indicator"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginEnd="12dp"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="8dp"
                 android:src="@drawable/rounded_drag_indicator_24"
                 app:tint="?attr/colorOnSurfaceVariant"
                 tools:ignore="ContentDescription" />
@@ -79,7 +79,7 @@
         <LinearLayout
             android:id="@+id/empty_state"
             android:layout_width="match_parent"
-            android:layout_height="120dp"
+            android:layout_height="80dp"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="16dp"
