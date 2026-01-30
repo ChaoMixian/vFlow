@@ -22,8 +22,10 @@ class CoreBluetoothModule : BaseModule() {
 
     override val id = "vflow.core.bluetooth"
     override val metadata = ActionMetadata(
-        name = "蓝牙控制",
-        description = "使用 vFlow Core 控制蓝牙开关状态（开启/关闭/切换）。",
+        name = "蓝牙控制",  // Fallback
+        nameStringRes = R.string.module_vflow_core_bluetooth_name,
+        description = "使用 vFlow Core 控制蓝牙开关状态（开启/关闭/切换）。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_bluetooth_desc,
         iconRes = R.drawable.rounded_bluetooth_24,
         category = "Core (Beta)"
     )
@@ -41,7 +43,8 @@ class CoreBluetoothModule : BaseModule() {
             staticType = ParameterType.ENUM,
             defaultValue = "切换",
             options = actionOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_core_bluetooth_action_name
         )
     )
 
@@ -56,7 +59,7 @@ class CoreBluetoothModule : BaseModule() {
             getInputs().find { it.id == "action" },
             isModuleOption = true
         )
-        return PillUtil.buildSpannable(context, "蓝牙：", actionPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_bluetooth), actionPill)
     }
 
     override suspend fun execute(

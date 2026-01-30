@@ -23,7 +23,9 @@ class SendKeyEventModule : BaseModule() {
 
     override val id = "vflow.device.send_key_event"
     override val metadata = ActionMetadata(
-        name = "执行全局操作", // 名称更新以反映真实功能
+        nameStringRes = R.string.module_vflow_device_send_key_event_name,
+        descriptionStringRes = R.string.module_vflow_device_send_key_event_desc,
+        name = "执行全局操作",
         description = "执行系统级操作，如返回、回到主屏幕、打开通知等。",
         iconRes = R.drawable.rounded_keyboard_24,
         category = "界面交互"
@@ -64,7 +66,7 @@ class SendKeyEventModule : BaseModule() {
             isModuleOption = true
         )
         return PillUtil.buildSpannable(context,
-            "执行全局操作 ",
+            context.getString(R.string.summary_vflow_device_send_key_event_prefix),
             keyPill
         )
     }

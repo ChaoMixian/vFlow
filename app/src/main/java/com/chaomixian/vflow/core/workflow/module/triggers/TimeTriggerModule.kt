@@ -13,9 +13,11 @@ import java.util.*
 class TimeTriggerModule : BaseModule() {
     override val id = "vflow.trigger.time"
     override val metadata = ActionMetadata(
-        name = "定时触发",
-        description = "在指定的时间和日期触发工作流，类似闹钟。",
-        iconRes = R.drawable.rounded_avg_time_24, // 复用一个时间图标
+        nameStringRes = R.string.module_vflow_trigger_time_name,
+        descriptionStringRes = R.string.module_vflow_trigger_time_desc,
+        name = "定时触发",  // Fallback
+        description = "在指定的时间和日期触发工作流，类似闹钟",  // Fallback
+        iconRes = R.drawable.rounded_avg_time_24,  // 复用一个时间图标
         category = "触发器"
     )
 
@@ -28,6 +30,7 @@ class TimeTriggerModule : BaseModule() {
         InputDefinition(
             id = "time",
             name = "触发时间",
+            nameStringRes = R.string.param_vflow_trigger_time_time_name,
             staticType = ParameterType.STRING,
             defaultValue = "09:00",
             acceptsMagicVariable = false
@@ -35,6 +38,7 @@ class TimeTriggerModule : BaseModule() {
         InputDefinition(
             id = "days",
             name = "重复日期",
+            nameStringRes = R.string.param_vflow_trigger_time_days_name,
             staticType = ParameterType.ANY, // 存储为 List<Int>
             // 默认值为包含所有星期的列表
             defaultValue = listOf(Calendar.SUNDAY, Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY),
@@ -56,26 +60,32 @@ class TimeTriggerModule : BaseModule() {
 
         val timePill = PillUtil.Pill(time, "time")
 
-        val daysText = when {
-            daysInt.size == 7 -> "每天"
-            daysInt.isEmpty() -> "单次"
-            daysInt.sorted() == listOf(Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY) -> "工作日"
-            else -> daysInt.sorted().joinToString(", ") { dayInt ->
-                when (dayInt) {
-                    Calendar.SUNDAY -> "周日"
-                    Calendar.MONDAY -> "周一"
-                    Calendar.TUESDAY -> "周二"
-                    Calendar.WEDNESDAY -> "周三"
-                    Calendar.THURSDAY -> "周四"
-                    Calendar.FRIDAY -> "周五"
-                    Calendar.SATURDAY -> "周六"
-                    else -> ""
-                }
+        val everyday = context.getString(R.string.summary_vflow_trigger_time_everyday)
+        val once = context.getString(R.string.summary_vflow_trigger_time_once)
+        val workdays = context.getString(R.string.summary_vflow_trigger_time_workdays)
+
+        val dayName = { dayInt: Int ->
+            when (dayInt) {
+                Calendar.SUNDAY -> context.getString(R.string.day_sunday)
+                Calendar.MONDAY -> context.getString(R.string.day_monday)
+                Calendar.TUESDAY -> context.getString(R.string.day_tuesday)
+                Calendar.WEDNESDAY -> context.getString(R.string.day_wednesday)
+                Calendar.THURSDAY -> context.getString(R.string.day_thursday)
+                Calendar.FRIDAY -> context.getString(R.string.day_friday)
+                Calendar.SATURDAY -> context.getString(R.string.day_saturday)
+                else -> ""
             }
+        }
+
+        val daysText = when {
+            daysInt.size == 7 -> everyday
+            daysInt.isEmpty() -> once
+            daysInt.sorted() == listOf(Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY) -> workdays
+            else -> daysInt.sorted().joinToString(", ") { dayName(it) }
         }
         val daysPill = PillUtil.Pill(daysText, "days")
 
-        return PillUtil.buildSpannable(context, daysPill, " ", timePill, " 触发")
+        return PillUtil.buildSpannable(context, daysPill, " ", timePill, context.getString(R.string.summary_vflow_trigger_time_suffix))
     }
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         onProgress(ProgressUpdate("定时任务已触发"))

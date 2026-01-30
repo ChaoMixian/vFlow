@@ -17,7 +17,14 @@ const val WHILE_END_ID = "vflow.logic.while.end"
 
 class WhileModule : BaseBlockModule() {
     override val id = WHILE_START_ID
-    override val metadata = ActionMetadata("循环直到", "当条件为真时重复执行直到条件不满足", R.drawable.rounded_repeat_24, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_while_start_name,
+        descriptionStringRes = R.string.module_vflow_logic_while_start_desc,
+        name = "循环直到",
+        description = "当条件为真时重复执行直到条件不满足",
+        iconRes = R.drawable.rounded_repeat_24,
+        category = "逻辑控制"
+    )
     override val pairingId = WHILE_PAIRING_ID
     override val stepIdsInBlock = listOf(WHILE_START_ID, WHILE_END_ID)
 
@@ -116,14 +123,14 @@ class WhileModule : BaseBlockModule() {
 
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.BOOLEAN.id, VTypeRegistry.NUMBER.id, VTypeRegistry.STRING.id, VTypeRegistry.DICTIONARY.id, VTypeRegistry.LIST.id, VTypeRegistry.SCREEN_ELEMENT.id)),
-        InputDefinition(id = "operator", name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
-        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.NUMBER.id, VTypeRegistry.BOOLEAN.id)),
-        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
+        InputDefinition(id = "input1", nameStringRes = R.string.param_vflow_logic_while_start_input1_name, name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.BOOLEAN.id, VTypeRegistry.NUMBER.id, VTypeRegistry.STRING.id, VTypeRegistry.DICTIONARY.id, VTypeRegistry.LIST.id, VTypeRegistry.SCREEN_ELEMENT.id)),
+        InputDefinition(id = "operator", nameStringRes = R.string.param_vflow_logic_while_start_operator_name, name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
+        InputDefinition(id = "value1", nameStringRes = R.string.param_vflow_logic_while_start_value1_name, name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.NUMBER.id, VTypeRegistry.BOOLEAN.id)),
+        InputDefinition(id = "value2", nameStringRes = R.string.param_vflow_logic_while_start_value2_name, name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "条件结果", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("result", nameStringRes = R.string.output_vflow_logic_while_start_result_name, name = "条件结果", typeName = VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -140,7 +147,13 @@ class WhileModule : BaseBlockModule() {
             isModuleOption = true
         )
 
-        val parts = mutableListOf<Any>("循环直到 ", input1Pill, " ", operatorPill, " 不成立")
+        val parts = mutableListOf<Any>(
+            context.getString(R.string.summary_vflow_logic_while_prefix),
+            input1Pill,
+            " ",
+            operatorPill,
+            context.getString(R.string.summary_vflow_logic_while_suffix)
+        )
 
         if (inputsForStep.any { it.id == "value1" }) {
             val value1Pill = PillUtil.createPillFromParam(
@@ -155,9 +168,9 @@ class WhileModule : BaseBlockModule() {
                 step.parameters["value2"],
                 allInputs.find { it.id == "value2" }
             )
-            parts.add(" 和 ")
+            parts.add(context.getString(R.string.summary_vflow_logic_loop_between))
             parts.add(value2Pill)
-            parts.add(" 之间")
+            parts.add(context.getString(R.string.summary_vflow_logic_loop_between_suffix))
         }
 
         return PillUtil.buildSpannable(context, *parts.toTypedArray())
@@ -206,10 +219,17 @@ class WhileModule : BaseBlockModule() {
  */
 class EndWhileModule : BaseModule() {
     override val id = WHILE_END_ID
-    override val metadata = ActionMetadata("结束循环", "", R.drawable.ic_control_flow, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_while_end_name,
+        descriptionStringRes = R.string.module_vflow_logic_while_end_desc,
+        name = "结束循环",
+        description = "",
+        iconRes = R.drawable.ic_control_flow,
+        category = "逻辑控制"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, WHILE_PAIRING_ID) // 标记为块结束
 
-    override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束循环"
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_end_loop)
 
     /**
      * 执行 EndWhile 模块的核心逻辑。

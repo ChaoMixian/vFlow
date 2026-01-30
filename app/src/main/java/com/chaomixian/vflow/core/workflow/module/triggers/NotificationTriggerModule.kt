@@ -16,8 +16,10 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class NotificationTriggerModule : BaseModule() {
     override val id = "vflow.trigger.notification"
     override val metadata = ActionMetadata(
-        name = "通知触发",
-        description = "当收到符合条件的通知时触发工作流。",
+        nameStringRes = R.string.module_vflow_trigger_notification_name,
+        descriptionStringRes = R.string.module_vflow_trigger_notification_desc,
+        name = "通知触发",  // Fallback
+        description = "当收到符合条件的通知时触发工作流",  // Fallback
         iconRes = R.drawable.rounded_notifications_unread_24,
         category = "触发器"
     )
@@ -26,16 +28,16 @@ class NotificationTriggerModule : BaseModule() {
     override val uiProvider: ModuleUIProvider = NotificationTriggerUIProvider()
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("app_filter", "应用包名", ParameterType.STRING),
-        InputDefinition("title_filter", "标题包含", ParameterType.STRING),
-        InputDefinition("content_filter", "内容包含", ParameterType.STRING)
+        InputDefinition("app_filter", "应用包名", ParameterType.STRING, nameStringRes = R.string.param_vflow_trigger_notification_app_filter_name),
+        InputDefinition("title_filter", "标题包含", ParameterType.STRING, nameStringRes = R.string.param_vflow_trigger_notification_title_filter_name),
+        InputDefinition("content_filter", "内容包含", ParameterType.STRING, nameStringRes = R.string.param_vflow_trigger_notification_content_filter_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("notification_object", "通知对象", VTypeRegistry.NOTIFICATION.id),
-        OutputDefinition("package_name", "应用包名", VTypeRegistry.STRING.id),
-        OutputDefinition("title", "通知标题", VTypeRegistry.STRING.id),
-        OutputDefinition("content", "通知内容", VTypeRegistry.STRING.id)
+        OutputDefinition("notification_object", "通知对象", VTypeRegistry.NOTIFICATION.id, nameStringRes = R.string.output_vflow_trigger_notification_notification_object_name),
+        OutputDefinition("package_name", "应用包名", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_notification_package_name_name),
+        OutputDefinition("title", "通知标题", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_notification_title_name),
+        OutputDefinition("content", "通知内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_notification_content_name)
     )
 
     /**
@@ -46,34 +48,42 @@ class NotificationTriggerModule : BaseModule() {
         val titleFilter = step.parameters["title_filter"] as? String
         val contentFilter = step.parameters["content_filter"] as? String
 
-        val parts = mutableListOf<Any>("当收到")
+        val prefix = context.getString(R.string.summary_vflow_trigger_notification_prefix)
+        val from = context.getString(R.string.summary_vflow_trigger_notification_from)
+        val and = context.getString(R.string.summary_vflow_trigger_notification_and)
+        val titleContains = context.getString(R.string.summary_vflow_trigger_notification_title_contains)
+        val contentContains = context.getString(R.string.summary_vflow_trigger_notification_content_contains)
+        val any = context.getString(R.string.summary_vflow_trigger_notification_any)
+        val suffix = context.getString(R.string.summary_vflow_trigger_notification_suffix)
+
+        val parts = mutableListOf<Any>(prefix)
         var hasCondition = false
 
         if (!appFilter.isNullOrBlank()) {
-            parts.add("来自 ")
+            parts.add(from)
             parts.add(PillUtil.Pill(appFilter, "app_filter"))
             hasCondition = true
         }
 
         if (!titleFilter.isNullOrBlank()) {
-            if (hasCondition) parts.add(" 且")
-            parts.add(" 标题含 ")
+            if (hasCondition) parts.add(and)
+            parts.add(titleContains)
             parts.add(PillUtil.Pill(titleFilter, "title_filter"))
             hasCondition = true
         }
 
         if (!contentFilter.isNullOrBlank()) {
-            if (hasCondition) parts.add(" 且")
-            parts.add(" 内容含 ")
+            if (hasCondition) parts.add(and)
+            parts.add(contentContains)
             parts.add(PillUtil.Pill(contentFilter, "content_filter"))
             hasCondition = true
         }
 
         if (!hasCondition) {
-            parts.add("任意")
+            parts.add(any)
         }
 
-        parts.add(" 的通知时")
+        parts.add(suffix)
         return PillUtil.buildSpannable(context, *parts.toTypedArray())
     }
 

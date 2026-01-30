@@ -83,7 +83,7 @@
                 android:layout_width="24dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:contentDescription="执行工作流"
+                android:contentDescription="@string/desc_execute_workflow"
                 android:src="@drawable/rounded_play_arrow_24"
                 app:tint="?attr/colorOnPrimaryContainer"
                 tools:ignore="ContentDescription" />

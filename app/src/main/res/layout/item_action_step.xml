@@ -68,7 +68,7 @@
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="0dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="删除动作"
+                android:contentDescription="@string/desc_delete_action"
                 android:src="@drawable/rounded_close_small_24"
                 app:tint="?attr/colorError"
                 android:visibility="gone"

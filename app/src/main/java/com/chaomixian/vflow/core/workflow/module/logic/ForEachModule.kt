@@ -22,13 +22,21 @@ const val FOREACH_END_ID = "vflow.logic.foreach.end"
  */
 class ForEachModule : BaseBlockModule() {
     override val id = FOREACH_START_ID
-    override val metadata = ActionMetadata("重复每一项", "遍历列表中的每一个项目，并分别执行操作。", R.drawable.rounded_repeat_24, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_foreach_start_name,
+        descriptionStringRes = R.string.module_vflow_logic_foreach_start_desc,
+        name = "重复每一项",
+        description = "遍历列表中的每一个项目，并分别执行操作。",
+        iconRes = R.drawable.rounded_repeat_24,
+        category = "逻辑控制"
+    )
     override val pairingId = FOREACH_PAIRING_ID
     override val stepIdsInBlock = listOf(FOREACH_START_ID, FOREACH_END_ID)
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "input_list",
+            nameStringRes = R.string.param_vflow_logic_foreach_start_input_list_name,
             name = "输入列表",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
@@ -38,8 +46,8 @@ class ForEachModule : BaseBlockModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("item", "重复项目", "vflow.type.any"), // 默认类型，实际类型由 getDynamicOutputs 确定
-        OutputDefinition("index", "重复索引", VTypeRegistry.NUMBER.id)
+        OutputDefinition("item", nameStringRes = R.string.output_vflow_logic_foreach_start_item_name, name = "重复项目", typeName = "vflow.type.any"), // 默认类型，实际类型由 getDynamicOutputs 确定
+        OutputDefinition("index", nameStringRes = R.string.output_vflow_logic_foreach_start_index_name, name = "重复索引", typeName = VTypeRegistry.NUMBER.id)
     )
 
     /**
@@ -50,8 +58,8 @@ class ForEachModule : BaseBlockModule() {
         val listElementType = inferListElementType(step, allSteps)
 
         return listOf(
-            OutputDefinition("item", "重复项目", listElementType ?: "vflow.type.any"),
-            OutputDefinition("index", "重复索引", VTypeRegistry.NUMBER.id)
+            OutputDefinition("item", nameStringRes = R.string.output_vflow_logic_foreach_start_item_name, name = "重复项目", typeName = listElementType ?: "vflow.type.any"),
+            OutputDefinition("index", nameStringRes = R.string.output_vflow_logic_foreach_start_index_name, name = "重复索引", typeName = VTypeRegistry.NUMBER.id)
         )
     }
 
@@ -99,7 +107,7 @@ class ForEachModule : BaseBlockModule() {
             step.parameters["input_list"],
             getInputs().find { it.id == "input_list" }
         )
-        return PillUtil.buildSpannable(context, "对于列表 ", listPill, " 中的每一项")
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_logic_for_each_prefix), listPill, context.getString(R.string.summary_vflow_logic_for_each_suffix))
     }
 
     override suspend fun execute(
@@ -135,10 +143,17 @@ class ForEachModule : BaseBlockModule() {
  */
 class EndForEachModule : BaseModule() {
     override val id = FOREACH_END_ID
-    override val metadata = ActionMetadata("结束重复", "", R.drawable.rounded_repeat_24, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_foreach_end_name,
+        descriptionStringRes = R.string.module_vflow_logic_foreach_end_desc,
+        name = "结束重复",
+        description = "",
+        iconRes = R.drawable.rounded_repeat_24,
+        category = "逻辑控制"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, FOREACH_PAIRING_ID)
 
-    override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束重复"
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_end_for_each)
 
     override suspend fun execute(
         context: ExecutionContext,

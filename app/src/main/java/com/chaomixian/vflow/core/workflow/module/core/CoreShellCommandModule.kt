@@ -26,8 +26,10 @@ class CoreShellCommandModule : BaseModule() {
 
     override val id = "vflow.core.shell_command"
     override val metadata = ActionMetadata(
-        name = "执行Shell命令",
-        description = "通过 vFlow Core 执行Shell命令（支持Shell/Root权限）。",
+        name = "执行Shell命令",  // Fallback
+        nameStringRes = R.string.module_vflow_core_shell_command_name,
+        description = "通过 vFlow Core 执行Shell命令（支持Shell/Root权限）。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_shell_command_desc,
         iconRes = R.drawable.rounded_terminal_24,
         category = "Core (Beta)"
     )
@@ -59,7 +61,8 @@ class CoreShellCommandModule : BaseModule() {
             staticType = ParameterType.ENUM,
             defaultValue = "自动",
             options = modeOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_core_shell_command_mode_name
         ),
         InputDefinition(
             id = "command",
@@ -67,13 +70,14 @@ class CoreShellCommandModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "echo 'Hello from Core'",
             acceptsMagicVariable = true,
-            supportsRichText = false
+            supportsRichText = false,
+            nameStringRes = R.string.param_vflow_core_shell_command_command_name
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "命令输出", VTypeRegistry.STRING.id),
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("result", "命令输出", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_core_shell_command_result_name),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_shell_command_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -87,7 +91,7 @@ class CoreShellCommandModule : BaseModule() {
             getInputs().find { it.id == "command" },
             PillType.PARAMETER
         )
-        return PillUtil.buildSpannable(context, "通过", modePill, "执行命令 ", commandPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_shell_command), modePill, "执行", commandPill)
     }
 
     override suspend fun execute(

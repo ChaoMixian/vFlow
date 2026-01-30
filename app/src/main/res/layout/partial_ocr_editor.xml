@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="功能模式"
+        android:text="@string/label_function_mode"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <com.google.android.material.chip.ChipGroup
@@ -26,14 +26,14 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="识别全文" />
+            android:text="@string/text_recognize_full_text" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_mode_find"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="查找文本" />
+            android:text="@string/text_find_text" />
     </com.google.android.material.chip.ChipGroup>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -41,7 +41,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="要查找的文本"
+        android:hint="@string/hint_target_text"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -83,7 +83,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="更多设置 (语言、策略、识别区域)"
+                android:text="@string/label_more_settings_ocr"
                 android:textAppearance="?attr/textAppearanceLabelLarge" />
 
             <ImageView
@@ -105,7 +105,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="识别语言"
+                android:text="@string/label_recognition_language"
                 android:textAppearance="?attr/textAppearanceLabelMedium" />
 
             <Spinner
@@ -119,7 +119,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="查找策略"
+                android:text="@string/text_recognition_strategy"
                 android:textAppearance="?attr/textAppearanceLabelMedium" />
 
             <Spinner
@@ -132,14 +132,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="识别区域（可选）"
+                android:text="@string/label_recognition_region_optional"
                 android:textAppearance="?attr/textAppearanceLabelMedium" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="留空则识别全屏"
+                android:text="@string/text_empty_for_fullscreen_recognition"
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 

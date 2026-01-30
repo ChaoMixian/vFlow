@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
-        android:text="安装模块"
+        android:text="@string/install_module"
         app:icon="@drawable/rounded_add_24"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

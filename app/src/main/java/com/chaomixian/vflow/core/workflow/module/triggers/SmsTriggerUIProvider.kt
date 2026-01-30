@@ -45,33 +45,46 @@ class SmsTriggerUIProvider : ModuleUIProvider {
     ): CustomEditorViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_sms_trigger_editor, parent, false)
         val holder = EditorViewHolder(view)
-        val module = SmsTriggerModule()
+
+        // 直接从资源获取选项，避免访问未初始化的模块属性
+        val senderFilterOptions = listOf(
+            context.getString(R.string.option_vflow_trigger_sms_sender_any),
+            context.getString(R.string.option_vflow_trigger_sms_sender_contains),
+            context.getString(R.string.option_vflow_trigger_sms_sender_not_contains),
+            context.getString(R.string.option_vflow_trigger_sms_sender_regex)
+        )
+        val contentFilterOptions = listOf(
+            context.getString(R.string.option_vflow_trigger_sms_content_any),
+            context.getString(R.string.option_vflow_trigger_sms_content_code),
+            context.getString(R.string.option_vflow_trigger_sms_content_contains),
+            context.getString(R.string.option_vflow_trigger_sms_content_not_contains),
+            context.getString(R.string.option_vflow_trigger_sms_content_regex)
+        )
+        val codeOption = context.getString(R.string.option_vflow_trigger_sms_content_code)
 
         // --- 恢复状态 ---
-        setupChipGroup(context, holder.senderChipGroup, module.senderFilterOptions, currentParameters["sender_filter_type"] as? String) { selectedText ->
-            updateValueLayoutVisibility(holder.senderValueLayout, selectedText)
+        setupChipGroup(context, holder.senderChipGroup, senderFilterOptions, currentParameters["sender_filter_type"] as? String) { selectedText ->
+            updateValueLayoutVisibility(holder.senderValueLayout, selectedText, context)
             onParametersChanged()
         }
         holder.senderValueEdit.setText(currentParameters["sender_filter_value"] as? String ?: "")
 
-        setupChipGroup(context, holder.contentChipGroup, module.contentFilterOptions, currentParameters["content_filter_type"] as? String) { selectedText ->
-            updateValueLayoutVisibility(holder.contentValueLayout, selectedText, "识别验证码")
+        setupChipGroup(context, holder.contentChipGroup, contentFilterOptions, currentParameters["content_filter_type"] as? String) { selectedText ->
+            updateValueLayoutVisibility(holder.contentValueLayout, selectedText, context, codeOption)
             onParametersChanged()
         }
-        // 当类型不是“识别验证码”时，才设置文本
-        if (currentParameters["content_filter_type"] as? String != "识别验证码") {
+        // 当类型不是"识别验证码"时，才设置文本
+        if (currentParameters["content_filter_type"] as? String != codeOption) {
             holder.contentValueEdit.setText(currentParameters["content_filter_value"] as? String ?: "")
         }
-
 
         // --- 添加监听器 ---
         holder.senderValueEdit.doAfterTextChanged { onParametersChanged() }
         holder.contentValueEdit.doAfterTextChanged { onParametersChanged() }
 
         // --- 初始化UI可见性 ---
-        updateValueLayoutVisibility(holder.senderValueLayout, getSelectedChipText(holder.senderChipGroup))
-        updateValueLayoutVisibility(holder.contentValueLayout, getSelectedChipText(holder.contentChipGroup), "识别验证码")
-
+        updateValueLayoutVisibility(holder.senderValueLayout, getSelectedChipText(holder.senderChipGroup), context)
+        updateValueLayoutVisibility(holder.contentValueLayout, getSelectedChipText(holder.contentChipGroup), context, codeOption)
 
         return holder
     }
@@ -85,9 +98,12 @@ class SmsTriggerUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as EditorViewHolder
+        // Note: We need to compare with the hardcoded string since we can't access context here
+        // This is a limitation of the current interface design
         val contentFilterType = getSelectedChipText(h.contentChipGroup)
-        // “识别验证码”模式下，value 字段为空字符串，不再需要硬编码正则表达式
-        val contentFilterValue = if (contentFilterType == "识别验证码") {
+        // "识别验证码"模式下，value 字段为空字符串
+        // 使用静态常量进行比较
+        val contentFilterValue = if (isCodeOption(contentFilterType)) {
             ""
         } else {
             h.contentValueEdit.text.toString()
@@ -99,6 +115,11 @@ class SmsTriggerUIProvider : ModuleUIProvider {
             "content_filter_type" to contentFilterType,
             "content_filter_value" to contentFilterValue
         )
+    }
+
+    private fun isCodeOption(option: String): Boolean {
+        // 比较时使用已知的选项值
+        return option == "识别验证码" || option == "Any content" || option == "Verify Code"
     }
 
     /**
@@ -137,9 +158,11 @@ class SmsTriggerUIProvider : ModuleUIProvider {
 
 
     // 辅助函数：更新值输入框的可见性
-    private fun updateValueLayoutVisibility(layout: TextInputLayout, selectedOption: String, vararg optionsToHide: String) {
-        val defaultOptions = arrayOf("任意号码", "任意内容")
-        val allHideOptions = defaultOptions + optionsToHide
+    private fun updateValueLayoutVisibility(layout: TextInputLayout, selectedOption: String, context: Context, vararg optionsToHide: String) {
+        val anySender = context.getString(R.string.option_vflow_trigger_sms_sender_any)
+        val anyContent = context.getString(R.string.option_vflow_trigger_sms_content_any)
+        val defaultOptions = listOf(anySender, anyContent)
+        val allHideOptions = defaultOptions + optionsToHide.toList()
         val needsValue = !allHideOptions.contains(selectedOption)
         layout.isVisible = needsValue
         if (needsValue) {

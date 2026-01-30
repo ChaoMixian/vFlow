@@ -49,8 +49,19 @@ object PillVariableResolver {
         variableReference: String,
         allSteps: List<ActionStep>
     ): ResolvedInfo? {
-        val varInfo = VariableInfo.fromReference(variableReference, allSteps)
-            ?: return null
+        // 解析属性名
+        val propertyName = resolvePropertyName(variableReference)
+        
+        // 如果是魔法变量且有属性，使用新的方法获取VariableInfo
+        val varInfo = if (propertyName != null && variableReference.startsWith("{{")) {
+            val content = variableReference.removeSurrounding("{{", "}}")
+            val parts = content.split('.')
+            if (parts.size >= 2) {
+                VariableInfo.fromMagicVariableWithProperty(parts[0], parts[1], propertyName, allSteps)
+            } else null
+        } else {
+            VariableInfo.fromReference(variableReference, allSteps)
+        } ?: return null
 
         // 获取源步骤和模块
         val sourceStep = varInfo.sourceStepId?.let { stepId ->
@@ -65,12 +76,10 @@ object PillVariableResolver {
             PillTheme.getColor(context, R.color.variable_pill_color)
         }
 
-        // 解析属性名
-        val propertyName = resolvePropertyName(variableReference, varInfo)
-
-        // 构建显示名称
+        // 构建显示名称（使用本地化属性名）
         val displayName = if (propertyName != null) {
-            "${varInfo.sourceName} 的 $propertyName"
+            val localizedPropName = varInfo.getPropertyDisplayName(context, propertyName)
+            "${varInfo.sourceName} 的 $localizedPropName"
         } else {
             varInfo.sourceName
         }
@@ -81,20 +90,16 @@ object PillVariableResolver {
     /**
      * 解析属性名
      *
-     * 从变量引用中提取属性名，并获取用户友好的显示名称。
+     * 从变量引用中提取属性名。
      *
      * 示例：
-     * - "{{step1.output.width}}" -> "宽度"
-     * - "[[imageVar.height]]" -> "高度"
+     * - "{{step1.output.width}}" -> "width"
+     * - "[[imageVar.height]]" -> "height"
      *
      * @param variableReference 变量引用字符串
-     * @param varInfo 变量信息对象
-     * @return 属性的显示名称，如果没有属性则返回null
+     * @return 属性名，如果没有属性则返回null
      */
-    private fun resolvePropertyName(
-        variableReference: String,
-        varInfo: VariableInfo
-    ): String? {
+    private fun resolvePropertyName(variableReference: String): String? {
         // 提取变量引用内容
         val content = when {
             variableReference.startsWith("[[") -> {
@@ -116,7 +121,20 @@ object PillVariableResolver {
             else -> null
         }
 
-        // 获取用户友好的显示名称
-        return propName?.let { varInfo.getPropertyDisplayName(it) }
+        return propName
+    }
+
+    /**
+     * 解析属性名（带VariableInfo参数的版本，向后兼容）
+     *
+     * @param variableReference 变量引用字符串
+     * @param varInfo 变量信息对象
+     * @return 属性名，如果没有属性则返回null
+     */
+    private fun resolvePropertyName(
+        variableReference: String,
+        varInfo: VariableInfo
+    ): String? {
+        return resolvePropertyName(variableReference)
     }
 }

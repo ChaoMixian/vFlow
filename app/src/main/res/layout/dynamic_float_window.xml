@@ -46,7 +46,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="悬浮窗"
+                android:text="@string/text_float_window"
                 android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold"
@@ -58,7 +58,7 @@
                 style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
-                android:contentDescription="关闭"
+                android:contentDescription="@string/content_desc_close"
                 app:icon="@drawable/ic_close"
                 app:iconSize="20dp" />
         </LinearLayout>

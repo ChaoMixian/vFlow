@@ -37,6 +37,8 @@ class ScreenOperationModule : BaseModule() {
 
     override val id = "vflow.interaction.screen_operation"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_interaction_screen_operation_name,
+        descriptionStringRes = R.string.module_vflow_interaction_screen_operation_desc,
         name = "屏幕操作",
         description = "在屏幕上执行点击、长按或滑动操作。",
         iconRes = R.drawable.rounded_ads_click_24,
@@ -78,14 +80,14 @@ class ScreenOperationModule : BaseModule() {
         return when (type) {
             "滑动" -> {
                 val endPill = PillUtil.createPillFromParam(step.parameters["target_end"], inputs.find { it.id == "target_end" })
-                PillUtil.buildSpannable(context, "从 ", targetPill, " 滑动到 ", endPill)
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_swipe_from), targetPill, context.getString(R.string.summary_vflow_device_swipe_to), endPill)
             }
             "长按" -> {
                 val duration = step.parameters["duration"]
-                PillUtil.buildSpannable(context, "长按 ", targetPill, " ($duration ms)")
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_long_press), targetPill, " ($duration ms)")
             }
             else -> { // 点击
-                PillUtil.buildSpannable(context, "点击 ", targetPill)
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_click_prefix), targetPill)
             }
         }
     }

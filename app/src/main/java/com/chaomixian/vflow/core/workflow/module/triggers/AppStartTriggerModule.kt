@@ -15,11 +15,20 @@ class AppStartTriggerModule : BaseModule() {
 
     override val id = "vflow.trigger.app_start"
     override val metadata = ActionMetadata(
-        name = "应用事件", // 名称更新
-        description = "当指定的应用程序打开或关闭时，触发此工作流。", // 描述更新
+        nameStringRes = R.string.module_vflow_trigger_app_start_name,
+        descriptionStringRes = R.string.module_vflow_trigger_app_start_desc,
+        name = "应用事件",  // Fallback
+        description = "当指定的应用程序打开或关闭时，触发此工作流",  // Fallback
         iconRes = R.drawable.rounded_activity_zone_24,
         category = "触发器"
     )
+
+    private val eventOptions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_trigger_app_start_event_opened),
+            appContext.getString(R.string.option_vflow_trigger_app_start_event_closed)
+        )
+    }
 
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
@@ -31,14 +40,16 @@ class AppStartTriggerModule : BaseModule() {
         InputDefinition(
             id = "event",
             name = "事件",
+            nameStringRes = R.string.param_vflow_trigger_app_start_event_name,
             staticType = ParameterType.ENUM,
-            defaultValue = "打开时",
-            options = listOf("打开时", "关闭时"),
+            defaultValue = eventOptions[0],
+            options = eventOptions,
             acceptsMagicVariable = false
         ),
         InputDefinition(
             id = "packageName",
             name = "应用包名",
+            nameStringRes = R.string.param_vflow_trigger_app_start_packageName_name,
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = false
@@ -46,6 +57,7 @@ class AppStartTriggerModule : BaseModule() {
         InputDefinition(
             id = "activityName",
             name = "Activity 名称",
+            nameStringRes = R.string.param_vflow_trigger_app_start_activityName_name,
             staticType = ParameterType.STRING,
             defaultValue = "LAUNCH", // "LAUNCH" 代表任意Activity或仅应用本身
             acceptsMagicVariable = false
@@ -55,12 +67,13 @@ class AppStartTriggerModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val event = step.parameters["event"] as? String ?: "打开时"
+        val defaultEvent = eventOptions[0]
+        val event = step.parameters["event"] as? String ?: defaultEvent
         val packageName = step.parameters["packageName"] as? String
         val activityName = step.parameters["activityName"] as? String
 
         if (packageName.isNullOrEmpty()) {
-            return "选择一个应用"
+            return context.getString(R.string.summary_vflow_trigger_app_start_select)
         }
 
         val pm = context.packageManager
@@ -79,7 +92,9 @@ class AppStartTriggerModule : BaseModule() {
         val eventPill = PillUtil.Pill(event, "event", isModuleOption = true)
         val appPill = PillUtil.Pill(displayText, "packageName")
 
-        return PillUtil.buildSpannable(context, "当 ", appPill, " ", eventPill)
+        val prefix = context.getString(R.string.summary_vflow_trigger_app_start_prefix)
+
+        return PillUtil.buildSpannable(context, "$prefix ", appPill, " ", eventPill)
     }
     override suspend fun execute(
         context: ExecutionContext,

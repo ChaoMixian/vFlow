@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="调用方式"
+        android:text="@string/label_invoke_method"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <com.google.android.material.chip.ChipGroup
@@ -24,25 +24,25 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="打开链接(Uri)" />
+            android:text="@string/text_open_uri" />
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_activity"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="启动活动(Activity)" />
+            android:text="@string/text_launch_activity" />
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_broadcast"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="发送广播(Broadcast)" />
+            android:text="@string/text_send_broadcast" />
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_service"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="启动服务(Service)" />
+            android:text="@string/text_start_service" />
     </com.google.android.material.chip.ChipGroup>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -50,7 +50,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="链接 / Data URI (vflow://...)">
+        android:hint="@string/hint_link_data_uri">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_uri"
             android:layout_width="match_parent"
@@ -63,7 +63,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="Action (例如 android.intent.action.VIEW)">
+        android:hint="@string/hint_action_example">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_action"
             android:layout_width="match_parent"
@@ -74,13 +74,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="扩展参数 (Extras)"
+        android:text="@string/label_extended_parameters_with_extras"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="自动推断类型：true/false -> 布尔值，数字 -> 整数/浮点"
+        android:text="@string/text_auto_infer_type"
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="?attr/colorOnSurfaceVariant"/>
 
@@ -120,7 +120,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="高级选项 (包名/类名/Type)"
+                android:text="@string/label_advanced_options_type"
                 android:textAppearance="?attr/textAppearanceLabelLarge" />
 
             <ImageView
@@ -149,7 +149,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:hint="应用包名 (Package)">
+                    android:hint="@string/hint_package_name_with_type">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_package"
                         android:layout_width="match_parent"
@@ -161,7 +161,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:hint="类名 (Class)">
+                    android:hint="@string/hint_class_name_with_type">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/et_class"
                         android:layout_width="match_parent"
@@ -173,7 +173,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="MIME Type (例如 image/*)">
+                android:hint="@string/hint_mime_type">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_type"
                     android:layout_width="match_parent"
@@ -184,13 +184,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Flags (整数，多个用 | 分隔)"
+                android:text="@string/text_flags_integer"
                 android:textAppearance="?attr/textAppearanceBodySmall" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Flags (例如 268435456 或 0x10000000)">
+                android:hint="@string/hint_flags_example">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_flags"
                     android:layout_width="match_parent"

@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.locale.toast
 import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.utils.StorageManager
@@ -85,17 +86,17 @@ class ModuleManagementFragment : Fragment() {
         val listItems = mutableListOf<ModuleListItem>()
 
         if (userModules.isNotEmpty()) {
-            listItems.add(ModuleListItem.Header("用户模块 (${userModules.size})"))
+            listItems.add(ModuleListItem.Header(getString(R.string.header_user_modules, userModules.size)))
             listItems.addAll(userModules.map { ModuleListItem.Item(it as BaseModule) })
         }
 
         if (builtInModules.isNotEmpty()) {
-            listItems.add(ModuleListItem.Header("内置模块 (${builtInModules.size})"))
+            listItems.add(ModuleListItem.Header(getString(R.string.header_builtin_modules, builtInModules.size)))
             listItems.addAll(builtInModules.map { ModuleListItem.Item(it as BaseModule) })
         }
 
         if (listItems.isEmpty()) {
-            listItems.add(ModuleListItem.Header("暂无模块"))
+            listItems.add(ModuleListItem.Header(getString(R.string.text_no_modules)))
         }
 
         adapter.updateData(listItems)
@@ -109,18 +110,18 @@ class ModuleManagementFragment : Fragment() {
                 prepareResult.onSuccess { session ->
                     if (ModuleManager.isModuleInstalled(session.manifest.id)) {
                         MaterialAlertDialogBuilder(requireContext())
-                            .setTitle("模块已存在")
-                            .setMessage("检测到 ID 为 \"${session.manifest.id}\" 的模块已存在。\n\n是否覆盖安装？")
-                            .setPositiveButton("覆盖") { _, _ ->
+                            .setTitle(getString(R.string.dialog_module_exists_title))
+                            .setMessage(getString(R.string.dialog_module_exists_message, session.manifest.id))
+                            .setPositiveButton(getString(R.string.dialog_button_overwrite)) { _, _ ->
                                 performInstallCommit(session)
                             }
-                            .setNegativeButton("取消", null)
+                            .setNegativeButton(android.R.string.cancel, null)
                             .show()
                     } else {
                         performInstallCommit(session)
                     }
                 }.onFailure { e ->
-                    showErrorDialog("解析模块失败", e.message)
+                    showErrorDialog(getString(R.string.dialog_parse_module_failed), e.message)
                 }
             }
         }
@@ -134,7 +135,7 @@ class ModuleManagementFragment : Fragment() {
                     refreshModuleList()
                     Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
                 }.onFailure { e ->
-                    showErrorDialog("安装失败", e.message)
+                    showErrorDialog(getString(R.string.dialog_install_failed), e.message)
                 }
             }
         }
@@ -149,14 +150,13 @@ class ModuleManagementFragment : Fragment() {
 
                 if (dependencyNames.isNotEmpty()) {
                     val msg = StringBuilder()
-                    msg.append("警告：以下 ${dependencyNames.size} 个工作流正在使用此模块：\n\n")
+                    msg.append(getString(R.string.dialog_module_dependency_message, dependencyNames.size, ""))
                     dependencyNames.forEach { name -> msg.append("• $name\n") }
-                    msg.append("\n强制删除会导致这些工作流失效。")
 
-                    builder.setTitle("存在依赖关系")
+                    builder.setTitle(getString(R.string.dialog_module_dependency_title))
                         .setMessage(msg.toString())
-                        .setPositiveButton("强制删除") { _, _ -> deleteModule(module) }
-                        .setNegativeButton("取消", null)
+                        .setPositiveButton(getString(R.string.dialog_button_force_delete)) { _, _ -> deleteModule(module) }
+                        .setNegativeButton(android.R.string.cancel, null)
                         .create().apply {
                             setOnShowListener {
                                 getButton(android.content.DialogInterface.BUTTON_POSITIVE).setTextColor(
@@ -165,10 +165,11 @@ class ModuleManagementFragment : Fragment() {
                             }
                         }.show()
                 } else {
-                    builder.setTitle("删除模块")
-                        .setMessage("确定要删除模块 \"${module.metadata.name}\" 吗？")
-                        .setPositiveButton("删除") { _, _ -> deleteModule(module) }
-                        .setNegativeButton("取消", null)
+                    val localizedName = module.metadata.getLocalizedName(requireContext())
+                    builder.setTitle(getString(R.string.dialog_delete_module_title))
+                        .setMessage(getString(R.string.dialog_delete_module_message, localizedName))
+                        .setPositiveButton(android.R.string.ok) { _, _ -> deleteModule(module) }
+                        .setNegativeButton(android.R.string.cancel, null)
                         .show()
                 }
             }
@@ -192,10 +193,10 @@ class ModuleManagementFragment : Fragment() {
 
             withContext(Dispatchers.Main) {
                 ModuleRegistry.reset()
-                ModuleRegistry.initialize()
+                ModuleRegistry.initialize(requireContext())
                 ModuleManager.loadModules(requireContext(), force = true)
                 refreshModuleList()
-                Toast.makeText(requireContext(), "已删除", Toast.LENGTH_SHORT).show()
+                requireContext().toast(R.string.toast_module_deleted)
             }
         }
     }
@@ -203,8 +204,8 @@ class ModuleManagementFragment : Fragment() {
     private fun showErrorDialog(title: String, message: String?) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(title)
-            .setMessage(message ?: "未知错误")
-            .setPositiveButton("确定", null)
+            .setMessage(message ?: getString(R.string.error_unknown_error))
+            .setPositiveButton(getString(R.string.common_ok), null)
             .show()
     }
 
@@ -276,8 +277,8 @@ class ModuleManagementFragment : Fragment() {
                 val meta = module.metadata
                 val context = itemView.context
 
-                tvName.text = meta.name
-                tvDesc.text = meta.description
+                tvName.text = meta.getLocalizedName(context)
+                tvDesc.text = meta.getLocalizedDescription(context)
                 ivIcon.setImageResource(if (meta.iconRes != 0) meta.iconRes else R.drawable.rounded_circles_ext_24)
 
                 tvCategory.text = meta.category
@@ -287,7 +288,7 @@ class ModuleManagementFragment : Fragment() {
                     btnDelete.visibility = View.VISIBLE
                     btnDelete.setOnClickListener { onDeleteClick(module) }
                     tvAuthorVer.visibility = View.VISIBLE
-                    tvAuthorVer.text = "作者: ${module.author}   版本: v${module.version}"
+                    tvAuthorVer.text = getString(R.string.module_author_version, module.author, module.version)
                 } else {
                     btnDelete.visibility = View.GONE
                     tvAuthorVer.visibility = View.GONE
@@ -327,11 +328,11 @@ class ModuleManagementFragment : Fragment() {
 
     private fun getPermissionLabel(permission: Permission): String {
         return when (permission.name) {
-            "ACCESSIBILITY" -> "无障碍"
-            "OVERLAY" -> "悬浮窗"
-            "STORAGE" -> "读写存储"
-            "USAGE_STATS" -> "应用使用情况"
-            "NOTIFICATION_LISTENER" -> "通知读取"
+            "ACCESSIBILITY" -> getString(R.string.permission_accessibility)
+            "OVERLAY" -> getString(R.string.permission_overlay)
+            "STORAGE" -> getString(R.string.permission_storage)
+            "USAGE_STATS" -> getString(R.string.permission_usage_stats)
+            "NOTIFICATION_LISTENER" -> getString(R.string.permission_notification_listener)
             else -> permission.name
         }
     }
@@ -344,17 +345,18 @@ class ModuleManagementFragment : Fragment() {
         val tvOutputs = dialogView.findViewById<TextView>(R.id.tv_detail_outputs)
         val btnClose = dialogView.findViewById<Button>(R.id.btn_close_dialog)
 
-        tvTitle.text = "${module.metadata.name} - 详情"
-        tvId.text = "模块ID: ${module.id}"
+        val localizedName = module.metadata.getLocalizedName(requireContext())
+        tvTitle.text = "$localizedName - ${getString(R.string.label_module_details)}"
+        tvId.text = "${getString(R.string.label_module_id)}: ${module.id}"
 
         val inputs = module.getInputs()
         if (inputs.isEmpty()) {
-            tvInputs.text = "无输入参数"
+            tvInputs.text = getString(R.string.label_no_input_params)
         } else {
             val sb = StringBuilder()
             inputs.forEachIndexed { index, input ->
-                sb.append("${index + 1}. ${input.name} (${input.id})\n")
-                sb.append("   类型: ${input.staticType.name}")
+                sb.append("${index + 1}. ${input.getLocalizedName(requireContext())} (${input.id})\n")
+                sb.append("   ${getString(R.string.label_param_type)}: ${input.staticType.name}")
                 if (index < inputs.size - 1) sb.append("\n")
             }
             tvInputs.text = sb.toString()
@@ -362,12 +364,12 @@ class ModuleManagementFragment : Fragment() {
 
         val outputs = try { module.getOutputs(null) } catch (e: Exception) { emptyList() }
         if (outputs.isEmpty()) {
-            tvOutputs.text = "无输出变量"
+            tvOutputs.text = getString(R.string.label_no_output_vars)
         } else {
             val sb = StringBuilder()
             outputs.forEachIndexed { index, output ->
-                sb.append("${index + 1}. ${output.name} (${output.id})\n")
-                sb.append("   类型: ${output.typeName}")
+                sb.append("${index + 1}. ${output.getLocalizedName(requireContext())} (${output.id})\n")
+                sb.append("   ${getString(R.string.label_param_type)}: ${output.typeName}")
                 if (index < outputs.size - 1) sb.append("\n")
             }
             tvOutputs.text = sb.toString()

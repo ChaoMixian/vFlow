@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="操作类型"
+        android:text="@string/label_operation_type"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <com.google.android.material.chip.ChipGroup
@@ -26,21 +26,21 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="点击" />
+            android:text="@string/text_click" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_long_press"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="长按" />
+            android:text="@string/text_long_press" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_swipe"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="滑动" />
+            android:text="@string/text_swipe" />
     </com.google.android.material.chip.ChipGroup>
 
     <com.google.android.material.divider.MaterialDivider
@@ -80,7 +80,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="持续时间 (毫秒)"
+                android:text="@string/label_duration_milliseconds"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 
             <TextView
@@ -133,7 +133,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="更多设置 (执行方式)"
+                android:text="@string/label_more_settings_execution"
                 android:textAppearance="?attr/textAppearanceLabelLarge" />
 
             <ImageView
@@ -155,7 +155,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="执行方式"
+                android:text="@string/label_execution_mode"
                 android:textAppearance="?attr/textAppearanceLabelMedium" />
 
             <Spinner

@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="触发时间"
+        android:text="@string/label_trigger_time"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <TextView
@@ -17,7 +17,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="09:00"
+        android:text="@string/text_time_09_00"
         android:textAppearance="?attr/textAppearanceHeadlineMedium"
         android:textStyle="bold" />
 
@@ -27,13 +27,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="选择时间" />
+        android:text="@string/button_select_time" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="重复"
+        android:text="@string/label_repeat"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <com.google.android.material.chip.ChipGroup
@@ -48,49 +48,49 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="日" />
+            android:text="@string/text_day" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_mon"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="一" />
+            android:text="@string/text_monday" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_tue"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="二" />
+            android:text="@string/text_tuesday" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_wed"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="三" />
+            android:text="@string/text_wednesday" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_thu"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="四" />
+            android:text="@string/text_thursday" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_fri"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="五" />
+            android:text="@string/text_friday" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_sat"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="六" />
+            android:text="@string/text_saturday" />
     </com.google.android.material.chip.ChipGroup>
 
 </LinearLayout>

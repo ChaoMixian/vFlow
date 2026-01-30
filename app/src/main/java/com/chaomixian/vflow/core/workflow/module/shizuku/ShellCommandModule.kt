@@ -21,8 +21,10 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class ShellCommandModule : BaseModule() {
     override val id = "vflow.shizuku.shell_command"
     override val metadata = ActionMetadata(
-        name = "执行Shell命令",
-        description = "通过 Shell 执行命令 (支持 Root/Shizuku)。",
+        name = "执行Shell命令",  // Fallback
+        nameStringRes = R.string.module_vflow_shizuku_shell_command_name,
+        description = "通过 Shell 执行命令 (支持 Root/Shizuku)。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_shizuku_shell_command_desc,
         iconRes = R.drawable.rounded_terminal_24,
         category = "Shizuku"
     )
@@ -70,7 +72,7 @@ class ShellCommandModule : BaseModule() {
             step.parameters["command"],
             getInputs().find { it.id == "command" }
         )
-        return PillUtil.buildSpannable(context, "使用 $mode 执行命令 ", commandPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_shizuku_shell, mode), commandPill)
     }
 
     override suspend fun execute(

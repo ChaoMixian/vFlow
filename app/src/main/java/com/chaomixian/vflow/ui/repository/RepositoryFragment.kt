@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.databinding.FragmentRepositoryBinding
 import com.google.android.material.tabs.TabLayoutMediator
 
@@ -38,8 +39,8 @@ class RepositoryFragment : Fragment() {
 
         TabLayoutMediator(binding.tabsRepository, binding.viewPagerRepository) { tab, position ->
             tab.text = when (position) {
-                0 -> "工作流"
-                1 -> "模块"
+                0 -> getString(R.string.tab_workflows)
+                1 -> getString(R.string.tab_modules)
                 else -> throw IllegalArgumentException("Invalid position: $position")
             }
         }.attach()

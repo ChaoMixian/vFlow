@@ -30,17 +30,24 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  */
 class UiSwitchModule : BaseUiComponentModule() {
     override val id = "vflow.ui.component.switch"
-    override val metadata = ActionMetadata("开关", "布尔值开关。", R.drawable.rounded_change_circle_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "开关",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_component_switch_name,
+        description = "布尔值开关。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_component_switch_desc,
+        iconRes = R.drawable.rounded_change_circle_24,
+        category = "UI 组件"
+    )
 
     override fun getInputs() = listOf(
-        InputDefinition("key", "ID (变量名)", ParameterType.STRING, "switch1", acceptsMagicVariable = false),
-        InputDefinition("label", "标签", ParameterType.STRING, "选项", acceptsMagicVariable = true),
-        InputDefinition("default_value", "默认开启", ParameterType.BOOLEAN, false),
-        InputDefinition("trigger_event", "切换时触发事件", ParameterType.BOOLEAN, true)
+        InputDefinition("key", "ID (变量名)", ParameterType.STRING, "switch1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_key_variable),
+        InputDefinition("label", "标签", ParameterType.STRING, "选项", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_label),
+        InputDefinition("default_value", "默认开启", ParameterType.BOOLEAN, false, nameStringRes = R.string.param_vflow_ui_switch_default),
+        InputDefinition("trigger_event", "切换时触发事件", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_switch_trigger)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
-        PillUtil.buildSpannable(context, "开关: ", PillUtil.createPillFromParam(step.parameters["key"], getInputs()[0]))
+        PillUtil.buildSpannable(context, context.getString(R.string.summary_prefix_switch), PillUtil.createPillFromParam(step.parameters["key"], getInputs()[0]))
 
     override fun createUiElement(context: ExecutionContext, step: ActionStep): UiElement {
         val label = VariableResolver.resolve(step.parameters["label"]?.toString() ?: "", context)

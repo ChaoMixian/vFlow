@@ -43,7 +43,7 @@ object PillRenderer {
      * @deprecated 使用 PillVariableResolver.resolveVariable() 获取完整信息
      */
     @Deprecated("Use PillVariableResolver.resolveVariable() for complete information")
-    fun getDisplayNameForVariableReference(variableReference: String, allSteps: List<ActionStep>): String {
+    fun getDisplayNameForVariableReference(variableReference: String, allSteps: List<ActionStep>, context: Context): String {
         val varInfo = com.chaomixian.vflow.core.execution.VariableInfo.fromReference(variableReference, allSteps)
         if (varInfo != null) {
             val propName = when {
@@ -61,7 +61,7 @@ object PillRenderer {
             }
 
             return if (propName != null) {
-                val propDisplay = varInfo.getPropertyDisplayName(propName)
+                val propDisplay = varInfo.getPropertyDisplayName(context, propName)
                 "${varInfo.sourceName} 的 $propDisplay"
             } else {
                 varInfo.sourceName

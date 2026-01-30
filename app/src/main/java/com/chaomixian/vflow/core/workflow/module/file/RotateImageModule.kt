@@ -25,8 +25,10 @@ class RotateImageModule : BaseModule() {
 
     override val id = "vflow.file.rotate_image"
     override val metadata = ActionMetadata(
-        name = "旋转图片",
-        description = "将图片按指定角度旋转。",
+        name = "旋转图片",  // Fallback
+        nameStringRes = R.string.module_vflow_file_rotate_image_name,
+        description = "将图片按指定角度旋转。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_file_rotate_image_desc,
         iconRes = R.drawable.rounded_rotate_90_degrees_cw_24,
         category = "文件"
     )
@@ -37,7 +39,8 @@ class RotateImageModule : BaseModule() {
             name = "源图像",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id),
+            nameStringRes = R.string.param_vflow_file_rotate_image_image_name
         ),
         InputDefinition(
             id = "degrees",
@@ -45,7 +48,8 @@ class RotateImageModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 90.0,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
+            nameStringRes = R.string.param_vflow_file_rotate_image_degrees_name
         )
     )
 
@@ -66,11 +70,11 @@ class RotateImageModule : BaseModule() {
 
         return PillUtil.buildSpannable(
             context,
-            "将图像 ",
+            context.getString(R.string.summary_vflow_file_rotate_image_prefix),
             imagePill,
-            " 旋转 ",
+            context.getString(R.string.summary_vflow_file_rotate_image_rotate),
             degreesPill,
-            " 度"
+            context.getString(R.string.summary_vflow_file_rotate_image_degrees)
         )
     }
 

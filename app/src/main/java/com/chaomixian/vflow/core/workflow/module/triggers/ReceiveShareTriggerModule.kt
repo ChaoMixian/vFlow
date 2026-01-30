@@ -18,8 +18,10 @@ class ReceiveShareTriggerModule : BaseModule() {
 
     override val id = "vflow.trigger.share"
     override val metadata = ActionMetadata(
-        name = "接收分享",
-        description = "当有内容（如文本、图片、文件）分享到vFlow时启动工作流。",
+        name = "接收分享",  // Fallback
+        nameStringRes = R.string.module_vflow_trigger_share_name,
+        description = "当有内容（如文本、图片、文件）分享到vFlow时启动工作流。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_trigger_share_desc,
         iconRes = R.drawable.rounded_inbox_text_share_24, // 使用新创建的图标
         category = "触发器"
     )
@@ -64,9 +66,9 @@ class ReceiveShareTriggerModule : BaseModule() {
             isModuleOption = true
         )
         return PillUtil.buildSpannable(context,
-            "当分享 ",
+            context.getString(R.string.summary_vflow_trigger_share_prefix),
             typePill,
-            " 内容时"
+            context.getString(R.string.summary_vflow_trigger_share_suffix)
         )
     }
 

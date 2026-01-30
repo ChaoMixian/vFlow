@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="筛选方式"
+        android:text="@string/label_filter_mode"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <com.google.android.material.chip.ChipGroup
@@ -24,25 +24,25 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="最新一条" />
+            android:text="@string/text_latest_one" />
 
         <com.google.android.material.chip.Chip
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="来自发件人" />
+            android:text="@string/text_from_sender" />
 
         <com.google.android.material.chip.Chip
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="包含内容" />
+            android:text="@string/text_containing_content" />
 
         <com.google.android.material.chip.Chip
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="发件人与内容" />
+            android:text="@string/text_sender_and_content" />
     </com.google.android.material.chip.ChipGroup>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -50,7 +50,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="发件人号码包含"
+        android:hint="@string/label_sender_number_contains"
         android:visibility="gone">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -65,7 +65,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="短信内容包含"
+        android:hint="@string/label_sms_content_contains"
         android:visibility="gone">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -79,7 +79,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="自动提取验证码"
+        android:text="@string/text_auto_extract_verification_code"
         android:visibility="gone" />
 
     <TextView
@@ -87,7 +87,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="扫描范围"
+        android:text="@string/label_scan_range"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <TextView
@@ -96,7 +96,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="8dp"
-        android:text="扫描最近 20 条"
+        android:text="@string/text_scan_last_20"
         android:textAppearance="?attr/textAppearanceBodyMedium" />
 
     <com.google.android.material.slider.Slider

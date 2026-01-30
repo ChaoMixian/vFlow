@@ -49,22 +49,29 @@ import java.util.UUID
  */
 class CreateFloatWindowModule : BaseBlockModule() {
     override val id = FLOAT_WIN_START_ID
-    override val metadata = ActionMetadata("创建悬浮窗", "开始定义悬浮窗布局。", R.drawable.rounded_activity_zone_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "创建悬浮窗",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_float_start_name,
+        description = "开始定义悬浮窗布局。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_float_start_desc,
+        iconRes = R.drawable.rounded_activity_zone_24,
+        category = "UI 组件"
+    )
     override val stepIdsInBlock = listOf(FLOAT_WIN_START_ID, FLOAT_WIN_SHOW_ID, FLOAT_WIN_END_ID)
     override val pairingId = FLOAT_WIN_PAIRING
 
     override fun getInputs() = listOf(
-        InputDefinition("title", "标题", ParameterType.STRING, "", acceptsMagicVariable = false),
-        InputDefinition("width", "宽度 (dp)", ParameterType.NUMBER, 300, acceptsMagicVariable = false),
-        InputDefinition("height", "高度 (dp)", ParameterType.NUMBER, 400, acceptsMagicVariable = false),
-        InputDefinition("alpha", "透明度 (0.0-1.0)", ParameterType.NUMBER, 0.95, acceptsMagicVariable = false),
-        InputDefinition("destroy_on_exit", "退出随即销毁页面", ParameterType.BOOLEAN, true)
+        InputDefinition("title", "标题", ParameterType.STRING, "", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_title),
+        InputDefinition("width", "宽度 (dp)", ParameterType.NUMBER, 300, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_width),
+        InputDefinition("height", "高度 (dp)", ParameterType.NUMBER, 400, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_height),
+        InputDefinition("alpha", "透明度 (0.0-1.0)", ParameterType.NUMBER, 0.95, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_alpha),
+        InputDefinition("destroy_on_exit", "退出随即销毁页面", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_destroy_on_exit)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
         PillUtil.buildSpannable(
             context,
-            "悬浮窗: ",
+            context.getString(R.string.summary_vflow_ui_float_start),
             PillUtil.createPillFromParam(step.parameters["title"], getInputs()[0]),
             " (",
             PillUtil.createPillFromParam(step.parameters["width"], getInputs()[1]),
@@ -88,7 +95,7 @@ class CreateFloatWindowModule : BaseBlockModule() {
         val destroyOnExit = currentStep.parameters["destroy_on_exit"] as? Boolean ?: true
         context.namedVariables[KEY_UI_DESTROY_ON_EXIT] = destroyOnExit
 
-        onProgress(ProgressUpdate("初始化悬浮窗定义..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_float_init)))
         return ExecutionResult.Success()
     }
 }
@@ -101,13 +108,20 @@ class CreateFloatWindowModule : BaseBlockModule() {
  */
 class ShowFloatWindowModule : BaseModule() {
     override val id = FLOAT_WIN_SHOW_ID
-    override val metadata = ActionMetadata("显示悬浮窗 (事件循环)", "悬浮窗定义结束，启动悬浮窗并开始监听事件。", R.drawable.rounded_play_arrow_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "显示悬浮窗 (事件循环)",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_float_show_name,
+        description = "悬浮窗定义结束，启动悬浮窗并开始监听事件。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_float_show_desc,
+        iconRes = R.drawable.rounded_play_arrow_24,
+        category = "UI 组件"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, FLOAT_WIN_PAIRING, isIndividuallyDeletable = false)
 
-    override fun getSummary(context: Context, step: ActionStep) = "显示悬浮窗并开始监听事件"
+    override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_float_show)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String ?: return ExecutionResult.Failure("错误", "Session丢失")
+        val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String ?: return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
 
         // 获取 destroy_on_exit 参数
         val destroyOnExit = context.namedVariables[KEY_UI_DESTROY_ON_EXIT] as? Boolean ?: true
@@ -127,7 +141,7 @@ class ShowFloatWindowModule : BaseModule() {
             }
 
             // 2. 挂起等待下一个事件
-            onProgress(ProgressUpdate("等待用户操作..."))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_wait)))
             val event = UiSessionBus.waitForEvent(sessionId)
 
             // 3. 检查session是否已关闭
@@ -152,7 +166,7 @@ class ShowFloatWindowModule : BaseModule() {
                 context.namedVariables["component_value.$componentId"] = value
             }
 
-            onProgress(ProgressUpdate("收到事件: ${event.elementId} - ${event.type}"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_event, event.elementId, event.type)))
             return ExecutionResult.Success() // 继续执行内部的监听积木
 
         } else {
@@ -160,14 +174,14 @@ class ShowFloatWindowModule : BaseModule() {
 
             @Suppress("UNCHECKED_CAST")
             val elements = context.namedVariables[KEY_UI_ELEMENTS_LIST] as? List<UiElement>
-                ?: return ExecutionResult.Failure("配置错误", "组件列表为空")
+                ?: return ExecutionResult.Failure("配置错误", appContext.getString(R.string.error_vflow_ui_empty_list))
 
             val width = context.namedVariables[KEY_FLOAT_WIDTH] as? Int ?: 300
             val height = context.namedVariables[KEY_FLOAT_HEIGHT] as? Int ?: 400
             val alpha = context.namedVariables[KEY_FLOAT_ALPHA] as? Float ?: 0.95f
             val title = context.namedVariables[KEY_FLOAT_TITLE] as? String ?: ""
 
-            onProgress(ProgressUpdate("正在启动悬浮窗..."))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_float_starting)))
 
             // 先注册 Session（必须在 startService 之前，否则 Service 的命令监听器无法获取到 flow）
             UiSessionBus.registerSession(sessionId)
@@ -187,7 +201,7 @@ class ShowFloatWindowModule : BaseModule() {
             context.loopStack.push(UiLoopState(sessionId))
 
             // 为了复用代码，这里直接进入等待逻辑：
-            onProgress(ProgressUpdate("悬浮窗已启动，等待操作..."))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_float_started)))
             val event = UiSessionBus.waitForEvent(sessionId)
 
             // 检查session是否已关闭
@@ -222,10 +236,17 @@ class ShowFloatWindowModule : BaseModule() {
  */
 class EndFloatWindowModule : BaseModule() {
     override val id = FLOAT_WIN_END_ID
-    override val metadata = ActionMetadata("结束悬浮窗", "悬浮窗生命周期结束。", R.drawable.rounded_stop_circle_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "结束悬浮窗",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_float_end_name,
+        description = "悬浮窗生命周期结束。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_float_end_desc,
+        iconRes = R.drawable.rounded_stop_circle_24,
+        category = "UI 组件"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, FLOAT_WIN_PAIRING)
 
-    override fun getSummary(context: Context, step: ActionStep) = "结束悬浮窗"
+    override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_float_end)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String

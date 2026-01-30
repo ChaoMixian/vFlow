@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="触发类型"
+        android:text="@string/label_trigger_type"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <RadioGroup
@@ -22,12 +22,12 @@
             android:id="@+id/rb_connection_change"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="网络连接状态变化" />
+            android:text="@string/text_network_connection_change" />
         <RadioButton
             android:id="@+id/rb_state_change"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Wi-Fi状态变化" />
+            android:text="@string/text_wifi_state_change" />
     </RadioGroup>
 
     <LinearLayout
@@ -44,7 +44,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="事件"
+            android:text="@string/label_event"
             android:textAppearance="?attr/textAppearanceLabelLarge" />
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/cg_connection_event"
@@ -56,19 +56,19 @@
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="连接到" />
+                android:text="@string/text_connect_to" />
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_disconnect"
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="断开连接" />
+                android:text="@string/text_disconnect" />
         </com.google.android.material.chip.ChipGroup>
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="网络"
+            android:text="@string/label_network"
             android:textAppearance="?attr/textAppearanceLabelLarge" />
         <TextView
             android:id="@+id/text_selected_wifi_network"
@@ -86,7 +86,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             app:icon="@drawable/rounded_android_wifi_3_bar_24"
-            android:text="选择网络" />
+            android:text="@string/button_select_network" />
     </LinearLayout>
 
     <LinearLayout
@@ -103,7 +103,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="事件"
+            android:text="@string/label_event"
             android:textAppearance="?attr/textAppearanceLabelLarge" />
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/cg_state_event"
@@ -115,13 +115,13 @@
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="开启时" />
+                android:text="@string/text_turned_on" />
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_state_off"
                 style="@style/Widget.Material3.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="关闭时" />
+                android:text="@string/text_turned_off" />
         </com.google.android.material.chip.ChipGroup>
     </LinearLayout>
 </LinearLayout>

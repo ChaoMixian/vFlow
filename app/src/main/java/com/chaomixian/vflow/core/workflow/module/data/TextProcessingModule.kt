@@ -18,8 +18,10 @@ class TextProcessingModule : BaseModule() {
 
     override val id = "vflow.data.text_processing"
     override val metadata = ActionMetadata(
-        name = "文本处理",
-        description = "执行文本的拼接、分割、替换、正则匹配等操作。",
+        nameStringRes = R.string.module_vflow_data_text_processing_name,
+        descriptionStringRes = R.string.module_vflow_data_text_processing_desc,
+        name = "文本处理",  // Fallback
+        description = "执行文本的拼接、分割、替换、正则匹配等操作",  // Fallback
         iconRes = R.drawable.rounded_convert_to_text_24,
         category = "数据"
     )
@@ -83,33 +85,39 @@ class TextProcessingModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
         val operation = step.parameters["operation"]?.toString() ?: "拼接"
-        val operationPill = PillUtil.createPillFromParam(
-            operation,
-            inputs.find { it.id == "operation" },
-            isModuleOption = true
-        )
 
         return when (operation) {
             "拼接" -> {
                 val listPill = PillUtil.createPillFromParam(step.parameters["join_list"], inputs.find { it.id == "join_list" })
                 val delimiterPill = PillUtil.createPillFromParam(step.parameters["join_delimiter"], inputs.find { it.id == "join_delimiter" })
-                PillUtil.buildSpannable(context, operationPill, ": 将列表 ", listPill, " 用 ", delimiterPill, " 连接")
+                val prefix = context.getString(R.string.summary_vflow_data_text_processing_join_prefix)
+                val middle = context.getString(R.string.summary_vflow_data_text_processing_join_middle)
+                val suffix = context.getString(R.string.summary_vflow_data_text_processing_join_suffix)
+                PillUtil.buildSpannable(context, prefix, listPill, middle, delimiterPill, suffix)
             }
             "分割" -> {
                 val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
                 val delimiterPill = PillUtil.createPillFromParam(step.parameters["split_delimiter"], inputs.find { it.id == "split_delimiter" })
-                PillUtil.buildSpannable(context, operationPill, ": 将 ", sourcePill, " 用 ", delimiterPill, " 分割")
+                val prefix = context.getString(R.string.summary_vflow_data_text_processing_split_prefix)
+                val middle = context.getString(R.string.summary_vflow_data_text_processing_split_middle)
+                val suffix = context.getString(R.string.summary_vflow_data_text_processing_split_suffix)
+                PillUtil.buildSpannable(context, prefix, sourcePill, middle, delimiterPill, suffix)
             }
             "替换" -> {
                 val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
                 val fromPill = PillUtil.createPillFromParam(step.parameters["replace_from"], inputs.find { it.id == "replace_from" })
                 val toPill = PillUtil.createPillFromParam(step.parameters["replace_to"], inputs.find { it.id == "replace_to" })
-                PillUtil.buildSpannable(context, operationPill, ": 在 ", sourcePill, " 中将 ", fromPill, " 替换为 ", toPill)
+                val prefix = context.getString(R.string.summary_vflow_data_text_processing_replace_prefix)
+                val middle1 = context.getString(R.string.summary_vflow_data_text_processing_replace_middle1)
+                val middle2 = context.getString(R.string.summary_vflow_data_text_processing_replace_middle2)
+                PillUtil.buildSpannable(context, prefix, sourcePill, middle1, fromPill, middle2, toPill)
             }
             "正则提取" -> {
                 val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
                 val patternPill = PillUtil.createPillFromParam(step.parameters["regex_pattern"], inputs.find { it.id == "regex_pattern" })
-                PillUtil.buildSpannable(context, operationPill, ": 从 ", sourcePill, " 提取 ", patternPill)
+                val prefix = context.getString(R.string.summary_vflow_data_text_processing_regex_prefix)
+                val suffix = context.getString(R.string.summary_vflow_data_text_processing_regex_suffix)
+                PillUtil.buildSpannable(context, prefix, sourcePill, suffix, patternPill)
             }
             else -> operation
         }

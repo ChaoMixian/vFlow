@@ -128,7 +128,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         titleTextView.text = if (focusedInputId != null && focusedInputDef != null) {
             "编辑 ${focusedInputDef.name}"
         } else {
-            "编辑 ${module.metadata.name}"
+            val localizedName = module.metadata.getLocalizedName(requireContext())
+            "编辑 $localizedName"
         }
 
         buildUi()
@@ -162,9 +163,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         errorSettingsContent?.removeAllViews()
 
         val radioGroup = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
-        val rbStop = RadioButton(context).apply { text = "执行失败时：停止工作流 (默认)"; tag = POLICY_STOP }
-        val rbSkip = RadioButton(context).apply { text = "执行失败时：跳过此步骤继续"; tag = POLICY_SKIP }
-        val rbRetry = RadioButton(context).apply { text = "执行失败时：尝试重试"; tag = POLICY_RETRY }
+        val rbStop = RadioButton(context).apply { text = getString(R.string.editor_error_policy_stop); tag = POLICY_STOP }
+        val rbSkip = RadioButton(context).apply { text = getString(R.string.editor_error_policy_skip); tag = POLICY_SKIP }
+        val rbRetry = RadioButton(context).apply { text = getString(R.string.editor_error_policy_retry); tag = POLICY_RETRY }
 
         radioGroup.addView(rbStop)
         radioGroup.addView(rbSkip)
@@ -184,19 +185,19 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         // --- 重试次数 ---
         val sliderRetryCount = StandardControlFactory.createSliderWithLabel(
             context = context,
-            label = "重试次数",
+            label = getString(R.string.editor_retry_count),
             valueFrom = 1f,
             valueTo = 10f,
             stepSize = 1f,
             currentValue = currentRetryCount,
-            valueFormatter = { "${it.toInt()} 次" }
+            valueFormatter = { getString(R.string.editor_retry_times, it.toInt()) }
         )
         retryContainer.addView(sliderRetryCount)
 
         // --- 重试间隔 ---
         val sliderRetryInterval = StandardControlFactory.createSliderWithLabel(
             context = context,
-            label = "重试间隔 (毫秒)",
+            label = getString(R.string.editor_retry_interval),
             valueFrom = 100f,
             valueTo = 5000f,
             stepSize = 100f,
@@ -393,7 +394,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
         // 文字
         val title = TextView(context).apply {
-            text = "更多设置"
+            text = getString(R.string.editor_more_settings)
             textSize = 16f
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginStart = (12 * density).toInt()

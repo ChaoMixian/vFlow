@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/execution/VariableInfo.kt
 package com.chaomixian.vflow.core.execution
 
+import android.content.Context
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
@@ -57,8 +58,22 @@ data class VariableInfo(
     val sourceStepId: String? = null
 ) {
     /**
-     * 获取属性的中文显示名称
+     * 获取属性的本地化显示名称
+     * @param context Android上下文
+     * @param propertyName 属性名称（如"width"）
+     * @return 本地化的显示名称（如"宽度"或"Width"）
      */
+    fun getPropertyDisplayName(context: Context, propertyName: String): String {
+        val type = VTypeRegistry.getType(typeId)
+        val propDef = type.properties.find { it.name == propertyName }
+        return propDef?.getLocalizedName(context) ?: propertyName
+    }
+
+    /**
+     * 获取属性的中文显示名称（向后兼容方法）
+     * @deprecated 使用 getPropertyDisplayName(context, propertyName) 代替
+     */
+    @Deprecated("Use getPropertyDisplayName(context, propertyName) instead", ReplaceWith("getPropertyDisplayName(context, propertyName)"))
     fun getPropertyDisplayName(propertyName: String): String {
         val type = VTypeRegistry.getType(typeId)
         val propDef = type.properties.find { it.name == propertyName }
@@ -124,6 +139,43 @@ data class VariableInfo(
                 sourceModuleId = sourceStep.moduleId,
                 sourceStepId = stepId
             )
+        }
+
+        /**
+         * 从魔法变量引用创建 VariableInfo，支持属性访问时的类型修正
+         * @return 如果找到对应的步骤和输出则返回 VariableInfo，否则返回 null
+         */
+        fun fromMagicVariableWithProperty(stepId: String, outputId: String, propertyName: String?, allSteps: List<ActionStep>): VariableInfo? {
+            val sourceStep = allSteps.find { it.id == stepId } ?: return null
+            val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
+            // 使用 getDynamicOutputs 而不是 getOutputs，以获取动态类型信息
+            val outputDefs = sourceModule.getDynamicOutputs(sourceStep, allSteps)
+            val outputDef = outputDefs.find { it.id == outputId } ?: return null
+
+            // 检查是否是列表类型且正在访问列表属性
+            val isListProperty = propertyName != null && outputDef.listElementType != null && isListProperty(propertyName)
+            
+            // 如果是列表属性访问，使用列表类型；否则使用原来的逻辑
+            val actualTypeId = if (isListProperty) {
+                outputDef.typeName // 使用列表类型而不是元素类型
+            } else {
+                outputDef.listElementType ?: outputDef.typeName // 原来的逻辑
+            }
+
+            return VariableInfo(
+                sourceName = outputDef.name,
+                typeId = actualTypeId,
+                sourceModuleId = sourceStep.moduleId,
+                sourceStepId = stepId
+            )
+        }
+
+        /**
+         * 检查属性是否是列表属性
+         */
+        private fun isListProperty(propertyName: String): Boolean {
+            val listType = VTypeRegistry.getType(VTypeRegistry.LIST.id)
+            return listType.properties.any { it.name == propertyName }
         }
 
         /**

@@ -16,9 +16,11 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 class ContinueLoopModule : BaseModule() {
     override val id = "vflow.logic.continue_loop"
     override val metadata = ActionMetadata(
-        name = "继续循环",
-        description = "跳过当前循环的剩余步骤，直接进入下一次迭代。",
-        iconRes = R.drawable.rounded_skip_next_24, // 使用一个合适的图标
+        nameStringRes = R.string.module_vflow_logic_continue_loop_name,
+        descriptionStringRes = R.string.module_vflow_logic_continue_loop_desc,
+        name = "继续循环",  // Fallback
+        description = "跳过当前循环的剩余步骤，直接进入下一次迭代",  // Fallback
+        iconRes = R.drawable.rounded_skip_next_24,
         category = "逻辑控制"
     )
 
@@ -26,7 +28,7 @@ class ContinueLoopModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return "继续下一次循环"
+        return context.getString(R.string.summary_vflow_logic_continue_loop)
     }
 
     override suspend fun execute(

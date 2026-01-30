@@ -58,7 +58,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Core"
+                            android:text="@string/home_core_title"
                             android:textStyle="bold"
                             android:textAppearance="?attr/textAppearanceTitleLarge"
                             android:textColor="?attr/colorOnPrimaryContainer"
@@ -69,7 +69,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="0dp"
-                            android:text="工作中"
+                            android:text="@string/home_core_status_working"
                             android:textAppearance="?attr/textAppearanceHeadlineMedium"
                             android:textStyle="bold"
                             android:textColor="?attr/colorOnPrimaryContainer" />
@@ -115,7 +115,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="工作流总数"
+                            android:text="@string/home_total_workflows"
                             android:textAppearance="?attr/textAppearanceLabelLarge"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -151,7 +151,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="自动化任务"
+                            android:text="@string/home_auto_tasks"
                             android:textAppearance="?attr/textAppearanceLabelLarge"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -206,7 +206,7 @@
                         android:id="@+id/text_permission_health_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="权限健康检查"
+                        android:text="@string/home_permission_health"
                         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                     <TextView
@@ -243,7 +243,7 @@
                     android:paddingHorizontal="20dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
-                    android:text="最近日志"
+                    android:text="@string/home_recent_logs"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                 <LinearLayout
@@ -278,7 +278,7 @@
                     android:paddingHorizontal="20dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
-                    android:text="快速执行"
+                    android:text="@string/home_quick_execute"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                 <LinearLayout

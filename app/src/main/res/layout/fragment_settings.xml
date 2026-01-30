@@ -61,7 +61,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="前往下载" />
+                    android:text="@string/settings_update_download" />
 
             </LinearLayout>
 
@@ -109,6 +109,39 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:text="@string/settings_section_language"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <LinearLayout
+                    android:id="@+id/btn_language_settings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_language_desc"
+                        android:textAppearance="?attr/textAppearanceBodyLarge" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="?attr/materialCardViewFilledStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:text="@string/settings_section_general"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
@@ -130,12 +163,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="显示后台服务通知" />
+                    android:text="@string/settings_switch_background_service" />
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="在状态栏显示后台常驻通知。关闭此项可能会导致后台服务被系统杀掉，影响触发器稳定性。"
+                    android:text="@string/settings_switch_background_service_desc"
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
 
@@ -157,12 +190,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="自动开启无障碍服务" />
+                    android:text="@string/settings_switch_auto_enable_accessibility" />
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="当服务意外关闭时，通过 Shizuku / Root 自动重新启用无障碍服务。此功能需要 Shizuku / Root权限。"
+                    android:text="@string/settings_switch_auto_enable_accessibility_desc"
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
             </LinearLayout>
@@ -183,7 +216,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="权限与 Shell"
+                    android:text="@string/settings_section_permissions_shell"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
                 <LinearLayout
@@ -200,12 +233,12 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Shell 偏好"
+                            android:text="@string/settings_shell_preference"
                             android:textAppearance="?attr/textAppearanceBodyLarge" />
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="用于执行截图、Shell 命令等操作"
+                            android:text="@string/settings_shell_preference_desc"
                             android:textAppearance="?attr/textAppearanceBodySmall" />
                     </LinearLayout>
 
@@ -221,13 +254,13 @@
                             style="?attr/materialButtonOutlinedStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Shizuku"/>
+                            android:text="@string/settings_btn_shell_shizuku"/>
                         <Button
                             android:id="@+id/btn_shell_root"
                             style="?attr/materialButtonOutlinedStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Root"/>
+                            android:text="@string/settings_btn_shell_root"/>
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
 
@@ -323,7 +356,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginEnd="8dp"
-                        android:text="运行按键诊断" />
+                        android:text="@string/settings_button_run_diagnostic" />
                     <Button
                         android:id="@+id/button_key_tester"
                         style="?attr/materialButtonOutlinedStyle"
@@ -331,7 +364,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:text="按键测试器" />
+                        android:text="@string/settings_button_key_tester" />
                 </LinearLayout>
 
                 <Button
@@ -340,7 +373,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="vFlow Core 管理" />
+                    android:text="@string/settings_button_core_management" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

@@ -5,14 +5,7 @@ import android.os.Parcelable
 import android.util.Log
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
-import com.chaomixian.vflow.core.module.ActionMetadata
-import com.chaomixian.vflow.core.module.BaseModule
-import com.chaomixian.vflow.core.module.ExecutionResult
-import com.chaomixian.vflow.core.module.InputDefinition
-import com.chaomixian.vflow.core.module.OutputDefinition
-import com.chaomixian.vflow.core.module.ProgressUpdate
-import com.chaomixian.vflow.core.module.ValidationResult
-import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
@@ -22,20 +15,28 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class RandomVariableModule : BaseModule() {
     override val id = "vflow.variable.random"
     override val metadata = ActionMetadata(
-        name = "创建随机变量",
-        description = "创建新的随机变量，可选择为其命名以便后续修改或读取。",
+        nameStringRes = R.string.module_vflow_variable_random_name,
+        descriptionStringRes = R.string.module_vflow_variable_random_desc,
+        name = "创建随机变量",  // Fallback
+        description = "创建新的随机变量，可选择为其命名以便后续修改或读取",  // Fallback
         iconRes = R.drawable.rounded_add_24,
         category = "数据"
     )
 
-    private val typeOptions = listOf("数字", "文本")
+    private val typeOptions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_variable_random_type_number),
+            appContext.getString(R.string.option_vflow_variable_random_type_string)
+        )
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "type",
             name = "变量类型",
+            nameStringRes = R.string.param_vflow_variable_random_type_name,
             staticType = ParameterType.ENUM,
-            defaultValue = "数字",
+            defaultValue = typeOptions[0],
             options = typeOptions,
             acceptsMagicVariable = false
         ),
@@ -43,6 +44,7 @@ class RandomVariableModule : BaseModule() {
         InputDefinition(
             id = "variableName",
             name = "变量名称 (可选)",
+            nameStringRes = R.string.param_vflow_variable_random_variableName_name,
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = false
@@ -51,6 +53,7 @@ class RandomVariableModule : BaseModule() {
         InputDefinition(
             id = "min",
             name = "随机数最小值 (默认为 0)",
+            nameStringRes = R.string.param_vflow_variable_random_min_name,
             staticType = ParameterType.NUMBER,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -61,6 +64,7 @@ class RandomVariableModule : BaseModule() {
         InputDefinition(
             id = "max",
             name = "随机数最大值 (默认为 100)",
+            nameStringRes = R.string.param_vflow_variable_random_max_name,
             staticType = ParameterType.NUMBER,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -71,6 +75,7 @@ class RandomVariableModule : BaseModule() {
         InputDefinition(
             id = "step",
             name = "步长 (默认为 1)",
+            nameStringRes = R.string.param_vflow_variable_random_step_name,
             staticType = ParameterType.NUMBER,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -81,6 +86,7 @@ class RandomVariableModule : BaseModule() {
         InputDefinition(
             id = "length",
             name = "随机文本长度 (默认为 8)",
+            nameStringRes = R.string.param_vflow_variable_random_length_name,
             staticType = ParameterType.NUMBER,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -91,6 +97,7 @@ class RandomVariableModule : BaseModule() {
         InputDefinition(
             id = "custom_chars",
             name = "随机文本符集 (默认为 a-zA-Z0-9)",
+            nameStringRes = R.string.param_vflow_variable_random_custom_chars_name,
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -100,23 +107,27 @@ class RandomVariableModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val inputType = step?.parameters?.get("type") as? String ?: "数字"
+        val inputType = step?.parameters?.get("type") as? String ?: typeOptions[0]
         val outputTypeName = when (inputType) {
-            "数字" -> VTypeRegistry.NUMBER.id
-            "文本" -> VTypeRegistry.STRING.id
+            typeOptions[0] -> VTypeRegistry.NUMBER.id // 数字
+            typeOptions[1] -> VTypeRegistry.STRING.id // 文本
             else -> VTypeRegistry.NUMBER.id
         }
-        return listOf(OutputDefinition("randomVariable", "随机变量", outputTypeName))
+        return listOf(OutputDefinition("randomVariable", "随机变量", outputTypeName, nameStringRes = R.string.output_vflow_variable_random_randomVariable_name))
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence? {
-        val type = step.parameters["type"] as? String ?: "数字"
+        val type = step.parameters["type"] as? String ?: typeOptions[0]
         val varName = step.parameters["variableName"]?.toString()
+        val generate = context.getString(R.string.summary_vflow_variable_random_generate)
+        val anonymous = context.getString(R.string.summary_vflow_variable_random_anonymous)
+        val named = context.getString(R.string.summary_vflow_variable_random_named)
+
         return if (varName.isNullOrEmpty()) {
-            "生成 匿名随机变量 ($type)"
+            "$generate $anonymous ($type)"
         } else {
             val namePill = PillUtil.Pill("[[$varName]]", "variableName")
-            PillUtil.buildSpannable(context, "生成随机变量 ", namePill, " ($type)")
+            PillUtil.buildSpannable(context, "$named ", namePill, " ($type)")
         }
     }
 
@@ -127,10 +138,13 @@ class RandomVariableModule : BaseModule() {
             val count = allSteps.count {
                 it.id != step.id && it.moduleId == this.id && (it.parameters["variableName"] as? String) == varName
             }
-            if (count > 0) return ValidationResult(
-                false,
-                "变量名 '$varName' 已存在，请使用其他名称。"
-            )
+            if (count > 0) {
+                val errorMsg = String.format(appContext.getString(R.string.error_vflow_variable_random_duplicate), varName)
+                return ValidationResult(
+                    false,
+                    errorMsg
+                )
+            }
         }
 
         return ValidationResult(true)
@@ -140,20 +154,24 @@ class RandomVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = context.variables["type"] as? String ?: "数字"
+        val type = context.variables["type"] as? String ?: typeOptions[0]
         val varName = context.variables["variableName"]?.toString()
 
         val resultVariable: Parcelable = when (type) {
-            "数字" -> {
+            typeOptions[0] -> { // 数字
                 val min = context.variables["min"]?.toString()?.toDoubleOrNull() ?: 0.0
                 val max = context.variables["max"]?.toString()?.toDoubleOrNull() ?: 100.0
                 val step = context.variables["step"]?.toString()?.toDoubleOrNull() ?: 1.0
 
                 if (min > max) {
-                    return ExecutionResult.Failure("参数错误", "最小值不能大于最大值")
+                    val title = appContext.getString(R.string.error_vflow_variable_random_param_error)
+                    val message = appContext.getString(R.string.error_vflow_variable_random_min_gt_max)
+                    return ExecutionResult.Failure(title, message)
                 }
                 if (step <= 0) {
-                    return ExecutionResult.Failure("参数错误", "步长必须大于 0")
+                    val title = appContext.getString(R.string.error_vflow_variable_random_param_error)
+                    val message = appContext.getString(R.string.error_vflow_variable_random_step_positive)
+                    return ExecutionResult.Failure(title, message)
                 }
 
                 // 生成逻辑
@@ -172,7 +190,7 @@ class RandomVariableModule : BaseModule() {
                     VNumber(rawResult)
                 }
             }
-            "文本" -> {
+            typeOptions[1] -> { // 文本
                 val length = context.variables["length"]?.toString()?.toDoubleOrNull()?.toInt() ?: 8
                 val customChars = context.variables["custom_chars"]?.toString()
 
@@ -183,7 +201,9 @@ class RandomVariableModule : BaseModule() {
                 }
 
                 if (charPool.isEmpty()) {
-                    return ExecutionResult.Failure("参数错误", "字符集不能为空")
+                    val title = appContext.getString(R.string.error_vflow_variable_random_param_error)
+                    val message = appContext.getString(R.string.error_vflow_variable_random_charset_empty)
+                    return ExecutionResult.Failure(title, message)
                 }
 
                 val randomString = (1..length)
@@ -193,13 +213,19 @@ class RandomVariableModule : BaseModule() {
                 VString(randomString)
             }
             // 添加 else 分支处理未知类型，保证 when 表达式的完备性
-            else -> return ExecutionResult.Failure("未知类型", "无法创建类型为 '$type' 的随机变量")
+            else -> {
+                val title = appContext.getString(R.string.error_vflow_variable_random_unknown_type)
+                val message = String.format(appContext.getString(R.string.error_vflow_variable_random_cannot_create), type)
+                return ExecutionResult.Failure(title, message)
+            }
         }
 
         // 如果指定了变量名，存储到命名变量中
         if (!varName.isNullOrEmpty()) {
             if (context.namedVariables.containsKey(varName)) {
-                return ExecutionResult.Failure("命名冲突", "变量 '$varName' 已存在。")
+                val title = appContext.getString(R.string.error_vflow_variable_random_name_conflict)
+                val message = String.format(appContext.getString(R.string.error_vflow_variable_random_exists), varName)
+                return ExecutionResult.Failure(title, message)
             }
             context.namedVariables[varName] = resultVariable
             onProgress(ProgressUpdate("已创建命名变量 '$varName'"))

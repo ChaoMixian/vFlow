@@ -57,7 +57,7 @@ class MainActivity : BaseActivity() {
             return
         }
 
-        ModuleRegistry.initialize() // 初始化模块注册表
+        ModuleRegistry.initialize(applicationContext) // 初始化模块注册表
         ModuleManager.loadModules(this, true) // 初始化用户模块管理器
         TriggerHandlerRegistry.initialize() // 初始化触发器处理器注册表
         ExecutionNotificationManager.initialize(this) // 初始化通知管理器

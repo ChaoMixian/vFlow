@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import com.chaomixian.vflow.core.locale.toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -159,11 +160,11 @@ class HomeFragment : Fragment() {
 
         // 设置模式文本 (Mode)
         val modeString = when (privilegeMode) {
-            VFlowCoreBridge.PrivilegeMode.ROOT -> "Root"
-            VFlowCoreBridge.PrivilegeMode.SHELL -> "Shell"
-            VFlowCoreBridge.PrivilegeMode.NONE -> "无权限"
+            VFlowCoreBridge.PrivilegeMode.ROOT -> getString(R.string.home_privilege_root)
+            VFlowCoreBridge.PrivilegeMode.SHELL -> getString(R.string.home_privilege_shell)
+            VFlowCoreBridge.PrivilegeMode.NONE -> getString(R.string.home_privilege_none)
         }
-        coreModeText.text = "模式：$modeString"
+        coreModeText.text = getString(R.string.home_core_mode, modeString)
 
         // 根据连接状态设置视觉样式 (颜色和图标)
         if (isConnected) {
@@ -173,7 +174,7 @@ class HomeFragment : Fragment() {
 
             // 设置卡片背景和所有文字颜色
             coreStatusCard.setCardBackgroundColor(bgColor)
-            coreStatusText.text = "工作中"
+            coreStatusText.text = getString(R.string.home_core_status_working)
             coreStatusText.setTextColor(contentColor)
             coreModeText.setTextColor(contentColor)
 
@@ -190,7 +191,7 @@ class HomeFragment : Fragment() {
 
             // 设置卡片背景和所有文字颜色
             coreStatusCard.setCardBackgroundColor(bgColor)
-            coreStatusText.text = "已停止"
+            coreStatusText.text = getString(R.string.home_core_status_stopped)
             coreStatusText.setTextColor(contentColor)
             coreModeText.setTextColor(contentColor)
 
@@ -221,10 +222,10 @@ class HomeFragment : Fragment() {
         val missingPermissions = requiredPermissions.filter { !PermissionManager.isGranted(requireContext(), it) }
 
         if (missingPermissions.isEmpty()) {
-            permissionHealthDesc.text = "状态：良好，所有权限均已授予"
+            permissionHealthDesc.text = getString(R.string.home_permission_good)
             permissionHealthDesc.setTextColor(MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, 0))
         } else {
-            permissionHealthDesc.text = "状态：存在 ${missingPermissions.size} 个缺失的权限"
+            permissionHealthDesc.text = getString(R.string.home_permission_missing, missingPermissions.size)
             permissionHealthDesc.setTextColor(MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorError, 0))
         }
 
@@ -350,14 +351,14 @@ class HomeFragment : Fragment() {
                 return
             }
         }
-        Toast.makeText(context, "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
+        requireContext().toast(getString(R.string.home_starting_execution, workflow.name))
         WorkflowExecutor.execute(workflow, requireContext())
     }
 
     private fun handleQuickExecuteClick(workflow: Workflow) {
         if (WorkflowExecutor.isRunning(workflow.id)) {
             WorkflowExecutor.stopExecution(workflow.id)
-            Toast.makeText(context, "已停止: ${workflow.name}", Toast.LENGTH_SHORT).show()
+            requireContext().toast(getString(R.string.home_stopped_execution, workflow.name))
         } else {
             executeWorkflow(workflow)
         }

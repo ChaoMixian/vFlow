@@ -1,6 +1,7 @@
 // 文件：main/java/com/chaomixian/vflow/ui/settings/CoreManagementActivity.kt
 package com.chaomixian.vflow.ui.settings
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -49,6 +50,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.chaomixian.vflow.R
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -98,7 +101,7 @@ class CoreManagementActivity : BaseActivity() {
                     onStartServer = { startServer() },
                     onStartServerWithMode = { mode -> startServerWithMode(mode) },
                     onStopServer = { stopServer() },
-                    onLoadLogs = { loadServerLogs() },
+                    onLoadLogs = { loadServerLogs(this) },
                     autoStart = autoStartRequested
                 )
             }
@@ -212,17 +215,17 @@ class CoreManagementActivity : BaseActivity() {
     /**
      * 加载 vFlowCore 日志
      */
-    private suspend fun loadServerLogs(): String {
+    private suspend fun loadServerLogs(context: Context): String {
         return withContext(Dispatchers.IO) {
             try {
                 val logs = if (serverLogFile.exists()) {
                     serverLogFile.readText()
                 } else {
-                    "日志文件不存在"
+                    context.getString(R.string.text_logs_not_available)
                 }
 
                 if (logs.isBlank()) {
-                    "暂无日志..."
+                    context.getString(R.string.text_no_logs_yet)
                 } else {
                     // 只显示最后8000个字符，避免内存问题
                     if (logs.length > 8000) {
@@ -233,12 +236,13 @@ class CoreManagementActivity : BaseActivity() {
                 }
             } catch (e: Exception) {
                 DebugLogger.e("CoreManagementActivity", "读取日志失败", e)
-                "读取日志失败: ${e.message}"
+                context.getString(R.string.text_log_load_failed, e.message ?: "")
             }
         }
     }
 }
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CoreManagementScreen(
@@ -254,8 +258,8 @@ private fun CoreManagementScreen(
     val coroutineScope = rememberCoroutineScope()
     var isServerRunning by remember { mutableStateOf<Boolean?>(null) }
     var isChecking by remember { mutableStateOf(false) }
-    var logs by remember { mutableStateOf("暂无日志...") }
-    var statusDetail by remember { mutableStateOf("正在检查vFlow Core状态...") }
+    var logs by remember { mutableStateOf("") }
+    var statusDetail by remember { mutableStateOf("") }
     var logsExpanded by remember { mutableStateOf(false) }
 
     // 保存的启动方式和自动启动设置
@@ -272,6 +276,10 @@ private fun CoreManagementScreen(
 
     // 初始加载和自动启动
     LaunchedEffect(Unit) {
+        // 初始化本地化状态
+        statusDetail = context.getString(R.string.status_checking)
+        logs = context.getString(R.string.text_no_logs_yet)
+
         // 加载保存的偏好设置
         val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
         val savedMode = prefs.getString("preferred_core_launch_mode", "shizuku")
@@ -288,20 +296,20 @@ private fun CoreManagementScreen(
         // 如果需要自动启动且 Core 未运行
         if (autoStart && isServerRunning == false) {
             DebugLogger.i("CoreManagementScreen", "自动启动 vFlow Core...")
-            statusDetail = "正在自动启动 vFlow Core..."
+            statusDetail = context.getString(R.string.status_starting_core, "Shizuku")
             isChecking = true
 
             val success = onStartServer()
             isChecking = false
             isServerRunning = success
             statusDetail = if (success) {
-                showToast("vFlow Core 自动启动成功")
+                showToast(context.getString(R.string.toast_core_start_success))
                 // 重新加载日志
                 logs = onLoadLogs()
-                "vFlow Core 正常运行中"
+                context.getString(R.string.status_core_running)
             } else {
-                showToast("vFlow Core 自动启动失败")
-                "vFlow Core 启动失败"
+                showToast(context.getString(R.string.toast_core_start_failed))
+                context.getString(R.string.status_core_start_failed)
             }
         }
     }
@@ -309,10 +317,10 @@ private fun CoreManagementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("vFlow Core 管理") },
+                title = { Text(stringResource(R.string.title_core_management)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
@@ -336,7 +344,7 @@ private fun CoreManagementScreen(
 
             // 启动方式卡片组
             Text(
-                text = "启动方式",
+                text = stringResource(R.string.label_launch_method),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -345,8 +353,8 @@ private fun CoreManagementScreen(
 
             // Shizuku 启动卡片
             LaunchMethodCard(
-                title = "通过 Shizuku 启动",
-                description = "使用 Shizuku 权限启动 Core，无需 Root",
+                title = stringResource(R.string.title_shizuku_launch),
+                description = stringResource(R.string.desc_shizuku_launch),
                 icon = Icons.Default.Terminal,
                 iconTint = MaterialTheme.colorScheme.tertiary,
                 isAvailable = ShellManager.isShizukuActive(context),
@@ -355,7 +363,7 @@ private fun CoreManagementScreen(
                 onClick = {
                     if (isChecking) return@LaunchMethodCard
                     if (!ShellManager.isShizukuActive(context)) {
-                        showToast("Shizuku 未激活或未授权，无法启动")
+                        showToast(context.getString(R.string.toast_shizuku_not_active))
                         return@LaunchMethodCard
                     }
 
@@ -364,19 +372,19 @@ private fun CoreManagementScreen(
                     prefs.edit { putString("preferred_core_launch_mode", "shizuku") }
                     selectedLaunchMode = ShellManager.ShellMode.SHIZUKU
 
-                    statusDetail = "正在通过 Shizuku 启动 vFlow Core..."
+                    statusDetail = context.getString(R.string.status_starting_shizuku)
                     isChecking = true
                     coroutineScope.launch {
                         val success = onStartServerWithMode(ShellManager.ShellMode.SHIZUKU)
                         isChecking = false
                         isServerRunning = success
                         statusDetail = if (success) {
-                            showToast("vFlow Core 启动成功")
+                            showToast(context.getString(R.string.toast_core_start_success))
                             logs = onLoadLogs()
-                            "vFlow Core 正常运行中"
+                            context.getString(R.string.status_core_running)
                         } else {
-                            showToast("vFlow Core 启动失败，请查看日志")
-                            "vFlow Core 启动失败"
+                            showToast(context.getString(R.string.toast_core_start_failed))
+                            context.getString(R.string.status_core_start_failed)
                         }
                     }
                 }
@@ -384,8 +392,8 @@ private fun CoreManagementScreen(
 
             // Root 启动卡片
             LaunchMethodCard(
-                title = "通过 Root 启动",
-                description = "使用 Root 权限启动 Core，需要设备已 Root",
+                title = stringResource(R.string.title_root_launch),
+                description = stringResource(R.string.desc_root_launch),
                 icon = Icons.Default.Security,
                 iconTint = MaterialTheme.colorScheme.primary,
                 isAvailable = ShellManager.isRootAvailable(),
@@ -394,7 +402,7 @@ private fun CoreManagementScreen(
                 onClick = {
                     if (isChecking) return@LaunchMethodCard
                     if (!ShellManager.isRootAvailable()) {
-                        showToast("设备未 Root 或 Root 权限未授予，无法启动")
+                        showToast(context.getString(R.string.toast_root_not_available))
                         return@LaunchMethodCard
                     }
 
@@ -403,19 +411,19 @@ private fun CoreManagementScreen(
                     prefs.edit { putString("preferred_core_launch_mode", "root") }
                     selectedLaunchMode = ShellManager.ShellMode.ROOT
 
-                    statusDetail = "正在通过 Root 启动 vFlow Core..."
+                    statusDetail = context.getString(R.string.status_starting_root)
                     isChecking = true
                     coroutineScope.launch {
                         val success = onStartServerWithMode(ShellManager.ShellMode.ROOT)
                         isChecking = false
                         isServerRunning = success
                         statusDetail = if (success) {
-                            showToast("vFlow Core 启动成功")
+                            showToast(context.getString(R.string.toast_core_start_success))
                             logs = onLoadLogs()
-                            "vFlow Core 正常运行中"
+                            context.getString(R.string.status_core_running)
                         } else {
-                            showToast("vFlow Core 启动失败，请查看日志")
-                            "vFlow Core 启动失败"
+                            showToast(context.getString(R.string.toast_core_start_failed))
+                            context.getString(R.string.status_core_start_failed)
                         }
                     }
                 }
@@ -440,37 +448,37 @@ private fun CoreManagementScreen(
                         // 根据 Core 状态选择操作
                         if (isServerRunning == true) {
                             // Core 正在运行，执行重启
-                            statusDetail = "正在重启 vFlowCore（加载新 DEX）..."
+                            statusDetail = context.getString(R.string.status_restarting_core)
                             isChecking = true
                             coroutineScope.launch {
                                 val success = VFlowCoreBridge.restart(context)
                                 isChecking = false
                                 isServerRunning = success
                                 statusDetail = if (success) {
-                                    showToast("vFlow Core 重启成功")
+                                    showToast(context.getString(R.string.toast_core_restart_success))
                                     logs = onLoadLogs()
-                                    "vFlow Core 正常运行中"
+                                    context.getString(R.string.status_core_running)
                                 } else {
-                                    showToast("vFlow Core 重启失败")
-                                    "vFlow Core 重启失败"
+                                    showToast(context.getString(R.string.toast_core_restart_failed))
+                                    context.getString(R.string.status_core_restart_failed)
                                 }
                             }
                         } else {
                             // Core 未运行，执行启动
                             val mode = selectedLaunchMode ?: ShellManager.ShellMode.AUTO
-                            statusDetail = "正在启动 vFlow Core ($mode)..."
+                            statusDetail = context.getString(R.string.status_starting_core, mode.name)
                             isChecking = true
                             coroutineScope.launch {
                                 val success = onStartServerWithMode(mode)
                                 isChecking = false
                                 isServerRunning = success
                                 statusDetail = if (success) {
-                                    showToast("vFlow Core 启动成功")
+                                    showToast(context.getString(R.string.toast_core_start_success))
                                     logs = onLoadLogs()
-                                    "vFlow Core 正常运行中"
+                                    context.getString(R.string.status_core_running)
                                 } else {
-                                    showToast("vFlow Core 启动失败")
-                                    "vFlow Core 启动失败"
+                                    showToast(context.getString(R.string.toast_core_start_failed))
+                                    context.getString(R.string.status_core_start_failed)
                                 }
                             }
                         }
@@ -496,25 +504,25 @@ private fun CoreManagementScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(if (isServerRunning == true) "重启 Core" else "启动 Core")
+                    Text(if (isServerRunning == true) stringResource(R.string.button_restart_core) else stringResource(R.string.button_start_core))
                 }
 
                 // 停止 Core 按钮
                 FilledTonalButton(
                     onClick = {
                         if (isChecking) return@FilledTonalButton
-                        statusDetail = "正在停止 vFlow Core..."
+                        statusDetail = context.getString(R.string.status_stopping_core)
                         isChecking = true
                         coroutineScope.launch {
                             val stillRunning = onStopServer()
                             isChecking = false
                             isServerRunning = stillRunning
                             statusDetail = if (!stillRunning) {
-                                showToast("vFlow Core 已停止")
-                                "vFlow Core 未运行"
+                                showToast(context.getString(R.string.toast_core_stopped))
+                                context.getString(R.string.status_core_not_running)
                             } else {
-                                showToast("vFlow Core 仍在运行")
-                                "vFlow Core 仍在运行"
+                                showToast(context.getString(R.string.toast_core_still_running))
+                                context.getString(R.string.status_core_still_running)
                             }
                         }
                     },
@@ -531,7 +539,7 @@ private fun CoreManagementScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("停止 Core")
+                    Text(stringResource(R.string.button_stop_core))
                 }
             }
 
@@ -539,16 +547,16 @@ private fun CoreManagementScreen(
             FilledTonalButton(
                 onClick = {
                     if (isChecking) return@FilledTonalButton
-                    statusDetail = "正在刷新状态..."
+                    statusDetail = context.getString(R.string.status_refreshing)
                     isChecking = true
                     coroutineScope.launch {
                         val running = onCheckStatus()
                         isChecking = false
                         isServerRunning = running
                         statusDetail = if (running) {
-                            "vFlow Core 正常运行中"
+                            context.getString(R.string.status_core_running)
                         } else {
-                            "vFlow Core 未运行"
+                            context.getString(R.string.status_core_not_running)
                         }
                     }
                 },
@@ -561,7 +569,7 @@ private fun CoreManagementScreen(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("刷新状态")
+                Text(stringResource(R.string.button_refresh_status))
             }
 
             // 日志卡片
@@ -592,7 +600,7 @@ private fun CoreManagementScreen(
                         )
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            text = "vFlow Core 设置",
+                            text = stringResource(R.string.title_core_settings),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -607,12 +615,12 @@ private fun CoreManagementScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "自动启动 vFlow Core",
+                                text = stringResource(R.string.text_auto_start_core),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "应用启动或设备重启时自动使用上次的方式启动 Core",
+                                text = stringResource(R.string.desc_auto_start_core),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -625,12 +633,12 @@ private fun CoreManagementScreen(
                                 val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
                                 prefs.edit { putBoolean("core_auto_start_enabled", it) }
                                 if (it && selectedLaunchMode == null) {
-                                    showToast("请先手动启动一次 Core 以记录偏好")
+                                    showToast(context.getString(R.string.toast_set_preferred_mode_first))
                                 }
                             }
                         )
                     }
-                }
+}
             }
 
             // 底部间距
@@ -654,16 +662,16 @@ private fun StatusCard(
     }
 
     val statusText = when {
-        isChecking -> "检查中..."
-        isRunning == true -> "运行中"
-        isRunning == false -> "已停止"
-        else -> "检查中..."
+        isChecking -> stringResource(R.string.status_checking)
+        isRunning == true -> stringResource(R.string.status_running)
+        isRunning == false -> stringResource(R.string.status_stopped)
+        else -> stringResource(R.string.status_checking)
     }
 
     val modeText = when (privilegeMode) {
-        VFlowCoreBridge.PrivilegeMode.ROOT -> "Root"
-        VFlowCoreBridge.PrivilegeMode.SHELL -> "Shell"
-        VFlowCoreBridge.PrivilegeMode.NONE -> "未连接"
+        VFlowCoreBridge.PrivilegeMode.ROOT -> stringResource(R.string.mode_root)
+        VFlowCoreBridge.PrivilegeMode.SHELL -> stringResource(R.string.mode_shell)
+        VFlowCoreBridge.PrivilegeMode.NONE -> stringResource(R.string.status_not_connected)
     }
 
     val modeColor = when (privilegeMode) {
@@ -715,7 +723,7 @@ private fun StatusCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "vFlow Core 状态",
+                    text = stringResource(R.string.title_core_status),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -854,7 +862,7 @@ private fun LaunchMethodCard(
                 if (!isAvailable) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "当前不可用",
+                        text = stringResource(R.string.text_not_available),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Medium
@@ -867,7 +875,7 @@ private fun LaunchMethodCard(
                 Spacer(Modifier.width(8.dp))
                 Icon(
                     Icons.Default.CheckCircle,
-                    contentDescription = "已选择",
+                    contentDescription = stringResource(R.string.content_desc_close),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -921,13 +929,13 @@ private fun AdbLaunchCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "通过电脑授权启动",
+                        text = stringResource(R.string.title_adb_launch),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "使用 ADB 从电脑启动 Core",
+                        text = stringResource(R.string.desc_adb_launch),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -948,7 +956,7 @@ private fun AdbLaunchCard(
                     )
                     Icon(
                         if (showCommand) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (showCommand) "收起" else "展开",
+                        contentDescription = if (showCommand) stringResource(R.string.action_collapse) else stringResource(R.string.action_expand),
                         modifier = Modifier.rotate(rotation)
                     )
                 }
@@ -977,7 +985,7 @@ private fun AdbLaunchCard(
 
                     // 提示文本
                     Text(
-                        text = "在电脑上执行以下命令：",
+                        text = stringResource(R.string.text_execute_on_pc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium
@@ -1016,7 +1024,7 @@ private fun AdbLaunchCard(
                                     val clip = ClipData.newPlainText("ADB Command", adbCommand)
                                     clipboard.setPrimaryClip(clip)
                                     commandCopied = true
-                                    android.widget.Toast.makeText(context, "命令已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+                                    android.widget.Toast.makeText(context, context.getString(R.string.toast_command_copied), android.widget.Toast.LENGTH_SHORT).show()
 
                                     // 2秒后重置复制状态
                                     kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
@@ -1037,7 +1045,7 @@ private fun AdbLaunchCard(
                             ) {
                                 Icon(
                                     Icons.Default.ContentCopy,
-                                    contentDescription = "复制命令",
+                                    contentDescription = stringResource(R.string.action_reload),
                                     tint = if (commandCopied) {
                                         MaterialTheme.colorScheme.onPrimary
                                     } else {
@@ -1053,9 +1061,7 @@ private fun AdbLaunchCard(
 
                     // 使用说明
                     Text(
-                        text = "• 确保 Android 设备已通过 USB 连接到电脑\n" +
-                               "• 已启用 USB 调试模式\n" +
-                               "• 电脑已安装 ADB 工具",
+                        text = stringResource(R.string.text_adb_prerequisites),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = MaterialTheme.typography.bodySmall.lineHeight * 1.4f
@@ -1088,14 +1094,14 @@ private fun LogsCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "vFlow Core 日志",
+                        text = stringResource(R.string.title_core_logs),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     if (!expanded) {
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "点击展开查看",
+                            text = stringResource(R.string.text_tap_to_expand),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1108,7 +1114,7 @@ private fun LogsCard(
                 ) {
                     Icon(
                         Icons.Default.Refresh,
-                        contentDescription = "重新加载",
+                        contentDescription = stringResource(R.string.action_reload),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -1127,7 +1133,7 @@ private fun LogsCard(
                     )
                     Icon(
                         if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (expanded) "收起" else "展开",
+                        contentDescription = if (expanded) stringResource(R.string.action_collapse) else stringResource(R.string.action_expand),
                         modifier = Modifier.rotate(rotation)
                     )
                 }

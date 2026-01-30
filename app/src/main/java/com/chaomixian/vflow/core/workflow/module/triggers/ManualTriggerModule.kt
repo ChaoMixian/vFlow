@@ -18,20 +18,27 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 class ManualTriggerModule : BaseModule() {
     override val id = "vflow.trigger.manual" // 模块唯一ID
     override val metadata = ActionMetadata(
-        name = "手动触发",
-        description = "通过点击按钮手动启动此工作流",
-        iconRes = R.drawable.rounded_play_arrow_24, // 图标
-        category = "触发器" // 分类
+        nameStringRes = R.string.module_vflow_trigger_manual_name,
+        descriptionStringRes = R.string.module_vflow_trigger_manual_desc,
+        name = "手动触发",  // Fallback
+        description = "通过点击按钮手动启动此工作流",  // Fallback
+        iconRes = R.drawable.rounded_play_arrow_24,
+        category = "触发器"
     )
 
     /** 输出参数：触发是否成功 (始终为 true)。 */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            "success",
+            "是否成功",
+            VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_trigger_manual_success_name
+        )
     )
 
     /** 模块摘要：直接使用元数据中的名称。 */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return metadata.name
+        return metadata.getLocalizedName(context)
     }
 
     /** 执行逻辑：报告被手动触发，并返回成功。 */

@@ -80,10 +80,13 @@ class CoreScreenOperationModuleUIProvider : ModuleUIProvider {
         holder.advancedContainer.isVisible = false
 
         // 恢复操作类型
-        val opType = currentParameters["operation_type"] as? String ?: "点击"
+        val tapOption = context.getString(R.string.option_vflow_core_screen_operation_click)
+        val longPressOption = context.getString(R.string.option_vflow_core_screen_operation_long_press)
+        val swipeOption = context.getString(R.string.option_vflow_core_screen_operation_swipe)
+        val opType = currentParameters["operation_type"] as? String ?: tapOption
         when (opType) {
-            "长按" -> holder.chipLongPress.isChecked = true
-            "滑动" -> holder.chipSwipe.isChecked = true
+            longPressOption -> holder.chipLongPress.isChecked = true
+            swipeOption -> holder.chipSwipe.isChecked = true
             else -> holder.chipTap.isChecked = true
         }
 
@@ -96,32 +99,32 @@ class CoreScreenOperationModuleUIProvider : ModuleUIProvider {
             return inputView
         }
 
-        holder.startInputView = setupInput(holder.startContainer, "target", "目标位置 / 起点")
-        holder.endInputView = setupInput(holder.endContainer, "target_end", "滑动终点")
+        holder.startInputView = setupInput(holder.startContainer, "target", context.getString(R.string.label_vflow_core_screen_operation_target))
+        holder.endInputView = setupInput(holder.endContainer, "target_end", context.getString(R.string.label_vflow_core_screen_operation_swipe_end))
 
         // 恢复持续时间
         val duration = (currentParameters["duration"] as? Number)?.toFloat()
-            ?: (if (opType == "滑动") 500f else if (opType == "长按") 1000f else 0f)
+            ?: (if (opType == swipeOption) 500f else if (opType == longPressOption) 1000f else 0f)
         holder.durationSlider.value = duration.coerceIn(0f, 5000f)
         holder.durationText.text = "${duration.toInt()} ms"
 
         // 更新 UI 状态
         fun updateUiState() {
             val type = when {
-                holder.chipLongPress.isChecked -> "长按"
-                holder.chipSwipe.isChecked -> "滑动"
-                else -> "点击"
+                holder.chipLongPress.isChecked -> longPressOption
+                holder.chipSwipe.isChecked -> swipeOption
+                else -> tapOption
             }
 
-            holder.endContainer.isVisible = (type == "滑动")
-            holder.durationContainer.isVisible = (type == "滑动" || type == "长按")
+            holder.endContainer.isVisible = (type == swipeOption)
+            holder.durationContainer.isVisible = (type == swipeOption || type == longPressOption)
 
-            val startLabel = if (type == "滑动") "滑动起点" else "目标位置"
+            val startLabel = if (type == swipeOption) context.getString(R.string.label_vflow_core_screen_operation_swipe_start) else context.getString(R.string.label_vflow_core_screen_operation_target)
             holder.startInputView?.findViewById<TextView>(R.id.input_name)?.text = startLabel
 
             // 智能设置默认时间
-            if (type != "点击" && holder.durationSlider.value == 0f) {
-                val newDuration = if (type == "滑动") 500f else 1000f
+            if (type != tapOption && holder.durationSlider.value == 0f) {
+                val newDuration = if (type == swipeOption) 500f else 1000f
                 holder.durationSlider.value = newDuration
                 holder.durationText.text = "${newDuration.toInt()} ms"
             }
@@ -143,6 +146,7 @@ class CoreScreenOperationModuleUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
+        // 使用硬编码字符串进行内部比较，因为 readFromEditor 无法访问 context
         val type = when {
             h.chipLongPress.isChecked -> "长按"
             h.chipSwipe.isChecked -> "滑动"
@@ -186,7 +190,7 @@ class CoreScreenOperationModuleUIProvider : ModuleUIProvider {
         if (valStr.isMagicVariable() || valStr.isNamedVariable()) {
             // 变量药丸（支持魔法变量和命名变量）
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
-            val displayName = PillRenderer.getDisplayNameForVariableReference(valStr!!, allSteps ?: emptyList())
+            val displayName = PillRenderer.getDisplayNameForVariableReference(valStr!!, allSteps ?: emptyList(), context)
             pill.findViewById<TextView>(R.id.pill_text).text = displayName
             pill.setOnClickListener { onMagicReq?.invoke(inputDef.id) }
             valueContainer.addView(pill)

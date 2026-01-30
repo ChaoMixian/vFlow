@@ -23,6 +23,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.DataOutputStream
 import androidx.core.net.toUri
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.core.logging.DebugLogger
 
@@ -38,7 +39,9 @@ object PermissionManager {
         id = "vflow.permission.CORE",
         name = "vFlow Core 服务",
         description = "vFlow 的核心后台服务，用于执行模拟点击、系统操作等高级功能。可以通过 Shizuku 或 Root 启动。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_core,
+        descriptionStringRes = R.string.permission_desc_core
     )
 
     /**
@@ -50,7 +53,9 @@ object PermissionManager {
         id = "vflow.permission.CORE_ROOT",
         name = "vFlow Core (Root)",
         description = "需要 vFlow Core 以 Root 权限运行才能使用的功能。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_core_root,
+        descriptionStringRes = R.string.permission_desc_core_root
     )
 
 
@@ -58,14 +63,18 @@ object PermissionManager {
         id = "vflow.permission.ACCESSIBILITY_SERVICE",
         name = "无障碍服务",
         description = "实现自动化点击、查找、输入等核心功能所必需的权限。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_accessibility,
+        descriptionStringRes = R.string.permission_desc_accessibility
     )
 
     val NOTIFICATIONS = Permission(
         id = Manifest.permission.POST_NOTIFICATIONS,
         name = "通知权限",
         description = "用于显示Toast提示、发送任务结果通知等。",
-        type = PermissionType.RUNTIME
+        type = PermissionType.RUNTIME,
+        nameStringRes = R.string.permission_name_notifications,
+        descriptionStringRes = R.string.permission_desc_notifications
     )
 
     // 定义悬浮窗权限
@@ -73,7 +82,9 @@ object PermissionManager {
         id = "vflow.permission.SYSTEM_ALERT_WINDOW",
         name = "悬浮窗权限",
         description = "允许应用在后台执行时显示输入框等窗口，这是实现复杂自动化流程的关键。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_overlay,
+        descriptionStringRes = R.string.permission_desc_overlay
     )
 
     // 定义通知使用权
@@ -81,17 +92,21 @@ object PermissionManager {
         id = "vflow.permission.NOTIFICATION_LISTENER_SERVICE",
         name = "通知使用权",
         description = "允许应用读取和操作状态栏通知，用于实现通知触发器、查找和移除通知等功能。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_notification_listener,
+        descriptionStringRes = R.string.permission_desc_notification_listener
     )
 
-    // 存储权限现在优先请求“所有文件访问权限”
+    // 存储权限现在优先请求"所有文件访问权限"
     val STORAGE = Permission(
         id = "vflow.permission.STORAGE",
         name = "文件访问权限",
         description = "允许应用读写 /sdcard/vFlow 目录下的脚本和资源文件。",
         type = PermissionType.SPECIAL, // 改为 SPECIAL，因为 Android 11+ 需要跳转设置
         // 兼容旧版本
-        runtimePermissions = listOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        runtimePermissions = listOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+        nameStringRes = R.string.permission_name_storage,
+        descriptionStringRes = R.string.permission_desc_storage
     )
 
 
@@ -102,7 +117,9 @@ object PermissionManager {
         description = "用于接收和读取短信，以触发相应的工作流。此权限组包含接收、读取短信。",
         type = PermissionType.RUNTIME,
         // 定义此权限对象实际包含的系统权限列表
-        runtimePermissions = listOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
+        runtimePermissions = listOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS),
+        nameStringRes = R.string.permission_name_sms,
+        descriptionStringRes = R.string.permission_desc_sms
     )
 
     // 蓝牙权限 (Android 12+)
@@ -110,7 +127,9 @@ object PermissionManager {
         id = Manifest.permission.BLUETOOTH_CONNECT,
         name = "蓝牙权限",
         description = "用于控制设备的蓝牙开关状态。",
-        type = PermissionType.RUNTIME
+        type = PermissionType.RUNTIME,
+        nameStringRes = R.string.permission_name_bluetooth,
+        descriptionStringRes = R.string.permission_desc_bluetooth
     )
 
     // 修改系统设置权限
@@ -118,7 +137,9 @@ object PermissionManager {
         id = "vflow.permission.WRITE_SETTINGS",
         name = "修改系统设置",
         description = "用于调整屏幕亮度等系统级别的设置。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_write_settings,
+        descriptionStringRes = R.string.permission_desc_write_settings
     )
 
     // 定义精确定位权限
@@ -126,7 +147,9 @@ object PermissionManager {
         id = Manifest.permission.ACCESS_FINE_LOCATION,
         name = "精确定位",
         description = "在部分安卓版本上，获取已保存的Wi-Fi列表需要此权限。",
-        type = PermissionType.RUNTIME
+        type = PermissionType.RUNTIME,
+        nameStringRes = R.string.permission_name_location,
+        descriptionStringRes = R.string.permission_desc_location
     )
 
     // 定义 Shizuku 权限
@@ -134,7 +157,9 @@ object PermissionManager {
         id = "vflow.permission.SHIZUKU",
         name = "Shizuku",
         description = "允许应用通过 Shizuku 执行需要更高权限的操作，例如 Shell 命令。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_shizuku,
+        descriptionStringRes = R.string.permission_desc_shizuku
     )
 
     // 定义电池优化白名单权限
@@ -142,21 +167,27 @@ object PermissionManager {
         id = "vflow.permission.IGNORE_BATTERY_OPTIMIZATIONS",
         name = "后台运行权限",
         description = "将应用加入电池优化白名单，确保后台触发器（如按键监听）能长时间稳定运行。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_battery,
+        descriptionStringRes = R.string.permission_desc_battery
     )
 
     // 定义精确闹钟权限
     val EXACT_ALARM = Permission(
         id = "vflow.permission.SCHEDULE_EXACT_ALARM",
         name = "闹钟和提醒",
-        description = "用于“定时触发”功能，确保工作流可以在精确的时间被唤醒和执行。",
-        type = PermissionType.SPECIAL
+        description = "用于\"定时触发\"功能，确保工作流可以在精确的时间被唤醒和执行。",
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_alarm,
+        descriptionStringRes = R.string.permission_desc_alarm
     )
     val ROOT = Permission(
         id = "vflow.permission.ROOT",
         name = "Root 权限",
         description = "允许应用通过超级用户权限执行底层系统命令。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_root,
+        descriptionStringRes = R.string.permission_desc_root
     )
 
     // 使用情况访问权限
@@ -164,7 +195,9 @@ object PermissionManager {
         id = Manifest.permission.PACKAGE_USAGE_STATS,
         name = "使用情况访问",
         description = "允许 vFlow 读取应用的使用统计信息（如使用时长、最后使用时间），提高 Agent 行为准确度。",
-        type = PermissionType.SPECIAL
+        type = PermissionType.SPECIAL,
+        nameStringRes = R.string.permission_name_usage_stats,
+        descriptionStringRes = R.string.permission_desc_usage_stats
     )
 
     // 所有已知特殊权限的列表，用于 UI 展示和快速查找

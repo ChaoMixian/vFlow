@@ -18,7 +18,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
-        android:text="添加新项目"
+        android:text="@string/text_add_new_item"
         app:icon="@drawable/ic_add"/>
 
 </LinearLayout>

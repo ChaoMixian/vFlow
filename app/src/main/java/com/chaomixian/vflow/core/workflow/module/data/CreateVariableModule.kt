@@ -17,6 +17,8 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class CreateVariableModule : BaseModule() {
     override val id = "vflow.variable.create"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_variable_create_name,
+        descriptionStringRes = R.string.module_vflow_variable_create_desc,
         name = "创建变量",
         description = "创建一个新的变量，可选择为其命名以便后续修改或读取。",
         iconRes = R.drawable.rounded_add_24,
@@ -28,8 +30,24 @@ class CreateVariableModule : BaseModule() {
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("variableName", "变量名称 (可选)", ParameterType.STRING, defaultValue = "", acceptsMagicVariable = false),
-        InputDefinition("type", "变量类型", ParameterType.ENUM, defaultValue = "文本", options = typeOptions, acceptsMagicVariable = false),
-        InputDefinition("value", "值", ParameterType.ANY, defaultValue = "", acceptsMagicVariable = true, supportsRichText = true)
+        InputDefinition(
+            id = "type",
+            nameStringRes = R.string.param_vflow_variable_create_type_name,
+            name = "变量类型",
+            staticType = ParameterType.ENUM,
+            defaultValue = "文本",
+            options = typeOptions,
+            acceptsMagicVariable = false
+        ),
+        InputDefinition(
+            id = "value",
+            nameStringRes = R.string.param_vflow_variable_create_value_name,
+            name = "值",
+            staticType = ParameterType.ANY,
+            defaultValue = "",
+            acceptsMagicVariable = true,
+            supportsRichText = true
+        )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
@@ -45,7 +63,14 @@ class CreateVariableModule : BaseModule() {
             "坐标" -> VTypeRegistry.COORDINATE.id
             else -> VTypeRegistry.STRING.id
         }
-        return listOf(OutputDefinition("variable", "变量值", outputTypeName))
+        return listOf(
+            OutputDefinition(
+                id = "variable",
+                name = "变量值",
+                nameStringRes = R.string.output_vflow_variable_create_variable_name,
+                typeName = outputTypeName
+            )
+        )
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -54,15 +79,15 @@ class CreateVariableModule : BaseModule() {
         val value = step.parameters["value"]
         val rawText = value?.toString() ?: ""
 
-        // 优先检查是否为“复杂内容”。
+        // 优先检查是否为"复杂内容"。
         // 如果是复杂的（包含多个变量或混合文本），则只返回简单标题。
         // RichTextUIProvider 会负责渲染预览视图。
         if (type == "文本" && VariableResolver.isComplex(rawText)) {
             return if (name.isNullOrBlank()) {
-                "创建 匿名变量 ($type)"
+                context.getString(R.string.summary_vflow_data_create_anon, type, "")
             } else {
                 val namePill = PillUtil.Pill("[[$name]]", "variableName")
-                PillUtil.buildSpannable(context, "创建变量 ", namePill, " ($type)")
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", type), namePill)
             }
         }
 
@@ -75,19 +100,19 @@ class CreateVariableModule : BaseModule() {
         // 其他情况（简单文本、数字、布尔、或直接引用变量的字典/列表），摘要中显示完整值
         val valuePill = PillUtil.createPillFromParam(value, getInputs().find { it.id == "value" })
         return if (name.isNullOrBlank()) {
-            PillUtil.buildSpannable(context, "创建匿名 ", type, " 为 ", valuePill)
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_anon, type, ""), valuePill)
         } else {
             val namePill = PillUtil.Pill("[[$name]]", "variableName")
-            PillUtil.buildSpannable(context, "创建变量 ", namePill, " (", type, ") 为 ", valuePill)
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", type), namePill, context.getString(R.string.summary_vflow_data_create_value_separator), valuePill)
         }
     }
 
     private fun buildSimpleSummary(context: Context, name: String?, type: String): CharSequence {
         return if (name.isNullOrBlank()) {
-            "创建 匿名变量 ($type)"
+            context.getString(R.string.summary_vflow_data_create_anon, type, "")
         } else {
             val namePill = PillUtil.Pill("[[$name]]", "variableName")
-            PillUtil.buildSpannable(context, "创建变量 ", namePill, " ($type)")
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", type), namePill)
         }
     }
 

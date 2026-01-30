@@ -25,8 +25,10 @@ class CoreTouchReplayModule : BaseModule() {
 
     override val id = "vflow.core.touch_replay"
     override val metadata = ActionMetadata(
-        name = "触摸回放",
-        description = "回放录制的触摸操作序列，可调节回放速度",
+        name = "触摸回放",  // Fallback
+        nameStringRes = R.string.module_vflow_core_touch_replay_name,
+        description = "回放录制的触摸操作序列，可调节回放速度",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_touch_replay_desc,
         iconRes = R.drawable.rounded_all_out_24,
         category = "Core (Beta)"
     )
@@ -55,15 +57,16 @@ class CoreTouchReplayModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val recordingData = step.parameters["recording_data"] as? String
         val speed = step.parameters["speed"] as? Number ?: 1.0
+        val speedValue = speed.toDouble()
 
         return if (recordingData.isNullOrEmpty()) {
-            "触摸回放 (未录制)"
+            context.getString(R.string.summary_vflow_core_touch_replay_not_recorded)
         } else {
             val data = TouchRecordingData.fromJson(recordingData)
             if (data != null) {
-                "回放 ${data.events.size} 个触摸事件，速度 ${speed}x"
+                context.getString(R.string.summary_vflow_core_touch_replay_with_data, data.events.size, speedValue)
             } else {
-                "触摸回放 (数据错误)"
+                context.getString(R.string.summary_vflow_core_touch_replay_error)
             }
         }
     }

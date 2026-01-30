@@ -23,8 +23,10 @@ class CoreGetClipboardModule : BaseModule() {
 
     override val id = "vflow.core.get_clipboard"
     override val metadata = ActionMetadata(
-        name = "读取剪贴板",
-        description = "使用 vFlow Core 读取剪贴板内容。",
+        name = "读取剪贴板",  // Fallback
+        nameStringRes = R.string.module_vflow_core_get_clipboard_name,
+        description = "使用 vFlow Core 读取剪贴板内容。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_get_clipboard_desc,
         iconRes = R.drawable.rounded_content_paste_24,
         category = "Core (Beta)"
     )
@@ -36,12 +38,12 @@ class CoreGetClipboardModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("text", "剪贴板内容", VTypeRegistry.STRING.id),
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("text", "剪贴板内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_core_get_clipboard_text_name),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_get_clipboard_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return PillUtil.buildSpannable(context, "vFlow Core 读取剪贴板")
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_get_clipboard))
     }
 
     override suspend fun execute(

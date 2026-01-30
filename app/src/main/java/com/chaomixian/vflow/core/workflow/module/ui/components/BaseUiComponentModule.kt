@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.workflow.module.ui.components
 import com.chaomixian.vflow.core.types.VTypeRegistry
 
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.basic.VString
@@ -48,7 +49,7 @@ abstract class BaseUiComponentModule : BaseModule() {
         if (list != null) {
             val element = createUiElement(context, step = context.allSteps[context.currentStepIndex])
             list.add(element)
-            onProgress(ProgressUpdate("已注册组件: ${element.id}"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_component_registered, element.id)))
 
             // 保存对 namedVariables 的引用，用于动态获取组件值
             // 在事件循环中，组件值会被更新到 namedVariables["component_value.$componentId"]
@@ -71,7 +72,7 @@ abstract class BaseUiComponentModule : BaseModule() {
                 "id" to VString(element.id)
             ))
         } else {
-            return ExecutionResult.Failure("位置错误", "UI 组件必须放置在\"创建界面\"积木块内部。")
+            return ExecutionResult.Failure("位置错误", appContext.getString(R.string.error_vflow_ui_wrong_position))
         }
     }
 }

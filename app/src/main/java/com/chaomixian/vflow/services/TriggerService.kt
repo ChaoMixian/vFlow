@@ -61,7 +61,7 @@ class TriggerService : Service() {
         // 让服务变得自给自足，无论应用进程是否存活，都能正确初始化所有依赖项。
         // 这可以修复在后台被杀后触发工作流导致的 UninitializedPropertyAccessException 崩溃。
         DebugLogger.initialize(applicationContext) // 确保服务独立运行时也能初始化
-        ModuleRegistry.initialize()
+        ModuleRegistry.initialize(applicationContext)
         ModuleManager.loadModules(applicationContext) // 注册用户模块
         TriggerHandlerRegistry.initialize() // 确保服务独立运行时也能初始化注册表
         ExecutionNotificationManager.initialize(this)

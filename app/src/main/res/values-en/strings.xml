@@ -1,0 +1,604 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">vFlow</string>
+    <string name="accessibility_service_description">vFlow service can perform various tasks through automated workflows.</string>
+
+    <string name="title_home">Home</string>
+    <string name="title_workflows">Workflows</string>
+    <string name="title_settings">Settings</string>
+    <string name="settings_section_theme">Theme</string>
+    <string name="settings_switch_dynamic_color">Dynamic Color</string>
+    <string name="settings_switch_dynamic_color_desc">Generate app theme based on your wallpaper colors (requires app restart).</string>
+    <string name="settings_section_general">General Settings</string>
+    <string name="settings_switch_progress_notification">Show Execution Progress Notification</string>
+    <string name="settings_switch_progress_notification_desc">Display a progress notification in the status bar when workflows run in the background.</string>
+    <string name="settings_switch_force_keep_alive">Force Keep Alive (Shizuku)</string>
+    <string name="settings_switch_force_keep_alive_desc">Experimental feature. Automatically restart the service when killed by the system through Shizuku daemon. May increase battery usage.</string>
+
+    <string name="settings_section_debugging">Debugging</string>
+    <string name="settings_switch_enable_logging">Record Debug Logs</string>
+    <string name="settings_switch_enable_logging_desc">When enabled, all app logs will be recorded in memory until the app is force stopped. Slightly increases memory usage.</string>
+    <string name="settings_button_export_logs">Export Logs</string>
+    <string name="settings_button_clear_logs">Clear Logs</string>
+
+
+    <string name="settings_section_permissions">Permission Manager</string>
+    <string name="settings_section_permissions_desc">View and manage all permissions required by the app.</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_section_about_desc">View app version, open source licenses, and developer info.</string>
+    <string name="about_version_label">Version %s</string>
+    <string name="about_developer_label">Developer</string>
+    <string name="about_developer_name">ChaoMixian</string>
+    <string name="about_github_button">View on GitHub</string>
+
+    <string name="permission_activity_title">Permission Request</string>
+    <string name="permission_header_for_workflow">To run workflow \"%s\" properly, please grant the following permissions:</string>
+    <string name="permission_header_global">Manage all permissions required by the app:</string>
+    <string name="permission_status_granted">Status: Granted</string>
+    <string name="permission_status_denied">Status: Denied</string>
+    <string name="permission_button_grant">Grant</string>
+    <string name="permission_button_granted">Granted</string>
+    <string name="permission_button_continue">Continue after all permissions granted</string>
+
+    <string name="workflow_item_menu_add_shortcut">Add to Home Screen</string>
+    <string name="workflow_item_menu_duplicate">Duplicate</string>
+    <string name="workflow_item_menu_export_single">Export This Workflow</string>
+    <string name="workflow_item_menu_delete">Delete</string>
+    <string name="dialog_delete_title">Confirm Delete</string>
+    <string name="dialog_delete_message">Are you sure you want to delete workflow \"%s\"? This action cannot be undone.</string>
+    <string name="dialog_unsaved_title">Unsaved Changes</string>
+    <string name="dialog_unsaved_message">Do you want to save changes before exiting?</string>
+    <string name="dialog_unsaved_save_exit">Save</string>
+    <string name="dialog_unsaved_discard">Discard</string>
+
+    <string name="common_delete">Delete</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_confirm">Confirm</string>
+    <string name="workflow_editor_add_action">Add Action</string>
+    <string name="picker_select_trigger">Select a trigger</string>
+    <string name="picker_select_action">Select an action</string>
+    <string name="workflow_editor_execute">Execute</string>
+    <string name="workflow_editor_save">Save</string>
+    <string name="share_to_vflow">Share to vFlow</string>
+    <string name="shortcut_executing">Launching via shortcut: %s</string>
+
+    <string name="screen_op_type_label">Operation Type</string>
+    <string name="screen_op_tap">Tap</string>
+    <string name="screen_op_long_press">Long Press</string>
+    <string name="screen_op_swipe">Swipe</string>
+    <string name="screen_op_duration_label">Duration (ms)</string>
+    <string name="screen_op_advanced_settings">More Settings</string>
+    <string name="screen_op_execution_mode">Execution Mode</string>
+
+    <string name="agent_instruction_label">Instruction</string>
+    <string name="agent_max_steps_label">Max Steps</string>
+    <string name="agent_tools_label">Enable Tools</string>
+
+    <!-- Common strings for backward compatibility -->
+    <string name="common_save">Save</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_settings">Settings</string>
+    <string name="common_add">Add</string>
+    <string name="common_remove">Remove</string>
+    <string name="common_ok">OK</string>
+    <string name="common_yes">Yes</string>
+    <string name="common_no">No</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_close">Close</string>
+    <string name="common_copy">Copy</string>
+    <string name="common_share">Share</string>
+    <string name="common_export">Export</string>
+    <string name="common_import">Import</string>
+
+    <!-- Home Screen -->
+    <string name="home_core_title">Core</string>
+    <string name="home_core_status_working">Working</string>
+    <string name="home_core_status_stopped">Stopped</string>
+    <string name="home_core_mode">Mode: %s</string>
+    <string name="home_privilege_root">Root</string>
+    <string name="home_privilege_shell">Shell</string>
+    <string name="home_privilege_none">No Privilege</string>
+    <string name="home_total_workflows">Total Workflows</string>
+    <string name="home_auto_tasks">Automated Tasks</string>
+    <string name="home_permission_health">Permission Health Check</string>
+    <string name="home_permission_good">Status: Good, all permissions granted</string>
+    <string name="home_permission_missing">Status: %d missing permissions</string>
+    <string name="home_recent_logs">Recent Logs</string>
+    <string name="home_quick_execute">Quick Execute</string>
+    <string name="home_starting_execution">Starting: %s</string>
+    <string name="home_stopped_execution">Stopped: %s</string>
+
+    <!-- Workflow Item -->
+    <string name="workflow_item_more_options">More options</string>
+    <string name="workflow_item_favorite">Favorite</string>
+    <string name="workflow_item_execute">Execute Workflow</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_update_download">Download Now</string>
+    <string name="settings_update_available">New version available v%s</string>
+    <string name="settings_switch_background_service">Show Background Service Notification</string>
+    <string name="settings_switch_background_service_desc">Shows a permanent notification in the status bar when running in the background. Disabling this may cause the background service to be killed by the system, affecting trigger stability.</string>
+    <string name="settings_switch_auto_enable_accessibility">Auto Enable Accessibility Service</string>
+    <string name="settings_switch_auto_enable_accessibility_desc">Automatically re-enables the accessibility service when it closes unexpectedly via Shizuku / Root. This feature requires Shizuku / Root permissions.</string>
+    <string name="settings_section_permissions_shell">Permissions &amp; Shell</string>
+    <string name="settings_shell_preference">Shell Preference</string>
+    <string name="settings_shell_preference_desc">For executing screenshots, Shell commands, and other operations</string>
+    <string name="settings_btn_shell_shizuku">Shizuku</string>
+    <string name="settings_btn_shell_root">Root</string>
+    <string name="settings_button_run_diagnostic">Run Key Diagnostic</string>
+    <string name="settings_button_key_tester">Key Tester</string>
+    <string name="settings_button_core_management">vFlow Core Management</string>
+    <string name="settings_switch_keep_alive_unavailable">%1$s (Shizuku not active)</string>
+    <string name="settings_switch_auto_accessibility_unavailable">Auto Enable Accessibility Service (Shizuku/Root not authorized)</string>
+    <string name="settings_toast_shizuku_watcher_started">Shizuku watcher started</string>
+    <string name="settings_toast_shizuku_watcher_stopped">Shizuku watcher stopped</string>
+    <string name="settings_toast_auto_accessibility_enabled">Auto accessibility service enabled</string>
+    <string name="settings_toast_auto_accessibility_disabled">Auto accessibility service disabled</string>
+    <string name="settings_toast_operation_failed">Operation failed, please check Shell permissions</string>
+    <string name="settings_toast_logging_enabled">Debug logging enabled</string>
+    <string name="settings_toast_logging_disabled">Debug logging disabled and cleared</string>
+    <string name="settings_toast_logs_cleared">Logs cleared</string>
+    <string name="settings_toast_shizuku_not_active">Please activate Shizuku first</string>
+    <string name="settings_toast_diagnostic_running">Running diagnostics...</string>
+    <string name="settings_toast_diagnostic_complete">Diagnostic complete, please click "Export Logs" to view detailed results</string>
+    <string name="settings_toast_logs_exported">Logs exported successfully</string>
+    <string name="settings_toast_export_failed">Export failed: %s</string>
+
+    <!-- Language Settings -->
+    <string name="settings_section_language">Language</string>
+    <string name="settings_language_desc">Choose app display language</string>
+    <string name="settings_language_dialog_title">Select Language</string>
+    <string name="settings_toast_language_changed">Language changed, please restart app to apply</string>
+    <string name="settings_toast_restart_needed">App restart needed to apply new language</string>
+    <string name="settings_button_restart">Restart Now</string>
+    <string name="settings_button_later">Later</string>
+
+    <!-- Workflow Editor -->
+    <string name="editor_toast_execution_start">Starting execution: %s</string>
+    <string name="editor_toast_workflow_name_empty">Workflow name cannot be empty</string>
+    <string name="editor_toast_ui_inspector_started">UI Inspector started, drag icon to select controls</string>
+    <string name="editor_group_named_variables">Named Variables</string>
+    <string name="variable_type_text">Text</string>
+    <string name="variable_named_variable">Named Variable</string>
+    <string name="editor_toast_variable_reference_updated">Automatically updated references to variable \'%s\'</string>
+    <string name="editor_toast_input_definition_not_found">Cannot find input definition: %s</string>
+    <string name="editor_toast_trigger_cannot_duplicate">Trigger cannot be duplicated</string>
+    <string name="editor_toast_steps_duplicated">Duplicated %d steps</string>
+    <string name="editor_toast_invalid_move">Invalid move</string>
+    <string name="editor_toast_unknown_modules_removed">Automatically removed %d unknown or deprecated modules.</string>
+    <string name="editor_button_stop">Stop</string>
+    <string name="editor_toast_workflow_saved">Workflow saved</string>
+    <string name="editor_dialog_overwrite_title">Overwrite existing steps?</string>
+    <string name="editor_dialog_overwrite_message">AI has generated new workflow steps. Do you want to clear all current steps in the editor and apply the newly generated content?</string>
+    <string name="editor_button_overwrite">Overwrite</string>
+    <string name="editor_button_append_to_end">Append to end</string>
+    <string name="editor_toast_ai_workflow_applied">Applied AI-generated workflow</string>
+    <string name="editor_toast_steps_appended">Steps appended</string>
+
+    <!-- Permission Activity -->
+    <string name="permission_toast_shizuku_not_started">Shizuku is not started, please start Shizuku service first</string>
+
+    <!-- WorkflowListFragment -->
+    <string name="toast_overlay_permission_required">Overlay permission required to show quick control panel</string>
+    <string name="toast_export_success">Export successful</string>
+    <string name="toast_export_failed">Export failed: %s</string>
+    <string name="toast_backup_success">Backup successful</string>
+    <string name="toast_backup_failed">Backup failed: %s</string>
+    <string name="toast_no_workflow_in_file">No workflows found in file</string>
+    <string name="toast_import_failed">Import failed: %s</string>
+    <string name="toast_copied_as">Copied as \'%s (Copy)\'</string>
+    <string name="toast_starting_workflow">Starting: %s</string>
+    <string name="toast_import_completed">Import completed</string>
+    <string name="dialog_overlay_permission_title">Overlay Permission Required</string>
+    <string name="dialog_overlay_permission_message">To show quick control panels for favorite workflows, overlay permission is required.</string>
+    <string name="dialog_button_go_to_settings">Go to Settings</string>
+    <string name="dialog_import_conflict_title">Import Conflict</string>
+    <string name="dialog_import_conflict_message" formatted="false">A workflow named \'%s\' already exists (ID: %s...). How do you want to handle \'%s\' from the file?</string>
+    <string name="dialog_button_keep_both">Keep Both</string>
+    <string name="dialog_button_replace">Replace</string>
+    <string name="dialog_button_skip">Skip</string>
+    <string name="toast_workflow_replaced">\'%s\' has been replaced</string>
+    <string name="toast_workflow_imported_name">%s (Imported)</string>
+    <string name="toast_workflow_imported_as_copy">\'%s\' has been imported as a copy</string>
+
+    <!-- ModuleManagementFragment -->
+    <string name="dialog_module_exists_title">Module Already Exists</string>
+    <string name="dialog_module_exists_message">A module with ID \"%s\" already exists.\n\nDo you want to overwrite it?</string>
+    <string name="dialog_module_dependency_title">Dependency Exists</string>
+    <string name="dialog_module_dependency_message">Warning: %d workflow(s) are using this module:\n\n%sForcibly deleting will cause these workflows to malfunction.</string>
+    <string name="dialog_button_force_delete">Force Delete</string>
+    <string name="dialog_delete_module_title">Delete Module</string>
+    <string name="dialog_delete_module_message">Are you sure you want to delete module \"%s\"?</string>
+    <string name="dialog_button_overwrite">Overwrite</string>
+    <string name="toast_module_deleted">Deleted</string>
+    <string name="dialog_unknown_error">Unknown error</string>
+    <string name="dialog_parse_module_failed">Failed to parse module</string>
+    <string name="dialog_install_failed">Installation failed</string>
+    <string name="header_user_modules">User Modules (%d)</string>
+    <string name="header_builtin_modules">Built-in Modules (%d)</string>
+    <string name="text_no_modules">No modules available</string>
+    <string name="label_module_id">Module ID</string>
+    <string name="label_no_input_params">No input parameters</string>
+    <string name="label_no_output_vars">No output variables</string>
+    <string name="label_param_type">Type</string>
+    <string name="permission_accessibility">Accessibility</string>
+    <string name="permission_overlay">Overlay</string>
+    <string name="permission_storage">Read/Write Storage</string>
+    <string name="permission_usage_stats">Usage Stats</string>
+    <string name="permission_notification_listener">Notification Listener</string>
+
+    <!-- AiGenerationSheet -->
+    <string name="toast_please_enter_requirement">Please enter requirement</string>
+    <string name="toast_please_enter_api_key">Please enter API Key in settings</string>
+    <string name="toast_generation_failed">Generation failed: %s</string>
+    <string name="dialog_stop_generation_title">Stop Generation?</string>
+    <string name="dialog_stop_generation_message">AI is generating, are you sure you want to interrupt?</string>
+
+    <!-- MagicVariablePickerSheet -->
+    <string name="dialog_dictionary_title">Dictionary: %s</string>
+    <string name="dialog_enter_dictionary_key_title">Enter dictionary key</string>
+    <string name="dialog_list_title">List: %s</string>
+    <string name="dialog_enter_list_index_title">Enter list index</string>
+    <string name="dialog_select_property_title">Select property of %s</string>
+
+    <!-- ModuleRepoFragment -->
+    <string name="text_load_failed">Load failed: %s</string>
+    <string name="toast_load_failed">Load failed: %s</string>
+    <string name="dialog_download_module_title">Download Module</string>
+    <string name="dialog_download_module_message" formatted="false">Are you sure you want to download \'%s\'?\n\nDescription: %s\n\nVersion: v%s\nCategory: %s\nPermissions: %s</string>
+    <string name="dialog_button_download">Download</string>
+    <string name="toast_downloading">Downloading: %s</string>
+    <string name="toast_download_failed">Download failed: %s</string>
+    <string name="toast_install_success">Installation successful: %s</string>
+    <string name="toast_install_failed">Installation failed: %s</string>
+    <string name="dialog_module_conflict_title">Module Conflict</string>
+    <string name="dialog_module_conflict_message" formatted="false">A module with ID \'%s\' already exists. How do you want to handle \'%s\' from the repository?</string>
+    <string name="toast_module_replaced">\'%s\' has been replaced</string>
+    <string name="label_no_permissions">None</string>
+
+    <!-- WorkflowRepoFragment -->
+    <string name="text_no_workflows">No workflows available</string>
+    <string name="dialog_download_workflow_title">Download Workflow</string>
+    <string name="dialog_download_workflow_message" formatted="false">Are you sure you want to download \'%s\'?\n\n%s</string>
+    <string name="toast_download_workflow_success">Download successful: %s</string>
+    <string name="toast_workflow_downloaded_as_copy">\'%s\' has been downloaded as a copy</string>
+    <string name="dialog_workflow_conflict_title">Workflow Conflict</string>
+    <string name="dialog_workflow_conflict_message" formatted="false">A workflow named \'%s\' already exists (ID: %s...). How do you want to handle \'%s\' from the repository?</string>
+    <string name="label_workflow_from_repo">(Repository)</string>
+
+    <!-- ActionEditorSheet -->
+    <string name="editor_edit_parameter">Edit %s</string>
+    <string name="editor_error_policy_stop">On error: Stop workflow (default)</string>
+    <string name="editor_error_policy_skip">On error: Skip this step and continue</string>
+    <string name="editor_error_policy_retry">On error: Retry</string>
+    <string name="editor_retry_count">Retry count</string>
+    <string name="editor_retry_times">times</string>
+    <string name="editor_retry_interval">Retry interval (ms)</string>
+    <string name="editor_more_settings">More settings</string>
+    <string name="tab_workflows">Workflows</string>
+    <string name="tab_modules">Modules</string>
+
+    <!-- Workflow Editor -->
+    <string name="workflow_name_hint">Workflow name</string>
+    <string name="ai_generate">AI Generate</string>
+    <string name="add_workflow">Add workflow</string>
+
+    <!-- Module Management -->
+    <string name="install_module">Install module</string>
+    <string name="module_author_version" formatted="false">Author: %s   Version: v%s</string>
+    <string name="module_find_text_name">Find Text</string>
+    <string name="module_find_text_description">Find element on screen</string>
+    <string name="module_vflow_system_systeminfo_name">Get System Info</string>
+    <string name="module_vflow_system_systeminfo_desc">Get current system information.</string>
+
+    <!-- Category Names -->
+    <!-- Note: category_template and category_trigger are already defined in strings_module.xml -->
+
+    <!-- Error Messages -->
+    <string name="error_cannot_read_file">Cannot read file</string>
+    <string name="error_backup_format_invalid">Backup file format invalid</string>
+    <string name="error_single_workflow_format_invalid">Single workflow file format invalid</string>
+    <string name="error_unknown_error">Unknown error</string>
+    <string name="error_named_variable">Named variable (%s)</string>
+
+    <!-- Layout Hardcoded Strings -->
+    <string name="label_module_details">Module Details</string>
+    <string name="label_inputs">Input Parameters</string>
+    <string name="label_outputs">Output Variables</string>
+    <string name="text_none">None</string>
+    <string name="button_close">Close</string>
+    <string name="label_parameter_name">Parameter Name</string>
+    <string name="desc_select_variable">Select Variable</string>
+    <string name="button_download">Download</string>
+    <string name="button_install_module">Install Module</string>
+    <string name="label_module_name">Module Name</string>
+    <string name="label_category">Category</string>
+    <string name="text_module_description">This is the module description...</string>
+    <string name="text_ready">Ready</string>
+    <string name="text_waiting_data">Waiting for data...</string>
+    <string name="text_select_slot_1">Select Slot 1</string>
+    <string name="text_select_slot_2">Select Slot 2</string>
+    <string name="text_select_slot_3">Select Slot 3</string>
+    <string name="text_select_slot_4">Select Slot 4</string>
+    <string name="button_complete_config">Complete Config</string>
+    <string name="text_workflow_error">Workflow Execution Error</string>
+    <string name="text_workflow_unnamed">Workflow: Unnamed</string>
+    <string name="text_error_module">Error Module: #1 Click</string>
+    <string name="label_error_reason">Error Reason</string>
+    <string name="text_use_same_choice">Use same choice for subsequent actions</string>
+    <string name="label_log_details">Log Details</string>
+    <string name="label_basic_info">Basic Info</string>
+    <string name="text_execution_success">Execution Successful</string>
+    <string name="text_execution_details">Execution Details</string>
+    <string name="text_no_detailed_logs">No detailed logs</string>
+    <string name="text_float_window">Float Window</string>
+    <string name="text_activity_not_exported">This Activity is not exported, regular methods may not be able to start it</string>
+    <string name="text_recording_status">Recording... 0s | 0 Events</string>
+    <string name="button_stop">Stop</string>
+    <string name="label_source_image">Source Image</string>
+    <string name="text_exposure">Exposure</string>
+    <string name="text_saturation">Saturation</string>
+    <string name="text_highlights">Highlights</string>
+    <string name="text_shadows">Shadows</string>
+    <string name="label_model_config">Model Configuration</string>
+    <string name="text_alibaba_cloud">Alibaba Cloud</string>
+    <string name="text_zhipu">Zhipu AI</string>
+    <string name="text_custom">Custom</string>
+    <string name="text_no_tools_selected">No tools selected</string>
+    <string name="label_service_provider">Service Provider</string>
+    <string name="label_trigger_type">Trigger Type</string>
+    <string name="text_network_connection_change">Network Connection Change</string>
+    <string name="text_wifi_state_change">Wi-Fi State Change</string>
+    <string name="label_event">Event</string>
+    <string name="text_connect_to">Connect To</string>
+    <string name="text_disconnect">Disconnect</string>
+    <string name="label_network">Network</string>
+    <string name="button_select_network">Select Network</string>
+    <string name="text_turned_on">Turned On</string>
+    <string name="text_turned_off">Turned Off</string>
+    <string name="text_add_new_item">Add New Item</string>
+    <string name="button_click_select_image">Click to Select Image</string>
+    <string name="text_workflow_to_call">Workflow to Call</string>
+    <string name="text_select_image_to_find">Select Image to Find on Screen</string>
+    <string name="text_empty_for_fullscreen">Leave empty to capture full screen, click button below to select region</string>
+    <string name="label_region_select_optional">Region Select (Optional)</string>
+    <string name="label_more_settings_execution">More Settings (Execution Mode)</string>
+    <string name="label_more_settings_ocr">More Settings (Language, Strategy, Recognition Region)</string>
+    <string name="label_more_settings_language">More Settings (Language, Strategy, Recognition Region)</string>
+    <string name="label_recognition_language">Recognition Language</string>
+    <string name="text_click">Tap</string>
+    <string name="text_long_press">Long Press</string>
+    <string name="text_swipe">Swipe</string>
+    <string name="text_containing_content">Content Contains</string>
+    <string name="text_auto_extract_verification_code">Auto Extract Verification Code</string>
+    <string name="text_scan_last_20">Scan Last 20</string>
+    <string name="label_duration_milliseconds">Duration (ms)</string>
+    <string name="label_advanced_options_type">Advanced Options (Package/Class/Type)</string>
+    <string name="label_advanced_options_body">Advanced Options (Parameters/Body)</string>
+    <string name="label_extended_params">Extended Parameters</string>
+    <string name="label_prompt">Prompt</string>
+    <string name="label_randomness">Randomness</string>
+    <string name="label_advanced_settings_url">Advanced Settings (URL/System)</string>
+    <string name="text_scan_recent_20">Scan Recent 20</string>
+    <string name="text_region_example">Region: 100,200,500,600</string>
+    <string name="text_open_uri">Open URI</string>
+    <string name="label_target_app">Target App/Activity</string>
+    <string name="text_not_recorded">Not recorded\nClick button below to record touch operations</string>
+    <string name="text_time_09_00">09:00</string>
+    <string name="text_scale_1_0">1.0x</string>
+    <string name="text_50_percent">50%</string>
+    <string name="text_60_fuzzy">60% Fuzzy</string>
+    <string name="text_70_loose">70% Loose</string>
+    <string name="text_80_recommended">80% Recommended</string>
+    <string name="text_90_precise">90% Precise</string>
+    <string name="text_select_app_activity">Select App/Activity</string>
+    <string name="text_ai_assisted_generation">AI Assisted Generation</string>
+    <string name="text_describe_requirements">Describe your requirements, AI will automatically build the workflow for you.</string>
+    <string name="text_deepseek">DeepSeek</string>
+    <string name="text_flags_integer">Flags (integer, separate with |)</string>
+    <string name="text_openai">OpenAI</string>
+    <string name="text_auto_infer_type">Auto-infer type: true/false -> Boolean, number -> Integer/Float</string>
+    <string name="text_day">Sun</string>
+    <string name="text_contrast">Contrast</string>
+    <string name="text_brightness">Brightness</string>
+    <string name="text_blacks">Blacks</string>
+    <string name="text_temperature">Temperature</string>
+    <string name="text_tint">Tint</string>
+    <string name="text_vignette">Vignette</string>
+    <string name="text_sharpen">Sharpen</string>
+    <string name="text_clarity">Clarity</string>
+    <string name="text_noise_reduction">Noise Reduction</string>
+    <string name="text_monday">Mon</string>
+    <string name="text_tuesday">Tue</string>
+    <string name="text_wednesday">Wed</string>
+    <string name="text_thursday">Thu</string>
+    <string name="text_friday">Fri</string>
+    <string name="text_saturday">Sat</string>
+    <string name="label_trigger_time">Trigger Time</string>
+    <string name="button_select_time">Select Time</string>
+    <string name="label_repeat">Repeat</string>
+    <string name="label_template_image">Template Image</string>
+    <string name="button_select_from_gallery">Select from Gallery</string>
+    <string name="button_screenshot_select">Screenshot Select</string>
+    <string name="label_match_similarity">Match Similarity</string>
+    <string name="label_output_format">Output Format</string>
+    <string name="text_coordinates">Coordinates</string>
+    <string name="label_select_tools">Select Tools</string>
+    <string name="label_sms_sender_condition">Sender Condition</string>
+    <string name="label_sms_content_condition">Content Condition</string>
+    <string name="label_bluetooth_state_change">Bluetooth State Change</string>
+    <string name="label_device_connection_change">Device Connection Change</string>
+    <string name="label_target_device">Target Device</string>
+    <string name="label_battery_trigger_condition">Trigger Condition</string>
+    <string name="label_below">Below</string>
+    <string name="label_above">Above</string>
+    <string name="label_battery_threshold">Battery Threshold</string>
+    <string name="label_workflow_not_selected">Not Selected</string>
+    <string name="button_select_workflow">Select Workflow</string>
+    <string name="button_set_region">Set Region</string>
+    <string name="button_select_region">Select Region</string>
+    <string name="button_clear">Clear</string>
+    <string name="label_generate_workflow">Generate Workflow</string>
+    <string name="label_select_action">Select Action</string>
+    <string name="text_no_matching_modules">No matching modules found</string>
+    <string name="label_input_content">Input Content</string>
+    <string name="label_execution_mode">Execution Mode</string>
+    <string name="label_request_method">Request Method</string>
+    <string name="label_query_params">Query Parameters</string>
+    <string name="label_request_headers">Request Headers</string>
+    <string name="label_request_body">Request Body</string>
+    <string name="label_invoke_method">Invoke Method</string>
+    <string name="label_filter_mode">Filter Mode</string>
+    <string name="text_latest_one">Latest One</string>
+    <string name="text_from_sender">From Sender</string>
+    <string name="text_content_contains">Content Contains</string>
+    <string name="text_sender_and_content">Sender and Content</string>
+    <string name="button_auto_extract_verification_code">Auto Extract Verification Code</string>
+    <string name="label_scan_range">Scan Range</string>
+    <string name="label_recording_status">Recording Status</string>
+    <string name="button_record_touch">Record Touch</string>
+    <string name="label_playback_speed">Playback Speed</string>
+    <string name="label_operation_type">Operation Type</string>
+    <string name="label_function_mode">Function Mode</string>
+    <string name="text_recognize_full_text">Recognize Full Text</string>
+    <string name="text_find_text">Find Text</string>
+    <string name="text_recognition_language">Recognition Language</string>
+    <string name="text_recognition_strategy">Recognition Strategy</string>
+    <string name="label_recognition_region_optional">Recognition Region (Optional)</string>
+    <string name="text_empty_for_fullscreen_recognition">Leave empty to recognize full screen</string>
+    <string name="label_edit_action">Edit Action</string>
+    <string name="button_save">Save</string>
+    <string name="label_error_handling_strategy">Error Handling Strategy</string>
+    <string name="label_sender_number_contains">Sender Number Contains</string>
+    <string name="label_sms_content_contains">Message Content Contains</string>
+    <string name="hint_target_text">Text to Find</string>
+    <string name="label_execution_log">Execution Log</string>
+    <string name="desc_execute_workflow">Execute Workflow</string>
+    <string name="text_when_opened">When Opened</string>
+    <string name="text_when_closed">When Closed</string>
+    <string name="button_select_app_activity">Select App/Activity</string>
+    <string name="label_workflow">Workflow</string>
+    <string name="text_no_favorite_workflows">No favorite workflows</string>
+    <string name="desc_details">Details</string>
+    <string name="desc_delete">Delete</string>
+    <string name="hint_key">Key</string>
+    <string name="desc_select_magic_variable">Select Magic Variable</string>
+    <string name="desc_delete_item">Delete This Item</string>
+    <string name="desc_error_icon">Error Icon</string>
+    <string name="desc_delete_action">Delete Action</string>
+    <string name="desc_select_device">Select Device</string>
+    <string name="label_trigger_condition">Trigger Condition</string>
+    <string name="hint_package_name">App Package Contains (Optional)</string>
+    <string name="hint_notification_title">Notification Title Contains (Optional)</string>
+    <string name="hint_notification_content">Notification Content Contains (Optional)</string>
+    <string name="text_when_connected">When Connected</string>
+    <string name="text_when_disconnected">When Disconnected</string>
+    <string name="hint_model_name">Model Name</string>
+    <string name="hint_system_prompt">System Prompt</string>
+    <string name="hint_ai_prompt">I want to...</string>
+    <string name="text_launch_activity">Launch Activity</string>
+    <string name="text_send_broadcast">Send Broadcast</string>
+    <string name="text_start_service">Start Service</string>
+    <string name="hint_link_data_uri">Link / Data URI (vflow://...)</string>
+    <string name="hint_action_example">Action (e.g. android.intent.action.VIEW)</string>
+    <string name="label_extended_parameters">Extended Parameters</string>
+    <string name="hint_package_name_simple">Package Name</string>
+    <string name="hint_class_name">Class Name</string>
+    <string name="hint_package_name_with_type">Package Name</string>
+    <string name="hint_class_name_with_type">Class Name</string>
+    <string name="label_extended_parameters_with_extras">Extended Parameters</string>
+    <string name="hint_mime_type">MIME Type (e.g. image/*)</string>
+    <string name="hint_flags_example">Flags (e.g. 268435456 or 0x10000000)</string>
+
+    <!-- Core Management -->
+    <string name="title_core_management">vFlow Core Management</string>
+    <string name="action_back">Back</string>
+    <string name="label_launch_method">Launch Method</string>
+    <string name="title_shizuku_launch">Launch via Shizuku</string>
+    <string name="desc_shizuku_launch">Start Core using Shizuku permissions, no Root required</string>
+    <string name="toast_shizuku_not_active">Shizuku is not active or not authorized, cannot start</string>
+    <string name="status_starting_shizuku">Starting vFlow Core via Shizuku...</string>
+    <string name="toast_core_start_success">vFlow Core started successfully</string>
+    <string name="toast_core_start_failed">vFlow Core failed to start, please check logs</string>
+    <string name="status_core_start_failed">vFlow Core failed to start</string>
+    <string name="title_root_launch">Launch via Root</string>
+    <string name="desc_root_launch">Start Core using Root permissions, requires rooted device</string>
+    <string name="toast_root_not_available">Device is not rooted or Root permission not granted, cannot start</string>
+    <string name="status_starting_root">Starting vFlow Core via Root...</string>
+    <string name="title_adb_launch">Launch via Computer Authorization</string>
+    <string name="desc_adb_launch">Start Core from computer using ADB</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="text_execute_on_pc">Execute the following command on your computer:</string>
+    <string name="text_adb_prerequisites">• Ensure Android device is connected to computer via USB\n• USB debugging mode is enabled\n• ADB tools are installed on your computer</string>
+    <string name="toast_command_copied">Command copied to clipboard</string>
+    <string name="button_restart_core">Restart Core</string>
+    <string name="button_start_core">Start Core</string>
+    <string name="button_stop_core">Stop Core</string>
+    <string name="status_restarting_core">Restarting vFlowCore (loading new DEX)...</string>
+    <string name="toast_core_restart_success">vFlow Core restarted successfully</string>
+    <string name="toast_core_restart_failed">vFlow Core restart failed</string>
+    <string name="status_core_restart_failed">vFlow Core restart failed</string>
+    <string name="status_starting_core">Starting vFlow Core (%s)...</string>
+    <string name="status_stopping_core">Stopping vFlow Core...</string>
+    <string name="toast_core_stopped">vFlow Core stopped</string>
+    <string name="status_core_not_running">vFlow Core is not running</string>
+    <string name="toast_core_still_running">vFlow Core is still running</string>
+    <string name="status_core_still_running">vFlow Core is still running</string>
+    <string name="button_refresh_status">Refresh Status</string>
+    <string name="status_refreshing">Refreshing status...</string>
+    <string name="status_core_running">vFlow Core is running</string>
+    <string name="title_core_logs">vFlow Core Logs</string>
+    <string name="text_tap_to_expand">Tap to expand</string>
+    <string name="action_reload">Reload</string>
+    <string name="title_core_settings">vFlow Core Settings</string>
+    <string name="text_auto_start_core">Auto-start vFlow Core</string>
+    <string name="desc_auto_start_core">Automatically start Core using the last used method when app starts or device reboots</string>
+    <string name="toast_set_preferred_mode_first">Please manually start Core once to record your preference</string>
+    <string name="text_logs_not_available">Log file does not exist</string>
+    <string name="text_no_logs_yet">No logs yet...</string>
+    <string name="text_log_load_failed">Failed to read logs: %s</string>
+    <string name="status_checking">Checking...</string>
+    <string name="status_running">Running</string>
+    <string name="status_stopped">Stopped</string>
+    <string name="mode_root">Root</string>
+    <string name="mode_shell">Shell</string>
+    <string name="status_not_connected">Not connected</string>
+    <string name="text_not_available">Currently unavailable</string>
+    <string name="title_core_status">vFlow Core Status</string>
+    <string name="content_desc_close">Close</string>
+
+    <!-- Permissions -->
+    <string name="permission_name_core">vFlow Core Service</string>
+    <string name="permission_desc_core">vFlow Core background service for performing advanced operations like simulated clicks and system actions. Can be started via Shizuku or Root.</string>
+    <string name="permission_name_core_root">vFlow Core (Root)</string>
+    <string name="permission_desc_core_root">Features that require vFlow Core to run with Root privileges.</string>
+    <string name="permission_name_accessibility">Accessibility Service</string>
+    <string name="permission_desc_accessibility">Required for core automation features like clicks, find, and input.</string>
+    <string name="permission_name_notifications">Notification Permission</string>
+    <string name="permission_desc_notifications">Used to display Toast messages and send task result notifications.</string>
+    <string name="permission_name_overlay">Overlay Permission</string>
+    <string name="permission_desc_overlay">Allows the app to display input boxes and other windows while running in the background, essential for complex automation flows.</string>
+    <string name="permission_name_notification_listener">Notification Listener</string>
+    <string name="permission_desc_notification_listener">Allows the app to read and manipulate status bar notifications, used for notification triggers and notification management.</string>
+    <string name="permission_name_storage">Storage Access</string>
+    <string name="permission_desc_storage">Allows the app to read and write scripts and resource files in /sdcard/vFlow directory.</string>
+    <string name="permission_name_sms">SMS Permission</string>
+    <string name="permission_desc_sms">Used to receive and read SMS messages to trigger workflows. Includes receive and read SMS permissions.</string>
+    <string name="permission_name_bluetooth">Bluetooth Permission</string>
+    <string name="permission_desc_bluetooth">Used to control device Bluetooth on/off state.</string>
+    <string name="permission_name_write_settings">Modify System Settings</string>
+    <string name="permission_desc_write_settings">Used for system-level settings like screen brightness adjustment.</string>
+    <string name="permission_name_location">Fine Location</string>
+    <string name="permission_desc_location">Required on some Android versions to access saved Wi-Fi lists.</string>
+    <string name="permission_name_shizuku">Shizuku</string>
+    <string name="permission_desc_shizuku">Allows the app to perform elevated operations through Shizuku, such as Shell commands.</string>
+    <string name="permission_name_battery">Background Run Permission</string>
+    <string name="permission_desc_battery">Add the app to battery optimization whitelist to ensure background triggers (like key listeners) run stably.</string>
+    <string name="permission_name_alarm">Alarms and Reminders</string>
+    <string name="permission_desc_alarm">Used for "Time Trigger" feature to ensure workflows can be awakened and executed at precise times.</string>
+    <string name="permission_name_root">Root Permission</string>
+    <string name="permission_desc_root">Allows the app to execute low-level system commands with superuser privileges.</string>
+    <string name="permission_name_usage_stats">Usage Access</string>
+    <string name="permission_desc_usage_stats">Allows vFlow to read app usage statistics (like usage duration, last used time) for improved Agent accuracy.</string>
+</resources>

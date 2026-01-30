@@ -23,8 +23,10 @@ class WifiModule : BaseModule() {
 
     override val id = "vflow.system.wifi"
     override val metadata = ActionMetadata(
-        name = "Wi-Fi 设置",
-        description = "开启、关闭或切换Wi-Fi状态。",
+        nameStringRes = R.string.module_vflow_system_wifi_name,
+        descriptionStringRes = R.string.module_vflow_system_wifi_desc,
+        name = "Wi-Fi 设置",  // Fallback
+        description = "开启、关闭或切换Wi-Fi状态。",  // Fallback
         iconRes = R.drawable.rounded_android_wifi_3_bar_24,
         category = "应用与系统"
     )
@@ -40,7 +42,8 @@ class WifiModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "state",
-            name = "状态",
+            nameStringRes = R.string.param_vflow_system_wifi_state_name,
+            name = "状态",  // Fallback
             staticType = ParameterType.ENUM,
             defaultValue = "切换",
             options = stateOptions,
@@ -58,7 +61,7 @@ class WifiModule : BaseModule() {
             getInputs().find { it.id == "state" },
             isModuleOption = true
         )
-        return PillUtil.buildSpannable(context, statePill, " Wi-Fi")
+        return PillUtil.buildSpannable(context, statePill, context.getString(R.string.summary_vflow_system_wifi_suffix))
     }
 
     @Suppress("DEPRECATION")

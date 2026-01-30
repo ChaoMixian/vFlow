@@ -162,7 +162,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
             options.add("使用 ${item.variableName} 本身")
         }
 
-        properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
+        properties.forEach { prop -> options.add("${prop.getLocalizedName(requireContext())} (${prop.name})") }
         options.add("选择指定键的值...")  // 添加选项
 
         MaterialAlertDialogBuilder(requireContext())
@@ -191,7 +191,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                         }
                         val newItem = item.copy(
                             variableReference = newRef,
-                            variableName = "${item.variableName} 的 ${prop.displayName}"
+                            variableName = "${item.variableName} 的 ${prop.getLocalizedName(requireContext())}"
                         )
                         onSelection?.invoke(newItem)
                         dismiss()
@@ -258,7 +258,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
             options.add("使用 ${item.variableName} 本身")
         }
 
-        properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
+        properties.forEach { prop -> options.add("${prop.getLocalizedName(requireContext())} (${prop.name})") }
         options.add("选择指定索引的值...")  // 添加选项
 
         MaterialAlertDialogBuilder(requireContext())
@@ -287,7 +287,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                         }
                         val newItem = item.copy(
                             variableReference = newRef,
-                            variableName = "${item.variableName} 的 ${prop.displayName}"
+                            variableName = "${item.variableName} 的 ${prop.getLocalizedName(requireContext())}"
                         )
                         onSelection?.invoke(newItem)
                         dismiss()
@@ -355,7 +355,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
             options.add("使用 ${item.variableName} 本身")
         }
 
-        properties.forEach { prop -> options.add("${prop.displayName} (${prop.name})") }
+        properties.forEach { prop -> options.add("${prop.getLocalizedName(requireContext())} (${prop.name})") }
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("选择 ${item.variableName} 的属性")
@@ -381,7 +381,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
                     val newItem = item.copy(
                         variableReference = newRef,
-                        variableName = "${item.variableName} 的 ${prop.displayName}"
+                        variableName = "${item.variableName} 的 ${prop.getLocalizedName(requireContext())}"
                     )
                     onSelection?.invoke(newItem)
                 }

@@ -28,7 +28,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
-                    android:hint="工作流名称"
+                    android:hint="@string/workflow_name_hint"
                     android:importantForAutofill="no"
                     android:inputType="textCapWords"
                     android:maxLines="1"
@@ -42,7 +42,7 @@
                     android:layout_height="48dp"
                     android:layout_marginEnd="16dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="AI 生成"
+                    android:contentDescription="@string/ai_generate"
                     android:src="@drawable/rounded_hexagon_nodes_24"
                     app:tint="?attr/colorPrimary" />
 

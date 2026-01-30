@@ -25,7 +25,14 @@ const val LOOP_END_ID = "vflow.logic.loop.end"    // EndLoop模块ID
  */
 class LoopModule : BaseBlockModule() {
     override val id = LOOP_START_ID
-    override val metadata = ActionMetadata("循环", "重复执行一组操作固定的次数", R.drawable.rounded_cached_24, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_loop_start_name,
+        descriptionStringRes = R.string.module_vflow_logic_loop_start_desc,
+        name = "循环",
+        description = "重复执行一组操作固定的次数",
+        iconRes = R.drawable.rounded_cached_24,
+        category = "逻辑控制"
+    )
     override val pairingId = LOOP_PAIRING_ID
     override val stepIdsInBlock = listOf(LOOP_START_ID, LOOP_END_ID) // 定义Loop块包含的模块ID
 
@@ -33,6 +40,7 @@ class LoopModule : BaseBlockModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "count",
+            nameStringRes = R.string.param_vflow_logic_loop_start_count_name,
             name = "重复次数",
             staticType = ParameterType.NUMBER,
             defaultValue = 5L, // 默认5次
@@ -48,8 +56,8 @@ class LoopModule : BaseBlockModule() {
      * 使得循环体内的模块可以通过魔法变量引用它们。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("loop_index", "循环索引", VTypeRegistry.NUMBER.id),
-        OutputDefinition("loop_total", "循环总数", VTypeRegistry.NUMBER.id)
+        OutputDefinition("loop_index", nameStringRes = R.string.output_vflow_logic_loop_start_loop_index_name, name = "循环索引", typeName = VTypeRegistry.NUMBER.id),
+        OutputDefinition("loop_total", nameStringRes = R.string.output_vflow_logic_loop_start_loop_total_name, name = "循环总数", typeName = VTypeRegistry.NUMBER.id)
     )
 
 
@@ -59,7 +67,7 @@ class LoopModule : BaseBlockModule() {
             step.parameters["count"],
             getInputs().find { it.id == "count" }
         )
-        return PillUtil.buildSpannable(context, "循环 ", countPill, " 次")
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_logic_loop_prefix), countPill, context.getString(R.string.summary_vflow_logic_loop_suffix))
     }
 
     /** 验证参数：循环次数必须为正数。 */
@@ -111,10 +119,17 @@ class LoopModule : BaseBlockModule() {
  */
 class EndLoopModule : BaseModule() {
     override val id = LOOP_END_ID
-    override val metadata = ActionMetadata("结束循环", "", R.drawable.rounded_cached_24, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_loop_end_name,
+        descriptionStringRes = R.string.module_vflow_logic_loop_end_desc,
+        name = "结束循环",
+        description = "",
+        iconRes = R.drawable.rounded_cached_24,
+        category = "逻辑控制"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, LOOP_PAIRING_ID) // 标记为块结束
 
-    override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束循环"
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_end_loop)
 
     /** 执行结束循环模块：更新循环状态并发出 LoopAction.END 信号。 */
     override suspend fun execute(

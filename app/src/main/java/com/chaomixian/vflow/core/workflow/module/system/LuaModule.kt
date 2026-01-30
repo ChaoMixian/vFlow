@@ -21,8 +21,10 @@ class LuaModule : BaseModule() {
 
     override val id = "vflow.system.lua"
     override val metadata = ActionMetadata(
-        name = "Lua脚本",
-        description = "执行一段Lua脚本，可调用其他模块功能。",
+        name = "Lua脚本",  // Fallback
+        nameStringRes = R.string.module_vflow_system_lua_name,
+        description = "执行一段Lua脚本，可调用其他模块功能。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_system_lua_desc,
         iconRes = R.drawable.rounded_lua_24,
         category = "应用与系统"
     )
@@ -52,13 +54,14 @@ class LuaModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val script = step.parameters["script"] as? String ?: "..."
-        val firstLine = script.trim().lines().firstOrNull { it.isNotBlank() && !it.trim().startsWith("--") } ?: "空脚本"
+        val firstLine = script.trim().lines().firstOrNull { it.isNotBlank() && !it.trim().startsWith("--") }
+            ?: context.getString(R.string.summary_empty_script)
 
         // 更新 Pill 的构造以匹配新的签名
         val scriptPill = PillUtil.Pill(firstLine, "script")
 
         return PillUtil.buildSpannable(context,
-            "执行Lua脚本: ",
+            context.getString(R.string.summary_vflow_system_lua_prefix),
             scriptPill
         )
     }

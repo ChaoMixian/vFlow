@@ -30,8 +30,10 @@ class QuickViewModule : BaseModule() {
 
     override val id = "vflow.data.quick_view"
     override val metadata = ActionMetadata(
-        name = "快速查看",
-        description = "在悬浮窗中显示文本、数字、图片等各种类型的内容。",
+        nameStringRes = R.string.module_vflow_data_quick_view_name,
+        descriptionStringRes = R.string.module_vflow_data_quick_view_desc,
+        name = "快速查看",  // Fallback
+        description = "在悬浮窗中显示文本、数字、图片等各种类型的内容。",  // Fallback
         iconRes = R.drawable.rounded_preview_24,
         category = "应用与系统"
     )
@@ -48,7 +50,8 @@ class QuickViewModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "content",
-            name = "内容",
+            nameStringRes = R.string.param_vflow_data_quick_view_content_name,
+            name = "内容",  // Fallback
             staticType = ParameterType.ANY, // 接受任何类型的输入
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -60,7 +63,12 @@ class QuickViewModule : BaseModule() {
      * 增加 success 输出以保持统一。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            "success",
+            "是否成功",
+            VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_data_quick_view_success_name
+        )
     )
 
     /**
@@ -72,7 +80,7 @@ class QuickViewModule : BaseModule() {
         // 检查内容是否为复杂内容（包含变量或其他文本的组合）
         if (VariableResolver.isComplex(rawContent)) {
             // 复杂内容：只显示模块名称，详细内容由 UIProvider 在预览中显示
-            return metadata.name
+            return metadata.getLocalizedName(context)
         }
 
         // 简单内容：显示完整的摘要（带药丸）
@@ -80,7 +88,7 @@ class QuickViewModule : BaseModule() {
             step.parameters["content"],
             getInputs().find { it.id == "content" }
         )
-        return PillUtil.buildSpannable(context, "快速查看 ", contentPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_quick_view_prefix), contentPill)
     }
 
     /**

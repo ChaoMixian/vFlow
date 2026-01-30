@@ -10,14 +10,14 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="模板图片"
+        android:text="@string/label_template_image"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="选择要在屏幕上查找的图片"
+        android:text="@string/text_select_image_to_find"
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -61,7 +61,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="点击选择图片"
+                    android:text="@string/button_click_select_image"
                     android:textAppearance="?attr/textAppearanceBodyMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
@@ -82,7 +82,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="从相册选择"
+            android:text="@string/button_select_from_gallery"
             app:icon="@drawable/rounded_photo_24" />
 
         <com.google.android.material.button.MaterialButton
@@ -91,7 +91,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="截图选取"
+            android:text="@string/button_screenshot_select"
             app:icon="@drawable/rounded_fullscreen_portrait_24" />
     </LinearLayout>
 
@@ -105,7 +105,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="匹配相似度"
+        android:text="@string/label_match_similarity"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <com.google.android.material.chip.ChipGroup
@@ -121,14 +121,14 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="90% 精确" />
+            android:text="@string/text_90_precise" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_threshold_80"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="80% 推荐"
+            android:text="@string/text_80_recommended"
             android:checked="true" />
 
         <com.google.android.material.chip.Chip
@@ -136,14 +136,14 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="70% 宽松" />
+            android:text="@string/text_70_loose" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_threshold_60"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="60% 模糊" />
+            android:text="@string/text_60_fuzzy" />
     </com.google.android.material.chip.ChipGroup>
 
     <com.google.android.material.divider.MaterialDivider
@@ -156,7 +156,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="输出格式"
+        android:text="@string/label_output_format"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <com.google.android.material.chip.ChipGroup
@@ -172,7 +172,7 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="坐标"
+            android:text="@string/text_coordinates"
             android:checked="true" />
 
     </com.google.android.material.chip.ChipGroup>

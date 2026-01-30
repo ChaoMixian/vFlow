@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.ActionModule
+import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.chip.Chip
@@ -87,17 +88,24 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             val isTriggerPicker = arguments?.getBoolean("is_trigger_picker", false) ?: false
+
+            // 使用固定的中文 key 进行过滤（ModuleRegistry 内部使用中文）
             val categorizedModules = if (isTriggerPicker) {
                 ModuleRegistry.getModulesByCategory().filterKeys { it == "触发器" }
             } else {
                 ModuleRegistry.getModulesByCategory().filterKeys { it != "触发器" }
             }
 
-            allModuleGroups = categorizedModules
-            filteredModuleGroups = categorizedModules
+            // 将分类名转换为本地化名称
+            val localizedModules = categorizedModules.mapKeys { (category, _) ->
+                localizeCategoryName(category)
+            }
+
+            allModuleGroups = localizedModules
+            filteredModuleGroups = localizedModules
 
             withContext(Dispatchers.Main) {
-                titleView.text = if (isTriggerPicker) "选择一个触发器" else "选择一个动作"
+                titleView.text = if (isTriggerPicker) getString(R.string.picker_select_trigger) else getString(R.string.picker_select_action)
                 setupPermissionChips()
                 progressBar.visibility = View.GONE
                 recyclerView.visibility = View.VISIBLE
@@ -106,35 +114,52 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
         }
     }
 
+    private fun localizeCategoryName(chineseCategory: String): String {
+        return when (chineseCategory) {
+            "触发器" -> getString(R.string.category_trigger)
+            "界面交互" -> getString(R.string.category_interaction)
+            "逻辑控制" -> getString(R.string.category_logic)
+            "数据" -> getString(R.string.category_data)
+            "文件" -> getString(R.string.category_file)
+            "网络" -> getString(R.string.category_network)
+            "应用与系统" -> getString(R.string.category_device)
+            "Core (Beta)" -> "Core (Beta)"
+            "Shizuku" -> "Shizuku"
+            "模板" -> getString(R.string.category_template)
+            else -> chineseCategory
+        }
+    }
+
     private fun setupPermissionChips() {
         permissionChipGroup.removeAllViews()
         val allPermissions = allModuleGroups.values.flatten()
             .flatMap { it.requiredPermissions }
-            .distinctBy { it.name }
-            .sortedBy { it.name }
+            .distinctBy { it.id }
+            .sortedBy { it.id }
 
         val inflater = LayoutInflater.from(requireContext())
 
         selectedPermissions.clear()
-        allPermissions.forEach { selectedPermissions.add(it.name) }
+        allPermissions.forEach { selectedPermissions.add(it.id) }
 
         allPermissions.forEach { permission ->
             val chip = inflater.inflate(R.layout.chip_filter, permissionChipGroup, false) as Chip
-            chip.text = permission.name
+            chip.text = permission.getLocalizedName(requireContext())
             chip.isChecked = true // 默认选中
 
             // 为每个Chip单独设置监听器，而不是给整个Group设置
             chip.setOnCheckedChangeListener { buttonView, isChecked ->
-                val permissionName = buttonView.text.toString()
+                val permissionId = buttonView.tag as? String ?: return@setOnCheckedChangeListener
                 if (isChecked) {
-                    selectedPermissions.add(permissionName)
+                    selectedPermissions.add(permissionId)
                 } else {
-                    selectedPermissions.remove(permissionName)
+                    selectedPermissions.remove(permissionId)
                 }
                 // 使用防抖来避免快速点击时频繁刷新
                 debounceHandler.removeCallbacksAndMessages(null)
                 debounceHandler.postDelayed({ filterModules() }, 50)
             }
+            chip.tag = permission.id
             permissionChipGroup.addView(chip)
         }
     }
@@ -143,16 +168,23 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
     private fun filterModules() {
         searchJob?.cancel()
         searchJob = lifecycleScope.launch(Dispatchers.Default) {
+            // 在协程开始时获取 context，避免在后台线程调用 requireContext()
+            val context = requireContext()
+
             val query = searchView.query.toString().lowercase().trim()
 
             filteredModuleGroups = allModuleGroups.mapValues { (_, modules) ->
                 modules.filter { module ->
+                    val localizedName = module.metadata.getLocalizedName(context)
+                    val localizedDesc = module.metadata.getLocalizedDescription(context)
                     val textMatch = query.isEmpty() ||
+                            localizedName.lowercase().contains(query) ||
                             module.metadata.name.lowercase().contains(query) ||
+                            localizedDesc.lowercase().contains(query) ||
                             module.metadata.description.lowercase().contains(query)
 
                     val permissionMatch = module.requiredPermissions.all { perm ->
-                        selectedPermissions.contains(perm.name)
+                        selectedPermissions.contains(perm.id)
                     }
 
                     textMatch && permissionMatch
@@ -249,7 +281,7 @@ class ActionPickerItemAdapter(
         private val icon: ImageView = itemView.findViewById(R.id.icon_action_type)
 
         fun bind(module: ActionModule, onClick: (ActionModule) -> Unit) {
-            name.text = module.metadata.name
+            name.text = module.metadata.getLocalizedName(itemView.context)
             icon.setImageResource(module.metadata.iconRes)
 
             val context = itemView.context

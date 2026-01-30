@@ -25,39 +25,60 @@ class GetIpAddressModule : BaseModule() {
 
     override val id = "vflow.network.get_ip"
     override val metadata = ActionMetadata(
-        name = "获取IP地址",
-        description = "获取设备的本地或外部IP地址。",
+        nameStringRes = R.string.module_vflow_network_get_ip_name,
+        descriptionStringRes = R.string.module_vflow_network_get_ip_desc,
+        name = "获取IP地址",  // Fallback
+        description = "获取设备的本地或外部IP地址",  // Fallback
         iconRes = R.drawable.rounded_public_24,
         category = "网络"
     )
 
-    private val typeOptions = listOf("本地", "外部")
-    private val ipVersionOptions = listOf("IPv4", "IPv6")
+    private val typeOptions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_network_get_ip_type_local),
+            appContext.getString(R.string.option_vflow_network_get_ip_type_external)
+        )
+    }
+    private val ipVersionOptions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_network_get_ip_version_ipv4),
+            appContext.getString(R.string.option_vflow_network_get_ip_version_ipv6)
+        )
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "type",
             name = "类型",
+            nameStringRes = R.string.param_vflow_network_get_ip_type_name,
             staticType = ParameterType.ENUM,
-            defaultValue = "本地",
+            defaultValue = appContext.getString(R.string.option_vflow_network_get_ip_type_local),
             options = typeOptions,
             acceptsMagicVariable = false
         ),
         InputDefinition(
             id = "ip_version",
             name = "IP版本",
+            nameStringRes = R.string.param_vflow_network_get_ip_ip_version_name,
             staticType = ParameterType.ENUM,
-            defaultValue = "IPv4",
+            defaultValue = appContext.getString(R.string.option_vflow_network_get_ip_version_ipv4),
             options = ipVersionOptions,
             acceptsMagicVariable = false
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("ip_address", "IP地址", VTypeRegistry.STRING.id)
+        OutputDefinition(
+            "ip_address",
+            "IP地址",
+            VTypeRegistry.STRING.id,
+            nameStringRes = R.string.output_vflow_network_get_ip_ip_address_name
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val type = step.parameters["type"] as? String ?: ""
+        val ipVersion = step.parameters["ip_version"] as? String ?: ""
         val typePill = PillUtil.createPillFromParam(
             step.parameters["type"],
             getInputs().find { it.id == "type" },
@@ -68,7 +89,7 @@ class GetIpAddressModule : BaseModule() {
             getInputs().find { it.id == "ip_version" },
             isModuleOption = true
         )
-        return PillUtil.buildSpannable(context, "获取 ", typePill, " ", versionPill, " 地址")
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_network_get_ip), typePill, " ", versionPill, " 地址")
     }
 
     override suspend fun execute(
@@ -89,10 +110,16 @@ class GetIpAddressModule : BaseModule() {
             if (ipAddress != null) {
                 ExecutionResult.Success(mapOf("ip_address" to VString(ipAddress)))
             } else {
-                ExecutionResult.Failure("获取失败", "未能找到符合条件的 $type $ipVersion 地址。")
+                ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_network_get_ip_fetch_failed),
+                    "未能找到符合条件的 $type $ipVersion 地址。"
+                )
             }
         } catch (e: Exception) {
-            ExecutionResult.Failure("执行异常", e.localizedMessage ?: "发生了未知网络错误")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_network_get_ip_exception),
+                e.localizedMessage ?: "发生了未知网络错误"
+            )
         }
     }
 

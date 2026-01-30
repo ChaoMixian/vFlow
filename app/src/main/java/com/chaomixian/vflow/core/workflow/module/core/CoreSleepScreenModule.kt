@@ -21,8 +21,10 @@ class CoreSleepScreenModule : BaseModule() {
 
     override val id = "vflow.core.sleep_screen"
     override val metadata = ActionMetadata(
-        name = "关闭屏幕",
-        description = "使用 vFlow Core 关闭设备屏幕。",
+        name = "关闭屏幕",  // Fallback
+        nameStringRes = R.string.module_vflow_core_sleep_screen_name,
+        description = "使用 vFlow Core 关闭设备屏幕。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_sleep_screen_desc,
         iconRes = R.drawable.rounded_brightness_5_24,
         category = "Core (Beta)"
     )
@@ -34,11 +36,11 @@ class CoreSleepScreenModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_sleep_screen_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return "关闭屏幕"
+        return context.getString(R.string.summary_vflow_core_sleep_screen)
     }
 
     override suspend fun execute(

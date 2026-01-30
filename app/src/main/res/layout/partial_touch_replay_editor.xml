@@ -24,7 +24,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="录制状态"
+                android:text="@string/label_recording_status"
                 android:textAppearance="?attr/textAppearanceLabelLarge" />
 
             <TextView
@@ -32,7 +32,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="未录制\n点击下方按钮录制触摸操作"
+                android:text="@string/text_not_recorded"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 
             <com.google.android.material.button.MaterialButton
@@ -40,7 +40,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="录制触摸"
+                android:text="@string/button_record_touch"
                 app:icon="@drawable/rounded_arrow_upload_ready_24" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -61,7 +61,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="回放速度"
+                android:text="@string/label_playback_speed"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 
             <TextView

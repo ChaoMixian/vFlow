@@ -29,8 +29,10 @@ class AIModule : BaseModule() {
 
     override val id = "vflow.ai.completion"
     override val metadata = ActionMetadata(
-        name = "AI 对话",
-        description = "调用大模型 API (OpenAI/DeepSeek) 进行智能对话。",
+        name = "AI 对话",  // Fallback
+        nameStringRes = R.string.module_vflow_ai_completion_name,
+        description = "调用大模型 API (OpenAI/DeepSeek) 进行智能对话。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ai_completion_desc,
         iconRes = R.drawable.rounded_hexagon_nodes_24,
         category = "网络"
     )
@@ -40,14 +42,14 @@ class AIModule : BaseModule() {
     private val gson = Gson()
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("provider", "服务商", ParameterType.ENUM, "OpenAI", options = listOf("OpenAI", "DeepSeek", "自定义")),
+        InputDefinition("provider", "服务商", ParameterType.ENUM, "OpenAI", options = listOf("OpenAI", "DeepSeek", "自定义"), nameStringRes = R.string.param_vflow_network_ai_provider),
         InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://api.openai.com/v1"),
         InputDefinition("api_key", "API Key", ParameterType.STRING, ""),
-        InputDefinition("model", "模型", ParameterType.STRING, "gpt-3.5-turbo"),
-        InputDefinition("prompt", "提示词", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("system_prompt", "系统提示词", ParameterType.STRING, "You are a helpful assistant."),
-        InputDefinition("temperature", "随机性", ParameterType.NUMBER, 0.7),
-        InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true)
+        InputDefinition("model", "模型", ParameterType.STRING, "gpt-3.5-turbo", nameStringRes = R.string.param_vflow_network_ai_model),
+        InputDefinition("prompt", "提示词", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_network_ai_prompt),
+        InputDefinition("system_prompt", "系统提示词", ParameterType.STRING, "You are a helpful assistant.", nameStringRes = R.string.param_vflow_network_ai_system_prompt),
+        InputDefinition("temperature", "随机性", ParameterType.NUMBER, 0.7, nameStringRes = R.string.param_vflow_network_ai_temperature),
+        InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true, nameStringRes = R.string.param_vflow_network_ai_show_advanced)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -60,15 +62,18 @@ class AIModule : BaseModule() {
         val provider = step.parameters["provider"] as? String ?: "OpenAI"
         val promptText = step.parameters["prompt"] as? String ?: ""
 
-        // 如果内容是“复杂”的（多变量或长文本），VariableResolver.isComplex 会返回 true
+        // 如果内容是"复杂"的（多变量或长文本），VariableResolver.isComplex 会返回 true
         // 此时我们由 createPreview 显示大预览框，摘要只显示简单标题
         if (VariableResolver.isComplex(promptText)) {
             val providerPill = PillUtil.Pill(provider, "provider", isModuleOption = true)
-            return PillUtil.buildSpannable(context, "向 ", providerPill, " 发送请求")
+            val prefix = context.getString(R.string.summary_vflow_network_ai_prefix)
+            val suffix = context.getString(R.string.summary_vflow_network_ai_middle)
+            return PillUtil.buildSpannable(context, prefix, providerPill, suffix)
         } else {
             // 如果内容简单（单变量或短文本），显示完整的摘要（包含 Prompt 药丸）
             val promptPill = PillUtil.createPillFromParam(step.parameters["prompt"], getInputs().find { it.id == "prompt" })
-            return PillUtil.buildSpannable(context, "向 $provider 发送: ", promptPill)
+            val prefix = context.getString(R.string.summary_vflow_network_ai_with, provider)
+            return PillUtil.buildSpannable(context, prefix, promptPill)
         }
     }
 

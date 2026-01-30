@@ -21,6 +21,7 @@ import com.google.android.material.appbar.AppBarLayout
 import android.widget.Button
 import android.widget.TextView
 import rikka.shizuku.Shizuku
+import com.chaomixian.vflow.core.locale.toast
 import androidx.core.net.toUri
 
 // 继承 BaseActivity 以应用动态主题
@@ -133,11 +134,7 @@ class PermissionActivity : BaseActivity() {
                         Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
                     } catch (e: Exception) {
                         // Shizuku 未启动或异常
-                        android.widget.Toast.makeText(
-                            this,
-                            "Shizuku 未启动，请先启动 Shizuku 服务",
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
+                        toast(R.string.permission_toast_shizuku_not_started)
                     }
                     return
                 }

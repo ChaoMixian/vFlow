@@ -1,0 +1,1620 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Module Categories -->
+    <string name="category_device">Device &amp; System</string>
+    <string name="category_logic">Logic</string>
+    <string name="category_interaction">Screen Interaction</string>
+    <string name="category_network">Network</string>
+    <string name="category_data">Data Processing</string>
+    <string name="category_ui">UI Control</string>
+    <string name="category_trigger">Triggers</string>
+    <string name="category_template">Templates</string>
+
+    <!-- vflow.device.delay - Delay Module -->
+    <string name="module_vflow_device_delay_name">Delay</string>
+    <string name="module_vflow_device_delay_desc">Pause workflow for a period of time</string>
+    <string name="param_vflow_device_delay_duration_name">Duration</string>
+    <string name="output_vflow_device_delay_success_name">Success</string>
+    <string name="summary_vflow_device_delay_prefix">Delay</string>
+    <string name="summary_vflow_device_delay_suffix">ms</string>
+    <string name="error_vflow_device_delay_negative">Delay cannot be negative</string>
+    <string name="error_vflow_device_delay_invalid_format">Invalid number format</string>
+    <string name="error_vflow_device_delay_parameter_error">Parameter error</string>
+    <string name="error_vflow_device_delay_negative_validation">Delay cannot be negative</string>
+    <string name="msg_vflow_device_delay_delaying">Delaying %dms...</string>
+
+    <!-- vflow.device.toast - Toast Message Module -->
+    <string name="module_vflow_device_toast_name">Show Toast</string>
+    <string name="module_vflow_device_toast_desc">Display a brief message at the bottom of the screen.</string>
+    <string name="param_vflow_device_toast_message_name">Message</string>
+    <string name="output_vflow_device_toast_success_name">Success</string>
+    <string name="error_vflow_device_toast_empty">Message cannot be empty</string>
+    <string name="error_vflow_device_toast_message_empty">Message is empty</string>
+    <string name="error_vflow_device_toast_message_missing">The message content to display is empty, cannot execute</string>
+    <string name="msg_vflow_device_toast_preparing">Preparing to show Toast: %s</string>
+    <string name="summary_vflow_device_toast_prefix">Show Toast: </string>
+
+    <!-- vflow.system.get_clipboard - Get Clipboard Module -->
+    <string name="module_vflow_system_get_clipboard_name">Get Clipboard</string>
+    <string name="module_vflow_system_get_clipboard_desc">Get current content from system clipboard (text or image)</string>
+    <string name="output_vflow_system_get_clipboard_text_content_name">Clipboard Text</string>
+    <string name="output_vflow_system_get_clipboard_image_content_name">Clipboard Image</string>
+    <string name="msg_vflow_system_get_clipboard_empty">Clipboard is empty</string>
+    <string name="msg_vflow_system_get_clipboard_text_read">Read clipboard text content</string>
+    <string name="msg_vflow_system_get_clipboard_image_read">Read clipboard image content</string>
+    <string name="msg_vflow_system_get_clipboard_image_failed">Failed to read clipboard image: %s</string>
+    <string name="summary_vflow_system_get_clipboard">Get clipboard content</string>
+
+    <!-- vflow.system.launch_app - Launch App Module -->
+    <string name="module_vflow_system_launch_app_name">Launch App/Activity</string>
+    <string name="module_vflow_system_launch_app_desc">Launch a specified application or one of its internal pages (Activity).</string>
+    <string name="param_vflow_system_launch_app_packageName_name">Package Name</string>
+    <string name="param_vflow_system_launch_app_activityName_name">Activity Name</string>
+    <string name="output_vflow_system_launch_app_success_name">Success</string>
+    <string name="error_vflow_system_launch_app_empty_package">Package name cannot be empty</string>
+    <string name="error_vflow_system_launch_app_package_required">Package name cannot be empty</string>
+    <string name="error_vflow_system_launch_app_launch_failed">Launch failed</string>
+    <string name="error_vflow_system_launch_app_intent_not_found">Unable to find launch intent for the app. Please confirm the app is installed or the Activity name is correct</string>
+    <string name="error_vflow_system_launch_app_exception">Launch exception</string>
+    <string name="summary_vflow_system_launch_app_select">Select an app or Activity</string>
+    <string name="summary_vflow_system_launch_app_prefix">Launch</string>
+    <string name="msg_vflow_system_launch_app_launched">Launched: %s</string>
+
+    <!-- vflow.system.close_app - Close App Module -->
+    <string name="module_vflow_system_close_app_name">Close App</string>
+    <string name="module_vflow_system_close_app_desc">Force stop the specified application (requires Shizuku or Root)</string>
+    <string name="param_vflow_system_close_app_packageName_name">Package Name</string>
+    <string name="param_vflow_system_close_app_activityName_name">Activity Name</string>
+    <string name="output_vflow_system_close_app_success_name">Success</string>
+    <string name="error_vflow_system_close_app_empty_package">Package name cannot be empty</string>
+    <string name="error_vflow_system_close_app_execution_failed">Execution failed</string>
+    <string name="error_vflow_system_close_app_cannot_stop">Cannot stop app: %s</string>
+    <string name="summary_vflow_system_close_app_select">Select app to close</string>
+    <string name="summary_vflow_system_close_app_prefix">Force stop</string>
+    <string name="msg_vflow_system_close_app_stopping">Stopping app: %s</string>
+
+    <!-- vflow.system.brightness - Screen Brightness Module -->
+    <string name="module_vflow_system_brightness_name">Screen Brightness</string>
+    <string name="module_vflow_system_brightness_desc">Set screen brightness value</string>
+    <string name="param_vflow_system_brightness_level_name">Brightness (0-255)</string>
+    <string name="output_vflow_system_brightness_success_name">Success</string>
+    <string name="error_vflow_system_brightness_invalid_level">Brightness must be a number between 0 and 255</string>
+    <string name="error_vflow_system_brightness_set_failed">Setting failed</string>
+    <string name="summary_vflow_system_brightness_prefix">Set screen brightness to</string>
+    <string name="msg_vflow_system_brightness_setting">Setting screen brightness to %d...</string>
+
+    <!-- vflow.system.set_clipboard - Set Clipboard Module -->
+    <string name="module_vflow_system_set_clipboard_name">Set Clipboard</string>
+    <string name="module_vflow_system_set_clipboard_desc">Write specified text or image content to system clipboard</string>
+    <string name="param_vflow_system_set_clipboard_content_name">Content</string>
+    <string name="output_vflow_system_set_clipboard_success_name">Success</string>
+    <string name="error_vflow_system_set_clipboard_uri_error">File URI error</string>
+    <string name="error_vflow_system_set_clipboard_uri_create_failed">Cannot create safe image URI for clipboard: %s</string>
+    <string name="error_vflow_system_set_clipboard_unknown_error">Unknown error</string>
+    <string name="error_vflow_system_set_clipboard_create_failed">Cannot create clipboard data</string>
+    <string name="summary_vflow_system_set_clipboard_prefix">Write</string>
+    <string name="summary_vflow_system_set_clipboard_suffix">to clipboard</string>
+    <string name="msg_vflow_system_set_clipboard_success">Content written to clipboard</string>
+
+    <!-- vflow.system.sleep_screen - Sleep Screen Module -->
+    <string name="module_vflow_system_sleep_screen_name">Sleep Screen</string>
+    <string name="module_vflow_system_sleep_screen_desc">Turn off screen to put device in sleep mode. Requires Shizuku or Root permission.</string>
+    <string name="output_vflow_system_sleep_screen_success_name">Success</string>
+    <string name="output_vflow_system_sleep_screen_screen_off_name">Screen Off</string>
+    <string name="error_vflow_system_sleep_screen_failed">Sleep failed</string>
+    <string name="error_vflow_system_sleep_screen_exec_failed">Execution failed</string>
+    <string name="summary_vflow_system_sleep_screen">Turn off screen</string>
+    <string name="msg_vflow_system_sleep_screen_running">Turning off screen...</string>
+    <string name="msg_vflow_system_sleep_screen_done">Screen turned off</string>
+
+    <!-- vflow.system.wake_screen - Wake Screen Module -->
+    <string name="module_vflow_system_wake_screen_name">Wake Screen (No Password)</string>
+    <string name="module_vflow_system_wake_screen_desc">Wake up screen and dismiss swipe lock. Only for devices without password. Requires Shizuku or Root permission.</string>
+    <string name="output_vflow_system_wake_screen_success_name">Success</string>
+    <string name="output_vflow_system_wake_screen_screen_on_name">Screen On</string>
+    <string name="error_vflow_system_wake_screen_failed">Wake failed</string>
+    <string name="error_vflow_system_wake_screen_exec_failed">Execution failed</string>
+    <string name="summary_vflow_system_wake_screen">Wake screen and dismiss lock</string>
+    <string name="msg_vflow_system_wake_screen_running">Waking screen...</string>
+    <string name="msg_vflow_system_wake_screen_done">Screen awakened</string>
+    <string name="msg_vflow_system_wake_screen_unlocking">Attempting to dismiss lock...</string>
+
+    <!-- vflow.data.input - Request Input Module -->
+    <string name="module_vflow_data_input_name">Request Input</string>
+    <string name="module_vflow_data_input_desc">Show a dialog to request user input for text, number, time or date.</string>
+    <string name="param_vflow_data_input_inputType_name">Input Type</string>
+    <string name="param_vflow_data_input_prompt_name">Prompt</string>
+    <string name="param_vflow_data_input_prompt_default">Please enter content</string>
+    <string name="output_vflow_data_input_userInput_name">User Input</string>
+    <string name="error_vflow_data_input_service_missing">Service missing</string>
+    <string name="error_vflow_data_input_user_cancelled">User cancelled</string>
+    <string name="summary_vflow_data_input_prefix">Request</string>
+    <string name="summary_vflow_data_input_middle">input, prompt is</string>
+    <string name="msg_vflow_data_input_waiting">Waiting for user input (%s)...</string>
+    <string name="msg_vflow_data_input_received">Received user input</string>
+    <string name="option_vflow_data_input_type_text">Text</string>
+    <string name="option_vflow_data_input_type_number">Number</string>
+    <string name="option_vflow_data_input_type_time">Time</string>
+    <string name="option_vflow_data_input_type_date">Date</string>
+
+    <!-- vflow.device.click - Click Module -->
+    <string name="module_vflow_device_click_name">Click</string>
+    <string name="module_vflow_device_click_desc">Click on a screen element, coordinate or view ID</string>
+    <string name="param_vflow_device_click_target_name">Target</string>
+    <string name="output_vflow_device_click_success_name">Click Success</string>
+    <string name="error_vflow_device_click_service_not_running">Service not running</string>
+    <string name="summary_vflow_device_click_prefix">Click </string>
+    <string name="msg_vflow_device_click_element">Clicking found element</string>
+    <string name="msg_vflow_device_click_coordinate" formatted="false">Clicking coordinate: (%d, %d)</string>
+    <string name="msg_vflow_device_click_viewid">Clicking view ID: %s</string>
+    <string name="msg_vflow_device_click_invalid_target">Click failed: Invalid target</string>
+    <string name="msg_vflow_device_click_viewid_not_found">View ID \'%s\' not found</string>
+    <string name="msg_vflow_device_click_action_failed">View ID \'%s\' ACTION_CLICK failed, trying gesture click</string>
+    <string name="msg_vflow_device_click_action_success">Successfully clicked view ID \'%s\' via ACTION_CLICK</string>
+    <string name="msg_vflow_device_click_invalid_coord" formatted="false">Gesture click failed: Invalid coordinate (%d, %d)</string>
+    <string name="msg_vflow_device_click_gesture_success" formatted="false">Successfully clicked coordinate: (%d, %d) via gesture</string>
+    <string name="msg_vflow_device_click_gesture_failed" formatted="false">Gesture click at (%d, %d) failed or cancelled</string>
+
+    <!-- vflow.interaction.input_text - Input Text Module -->
+    <string name="module_vflow_interaction_input_text_name">Input Text</string>
+    <string name="module_vflow_interaction_input_text_desc">Input text into the currently focused input field (supports Accessibility and Shell)</string>
+    <string name="param_vflow_interaction_input_text_text_name">Text Content</string>
+    <string name="param_vflow_interaction_input_text_mode_name">Input Mode</string>
+    <string name="param_vflow_interaction_input_text_show_advanced_name">Show Advanced Options</string>
+    <string name="output_vflow_interaction_input_text_success_name">Success</string>
+    <string name="error_vflow_interaction_input_text_empty">Input text cannot be empty</string>
+    <string name="error_vflow_interaction_input_text_param_error">Parameter error</string>
+    <string name="error_vflow_interaction_input_text_failed">Input failed</string>
+    <string name="summary_vflow_interaction_input_text">Input text </string>
+    <string name="summary_vflow_interaction_input_text_with_mode">Use </string>
+    <string name="summary_vflow_interaction_input_text_with_mode_suffix">Input text</string>
+
+    <string name="msg_vflow_interaction_input_text_preparing">Preparing to input text...</string>
+    <string name="msg_vflow_interaction_input_text_a11y_success">Input via accessibility service</string>
+    <string name="msg_vflow_interaction_input_text_a11y_failed">Unable to find focused input field or field does not support editing.</string>
+    <string name="msg_vflow_interaction_input_text_trying_ime">Trying to input via vFlow IME...</string>
+    <string name="msg_vflow_interaction_input_text_ime_success">Input via vFlow IME</string>
+    <string name="msg_vflow_interaction_input_text_ime_fallback">IME mode failed, falling back to clipboard+paste mode...</string>
+    <string name="msg_vflow_interaction_input_text_complete">Input complete</string>
+    <string name="msg_vflow_interaction_input_text_shell_failed">Shell command execution failed. Please check Root/Shizuku permissions and IME settings.</string>
+    <string name="msg_vflow_interaction_input_text_no_focus">Unable to input text. Please ensure an input field is focused.</string>
+    <string name="option_vflow_interaction_input_text_mode_auto">Auto</string>
+    <string name="option_vflow_interaction_input_text_mode_a11y">Accessibility</string>
+    <string name="option_vflow_interaction_input_text_mode_shell">Shell</string>
+
+    <!-- vflow.logic.stop_workflow - Stop Workflow Module -->
+    <string name="module_vflow_logic_stop_workflow_name">Stop Workflow</string>
+    <string name="module_vflow_logic_stop_workflow_desc">Normally and unconditionally terminate the current workflow execution</string>
+    <string name="summary_vflow_logic_stop_workflow">Stop workflow</string>
+    <string name="msg_vflow_logic_stop_workflow_stopping">Stopping workflow...</string>
+
+    <!-- vflow.logic.break_loop - Break Loop Module -->
+    <string name="module_vflow_logic_break_loop_name">Break Loop</string>
+    <string name="module_vflow_logic_break_loop_desc">Immediately terminate current loop execution and jump to steps after the loop body</string>
+    <string name="summary_vflow_logic_break_loop">Break current loop</string>
+    <string name="error_vflow_logic_break_loop_invalid">Invalid operation</string>
+    <string name="msg_vflow_logic_break_loop_preparing">Preparing to break loop...</string>
+    <string name="msg_vflow_logic_break_loop_not_in_loop">Cannot break: not currently in a loop.</string>
+
+    <!-- vflow.logic.continue_loop - Continue Loop Module -->
+    <string name="module_vflow_logic_continue_loop_name">Continue Loop</string>
+    <string name="module_vflow_logic_continue_loop_desc">Skip remaining steps of current loop and directly enter next iteration</string>
+    <string name="summary_vflow_logic_continue_loop">Continue to next loop iteration</string>
+    <string name="summary_vflow_logic_call_workflow_prefix">Call workflow</string>
+    <string name="summary_vflow_logic_for_each_prefix">For each</string>
+    <string name="summary_vflow_logic_for_each_suffix">in</string>
+    <string name="summary_vflow_logic_if_prefix">If</string>
+    <string name="summary_vflow_logic_and">and</string>
+    <string name="summary_vflow_logic_between">between</string>
+    <string name="summary_vflow_logic_else">Else</string>
+    <string name="summary_vflow_logic_jump_to_step_prefix">Jump to step</string>
+    <string name="summary_vflow_logic_jump_to_step_suffix"></string>
+    <string name="summary_vflow_logic_loop_prefix">Loop</string>
+    <string name="summary_vflow_logic_loop_suffix">times</string>
+    <string name="summary_vflow_logic_stop_and_return_prefix">Return</string>
+    <string name="summary_vflow_logic_while_prefix">Loop until</string>
+    <string name="summary_vflow_logic_while_suffix">is met</string>
+    <string name="summary_vflow_logic_loop_between">between</string>
+    <string name="summary_vflow_logic_loop_between_suffix">and</string>
+    <string name="msg_vflow_logic_continue_loop_continuing">Continuing to next loop iteration...</string>
+
+    <!-- vflow.variable.get - Get Variable Module -->
+    <string name="module_vflow_variable_get_name">Get Variable</string>
+    <string name="module_vflow_variable_get_desc">Read value from a named variable or magic variable for use in subsequent steps</string>
+    <string name="param_vflow_variable_get_source_name">Source Variable</string>
+    <string name="output_vflow_variable_get_value_name">Variable Value</string>
+    <string name="error_vflow_variable_get_not_exist">Variable does not exist</string>
+    <string name="error_vflow_variable_get_not_found">Cannot find value for variable \'%s\'</string>
+    <string name="summary_vflow_variable_get_prefix">Get variable</string>
+    <string name="msg_vflow_variable_get_success">Variable value read</string>
+
+    <!-- vflow.network.get_ip - Get IP Address Module -->
+    <string name="module_vflow_network_get_ip_name">Get IP Address</string>
+    <string name="module_vflow_network_get_ip_desc">Get local or external IP address of the device</string>
+    <string name="param_vflow_network_get_ip_type_name">Type</string>
+    <string name="param_vflow_network_get_ip_ip_version_name">IP Version</string>
+    <string name="output_vflow_network_get_ip_ip_address_name">IP Address</string>
+    <string name="error_vflow_network_get_ip_fetch_failed">Fetch failed</string>
+    <string name="error_vflow_network_get_ip_not_found" formatted="false">No matching %s %s address found.</string>
+    <string name="error_vflow_network_get_ip_exception">Execution exception</string>
+    <string name="summary_vflow_network_get_ip_prefix">Get</string>
+    <string name="summary_vflow_network_get_ip_suffix">address</string>
+    <string name="msg_vflow_network_get_ip_fetching" formatted="false">Fetching %s %s address...</string>
+    <string name="option_vflow_network_get_ip_type_local">Local</string>
+    <string name="option_vflow_network_get_ip_type_external">External</string>
+    <string name="option_vflow_network_get_ip_version_ipv4">IPv4</string>
+    <string name="option_vflow_network_get_ip_version_ipv6">IPv6</string>
+
+    <!-- vflow.trigger.manual - Manual Trigger -->
+    <string name="module_vflow_trigger_manual_name">Manual Trigger</string>
+    <string name="module_vflow_trigger_manual_desc">Manually start this workflow by clicking a button</string>
+    <string name="output_vflow_trigger_manual_success_name">Success</string>
+    <string name="msg_vflow_trigger_manual_triggered">Workflow manually triggered</string>
+
+    <!-- vflow.file.save_image - Save Image Module -->
+    <string name="module_vflow_file_save_image_name">Save Image</string>
+    <string name="module_vflow_file_save_image_desc">Save image to gallery</string>
+    <string name="param_vflow_file_save_image_image_name">Image</string>
+    <string name="output_vflow_file_save_image_success_name">Success</string>
+    <string name="output_vflow_file_save_image_file_path_name">File Path</string>
+    <string name="summary_vflow_file_import_image">Select an image</string>
+    <string name="summary_vflow_file_save_image_prefix">Save image</string>
+    <string name="msg_vflow_file_save_image_saving">Saving image...</string>
+    <string name="msg_vflow_file_save_image_success">Image saved</string>
+    <string name="msg_vflow_file_save_image_failed">Save failed</string>
+
+    <!-- vflow.notification.send_notification - Send Notification Module -->
+    <string name="module_vflow_notification_send_notification_name">Send Notification</string>
+    <string name="module_vflow_notification_send_notification_desc">Create a custom notification in the system notification bar</string>
+    <string name="param_vflow_notification_send_notification_title_name">Title</string>
+    <string name="param_vflow_notification_send_notification_message_name">Content</string>
+    <string name="param_vflow_notification_send_notification_title_default">vFlow Notification</string>
+    <string name="param_vflow_notification_send_notification_message_default">This is a message from vFlow.</string>
+    <string name="output_vflow_notification_send_notification_success_name">Success</string>
+    <string name="summary_vflow_notification_send_notification_prefix">Send notification:</string>
+    <string name="msg_vflow_notification_send_notification_sent">Notification sent: %s</string>
+    <string name="channel_vflow_notification_custom">Custom Notifications</string>
+
+    <!-- vflow.trigger.time - Time Trigger Module -->
+    <string name="module_vflow_trigger_time_name">Timed Trigger</string>
+    <string name="module_vflow_trigger_time_desc">Trigger workflow at specified time and date, like an alarm clock</string>
+    <string name="param_vflow_trigger_time_time_name">Trigger Time</string>
+    <string name="param_vflow_trigger_time_days_name">Repeat Days</string>
+    <string name="summary_vflow_trigger_time_everyday">Daily</string>
+    <string name="summary_vflow_trigger_time_once">Once</string>
+    <string name="summary_vflow_trigger_time_workdays">Workdays</string>
+    <string name="summary_vflow_trigger_time_suffix">trigger</string>
+    <string name="day_sunday">Sun</string>
+    <string name="day_monday">Mon</string>
+    <string name="day_tuesday">Tue</string>
+    <string name="day_wednesday">Wed</string>
+    <string name="day_thursday">Thu</string>
+    <string name="day_friday">Fri</string>
+    <string name="day_saturday">Sat</string>
+    <string name="msg_vflow_trigger_time_triggered">Timed task triggered</string>
+
+    <!-- vflow.trigger.app_start - App Event Trigger -->
+    <string name="module_vflow_trigger_app_start_name">App Event</string>
+    <string name="module_vflow_trigger_app_start_desc">Trigger this workflow when specified app opens or closes</string>
+    <string name="param_vflow_trigger_app_start_event_name">Event</string>
+    <string name="param_vflow_trigger_app_start_packageName_name">Package Name</string>
+    <string name="param_vflow_trigger_app_start_activityName_name">Activity Name</string>
+    <string name="summary_vflow_trigger_app_start_select">Select an app</string>
+    <string name="summary_vflow_trigger_app_start_prefix">When</string>
+    <string name="msg_vflow_trigger_app_start_triggered">App event triggered</string>
+    <string name="option_vflow_trigger_app_start_event_opened">Opened</string>
+    <string name="option_vflow_trigger_app_start_event_closed">Closed</string>
+
+    <!-- vflow.trigger.battery - Battery Trigger -->
+    <string name="module_vflow_trigger_battery_name">Battery Trigger</string>
+    <string name="module_vflow_trigger_battery_desc">Trigger workflow when battery level meets specific condition</string>
+    <string name="param_vflow_trigger_battery_level_name">Battery Threshold</string>
+    <string name="param_vflow_trigger_battery_above_or_below_name">Trigger Condition</string>
+    <string name="summary_vflow_trigger_battery_prefix">When battery</string>
+    <string name="summary_vflow_trigger_battery_suffix">trigger</string>
+    <string name="msg_vflow_trigger_battery_triggered">Battery task triggered</string>
+    <string name="option_vflow_trigger_battery_below">Below</string>
+    <string name="option_vflow_trigger_battery_above">Above</string>
+
+    <!-- vflow.trigger.bluetooth - Bluetooth Trigger -->
+    <string name="module_vflow_trigger_bluetooth_name">Bluetooth Trigger</string>
+    <string name="module_vflow_trigger_bluetooth_desc">Trigger when Bluetooth state or device connection changes</string>
+    <string name="param_vflow_trigger_bluetooth_trigger_type_name">Trigger Type</string>
+    <string name="param_vflow_trigger_bluetooth_state_event_name">Event</string>
+    <string name="param_vflow_trigger_bluetooth_device_event_name">Event</string>
+    <string name="param_vflow_trigger_bluetooth_device_address_name">Device Address</string>
+    <string name="param_vflow_trigger_bluetooth_device_name_name">Device Name</string>
+    <string name="output_vflow_trigger_bluetooth_device_name_name">Device Name</string>
+    <string name="output_vflow_trigger_bluetooth_device_address_name">Device Address</string>
+    <string name="summary_vflow_trigger_bluetooth_state_prefix">When Bluetooth</string>
+    <string name="summary_vflow_trigger_bluetooth_device_prefix">When</string>
+    <string name="msg_vflow_trigger_bluetooth_triggered">Bluetooth event triggered</string>
+    <string name="option_vflow_trigger_bluetooth_type_state">Bluetooth State</string>
+    <string name="option_vflow_trigger_bluetooth_type_device">Device Connection</string>
+    <string name="option_vflow_trigger_bluetooth_state_on">Turned On</string>
+    <string name="option_vflow_trigger_bluetooth_state_off">Turned Off</string>
+    <string name="option_vflow_trigger_bluetooth_device_connected">Connected</string>
+    <string name="option_vflow_trigger_bluetooth_device_disconnected">Disconnected</string>
+
+    <!-- vflow.trigger.key_event - Key Event Trigger -->
+    <string name="module_vflow_trigger_key_event_name">Key Event Trigger</string>
+    <string name="module_vflow_trigger_key_event_desc">Trigger this workflow when specified physical key is pressed (requires Shizuku or Root)</string>
+    <string name="param_vflow_trigger_key_event_device_preset_name">Device Preset</string>
+    <string name="param_vflow_trigger_key_event_device_name">Input Device</string>
+    <string name="param_vflow_trigger_key_event_key_code_name">Key Code</string>
+    <string name="param_vflow_trigger_key_event_action_type_name">Action Type</string>
+    <string name="summary_vflow_trigger_key_event_configure">Configure key trigger</string>
+    <string name="summary_vflow_trigger_key_event_custom_prefix">When</string>
+    <string name="summary_vflow_trigger_key_event_custom_suffix">key pressed</string>
+    <string name="summary_vflow_trigger_key_event_preset_suffix">pressed</string>
+    <string name="msg_vflow_trigger_key_event_triggered">Key event triggered</string>
+    <string name="option_vflow_trigger_key_event_preset_manual">Manual/Custom</string>
+    <string name="option_vflow_trigger_key_event_preset_oneplus_13t">OnePlus 13T (Side Key)</string>
+    <string name="option_vflow_trigger_key_event_preset_oneplus_13">OnePlus 13 (Three-stage)</string>
+    <string name="option_vflow_trigger_key_event_action_single_click">Single Click</string>
+    <string name="option_vflow_trigger_key_event_action_double_click">Double Click</string>
+    <string name="option_vflow_trigger_key_event_action_long_press">Long Press</string>
+    <string name="option_vflow_trigger_key_event_action_short_press">Short Press (Immediate)</string>
+    <string name="option_vflow_trigger_key_event_action_swipe_down">Swipe Down</string>
+    <string name="option_vflow_trigger_key_event_action_swipe_up">Swipe Up</string>
+
+    <!-- vflow.trigger.notification - Notification Trigger -->
+    <string name="module_vflow_trigger_notification_name">Notification Trigger</string>
+    <string name="module_vflow_trigger_notification_desc">Trigger workflow when notification matching criteria is received</string>
+    <string name="param_vflow_trigger_notification_app_filter_name">Package Name</string>
+    <string name="param_vflow_trigger_notification_title_filter_name">Title Contains</string>
+    <string name="param_vflow_trigger_notification_content_filter_name">Content Contains</string>
+    <string name="output_vflow_trigger_notification_notification_object_name">Notification Object</string>
+    <string name="output_vflow_trigger_notification_package_name_name">Package Name</string>
+    <string name="output_vflow_trigger_notification_title_name">Notification Title</string>
+    <string name="output_vflow_trigger_notification_content_name">Notification Content</string>
+    <string name="summary_vflow_trigger_notification_prefix">When receiving</string>
+    <string name="summary_vflow_trigger_notification_from"> from </string>
+    <string name="summary_vflow_trigger_notification_and"> and</string>
+    <string name="summary_vflow_trigger_notification_title_contains"> title contains </string>
+    <string name="summary_vflow_trigger_notification_content_contains"> content contains </string>
+    <string name="summary_vflow_trigger_notification_any">any</string>
+    <string name="summary_vflow_trigger_notification_suffix"> notification</string>
+    <string name="msg_vflow_trigger_notification_received">Notification received</string>
+
+    <!-- vflow.trigger.sms - SMS Trigger -->
+    <string name="module_vflow_trigger_sms_name">SMS Trigger</string>
+    <string name="module_vflow_trigger_sms_desc">Trigger workflow when SMS meeting specific criteria is received</string>
+    <string name="param_vflow_trigger_sms_sender_filter_type_name">Sender Condition</string>
+    <string name="param_vflow_trigger_sms_sender_filter_value_name">Sender Value</string>
+    <string name="param_vflow_trigger_sms_content_filter_type_name">Content Condition</string>
+    <string name="param_vflow_trigger_sms_content_filter_value_name">Content Value</string>
+    <string name="output_vflow_trigger_sms_sender_number_name">Sender Number</string>
+    <string name="output_vflow_trigger_sms_message_content_name">Message Content</string>
+    <string name="output_vflow_trigger_sms_verification_code_name">Verification Code</string>
+    <string name="summary_vflow_trigger_sms_prefix">When receiving SMS from </string>
+    <string name="summary_vflow_trigger_sms_middle"> with content </string>
+    <string name="summary_vflow_trigger_sms_suffix">When receiving an SMS from</string>
+    <string name="summary_vflow_trigger_sms_is_code">is verification code</string>
+    <string name="msg_vflow_trigger_sms_received">SMS received</string>
+    <string name="option_vflow_trigger_sms_sender_any">Any Number</string>
+    <string name="option_vflow_trigger_sms_sender_contains">Number Contains</string>
+    <string name="option_vflow_trigger_sms_sender_not_contains">Number Not Contains</string>
+    <string name="option_vflow_trigger_sms_sender_regex">Regex Match</string>
+    <string name="option_vflow_trigger_sms_content_any">Any Content</string>
+    <string name="option_vflow_trigger_sms_content_code">Detect Verification Code</string>
+    <string name="option_vflow_trigger_sms_content_contains">Content Contains</string>
+    <string name="option_vflow_trigger_sms_content_not_contains">Content Not Contains</string>
+    <string name="option_vflow_trigger_sms_content_regex">Regex Match</string>
+
+    <!-- vflow.trigger.wifi - Wi-Fi Trigger -->
+    <string name="module_vflow_trigger_wifi_name">Wi-Fi Trigger</string>
+    <string name="module_vflow_trigger_wifi_desc">Trigger workflow when Wi-Fi state or network connection changes</string>
+    <string name="param_vflow_trigger_wifi_trigger_type_name">Trigger Type</string>
+    <string name="param_vflow_trigger_wifi_connection_event_name">Event</string>
+    <string name="param_vflow_trigger_wifi_network_target_name">Network</string>
+    <string name="param_vflow_trigger_wifi_state_event_name">Event</string>
+    <string name="output_vflow_trigger_wifi_ssid_name">Network SSID</string>
+    <string name="output_vflow_trigger_wifi_bssid_name">Network BSSID</string>
+    <string name="summary_vflow_trigger_wifi_connection_prefix">When</string>
+    <string name="summary_vflow_trigger_wifi_any_wifi">any Wi-Fi</string>
+    <string name="summary_vflow_trigger_wifi_state_prefix">When Wi-Fi</string>
+    <string name="msg_vflow_trigger_wifi_triggered">Wi-Fi event triggered</string>
+    <string name="option_vflow_trigger_wifi_type_connection">Network Connection</string>
+    <string name="option_vflow_trigger_wifi_type_state">Wi-Fi State</string>
+    <string name="option_vflow_trigger_wifi_connection_connected">Connect to</string>
+    <string name="option_vflow_trigger_wifi_connection_disconnected">Disconnect from</string>
+    <string name="option_vflow_trigger_wifi_state_on">Turned On</string>
+    <string name="option_vflow_trigger_wifi_state_off">Turned Off</string>
+
+    <!-- vflow.variable.create - Create Variable -->
+    <string name="module_vflow_variable_create_name">Create Variable</string>
+    <string name="module_vflow_variable_create_desc">Create a new variable, optionally name it for later modification or reading</string>
+    <string name="param_vflow_variable_create_variableName_name">Variable Name (Optional)</string>
+    <string name="param_vflow_variable_create_type_name">Variable Type</string>
+    <string name="param_vflow_variable_create_value_name">Value</string>
+    <string name="output_vflow_variable_create_variable_name">Variable Value</string>
+    <string name="summary_vflow_variable_create_anonymous">Create</string>
+    <string name="summary_vflow_variable_create_anonymous_middle">anonymous</string>
+    <string name="summary_vflow_variable_create_named">Create variable</string>
+    <string name="summary_vflow_variable_create_as">as</string>
+    <string name="msg_vflow_variable_create_named">Created named variable \'%s\'</string>
+    <string name="msg_vflow_variable_create_anonymous">Created anonymous variable</string>
+    <string name="error_vflow_variable_create_duplicate">Variable name \'%s\' already exists, please use another name</string>
+    <string name="error_vflow_variable_create_name_conflict">Naming Conflict</string>
+    <string name="error_vflow_variable_create_exists">Variable \'%s\' already exists</string>
+    <string name="option_vflow_variable_create_type_string">Text</string>
+    <string name="option_vflow_variable_create_type_number">Number</string>
+    <string name="option_vflow_variable_create_type_boolean">Boolean</string>
+    <string name="option_vflow_variable_create_type_dictionary">Dictionary</string>
+    <string name="option_vflow_variable_create_type_list">List</string>
+    <string name="option_vflow_variable_create_type_image">Image</string>
+    <string name="option_vflow_variable_create_type_coordinate">Coordinate</string>
+
+    <!-- vflow.variable.modify - Modify Variable -->
+    <string name="module_vflow_variable_modify_name">Modify Variable</string>
+    <string name="module_vflow_variable_modify_desc">Modify the value of an existing named variable</string>
+    <string name="param_vflow_variable_modify_variable_name">Variable</string>
+    <string name="param_vflow_variable_modify_newValue_name">New Value</string>
+    <string name="summary_vflow_variable_modify_prefix">Modify variable </string>
+    <string name="summary_vflow_variable_modify_middle"> to</string>
+    <string name="msg_vflow_variable_modify_success">Modified variable \'%s\'</string>
+    <string name="error_vflow_variable_modify_param_error">Parameter Error</string>
+    <string name="error_vflow_variable_modify_invalid">Please select a valid named variable</string>
+    <string name="error_vflow_variable_modify_not_found">Cannot find variable named \'%s\'. Please create it first using the "Create Variable" module</string>
+
+    <!-- vflow.variable.random - Create Random Variable -->
+    <string name="module_vflow_variable_random_name">Create Random Variable</string>
+    <string name="module_vflow_variable_random_desc">Create new random variable, optionally name it for later modification or reading</string>
+    <string name="param_vflow_variable_random_type_name">Variable Type</string>
+    <string name="param_vflow_variable_random_variableName_name">Variable Name (Optional)</string>
+    <string name="param_vflow_variable_random_min_name">Min Value (default 0)</string>
+    <string name="param_vflow_variable_random_max_name">Max Value (default 100)</string>
+    <string name="param_vflow_variable_random_step_name">Step (default 1)</string>
+    <string name="param_vflow_variable_random_length_name">Text Length (default 8)</string>
+    <string name="param_vflow_variable_random_custom_chars_name">Charset (default a-zA-Z0-9)</string>
+    <string name="output_vflow_variable_random_randomVariable_name">Random Variable</string>
+    <string name="summary_vflow_variable_random_generate">Generate</string>
+    <string name="summary_vflow_variable_random_anonymous">anonymous random variable</string>
+    <string name="summary_vflow_variable_random_named">Generate random variable</string>
+    <string name="msg_vflow_variable_random_named">Created named variable \'%s\'</string>
+    <string name="error_vflow_variable_random_duplicate">Variable name \'%s\' already exists, please use another name</string>
+    <string name="error_vflow_variable_random_min_gt_max">Min value cannot be greater than max value</string>
+    <string name="error_vflow_variable_random_step_positive">Step must be greater than 0</string>
+    <string name="error_vflow_variable_random_param_error">Parameter Error</string>
+    <string name="error_vflow_variable_random_charset_empty">Charset cannot be empty</string>
+    <string name="error_vflow_variable_random_unknown_type">Unknown Type</string>
+    <string name="error_vflow_variable_random_cannot_create">Cannot create random variable of type \'%s\'</string>
+    <string name="error_vflow_variable_random_name_conflict">Naming Conflict</string>
+    <string name="error_vflow_variable_random_exists">Variable \'%s\' already exists</string>
+    <string name="option_vflow_variable_random_type_number">Number</string>
+    <string name="option_vflow_variable_random_type_string">Text</string>
+
+    <!-- vflow.data.text_processing - Text Processing -->
+    <string name="module_vflow_data_text_processing_name">Text Processing</string>
+    <string name="module_vflow_data_text_processing_desc">Perform text operations like join, split, replace, regex extraction</string>
+    <string name="param_vflow_data_text_processing_operation_name">Operation</string>
+    <string name="param_vflow_data_text_processing_join_prefix_name">Prefix</string>
+    <string name="param_vflow_data_text_processing_join_list_name">List</string>
+    <string name="param_vflow_data_text_processing_join_delimiter_name">Delimiter</string>
+    <string name="param_vflow_data_text_processing_join_suffix_name">Suffix</string>
+    <string name="param_vflow_data_text_processing_source_text_name">Source Text</string>
+    <string name="param_vflow_data_text_processing_split_delimiter_name">Delimiter</string>
+    <string name="param_vflow_data_text_processing_replace_from_name">Find</string>
+    <string name="param_vflow_data_text_processing_replace_to_name">Replace With</string>
+    <string name="param_vflow_data_text_processing_regex_pattern_name">Regex Pattern</string>
+    <string name="param_vflow_data_text_processing_regex_group_name">Match Group</string>
+    <string name="output_vflow_data_text_processing_result_text_name">Result Text</string>
+    <string name="output_vflow_data_text_processing_result_list_name">Result List</string>
+    <string name="summary_vflow_data_text_processing_join_prefix">Join list</string>
+    <string name="summary_vflow_data_text_processing_join_middle">with</string>
+    <string name="summary_vflow_data_text_processing_join_suffix">join</string>
+    <string name="summary_vflow_data_text_processing_split_prefix">Split</string>
+    <string name="summary_vflow_data_text_processing_split_middle">by</string>
+    <string name="summary_vflow_data_text_processing_split_suffix">split</string>
+    <string name="summary_vflow_data_text_processing_replace_prefix">Replace</string>
+    <string name="summary_vflow_data_text_processing_replace_middle1">in</string>
+    <string name="summary_vflow_data_text_processing_replace_middle2">with</string>
+    <string name="summary_vflow_data_text_processing_regex_prefix">Extract from</string><string name="summary_vflow_data_text_processing_regex_suffix"> extract</string>
+    <string name="error_vflow_data_text_processing_param_error">Parameter Error</string>
+    <string name="error_vflow_data_text_processing_no_operation">Operation not specified</string>
+    <string name="error_vflow_data_text_processing_invalid_operation">Unsupported operation: %s</string>
+    <string name="error_vflow_data_text_processing_input_error">Input Error</string>
+    <string name="error_vflow_data_text_processing_need_list">Need a list variable to join</string>
+    <string name="error_vflow_data_text_processing_source_empty">Source text cannot be empty</string>
+    <string name="error_vflow_data_text_processing_source_and_from_empty">Source text and find content cannot be empty</string>
+    <string name="error_vflow_data_text_processing_pattern_empty">Source text and regex pattern cannot be empty</string>
+    <string name="error_vflow_data_text_processing_regex_error">Regex Error</string>
+    <string name="option_vflow_data_text_processing_operation_join">Join</string>
+    <string name="option_vflow_data_text_processing_operation_split">Split</string>
+    <string name="option_vflow_data_text_processing_operation_replace">Replace</string>
+    <string name="option_vflow_data_text_processing_operation_regex">Regex Extract</string>
+    <string name="error_vflow_file_save_image_invalid">Input is not a valid image variable</string>
+    <string name="error_vflow_file_save_image_read_failed">Cannot read source image file</string>
+    <string name="error_vflow_file_save_image_create_failed">Cannot create new image entry in gallery</string>
+    <string name="error_vflow_file_save_image_open_failed">Cannot open output stream for new image file</string>
+    <string name="error_vflow_file_save_image_unknown">Unknown error occurred</string>
+
+    <!-- CalculationModule -->
+    <string name="module_vflow_data_calculation_name">Calculate</string>
+    <string name="module_vflow_data_calculation_desc">Perform mathematical operations between two numbers</string>
+    <string name="param_vflow_data_calculation_operand1_name">Number 1</string>
+    <string name="param_vflow_data_calculation_operator_name">Operator</string>
+    <string name="param_vflow_data_calculation_operand2_name">Number 2</string>
+    <string name="output_vflow_data_calculation_result_name">Result</string>
+    <string name="summary_vflow_data_calculation_prefix">Calculate</string>
+    <string name="error_vflow_data_calculation_input_error">Input Error</string>
+    <string name="error_vflow_data_calculation_operand1_parse_failed">Cannot parse number 1: %s</string>
+    <string name="error_vflow_data_calculation_operand2_parse_failed">Cannot parse number 2: %s</string>
+    <string name="error_vflow_data_calculation_division_error">Division Error</string>
+    <string name="error_vflow_data_calculation_division_by_zero">Divisor cannot be zero</string>
+    <string name="error_vflow_data_calculation_division_failed">Error during division: %s</string>
+    <string name="error_vflow_data_calculation_calculation_error">Calculation Error</string>
+    <string name="error_vflow_data_calculation_invalid_operator">Invalid operator: %s</string>
+
+    <!-- Base64EncodeOrDecodeModule -->
+    <string name="module_vflow_data_base64_name">Base64 Encode/Decode</string>
+    <string name="module_vflow_data_base64_desc">Encode or decode text using Base64</string>
+    <string name="param_vflow_data_base64_operation_name">Operation</string>
+    <string name="param_vflow_data_base64_source_text_name">Source Text</string>
+    <string name="output_vflow_data_base64_result_text_name">Result Text</string>
+    <string name="option_vflow_data_base64_encode">Encode</string>
+    <string name="option_vflow_data_base64_decode">Decode</string>
+    <string name="error_vflow_data_base64_decode_failed">Decode Failed</string>
+    <string name="error_vflow_data_base64_invalid_format">Input text is not a valid Base64 encoded format</string>
+    <string name="error_vflow_data_base64_execution_error">Execution Error</string>
+    <string name="error_vflow_data_base64_unknown">Unknown error</string>
+
+    <!-- HttpRequestModule -->
+    <string name="module_vflow_network_http_request_name">HTTP Request</string>
+    <string name="module_vflow_network_http_request_desc">Send HTTP request and get response</string>
+    <string name="param_vflow_network_http_request_url_name">URL</string>
+    <string name="param_vflow_network_http_request_method_name">Method</string>
+    <string name="param_vflow_network_http_request_headers_name">Headers</string>
+    <string name="param_vflow_network_http_request_query_params_name">Query Parameters</string>
+    <string name="param_vflow_network_http_request_body_type_name">Body Type</string>
+    <string name="param_vflow_network_http_request_body_name">Body</string>
+    <string name="param_vflow_network_http_request_timeout_name">Timeout (sec)</string>
+    <string name="param_vflow_network_http_request_show_advanced_name">Show Advanced</string>
+    <string name="output_vflow_network_http_request_response_body_name">Response Body</string>
+    <string name="output_vflow_network_http_request_status_code_name">Status Code</string>
+    <string name="output_vflow_network_http_request_response_headers_name">Response Headers</string>
+    <string name="output_vflow_network_http_request_error_name">Error Message</string>
+    <string name="option_vflow_network_http_request_body_none">None</string>
+    <string name="option_vflow_network_http_request_body_json">JSON</string>
+    <string name="option_vflow_network_http_request_body_form">Form</string>
+    <string name="option_vflow_network_http_request_body_raw">Raw Text</string>
+    <string name="option_vflow_network_http_request_body_file">File</string>
+    <string name="msg_vflow_network_http_request_sending" formatted="false">Sending %s request to %s</string>
+    <string name="msg_vflow_network_http_request_received">Response received, status code: %s</string>
+    <string name="error_vflow_network_http_request_param_error">Parameter Error</string>
+    <string name="error_vflow_network_http_request_url_empty">URL cannot be empty</string>
+    <string name="error_vflow_network_http_request_url_format_error">URL Format Error</string>
+    <string name="error_vflow_network_http_request_url_parse_failed">Cannot parse URL: %s</string>
+    <string name="error_vflow_network_http_request_network_error">Network Error</string>
+    <string name="error_vflow_network_http_request_unknown_network">Unknown network error</string>
+    <string name="error_vflow_network_http_request_execution_failed">Execution Failed</string>
+    <string name="error_vflow_network_http_request_unknown_error">Unknown error occurred</string>
+
+    <!-- Logic Control Modules (逻辑控制模块) -->
+    <!-- vflow.logic.if.start - If Module -->
+    <string name="module_vflow_logic_if_start_name">If</string>
+    <string name="module_vflow_logic_if_start_desc">Execute different operations based on condition</string>
+    <string name="param_vflow_logic_if_start_input1_name">Input</string>
+    <string name="param_vflow_logic_if_start_operator_name">Condition</string>
+    <string name="param_vflow_logic_if_start_value1_name">Compare Value 1</string>
+    <string name="param_vflow_logic_if_start_value2_name">Compare Value 2</string>
+    <string name="output_vflow_logic_if_start_result_name">Condition Result</string>
+
+    <!-- vflow.logic.if.middle - Else Module -->
+    <string name="module_vflow_logic_if_middle_name">Else</string>
+    <string name="module_vflow_logic_if_middle_desc">Execute operations here when condition is not met</string>
+
+    <!-- vflow.logic.if.end - EndIf Module -->
+    <string name="module_vflow_logic_if_end_name">End If</string>
+    <string name="module_vflow_logic_if_end_desc">End point of If block</string>
+
+    <!-- vflow.logic.loop.start - Loop Module -->
+    <string name="module_vflow_logic_loop_start_name">Loop</string>
+    <string name="module_vflow_logic_loop_start_desc">Repeat a group of operations fixed number of times</string>
+    <string name="param_vflow_logic_loop_start_count_name">Repeat Count</string>
+    <string name="output_vflow_logic_loop_start_loop_index_name">Loop Index</string>
+    <string name="output_vflow_logic_loop_start_loop_total_name">Loop Total</string>
+
+    <!-- vflow.logic.loop.end - EndLoop Module -->
+    <string name="module_vflow_logic_loop_end_name">End Loop</string>
+    <string name="module_vflow_logic_loop_end_desc">End point of Loop block</string>
+
+    <!-- vflow.logic.while.start - While Module -->
+    <string name="module_vflow_logic_while_start_name">Loop Until</string>
+    <string name="module_vflow_logic_while_start_desc">Repeat while condition is true until condition is not met</string>
+    <string name="param_vflow_logic_while_start_input1_name">Input</string>
+    <string name="param_vflow_logic_while_start_operator_name">Condition</string>
+    <string name="param_vflow_logic_while_start_value1_name">Compare Value 1</string>
+    <string name="param_vflow_logic_while_start_value2_name">Compare Value 2</string>
+    <string name="output_vflow_logic_while_start_result_name">Condition Result</string>
+
+    <!-- vflow.logic.while.end - EndWhile Module -->
+    <string name="module_vflow_logic_while_end_name">End Loop</string>
+    <string name="module_vflow_logic_while_end_desc">End point of While loop block</string>
+
+    <!-- vflow.logic.foreach.start - ForEach Module -->
+    <string name="module_vflow_logic_foreach_start_name">For Each</string>
+    <string name="module_vflow_logic_foreach_start_desc">Iterate through each item in a list and execute operations</string>
+    <string name="param_vflow_logic_foreach_start_input_list_name">Input List</string>
+    <string name="output_vflow_logic_foreach_start_item_name">Item</string>
+    <string name="output_vflow_logic_foreach_start_index_name">Index</string>
+
+    <!-- vflow.logic.foreach.end - EndForEach Module -->
+    <string name="module_vflow_logic_foreach_end_name">End For Each</string>
+    <string name="module_vflow_logic_foreach_end_desc">End point of ForEach loop block</string>
+
+    <!-- vflow.logic.jump - Jump Module -->
+    <string name="module_vflow_logic_jump_name">Jump to Step</string>
+    <string name="module_vflow_logic_jump_desc">Jump to specified step in workflow and continue execution</string>
+    <string name="param_vflow_logic_jump_target_step_index_name">Target Step Number</string>
+    <string name="output_vflow_logic_jump_success_name">Success</string>
+
+    <!-- vflow.logic.call_workflow - CallWorkflow Module -->
+    <string name="module_vflow_logic_call_workflow_name">Call Workflow</string>
+    <string name="module_vflow_logic_call_workflow_desc">Execute another workflow as subroutine</string>
+    <string name="param_vflow_logic_call_workflow_workflow_id_name">Workflow</string>
+    <string name="output_vflow_logic_call_workflow_result_name">Return Value</string>
+
+    <!-- vflow.logic.return - StopAndReturn Module -->
+    <string name="module_vflow_logic_return_name">Stop and Return</string>
+    <string name="module_vflow_logic_return_desc">Stop current workflow execution and return a value</string>
+    <string name="param_vflow_logic_return_value_name">Return Value</string>
+
+    <!-- Core System Modules (Core系统模块) -->
+    <!-- vflow.core.capture_screen - CoreCaptureScreen Module -->
+    <string name="module_vflow_core_capture_screen_name">Capture Screen</string>
+    <string name="module_vflow_core_capture_screen_desc">Capture screen screenshot using vFlow Core, based on scrcpy implementation</string>
+    <string name="param_vflow_core_capture_screen_output_format_name">Output Format</string>
+    <string name="param_vflow_core_capture_screen_quality_name">JPEG Quality</string>
+    <string name="param_vflow_core_capture_screen_max_width_name">Max Width</string>
+    <string name="param_vflow_core_capture_screen_max_height_name">Max Height</string>
+    <string name="output_vflow_core_capture_screen_success_name">Success</string>
+    <string name="output_vflow_core_capture_screen_image_name">Screenshot Image</string>
+    <string name="output_vflow_core_capture_screen_width_name">Image Width</string>
+    <string name="output_vflow_core_capture_screen_height_name">Image Height</string>
+
+    <!-- vflow.core.shell_command - CoreShellCommand Module -->
+    <string name="module_vflow_core_shell_command_name">Execute Shell Command</string>
+    <string name="module_vflow_core_shell_command_desc">Execute Shell commands via vFlow Core (supports Shell/Root permissions)</string>
+    <string name="param_vflow_core_shell_command_mode_name">Execution Mode</string>
+    <string name="param_vflow_core_shell_command_command_name">Command</string>
+    <string name="output_vflow_core_shell_command_result_name">Command Output</string>
+    <string name="output_vflow_core_shell_command_success_name">Success</string>
+
+    <!-- vflow.core.press_key - CorePressKey Module -->
+    <string name="module_vflow_core_press_key_name">Press Key</string>
+    <string name="module_vflow_core_press_key_desc">Send key events using vFlow Core, faster and more stable than accessibility service</string>
+    <string name="param_vflow_core_press_key_key_code_name">Key Code</string>
+    <string name="output_vflow_core_press_key_success_name">Success</string>
+
+    <!-- vflow.core.screen_status - CoreScreenStatus Module -->
+    <string name="module_vflow_core_screen_status_name">Read Screen Status</string>
+    <string name="module_vflow_core_screen_status_desc">Read current screen status using vFlow Core</string>
+    <string name="output_vflow_core_screen_status_enabled_name">Screen Status</string>
+
+    <!-- vflow.core.sleep_screen - CoreSleepScreen Module -->
+    <string name="module_vflow_core_sleep_screen_name">Sleep Screen</string>
+    <string name="module_vflow_core_sleep_screen_desc">Turn off screen using vFlow Core</string>
+    <string name="output_vflow_core_sleep_screen_success_name">Success</string>
+
+    <!-- vflow.core.wake_screen - CoreWakeScreen Module -->
+    <string name="module_vflow_core_wake_screen_name">Wake Screen</string>
+    <string name="module_vflow_core_wake_screen_desc">Wake up screen using vFlow Core</string>
+    <string name="output_vflow_core_wake_screen_success_name">Success</string>
+
+    <!-- Module Categories (Additional) -->
+    <string name="category_shizuku">Shizuku</string>
+    <string name="category_file">File</string>
+    <string name="category_core">Core (Beta)</string>
+
+    <!-- UI Component Modules (UI组件模块) -->
+    <!-- vflow.ui.component.button - Button -->
+    <string name="module_vflow_ui_component_button_name">Button</string>
+    <string name="module_vflow_ui_component_button_desc">Submit form or trigger event when clicked.</string>
+    <string name="param_vflow_ui_component_button_key_name">ID (Event Source)</string>
+    <string name="param_vflow_ui_component_button_text_name">Button Text</string>
+    <string name="param_vflow_ui_component_button_trigger_event_name">Trigger Event Only (Don\'t Close Window)</string>
+    <string name="output_vflow_ui_component_button_id_name">Unique identifier of the component</string>
+    <!-- vflow.ui.component.input - Input Field -->
+    <string name="module_vflow_ui_component_input_name">Input Field</string>
+    <string name="module_vflow_ui_component_input_desc">Text input field.</string>
+    <string name="param_vflow_ui_component_input_key_name">ID (Variable Name)</string>
+    <string name="param_vflow_ui_component_input_label_name">Label</string>
+    <string name="param_vflow_ui_component_input_hint_name">Hint</string>
+    <string name="param_vflow_ui_component_input_default_value_name">Default Value</string>
+    <string name="param_vflow_ui_component_input_trigger_event_name">Trigger Event on Input</string>
+    <string name="output_vflow_ui_component_input_id_name">Unique identifier of the component</string>
+    <!-- vflow.ui.component.switch - Switch -->
+    <string name="module_vflow_ui_component_switch_name">Switch</string>
+    <string name="module_vflow_ui_component_switch_desc">Boolean switch.</string>
+    <string name="param_vflow_ui_component_switch_key_name">ID (Variable Name)</string>
+    <string name="param_vflow_ui_component_switch_label_name">Label</string>
+    <string name="param_vflow_ui_component_switch_default_value_name">Default On</string>
+    <string name="param_vflow_ui_component_switch_trigger_event_name">Trigger Event on Toggle</string>
+    <string name="output_vflow_ui_component_switch_id_name">Unique identifier of the component</string>
+    <!-- vflow.ui.component.text - Text Display -->
+    <string name="module_vflow_ui_component_text_name">Text Display</string>
+    <string name="module_vflow_ui_component_text_desc">Display static text.</string>
+    <string name="param_vflow_ui_component_text_content_name">Content</string>
+    <string name="param_vflow_ui_component_text_key_name">ID (Optional)</string>
+    <string name="output_vflow_ui_component_text_component_name">VUiComponent object (contains all component information)</string>
+    <string name="output_vflow_ui_component_text_id_name">Component ID (for backward compatibility)</string>
+    <!-- vflow.ui.activity.start - Create Activity -->
+    <string name="module_vflow_ui_activity_start_name">Create Activity</string>
+    <string name="module_vflow_ui_activity_start_desc">Start defining activity layout.</string>
+    <string name="param_vflow_ui_activity_start_title_name">Title</string>
+    <string name="param_vflow_ui_activity_start_destroy_on_exit_name">Destroy on Exit</string>
+    <string name="msg_vflow_ui_activity_start_initializing">Initializing activity definition...</string>
+
+    <!-- vflow.ui.activity.show - Show Activity (Event Loop) -->
+    <string name="module_vflow_ui_activity_show_name">Show Activity (Event Loop)</string>
+    <string name="module_vflow_ui_activity_show_desc">Activity definition complete, launch activity and start listening for events.</string>
+    <string name="error_vflow_ui_activity_show_session_lost">Session Lost</string>
+    <string name="error_vflow_ui_activity_show_config_error">Configuration Error</string>
+    <string name="error_vflow_ui_activity_show_empty_elements">Component list is empty</string>
+    <string name="msg_vflow_ui_activity_show_waiting">Waiting for user action...</string>
+    <string name="msg_vflow_ui_activity_show_launching">Launching activity...</string>
+    <string name="msg_vflow_ui_activity_show_launched">Activity launched, waiting for action...</string>
+    <string name="msg_vflow_ui_activity_show_event" formatted="false">Event received: %s - %s</string>
+
+    <!-- vflow.ui.activity.end - End Activity -->
+    <string name="module_vflow_ui_activity_end_name">End Activity</string>
+    <string name="module_vflow_ui_activity_end_desc">Activity lifecycle end.</string>
+    <!-- vflow.ui.float.start - Create Float Window -->
+    <string name="module_vflow_ui_float_start_name">Create Float Window</string>
+    <string name="module_vflow_ui_float_start_desc">Start defining float window layout.</string>
+    <string name="param_vflow_ui_float_start_title_name">Title</string>
+    <string name="param_vflow_ui_float_start_width_name">Width (dp)</string>
+    <string name="param_vflow_ui_float_start_height_name">Height (dp)</string>
+    <string name="param_vflow_ui_float_start_alpha_name">Opacity (0.0-1.0)</string>
+    <string name="param_vflow_ui_float_start_destroy_on_exit_name">Destroy on Exit</string>
+    <string name="msg_vflow_ui_float_start_initializing">Initializing float window definition...</string>
+
+    <!-- vflow.ui.float.show - Show Float Window (Event Loop) -->
+    <string name="module_vflow_ui_float_show_name">Show Float Window (Event Loop)</string>
+    <string name="module_vflow_ui_float_show_desc">Float window definition complete, launch float window and start listening for events.</string>
+    <string name="msg_vflow_ui_float_show_launching">Launching float window...</string>
+    <string name="msg_vflow_ui_float_show_launched">Float window launched, waiting for action...</string>
+
+    <!-- vflow.ui.float.end - End Float Window -->
+    <string name="module_vflow_ui_float_end_name">End Float Window</string>
+    <string name="module_vflow_ui_float_end_desc">Float window lifecycle end.</string>
+    <!-- vflow.ui.interaction.on_event - On Component Event -->
+    <string name="module_vflow_ui_interaction_on_event_name">On Component Event</string>
+    <string name="module_vflow_ui_interaction_on_event_desc">Listen for click or modification events on specified component.</string>
+    <string name="param_vflow_ui_interaction_on_event_target_id_name">Target Component</string>
+    <string name="output_vflow_ui_interaction_on_event_value_name">Event Value</string>
+    <string name="error_vflow_ui_interaction_on_event_environment_error">Environment Error</string>
+    <string name="error_vflow_ui_interaction_on_event_must_be_inside">This module must be placed inside the "Show Activity" block.</string>
+    <string name="error_vflow_ui_interaction_on_event_param_error">Parameter Error</string>
+    <string name="error_vflow_ui_interaction_on_event_target_must_be_component">Target component must be a UI component object</string>
+
+    <!-- vflow.ui.interaction.on_event.end - End Event Listener -->
+    <string name="module_vflow_ui_interaction_on_event_end_name">End Event Listener</string>
+    <string name="module_vflow_ui_interaction_on_event_end_desc">End Event Listener</string>
+    <!-- vflow.ui.interaction.update - Update Component -->
+    <string name="module_vflow_ui_interaction_update_name">Update Component</string>
+    <string name="module_vflow_ui_interaction_update_desc">Modify component properties (such as text, visibility, layout).</string>
+    <string name="param_vflow_ui_interaction_update_target_id_name">Target Component</string>
+    <string name="param_vflow_ui_interaction_update_text_name">New Text</string>
+    <string name="param_vflow_ui_interaction_update_visible_name">Visibility</string>
+    <string name="param_vflow_ui_interaction_update_padding_name">Padding</string>
+    <string name="param_vflow_ui_interaction_update_margin_name">Margin</string>
+    <string name="param_vflow_ui_interaction_update_textSize_name">Text Size (sp)</string>
+    <string name="param_vflow_ui_interaction_update_background_name">Background Color</string>
+    <string name="output_vflow_ui_interaction_update_success_name">Success</string>
+    <string name="error_vflow_ui_interaction_update_session_lost">Session Lost</string>
+    <string name="error_vflow_ui_interaction_update_empty_id">Target component ID cannot be empty</string>
+    <string name="option_vflow_ui_interaction_update_visible_unchanged">Unchanged</string>
+    <string name="option_vflow_ui_interaction_update_visible_show">Show</string>
+    <string name="option_vflow_ui_interaction_update_visible_hide">Hide</string>
+
+    <!-- vflow.ui.interaction.get_value - Get Component -->
+    <string name="module_vflow_ui_interaction_get_value_name">Get Component</string>
+    <string name="module_vflow_ui_interaction_get_value_desc">Get UI component object or its value.</string>
+    <string name="param_vflow_ui_interaction_get_value_component_id_name">Component ID</string>
+    <string name="output_vflow_ui_interaction_get_value_component_name">Component Object</string>
+    <string name="output_vflow_ui_interaction_get_value_value_name">Component Value</string>
+    <string name="error_vflow_ui_interaction_get_value_not_found">Component not found</string>
+    <string name="error_vflow_ui_interaction_get_value_does_not_exist">Component \'%s\' does not exist in current activity</string>
+
+    <!-- vflow.ui.interaction.exit - Exit Activity -->
+    <string name="module_vflow_ui_interaction_exit_name">Exit Activity</string>
+    <string name="module_vflow_ui_interaction_exit_desc">Actively exit and destroy current activity.</string>
+    <string name="error_vflow_ui_interaction_exit_session_lost">Session Lost</string>
+    <string name="error_vflow_ui_interaction_exit_environment_error">Environment Error</string>
+    <string name="error_vflow_ui_interaction_exit_must_be_inside">This module must be placed inside the "Show Activity" block.</string>
+
+    <!-- System Tool Modules (系统工具模块) -->
+    <!-- vflow.data.quick_view - Quick View -->
+    <string name="module_vflow_data_quick_view_name">Quick View</string>
+    <string name="module_vflow_data_quick_view_desc">Display various types of content (text, numbers, images, etc.) in a float window.</string>
+    <string name="param_vflow_data_quick_view_content_name">Content</string>
+    <string name="output_vflow_data_quick_view_success_name">Success</string>
+    <string name="error_vflow_data_quick_view_service_missing">Service Missing</string>
+    <string name="error_vflow_data_quick_view_cannot_get_ui">Cannot get UI service to display content.</string>
+    <string name="summary_vflow_data_quick_view_prefix">Quick View </string>
+    <string name="msg_vflow_data_quick_view_showing">Displaying content...</string>
+    <string name="msg_vflow_data_quick_view_closed">User closed the view window</string>
+
+    <!-- vflow.system.share - Share -->
+    <string name="module_vflow_system_share_name">Share</string>
+    <string name="module_vflow_system_share_desc">Use system share function to share text or images.</string>
+    <string name="param_vflow_system_share_content_name">Share Content</string>
+    <string name="output_vflow_system_share_success_name">Success</string>
+    <string name="error_vflow_system_share_service_missing">Service Missing</string>
+    <string name="error_vflow_system_share_cannot_get_ui">Cannot get UI service to perform share operation.</string>
+    <string name="error_vflow_system_share_empty">Content is empty</string>
+    <string name="error_vflow_system_share_no_content">No content to share.</string>
+    <string name="msg_vflow_system_share_preparing">Preparing to share...</string>
+    <string name="msg_vflow_system_share_sent">Share window opened</string>
+    <string name="msg_vflow_system_share_failed">Share operation failed to start or was cancelled</string>
+
+    <!-- vflow.system.wifi - Wi-Fi Settings -->
+    <string name="module_vflow_system_wifi_name">Wi-Fi Settings</string>
+    <string name="module_vflow_system_wifi_desc">Turn on, off, or toggle Wi-Fi state.</string>
+    <string name="param_vflow_system_wifi_state_name">State</string>
+    <string name="output_vflow_system_wifi_success_name">Success</string>
+    <string name="error_vflow_system_wifi_invalid_state">Invalid state: %s</string>
+    <string name="msg_vflow_system_wifi_trying">Trying to %s Wi-Fi...</string>
+    <string name="msg_vflow_system_wifi_shell">Trying through Shell...</string>
+    <string name="msg_vflow_system_wifi_panel">Shell unavailable, opening settings panel...</string>
+    <string name="option_vflow_system_wifi_state_on">On</string>
+    <string name="option_vflow_system_wifi_state_off">Off</string>
+    <string name="option_vflow_system_wifi_state_toggle">Toggle</string>
+
+    <!-- vflow.system.read_sms - Read SMS -->
+    <string name="module_vflow_system_read_sms_name">Read SMS</string>
+    <string name="module_vflow_system_read_sms_desc">Find SMS from inbox by conditions, support verification code extraction.</string>
+    <string name="param_vflow_system_read_sms_filter_by_name">Filter By</string>
+    <string name="param_vflow_system_read_sms_sender_name">Sender Number</string>
+    <string name="param_vflow_system_read_sms_content_name">Content Contains</string>
+    <string name="param_vflow_system_read_sms_max_scan_name">Max Scan Count</string>
+    <string name="param_vflow_system_read_sms_extract_code_name">Extract Verification Code</string>
+    <string name="output_vflow_system_read_sms_found_name">Found</string>
+    <string name="output_vflow_system_read_sms_sender_name">Sender Number</string>
+    <string name="output_vflow_system_read_sms_content_name">SMS Full Text</string>
+    <string name="output_vflow_system_read_sms_timestamp_name">Received Time</string>
+    <string name="output_vflow_system_read_sms_verification_code_name">Extracted Verification Code</string>
+    <string name="msg_vflow_system_read_sms_scanning">Scanning last %d SMS messages...</string>
+    <string name="msg_vflow_system_read_sms_found">Found matching SMS: from %s</string>
+    <string name="msg_vflow_system_read_sms_not_found">No matching SMS found</string>
+    <string name="option_vflow_system_read_sms_filter_latest">Latest One</string>
+    <string name="option_vflow_system_read_sms_filter_sender">From Sender</string>
+    <string name="option_vflow_system_read_sms_filter_content">Contains Content</string>
+    <string name="option_vflow_system_read_sms_filter_both">Sender and Content</string>
+
+    <!-- vflow.system.invoke - General Invoke -->
+    <string name="module_vflow_system_invoke_name">General Invoke</string>
+    <string name="module_vflow_system_invoke_desc">Execute Intent, open links, send broadcasts or start services.</string>
+    <string name="param_vflow_system_invoke_mode_name">Invoke Mode</string>
+    <string name="param_vflow_system_invoke_uri_name">Link/Data</string>
+    <string name="param_vflow_system_invoke_action_name">Action</string>
+    <string name="param_vflow_system_invoke_package_name">Package</string>
+    <string name="param_vflow_system_invoke_class_name">Class</string>
+    <string name="param_vflow_system_invoke_type_name">MIME Type</string>
+    <string name="param_vflow_system_invoke_flags_name">Flags (Int)</string>
+    <string name="param_vflow_system_invoke_extras_name">Extras</string>
+    <string name="param_vflow_system_invoke_show_advanced_name">Show Advanced</string>
+    <string name="output_vflow_system_invoke_success_name">Success</string>
+    <string name="error_vflow_system_invoke_invalid_uri">Invalid URI</string>
+    <string name="error_vflow_system_invoke_cannot_parse">Cannot parse URI: %s</string>
+    <string name="error_vflow_system_invoke_failed">Invoke Failed</string>
+    <string name="error_vflow_system_invoke_intent_failed">Intent execution failed: %s</string>
+    <string name="msg_vflow_system_invoke_executing">Executing invoke (%s)...</string>
+    <string name="option_vflow_system_invoke_mode_uri">Link/Uri</string>
+    <string name="option_vflow_system_invoke_mode_activity">Activity</string>
+    <string name="option_vflow_system_invoke_mode_broadcast">Broadcast</string>
+    <string name="option_vflow_system_invoke_mode_service">Service</string>
+
+    <!-- vflow.system.get_usage_stats - Get App Usage Stats -->
+    <string name="module_vflow_system_get_usage_stats_name">Get App Usage Stats</string>
+    <string name="module_vflow_system_get_usage_stats_desc">Get screen usage time statistics for apps on device.</string>
+    <string name="param_vflow_system_get_usage_stats_interval_name">Time Range</string>
+    <string name="param_vflow_system_get_usage_stats_max_results_name">Max Results</string>
+    <string name="output_vflow_system_get_usage_stats_stats_list_name">Stats List</string>
+    <string name="output_vflow_system_get_usage_stats_most_used_app_name">Most Used App</string>
+    <string name="output_vflow_system_get_usage_stats_success_name">Success</string>
+    <string name="error_vflow_system_get_usage_stats_fetch_failed">Fetch Failed</string>
+    <string name="error_vflow_system_get_usage_stats_no_data">No usage data retrieved. Please ensure "Usage Access Permission" is granted and system has recorded data.</string>
+    <string name="msg_vflow_system_get_usage_stats_querying">Querying %s usage records...</string>
+    <string name="msg_vflow_system_get_usage_stats_empty">No app usage records in specified time period</string>
+    <string name="msg_vflow_system_get_usage_stats_most_used">Most used: %s</string>
+    <string name="option_vflow_system_get_usage_stats_interval_today">Today</string>
+    <string name="option_vflow_system_get_usage_stats_interval_24h">Last 24 Hours</string>
+    <string name="option_vflow_system_get_usage_stats_interval_week">This Week</string>
+    <string name="option_vflow_system_get_usage_stats_interval_month">This Month</string>
+    <string name="option_vflow_system_get_usage_stats_interval_year">This Year</string>
+
+    <!-- vflow.system.bluetooth - Bluetooth Settings -->
+    <string name="module_vflow_system_bluetooth_name">Bluetooth Settings</string>
+    <string name="module_vflow_system_bluetooth_desc">Turn on, off, or toggle Bluetooth state.</string>
+    <string name="param_vflow_system_bluetooth_state_name">State</string>
+    <string name="output_vflow_system_bluetooth_success_name">Success</string>
+    <string name="error_vflow_system_bluetooth_no_hardware">Hardware Not Supported</string>
+    <string name="error_vflow_system_bluetooth_not_supported">This device does not support Bluetooth.</string>
+    <string name="error_vflow_system_bluetooth_invalid_state">Invalid state: %s</string>
+    <string name="msg_vflow_system_bluetooth_trying">Trying to %s Bluetooth...</string>
+    <string name="option_vflow_system_bluetooth_state_on">On</string>
+    <string name="option_vflow_system_bluetooth_state_off">Off</string>
+    <string name="option_vflow_system_bluetooth_state_toggle">Toggle</string>
+
+    <!-- Shizuku Modules -->
+    <!-- vflow.shizuku.shell_command - Execute Shell Command -->
+    <string name="module_vflow_shizuku_shell_command_name">Execute Shell Command</string>
+    <string name="module_vflow_shizuku_shell_command_desc">Execute commands via Shell (supports Root/Shizuku).</string>
+    <string name="param_vflow_shizuku_shell_command_mode_name">Execution Mode</string>
+    <string name="param_vflow_shizuku_shell_command_command_name">Command</string>
+    <string name="output_vflow_shizuku_shell_command_result_name">Command Output</string>
+    <string name="output_vflow_shizuku_shell_command_success_name">Success</string>
+    <string name="error_vflow_shizuku_shell_command_empty">Command to execute cannot be empty.</string>
+    <string name="error_vflow_shizuku_shell_command_failed">Execution Failed</string>
+    <string name="msg_vflow_shizuku_shell_command_executing" formatted="false">Executing via %s: %s</string>
+    <string name="option_vflow_shizuku_shell_command_mode_auto">Auto</string>
+    <string name="option_vflow_shizuku_shell_command_mode_shizuku">Shizuku</string>
+    <string name="option_vflow_shizuku_shell_command_mode_root">Root</string>
+
+    <!-- vflow.shizuku.alipay_shortcuts - Alipay Shortcuts -->
+    <string name="module_vflow_shizuku_alipay_shortcuts_name">Alipay</string>
+    <string name="module_vflow_shizuku_alipay_shortcuts_desc">Quick access to Alipay\'s scan, payment code, collection code, etc.</string>
+    <string name="param_vflow_shizuku_alipay_shortcuts_action_name">Action</string>
+    <string name="output_vflow_shizuku_alipay_shortcuts_result_name">Command Output</string>
+    <string name="error_vflow_shizuku_alipay_shortcuts_no_action">No action selected</string>
+    <string name="error_vflow_shizuku_alipay_shortcuts_invalid">Invalid action</string>
+    <string name="msg_vflow_shizuku_alipay_shortcuts_executing">Executing shortcut...</string>
+    <string name="option_vflow_shizuku_alipay_shortcuts_action_scan">Scan</string>
+    <string name="option_vflow_shizuku_alipay_shortcuts_action_pay">Payment Code</string>
+    <string name="option_vflow_shizuku_alipay_shortcuts_action_receive">Collection Code</string>
+
+    <!-- vflow.shizuku.wechat_shortcuts - WeChat Shortcuts -->
+    <string name="module_vflow_shizuku_wechat_shortcuts_name">WeChat</string>
+    <string name="module_vflow_shizuku_wechat_shortcuts_desc">Quick access to WeChat\'s collection code, payment code.</string>
+    <string name="param_vflow_shizuku_wechat_shortcuts_action_name">Action</string>
+    <string name="output_vflow_shizuku_wechat_shortcuts_result_name">Command Output</string>
+    <string name="option_vflow_shizuku_wechat_shortcuts_action_receive">Collection Code</string>
+    <string name="option_vflow_shizuku_wechat_shortcuts_action_pay">Payment Code</string>
+
+    <!-- vflow.shizuku.coloros_shortcuts - ColorOS Shortcuts -->
+    <string name="module_vflow_shizuku_coloros_shortcuts_name">ColorOS</string>
+    <string name="module_vflow_shizuku_coloros_shortcuts_desc">Execute ColorOS system-related shortcuts.</string>
+    <string name="param_vflow_shizuku_coloros_shortcuts_action_name">Action</string>
+    <string name="output_vflow_shizuku_coloros_shortcuts_result_name">Command Output</string>
+    <string name="option_vflow_shizuku_coloros_shortcuts_action_memory">Xiaobu Memory</string>
+    <string name="option_vflow_shizuku_coloros_shortcuts_action_assistant">Xiaobu Assistant</string>
+    <string name="option_vflow_shizuku_coloros_shortcuts_action_record">Start Recording</string>
+
+    <!-- vflow.shizuku.gemini_shortcut - Gemini Assistant -->
+    <string name="module_vflow_shizuku_gemini_shortcut_name">Gemini Assistant</string>
+    <string name="module_vflow_shizuku_gemini_shortcut_desc">Launch Google Gemini voice assistant.</string>
+    <string name="output_vflow_shizuku_gemini_shortcut_result_name">Command Output</string>
+    <!-- File Modules (文件模块) -->
+    <!-- vflow.file.adjust_image - Adjust Image -->
+    <string name="module_vflow_file_adjust_image_name">Adjust Image</string>
+    <string name="module_vflow_file_adjust_image_desc">Adjust image parameters like exposure, contrast, saturation, etc.</string>
+    <string name="param_vflow_file_adjust_image_image_name">Source Image</string>
+    <string name="param_vflow_file_adjust_image_exposure_name">Exposure</string>
+    <string name="param_vflow_file_adjust_image_vibrance_name">Vibrance</string>
+    <string name="param_vflow_file_adjust_image_highlights_name">Highlights</string>
+    <string name="param_vflow_file_adjust_image_shadows_name">Shadows</string>
+    <string name="param_vflow_file_adjust_image_contrast_name">Contrast</string>
+    <string name="param_vflow_file_adjust_image_brightness_name">Brightness</string>
+    <string name="param_vflow_file_adjust_image_blackPoint_name">Black Point</string>
+    <string name="param_vflow_file_adjust_image_saturation_name">Saturation</string>
+    <string name="param_vflow_file_adjust_image_warmth_name">Warmth</string>
+    <string name="param_vflow_file_adjust_image_tint_name">Tint</string>
+    <string name="param_vflow_file_adjust_image_vignette_name">Vignette</string>
+    <string name="param_vflow_file_adjust_image_sharpness_name">Sharpness</string>
+    <string name="param_vflow_file_adjust_image_clarity_name">Clarity</string>
+    <string name="param_vflow_file_adjust_image_denoise_name">Denoise</string>
+    <string name="output_vflow_file_adjust_image_image_name">Processed Image</string>
+    <string name="summary_vflow_file_adjust_image_prefix">Adjust image </string>
+    <string name="summary_vflow_file_adjust_image_with"> using: </string>
+    <string name="summary_vflow_file_adjust_image_no_adjust"> (no adjustment)</string>
+    <string name="error_vflow_file_adjust_image_not_image">Need an image variable as input.</string>
+    <string name="error_vflow_file_adjust_image_load_failed">Cannot load bitmap from URI: %s</string>
+    <string name="error_vflow_file_adjust_image_exception">Unknown error occurred</string>
+    <string name="msg_vflow_file_adjust_image_loading">Loading image...</string>
+    <string name="msg_vflow_file_adjust_image_applying">Applying image effects...</string>
+    <string name="msg_vflow_file_adjust_image_saving">Saving processed image...</string>
+
+    <!-- vflow.file.rotate_image - Rotate Image -->
+    <string name="module_vflow_file_rotate_image_name">Rotate Image</string>
+    <string name="module_vflow_file_rotate_image_desc">Rotate image by specified angle.</string>
+    <string name="param_vflow_file_rotate_image_image_name">Source Image</string>
+    <string name="param_vflow_file_rotate_image_degrees_name">Rotation Angle</string>
+    <string name="output_vflow_file_rotate_image_image_name">Rotated Image</string>
+    <string name="summary_vflow_file_rotate_image_prefix">Rotate image </string>
+    <string name="summary_vflow_file_rotate_image_rotate"> by </string>
+    <string name="summary_vflow_file_rotate_image_degrees"> degrees</string>
+    <string name="error_vflow_file_rotate_image_not_image">Need an image variable as input.</string>
+    <string name="error_vflow_file_rotate_image_load_failed">Cannot load bitmap from URI: %s</string>
+    <string name="error_vflow_file_rotate_image_exception">Unknown error occurred</string>
+    <string name="msg_vflow_file_rotate_image_loading">Loading image...</string>
+    <string name="msg_vflow_file_rotate_image_rotating">Rotating image...</string>
+    <string name="msg_vflow_file_rotate_image_saving">Saving processed image...</string>
+
+    <!-- Interaction Modules (交互模块) -->
+    <!-- vflow.interaction.find_element - Find Element -->
+    <string name="module_vflow_interaction_find_element_name">Find Element</string>
+    <string name="module_vflow_interaction_find_element_desc">Find screen elements by text, ID, region and other properties, supports multi-property combination filtering</string>
+    <string name="param_vflow_interaction_find_element_text_name">Element Text</string>
+    <string name="param_vflow_interaction_find_element_text_match_mode_name">Text Match Mode</string>
+    <string name="param_vflow_interaction_find_element_view_id_name">Element ID</string>
+    <string name="param_vflow_interaction_find_element_id_match_mode_name">ID Match Mode</string>
+    <string name="param_vflow_interaction_find_element_class_name_name">Class Name</string>
+    <string name="param_vflow_interaction_find_element_class_match_mode_name">Class Match Mode</string>
+    <string name="param_vflow_interaction_find_element_search_region_name">Search Region</string>
+    <string name="param_vflow_interaction_find_element_clickable_name">Clickable</string>
+    <string name="param_vflow_interaction_find_element_enabled_name">Enabled</string>
+    <string name="param_vflow_interaction_find_element_checkable_name">Checkable</string>
+    <string name="param_vflow_interaction_find_element_checked_name">Checked</string>
+    <string name="param_vflow_interaction_find_element_editable_name">Editable</string>
+    <string name="param_vflow_interaction_find_element_focusable_name">Focusable</string>
+    <string name="param_vflow_interaction_find_element_scrollable_name">Scrollable</string>
+    <string name="param_vflow_interaction_find_element_depth_limit_name">Max Depth</string>
+    <string name="param_vflow_interaction_find_element_result_selection_name">Result Selection</string>
+    <string name="output_vflow_interaction_find_element_success_name">Success</string>
+    <string name="output_vflow_interaction_find_element_found_name">Found</string>
+    <string name="output_vflow_interaction_find_element_count_name">Count</string>
+    <string name="output_vflow_interaction_find_element_element_name">Selected Element</string>
+    <string name="output_vflow_interaction_find_element_all_elements_name">All Elements</string>
+    <string name="summary_vflow_interaction_find_element_prefix">Find element</string>
+    <string name="summary_vflow_interaction_find_element_text_equals">text=</string>
+    <string name="summary_vflow_interaction_find_element_id_equals">ID=</string>
+    <string name="summary_vflow_interaction_find_element_class_equals">class=</string>
+    <string name="summary_vflow_interaction_find_element_separator">, </string>
+    <string name="summary_vflow_interaction_find_image">Find image</string>
+    <string name="summary_vflow_interaction_and_output">and output coordinates</string>
+    <string name="summary_vflow_interaction_find_image_no_template">No template image selected</string>
+    <string name="error_vflow_interaction_find_element_service_unavailable">Service Unavailable</string>
+    <string name="error_vflow_interaction_find_element_no_accessibility">Accessibility service not started</string>
+    <string name="error_vflow_interaction_find_element_no_condition">Please set at least one search condition</string>
+    <string name="error_vflow_interaction_find_element_regex_error">Regex Error</string>
+    <string name="error_vflow_interaction_find_element_invalid_regex">Invalid regex for text matching: %s</string>
+    <string name="error_vflow_interaction_find_element_not_found">Element Not Found</string>
+    <string name="error_vflow_interaction_find_element_no_match">No matching elements</string>
+    <string name="error_vflow_interaction_find_element_failed">Search Failed</string>
+    <string name="error_vflow_interaction_find_element_unknown">Unknown error occurred</string>
+    <string name="msg_vflow_interaction_find_element_searching">Searching for elements...</string>
+    <string name="msg_vflow_interaction_find_element_found">Found %d elements</string>
+    <string name="option_vflow_interaction_find_element_match_contains">Contains</string>
+    <string name="option_vflow_interaction_find_element_match_exact">Exact Match</string>
+    <string name="option_vflow_interaction_find_element_match_start">Starts With</string>
+    <string name="option_vflow_interaction_find_element_match_regex">Regex</string>
+    <string name="option_vflow_interaction_find_element_selection_first">First</string>
+    <string name="option_vflow_interaction_find_element_selection_last">Last</string>
+    <string name="option_vflow_interaction_find_element_selection_center">Closest to Center</string>
+    <string name="option_vflow_interaction_find_element_selection_top">Closest to Top</string>
+
+    <!-- vflow.device.find.text - Find Text -->
+    <string name="module_vflow_device_find_text_name">Find Text</string>
+    <string name="module_vflow_device_find_text_desc">Find elements on screen</string>
+    <string name="param_vflow_device_find_text_matchMode_name">Match Mode</string>
+    <string name="param_vflow_device_find_text_targetText_name">Target Text</string>
+    <string name="param_vflow_device_find_text_outputFormat_name">Output Format</string>
+    <string name="output_vflow_device_find_text_first_result_name">First Result</string>
+    <string name="output_vflow_device_find_text_all_results_name">All Results</string>
+    <string name="output_vflow_device_find_text_count_name">Result Count</string>
+    <string name="summary_vflow_device_find_text_prefix">Using </string>
+    <string name="summary_vflow_device_find_text_mode"> mode to find text </string>
+    <string name="summary_vflow_device_find_text_and"> and output </string>
+    <string name="error_vflow_device_find_text_service_not_running">Service Not Running</string>
+    <string name="error_vflow_device_find_text_need_service">Find text requires accessibility service, but it is not currently running.</string>
+    <string name="error_vflow_device_find_text_empty">Target text cannot be empty.</string>
+    <string name="error_vflow_device_find_text_no_root">Cannot get root node of current window.</string>
+    <string name="error_vflow_device_find_text_not_found">Text Not Found</string>
+    <string name="error_vflow_device_find_text_no_match" formatted="false">No matching text found on screen: \'%s\' (match mode: %s)</string>
+    <string name="error_vflow_device_find_text_exception">Execution Exception</string>
+    <string name="error_vflow_device_find_text_unknown">Unknown error occurred</string>
+    <string name="msg_vflow_device_find_text_searching" formatted="false">Searching for text in [%s] mode: \'%s\'</string>
+    <string name="option_vflow_device_find_text_match_exact">Exact Match</string>
+    <string name="option_vflow_device_find_text_match_contains">Contains</string>
+    <string name="option_vflow_device_find_text_match_regex">Regex</string>
+    <string name="option_vflow_device_find_text_output_element">Element</string>
+    <string name="option_vflow_device_find_text_output_coordinate">Coordinate</string>
+    <string name="option_vflow_device_find_text_output_viewid">View ID</string>
+
+    <!-- vflow.interaction.operit - Operit Interaction -->
+    <string name="module_vflow_interaction_operit_name">Operit Interaction</string>
+    <string name="module_vflow_interaction_operit_desc">Interact with Operit AI assistant: send messages or trigger workflows.</string>
+    <string name="param_vflow_interaction_operit_mode_name">Interaction Mode</string>
+    <string name="param_vflow_interaction_operit_message_name">Message Content</string>
+    <string name="param_vflow_interaction_operit_request_id_name">Request ID</string>
+    <string name="param_vflow_interaction_operit_create_new_chat_name">Create New Chat</string>
+    <string name="param_vflow_interaction_operit_group_name">Group Name</string>
+    <string name="param_vflow_interaction_operit_chat_id_name">Chat ID</string>
+    <string name="param_vflow_interaction_operit_show_floating_name">Show Float Window</string>
+    <string name="param_vflow_interaction_operit_auto_exit_after_ms_name">Auto Exit Time (ms)</string>
+    <string name="param_vflow_interaction_operit_stop_after_name">Stop After Execution</string>
+    <string name="param_vflow_interaction_operit_workflow_action_name">Workflow Action</string>
+    <string name="param_vflow_interaction_operit_workflow_extras_name">Workflow Parameters</string>
+    <string name="param_vflow_interaction_operit_wait_for_result_name">Wait for Result</string>
+    <string name="param_vflow_interaction_operit_timeout_ms_name">Timeout (ms)</string>
+    <string name="output_vflow_interaction_operit_success_name">Success</string>
+    <string name="output_vflow_interaction_operit_ai_response_name">AI Response</string>
+    <string name="output_vflow_interaction_operit_chat_id_name">Chat ID</string>
+    <string name="output_vflow_interaction_operit_error_name">Error Message</string>
+    <string name="summary_vflow_interaction_operit_send">Send message to Operit</string>
+    <string name="summary_vflow_interaction_operit_trigger">Trigger Operit workflow </string>
+    <string name="summary_vflow_agent_background_prefix">Virtual Screen</string>
+    <string name="summary_vflow_device_ocr_find_in">Find</string>
+    <string name="summary_vflow_device_ocr_find_middle">in image</string>
+    <string name="summary_vflow_device_ocr_recognize">Recognize text in image</string>
+    <string name="summary_vflow_device_ocr_text_in_image">text in</string>
+    <string name="summary_vflow_device_swipe_from">Swipe from</string>
+    <string name="summary_vflow_device_swipe_to">to</string>
+    <string name="summary_vflow_device_long_press">Long press</string>
+    <string name="summary_vflow_device_send_key_event_prefix">Send key event</string>
+    <string name="summary_vflow_interaction_ui_selector_prefix">Find using selector</string>
+    <string name="summary_vflow_device_wait_for_prefix">Wait for</string>
+    <string name="summary_vflow_device_wait_for_suffix">to appear</string>
+    <string name="summary_vflow_device_timeout_prefix">, timeout</string>
+    <string name="summary_vflow_device_timeout_suffix">seconds</string>
+    <string name="error_vflow_interaction_operit_param_error">Parameter Error</string>
+    <string name="error_vflow_interaction_operit_message_empty">Message content cannot be empty</string>
+    <string name="error_vflow_interaction_operit_action_empty">Workflow Action cannot be empty</string>
+    <string name="error_vflow_interaction_operit_send_failed">Send Failed</string>
+    <string name="error_vflow_interaction_operit_broadcast_failed">Broadcast send failed: %s</string>
+    <string name="error_vflow_interaction_operit_error">Operit returned error</string>
+    <string name="msg_vflow_interaction_operit_sending">Sending message to Operit...</string>
+    <string name="msg_vflow_interaction_operit_sent">Message sent</string>
+    <string name="msg_vflow_interaction_operit_timeout">Wait for result timeout, but message was sent</string>
+    <string name="msg_vflow_interaction_operit_triggering">Triggering workflow: %s</string>
+    <string name="msg_vflow_interaction_operit_triggered">Workflow triggered</string>
+    <string name="option_vflow_interaction_operit_mode_chat">Send Message</string>
+    <string name="option_vflow_interaction_operit_mode_workflow">Trigger Workflow</string>
+
+    <!-- vflow.ai.completion - AI Chat -->
+    <string name="module_vflow_ai_completion_name">AI Chat</string>
+    <string name="module_vflow_ai_completion_desc">Call LLM API (OpenAI/DeepSeek) for intelligent conversation.</string>
+    <string name="param_vflow_ai_completion_provider_name">Provider</string>
+    <string name="param_vflow_ai_completion_base_url_name">Base URL</string>
+    <string name="param_vflow_ai_completion_api_key_name">API Key</string>
+    <string name="param_vflow_ai_completion_model_name">Model</string>
+    <string name="param_vflow_ai_completion_prompt_name">Prompt</string>
+    <string name="param_vflow_ai_completion_system_prompt_name">System Prompt</string>
+    <string name="param_vflow_ai_completion_temperature_name">Temperature</string>
+    <string name="param_vflow_ai_completion_show_advanced_name">Show Advanced</string>
+    <string name="output_vflow_ai_completion_result_name">Response Content</string>
+    <string name="output_vflow_ai_completion_success_name">Success</string>
+    <string name="summary_vflow_ai_completion_send">Send request to </string>
+    <string name="summary_vflow_ai_completion_request"> request</string>
+    <string name="summary_vflow_ai_completion_with"> Send to $provider: </string>
+    <string name="error_vflow_ai_completion_no_key">API Key cannot be empty</string>
+    <string name="error_vflow_ai_completion_no_prompt">Prompt cannot be empty</string>
+    <string name="error_vflow_ai_completion_request_failed">Request Failed</string>
+    <string name="error_vflow_ai_completion_empty_response">Empty Response</string>
+    <string name="error_vflow_ai_completion_server_returned">Server returned empty content</string>
+    <string name="error_vflow_ai_completion_parse_failed">Parse Failed</string>
+    <string name="error_vflow_ai_completion_no_content">Response format not as expected: message.content does not exist</string>
+    <string name="error_vflow_ai_completion_cannot_extract">Cannot extract response from: %s</string>
+    <string name="error_vflow_ai_completion_network_error">Network Error</string>
+    <string name="msg_vflow_ai_completion_thinking">Thinking (%s)...</string>
+    <string name="option_vflow_ai_completion_provider_openai">OpenAI</string>
+    <string name="option_vflow_ai_completion_provider_deepseek">DeepSeek</string>
+    <string name="option_vflow_ai_completion_provider_custom">Custom</string>
+
+    <!-- Notification Modules (通知模块) -->
+    <!-- vflow.notification.find - Find Notification -->
+    <string name="module_vflow_notification_find_name">Find Notification</string>
+    <string name="module_vflow_notification_find_desc">Find all visible notifications in current status bar.</string>
+    <string name="param_vflow_notification_find_app_filter_name">App Package Name</string>
+    <string name="param_vflow_notification_find_title_filter_name">Title Contains</string>
+    <string name="param_vflow_notification_find_content_filter_name">Content Contains</string>
+    <string name="output_vflow_notification_find_notifications_name">Found Notifications</string>
+    <string name="error_vflow_notification_find_service_unavailable">Service Not Connected</string>
+    <string name="error_vflow_notification_find_need_permission">Need notification listener permission to find notifications.</string>
+    <string name="error_vflow_notification_find_not_found">Notification Not Found</string>
+    <string name="error_vflow_notification_find_no_match">No notifications matching filter criteria</string>
+    <string name="msg_vflow_notification_find_searching">Searching for notifications...</string>
+    <string name="msg_vflow_notification_find_found">Found %d notifications.</string>
+
+    <!-- vflow.notification.remove - Remove Notification -->
+    <string name="module_vflow_notification_remove_name">Remove Notification</string>
+    <string name="module_vflow_notification_remove_desc">Remove one or more notifications from status bar.</string>
+    <string name="param_vflow_notification_remove_target_name">Target Notification</string>
+    <string name="output_vflow_notification_remove_success_name">Success</string>
+    <string name="error_vflow_notification_remove_service_unavailable">Service Not Connected</string>
+    <string name="error_vflow_notification_remove_need_permission">Need notification listener permission to remove notifications.</string>
+    <string name="error_vflow_notification_remove_invalid_param">Invalid Parameter</string>
+    <string name="error_vflow_notification_remove_invalid_target">Input is not a valid notification object or notification list.</string>
+    <string name="msg_vflow_notification_remove_removing">Removing %d notifications...</string>
+
+    <!-- Trigger Modules (触发器模块) -->
+    <!-- vflow.trigger.share - Receive Share -->
+    <string name="module_vflow_trigger_share_name">Receive Share</string>
+    <string name="module_vflow_trigger_share_desc">Start workflow when content (text, image, file) is shared to vFlow.</string>
+    <string name="param_vflow_trigger_share_acceptedType_name">Accept Content Type</string>
+    <string name="output_vflow_trigger_share_shared_content_name">Shared Content</string>
+    <string name="error_vflow_trigger_share_failed">Trigger Failed</string>
+    <string name="error_vflow_trigger_share_no_data">No shared data received.</string>
+    <string name="msg_vflow_trigger_share_received">Shared content received</string>
+    <string name="option_vflow_trigger_share_type_any">Any</string>
+    <string name="option_vflow_trigger_share_type_text">Text</string>
+    <string name="option_vflow_trigger_share_type_link">Link</string>
+    <string name="option_vflow_trigger_share_type_image">Image</string>
+    <string name="option_vflow_trigger_share_type_file">File</string>
+
+    <!-- Other Modules (其他模块) -->
+    <!-- vflow.scripted - Dynamic Script Module -->
+    <string name="module_vflow_scripted_name">Dynamic Script</string>
+    <string name="module_vflow_scripted_desc">Dynamic module defined based on manifest.json</string>
+    <string name="error_vflow_scripted_execution_failed">Module execution error</string>
+    <string name="error_vflow_scripted_unknown">Unknown error</string>
+    <string name="msg_vflow_scripted_executing">Executing script...</string>
+    <string name="msg_vflow_scripted_completed">Script execution completed</string>
+
+    <!-- vflow.core.touch_replay - Touch Replay -->
+    <string name="module_vflow_core_touch_replay_name">Touch Replay</string>
+    <string name="module_vflow_core_touch_replay_desc">Replay recorded touch sequence, adjustable playback speed</string>
+    <string name="param_vflow_core_touch_replay_speed_name">Playback Speed</string>
+    <string name="output_vflow_core_touch_replay_success_name">Success</string>
+    <string name="output_vflow_core_touch_replay_event_count_name">Event Count</string>
+    <string name="summary_vflow_core_touch_replay_not_recorded">Touch Replay (not recorded)</string>
+    <string name="summary_vflow_core_touch_replay_with_data" formatted="false">Replay %d touch events at %sx speed</string>
+    <string name="summary_vflow_core_touch_replay_error">Touch Replay (data error)</string>
+    <string name="error_vflow_core_touch_replay_not_connected">Core Not Connected</string>
+    <string name="error_vflow_core_touch_replay_service_not_running">vFlow Core service not running. Please ensure Shizuku or Root permission is granted.</string>
+    <string name="error_vflow_core_touch_replay_not_recorded">Not Recorded</string>
+    <string name="error_vflow_core_touch_replay_no_data">Please record touch operations in editor first</string>
+    <string name="error_vflow_core_touch_replay_data_error">Data Error</string>
+    <string name="error_vflow_core_touch_replay_corrupted">Recording data corrupted</string>
+    <string name="error_vflow_core_touch_replay_failed">Replay Failed</string>
+    <string name="error_vflow_core_touch_replay_execution_failed">Touch replay execution failed</string>
+    <string name="msg_vflow_core_touch_replay_replaying">Replaying %d touch events...</string>
+    <string name="msg_vflow_core_touch_replay_completed">Replay completed</string>
+
+    <!-- vflow.system.lua - Lua Script Module -->
+    <string name="module_vflow_system_lua_name">Lua Script</string>
+    <string name="module_vflow_system_lua_desc">Execute Lua script, can call other module functions.</string>
+    <string name="param_vflow_system_lua_script_name">Lua Script</string>
+    <string name="param_vflow_system_lua_inputs_name">Script Inputs</string>
+    <string name="output_vflow_system_lua_outputs_name">Script Return Value</string>
+    <string name="summary_vflow_system_lua_prefix">Execute Lua script: </string>
+    <string name="error_vflow_system_lua_script_empty">Script Error</string>
+    <string name="error_vflow_system_lua_script_empty_desc">Lua script content cannot be empty.</string>
+    <string name="error_vflow_system_lua_execution_failed">Lua Script Execution Failed</string>
+    <string name="msg_vflow_system_lua_preparing">Preparing Lua environment...</string>
+    <string name="msg_vflow_system_lua_executing">Executing Lua script...</string>
+    <string name="msg_vflow_system_lua_completed">Script execution completed</string>
+    <string name="error_vflow_core_capture_screen_failed">Screenshot failed</string>
+    <string name="error_vflow_core_input_text_empty">Text content cannot be empty</string>
+    <string name="error_vflow_core_not_connected">Core not connected</string>
+    <string name="error_vflow_core_press_key_invalid_code">Key code must be a number</string>
+    <string name="error_vflow_core_screen_operation_invalid_type">Unknown operation type: %s</string>
+    <string name="error_vflow_core_screen_operation_target_empty">Target position is empty. Please ensure coordinates are set or connected to upstream module\'s coordinate output.</string>
+    <string name="error_vflow_core_screen_operation_target_invalid">Target position format is invalid. Requires Coordinate type or \"x,y\" format string.</string>
+    <string name="error_vflow_core_service_not_running">vFlow Core service is not running. Please ensure Shizuku or Root permissions are granted.</string>
+    <string name="error_vflow_core_shell_command_empty">Command to execute cannot be empty.</string>
+    <string name="module_vflow_ai_agent_desc">Fully autonomous AI assistant. Understands screen content based on vision and UI structure to automatically complete tasks</string>
+    <string name="module_vflow_ai_agent_name">AI Agent</string>
+    <string name="module_vflow_ai_autoglm_desc">Replicate AutoGLM project. Execute complex mobile operation tasks based on Chain of Thought (CoT) and custom instruction protocols</string>
+    <string name="module_vflow_ai_autoglm_name">AutoGLM Agent</string>
+    <string name="module_vflow_core_bluetooth_desc">Use vFlow Core to control Bluetooth state (on/off/toggle).</string>
+    <string name="module_vflow_core_bluetooth_name">Bluetooth Control</string>
+    <string name="module_vflow_core_get_clipboard_desc">Use vFlow Core to read clipboard content.</string>
+    <string name="module_vflow_core_get_clipboard_name">Get Clipboard</string>
+    <string name="module_vflow_core_input_text_desc">Use vFlow Core to input text, faster and more stable than accessibility service.</string>
+    <string name="module_vflow_core_input_text_name">Input Text</string>
+    <string name="module_vflow_core_screen_operation_desc">Use vFlow Core to perform tap, long press, or swipe operations, faster and more stable than accessibility service.</string>
+    <string name="module_vflow_core_screen_operation_name">Screen Operation</string>
+    <string name="module_vflow_core_set_clipboard_desc">Use vFlow Core to set clipboard content.</string>
+    <string name="module_vflow_core_set_clipboard_name">Set Clipboard</string>
+    <string name="module_vflow_device_send_key_event_desc">Execute system-level operations such as back, home, open notification, etc.</string>
+    <string name="module_vflow_device_send_key_event_name">Global Action</string>
+    <string name="module_vflow_file_apply_mask_desc">Apply Material You style rounded rectangle mask to image</string>
+    <string name="module_vflow_file_apply_mask_name">Apply Mask</string>
+    <string name="module_vflow_file_import_image_desc">Select an image from gallery or files</string>
+    <string name="module_vflow_file_import_image_name">Import Image</string>
+    <string name="module_vflow_interaction_find_image_desc">Find area on screen that matches template image, return center coordinate of match</string>
+    <string name="module_vflow_interaction_find_image_name">Find Image</string>
+    <string name="module_vflow_interaction_find_until_desc">Continuously find text on screen until it appears or timeout. Supports OCR fallback</string>
+    <string name="module_vflow_interaction_find_until_name">Find Until</string>
+    <string name="module_vflow_interaction_ocr_desc">Recognize text in image, or find coordinates of specified text</string>
+    <string name="module_vflow_interaction_ocr_name">OCR</string>
+    <string name="module_vflow_interaction_screen_operation_desc">Perform tap, long press, or swipe operations on screen</string>
+    <string name="module_vflow_interaction_screen_operation_name">Screen Operation</string>
+    <string name="module_vflow_interaction_ui_selector_desc">Use GKD selector syntax to find screen controls</string>
+    <string name="module_vflow_interaction_ui_selector_name">UI Selector</string>
+    <string name="module_vflow_snippet_find_until_desc">Continuously find specified text on screen until found</string>
+    <string name="module_vflow_snippet_find_until_name">Find Until</string>
+    <string name="module_vflow_system_capture_screen_desc">Capture current screen content.</string>
+    <string name="module_vflow_system_capture_screen_name">Capture Screen</string>
+    <string name="msg_vflow_core_bluetooth_disabled">Bluetooth disabled</string>
+    <string name="msg_vflow_core_bluetooth_disabling">Disabling Bluetooth via vFlow Core...</string>
+    <string name="msg_vflow_core_bluetooth_enabled">Bluetooth enabled</string>
+    <string name="msg_vflow_core_bluetooth_enabling">Enabling Bluetooth via vFlow Core...</string>
+    <string name="msg_vflow_core_bluetooth_toggling">Toggling Bluetooth via vFlow Core...</string>
+    <string name="msg_vflow_core_capture_screen_capturing">Capturing screenshot...</string>
+    <string name="msg_vflow_core_capture_screen_success">Screenshot captured successfully</string>
+    <string name="msg_vflow_core_get_clipboard_reading">Reading clipboard via vFlow Core...</string>
+    <string name="msg_vflow_core_input_text_inputting">Inputting text via vFlow Core...</string>
+    <string name="msg_vflow_core_input_text_success">Text input successfully</string>
+    <string name="msg_vflow_core_press_key_sending">Sending key via vFlow Core: %s...</string>
+    <string name="msg_vflow_core_press_key_success">Key sent successfully</string>
+    <string name="msg_vflow_core_screen_operation_click_success">Tapped successfully</string>
+    <string name="msg_vflow_core_screen_operation_clicking" formatted="false">Tapping coordinate (%d, %d) via vFlow Core...</string>
+    <string name="msg_vflow_core_screen_operation_long_press_success">Long pressed successfully</string>
+    <string name="msg_vflow_core_screen_operation_long_pressing" formatted="false">Long pressing coordinate (%d, %d) for %dms via vFlow Core...</string>
+    <string name="msg_vflow_core_screen_operation_swipe_success">Swiped successfully</string>
+    <string name="msg_vflow_core_screen_operation_swiping" formatted="false">Swiping via vFlow Core: (%d, %d) → (%d, %d) for %dms...</string>
+    <string name="msg_vflow_core_screen_status_reading">Reading screen status via vFlow Core...</string>
+    <string name="msg_vflow_core_set_clipboard_setting">Setting clipboard via vFlow Core...</string>
+    <string name="msg_vflow_core_set_clipboard_success">Clipboard set successfully</string>
+    <string name="msg_vflow_core_shell_command_executing" formatted="false">Executing via vFlow Core (%s): %s</string>
+    <string name="msg_vflow_core_sleep_screen_sleeping">Turning off screen via vFlow Core...</string>
+    <string name="msg_vflow_core_sleep_screen_success">Screen turned off successfully</string>
+    <string name="msg_vflow_core_wake_screen_success">Screen waked up successfully</string>
+    <string name="msg_vflow_core_wake_screen_waking">Waking up screen via vFlow Core...</string>
+    <string name="option_vflow_core_bluetooth_disable">Disable</string>
+    <string name="option_vflow_core_bluetooth_enable">Enable</string>
+    <string name="option_vflow_core_bluetooth_toggle">Toggle</string>
+    <string name="option_vflow_core_screen_operation_click">Tap</string>
+    <string name="option_vflow_core_screen_operation_long_press">Long Press</string>
+    <string name="option_vflow_core_screen_operation_swipe">Swipe</string>
+    <string name="option_vflow_core_shell_command_mode_auto">Auto</string>
+    <string name="option_vflow_core_shell_command_mode_root">Root Permission</string>
+    <string name="option_vflow_core_shell_command_mode_shell">Shell Permission</string>
+    <string name="option_vflow_system_capture_screen_mode_auto">Auto</string>
+    <string name="option_vflow_system_capture_screen_mode_screencap">screencap</string>
+    <string name="output_vflow_core_bluetooth_enabled_name">State After Toggle</string>
+    <string name="output_vflow_core_bluetooth_success_name">Success</string>
+    <string name="output_vflow_core_get_clipboard_success_name">Success</string>
+    <string name="output_vflow_core_get_clipboard_text_name">Clipboard Content</string>
+    <string name="output_vflow_core_input_text_success_name">Success</string>
+    <string name="output_vflow_core_screen_operation_success_name">Success</string>
+    <string name="output_vflow_core_set_clipboard_success_name">Success</string>
+    <string name="output_vflow_core_set_clipboard_text_name">Set Text Content</string>
+    <string name="output_vflow_system_capture_screen_image_name">Screenshot</string>
+    <string name="param_vflow_core_bluetooth_action_name">Action</string>
+    <string name="param_vflow_core_input_text_text_name">Text Content</string>
+    <string name="param_vflow_core_screen_operation_duration_name">Duration (ms)</string>
+    <string name="param_vflow_core_screen_operation_operation_type_name">Operation Type</string>
+    <string name="param_vflow_core_screen_operation_target_end_name">Swipe End Point</string>
+    <string name="param_vflow_core_screen_operation_target_name">Target Position/Start Point</string>
+    <string name="param_vflow_core_set_clipboard_text_name">Text Content</string>
+    <string name="param_vflow_system_capture_screen_mode_name">Mode</string>
+    <string name="param_vflow_system_capture_screen_region_name">Region (Optional)</string>
+    <string name="summary_vflow_core_bluetooth">Bluetooth </string>
+    <string name="summary_vflow_core_bluetooth_suffix">Bluetooth</string>
+
+    <string name="summary_vflow_core_capture_screen">Screenshot </string>
+    <string name="summary_vflow_core_capture_screen_suffix">Screenshot</string>
+
+    <string name="summary_vflow_core_get_clipboard">vFlow Core Get Clipboard</string>
+    <string name="summary_vflow_core_input_text">Input Text: %s</string>
+    <string name="summary_vflow_core_input_text_suffix">Input text</string>
+
+    <string name="summary_vflow_core_press_key">Send Key: %s</string>
+    <string name="summary_vflow_core_press_key_suffix">Send key</string>
+
+    <string name="summary_vflow_core_screen_operation_click">Core Tap </string>
+    <string name="summary_vflow_core_screen_operation_click_suffix">Core Tap</string>
+
+    <string name="summary_vflow_core_screen_operation_long_press">Core Long Press </string>
+    <string name="summary_vflow_core_screen_operation_long_press_suffix">Core Long Press</string>
+
+    <string name="summary_vflow_core_screen_operation_swipe">Core Swipe </string>
+    <string name="summary_vflow_core_screen_operation_swipe_suffix">Core Swipe</string>
+
+    <string name="summary_vflow_core_screen_status">Read Screen Status</string>
+    <string name="summary_vflow_core_set_clipboard">vFlow Core Set Clipboard: %s</string>
+    <string name="summary_vflow_core_set_clipboard_suffix">Set clipboard</string>
+
+    <string name="summary_vflow_core_shell_command">Execute command </string>
+    <string name="summary_vflow_core_shell_command_suffix">Execute command</string>
+
+    <string name="summary_vflow_core_sleep_screen">Turn Off Screen</string>
+    <string name="summary_vflow_core_wake_screen">Wake Up Screen</string>
+    <string name="summary_vflow_system_capture_screen">Screenshot </string>
+    <string name="summary_vflow_system_capture_screen_suffix">Screenshot</string>
+    <string name="summary_vflow_system_bluetooth_suffix">Bluetooth</string>
+    <string name="summary_vflow_system_get_usage_prefix">Get app usage, interval</string>
+    <string name="summary_vflow_system_get_usage_suffix">minutes</string>
+    <string name="summary_vflow_system_invoke_open_link">Open link</string>
+    <string name="summary_vflow_system_invoke_app">Launch app</string>
+    <string name="summary_vflow_system_invoke_start">Start</string>
+    <string name="summary_vflow_system_invoke_broadcast">Send broadcast</string>
+    <string name="summary_vflow_system_invoke_send_broadcast">to</string>
+    <string name="summary_vflow_system_invoke_service">Service</string>
+    <string name="summary_vflow_system_invoke_start_service">Start service</string>
+    <string name="summary_vflow_system_quick_view_prefix">Quick View</string>
+    <string name="summary_vflow_system_read_sms_prefix">Read SMS</string>
+    <string name="summary_vflow_system_read_sms_from">from</string>
+    <string name="summary_vflow_system_read_sms_content">content</string>
+    <string name="summary_vflow_system_read_sms_code">code</string>
+    <string name="summary_vflow_system_read_sms_suffix">SMS</string>
+    <string name="summary_vflow_system_read_sms_latest">latest SMS</string>
+    <string name="summary_vflow_system_share_prefix">Share</string>
+    <string name="summary_vflow_system_get_info_prefix">Get</string>
+    <string name="summary_vflow_system_wifi_suffix">WiFi</string>
+
+    <string name="module_vflow_core_bluetooth_state_name">Get Bluetooth State</string>
+    <string name="module_vflow_core_bluetooth_state_desc">Use vFlow Core to read current Bluetooth switch state.</string>
+    <string name="output_vflow_core_bluetooth_state_enabled_name">Bluetooth State</string>
+    <string name="summary_vflow_core_bluetooth_state">Get Bluetooth State</string>
+    <string name="msg_vflow_core_bluetooth_state_reading">Reading Bluetooth state via vFlow Core...</string>
+
+    <string name="error_vflow_core_force_stop_app_not_found">App not running</string>
+    <string name="error_vflow_core_force_stop_app_param_error">Parameter error</string>
+    <string name="module_vflow_core_force_stop_app_desc">Use vFlow Core to force stop a specific app.</string>
+    <string name="module_vflow_core_force_stop_app_name">Force Stop App</string>
+    <string name="module_vflow_core_front_app_desc">Get package name of current foreground app.</string>
+    <string name="module_vflow_core_front_app_name">Get Foreground App</string>
+    <string name="module_vflow_core_get_running_apps_desc">Get list of currently running apps.</string>
+    <string name="module_vflow_core_get_running_apps_name">Get Running Apps</string>
+    <string name="module_vflow_core_mobile_data_state_desc">Use vFlow Core to read current mobile data switch state.</string>
+    <string name="module_vflow_core_mobile_data_state_name">Get Mobile Data State</string>
+    <string name="module_vflow_core_set_mobile_data_desc">Use vFlow Core to enable or disable mobile data.</string>
+    <string name="module_vflow_core_set_mobile_data_name">Set Mobile Data</string>
+    <string name="module_vflow_core_set_wifi_desc">Use vFlow Core to enable or disable WiFi.</string>
+    <string name="module_vflow_core_set_wifi_name">Set WiFi</string>
+    <string name="module_vflow_core_wifi_state_desc">Use vFlow Core to read current WiFi switch state.</string>
+    <string name="module_vflow_core_wifi_state_name">Get WiFi State</string>
+    <string name="msg_vflow_core_bluetooth_state_disabled">Disabled</string>
+    <string name="msg_vflow_core_bluetooth_state_enabled">Enabled</string>
+    <string name="msg_vflow_core_force_stop_app_stopped">App force stopped</string>
+    <string name="msg_vflow_core_force_stop_app_stopping">Force stopping app...</string>
+    <string name="msg_vflow_core_set_wifi_setting">Setting WiFi...</string>
+    <string name="msg_vflow_core_wifi_state_reading">Reading WiFi state via vFlow Core...</string>
+    <string name="option_vflow_core_set_wifi_disable">Disable</string>
+    <string name="option_vflow_core_set_wifi_enable">Enable</string>
+    <string name="output_vflow_core_force_stop_app_success_name">Success</string>
+    <string name="output_vflow_core_front_app_packageName_name">Package Name</string>
+    <string name="output_vflow_core_get_running_apps_apps_name">App List</string>
+    <string name="output_vflow_core_mobile_data_state_enabled_name">Mobile Data State</string>
+    <string name="output_vflow_core_set_mobile_data_success_name">Success</string>
+    <string name="output_vflow_core_set_wifi_success_name">Success</string>
+    <string name="output_vflow_core_wifi_state_enabled_name">WiFi State</string>
+    <string name="param_vflow_core_force_stop_app_packageName_name">Package Name</string>
+    <string name="param_vflow_core_set_mobile_data_enabled_name">Enable/Disable</string>
+    <string name="param_vflow_core_set_wifi_enabled_name">Enable/Disable</string>
+    <string name="summary_vflow_core_force_stop_app">Force Stop %s</string>
+    <string name="summary_vflow_core_force_stop_app_suffix">Force stop</string>
+
+    <string name="summary_vflow_core_front_app">Get Foreground App</string>
+    <string name="summary_vflow_core_get_running_apps">Get Running Apps</string>
+    <string name="summary_vflow_core_mobile_data_state">Get Mobile Data State</string>
+    <string name="summary_vflow_core_set_mobile_data">Set Mobile Data: %s</string>
+    <string name="summary_vflow_core_set_mobile_data_suffix">Set mobile data</string>
+
+    <string name="summary_vflow_core_set_wifi">Set WiFi </string>
+    <string name="summary_vflow_core_set_wifi_suffix">Set WiFi</string>
+
+    <string name="summary_vflow_core_wifi_state">Get WiFi State</string>
+    <string name="module_vflow_core_wifi_name">WiFi Control</string>
+    <string name="module_vflow_core_wifi_desc">Control WiFi state using vFlow Core (on/off/toggle).</string>
+    <string name="param_vflow_core_force_stop_app_package_name_name">Package Name</string>
+
+    <string name="error_vflow_system_close_app_empty_package_detail">App package name cannot be empty.</string>
+    <string name="error_vflow_system_brightness_invalid_level_detail">Brightness value must be a number between 0 and 255.</string>
+    <string name="error_vflow_interaction_input_text_a11y_failed">Cannot find focused input box, or input box does not support editing.</string>
+    <string name="error_vflow_interaction_input_text_shell_failed">Shell command failed, please check Root/Shizuku permissions and input method settings.</string>
+    <string name="error_vflow_interaction_input_text_no_focus">Cannot input text, please ensure an input box is focused.</string>
+    <string name="error_vflow_file_save_image_param_error">Parameter error</string>
+    <string name="error_vflow_file_save_image_file_error">File error</string>
+    <string name="error_vflow_file_save_image_save_failed">Save failed</string>
+    <string name="error_vflow_file_save_image_save_exception">Save exception</string>
+    <string name="param_vflow_core_bluetooth_device_name">Device Address</string>
+    <string name="param_vflow_core_bluetooth_state_name">State</string>
+    <string name="param_vflow_core_force_stop_app_package_name">Package Name</string>
+    <string name="param_vflow_core_get_clipboard_timeout_name">Timeout (ms)</string>
+    <string name="param_vflow_core_press_key_code_name">Key Code</string>
+    <string name="param_vflow_core_operation_type">Operation Type</string>
+    <string name="param_vflow_core_target_position">Target Position/Start Point</string>
+    <string name="param_vflow_core_swipe_end">Swipe End Point</string>
+    <string name="param_vflow_core_duration">Duration (ms)</string>
+    <string name="param_vflow_core_screen_status_name">Screen Status</string>
+    <string name="param_vflow_core_set_clipboard_append_name">Append</string>
+    <string name="param_vflow_core_shell_command_timeout_name">Timeout (ms)</string>
+    <string name="param_vflow_core_wifi_action_name">Action</string>
+    <string name="param_vflow_core_wifi_ssid_name">Network name</string>
+    <string name="param_vflow_core_wifi_password_name">Password</string>
+    <string name="param_vflow_core_wifi_timeout_name">Timeout (s)</string><string name="toast_vflow_core_touch_replay_permission">Overlay permission required to record touch operations</string>
+    <string name="toast_vflow_core_touch_replay_completed">Touch recording completed</string>
+    <string name="toast_vflow_core_touch_replay_cancelled">Recording cancelled</string>
+    <string name="toast_vflow_core_touch_replay_failed">Touch recording failed</string>
+    <string name="ui_vflow_core_touch_replay_not_recorded">Not recorded</string>
+    <string name="ui_vflow_core_touch_replay_recorded">%d events recorded</string>
+    <string name="label_vflow_core_screen_operation_target">Target Position</string>
+    <string name="label_vflow_core_screen_operation_swipe_end">Swipe End Point</string>
+    <string name="label_vflow_core_screen_operation_swipe_start">Swipe Start</string>
+    <string name="summary_vflow_data_create_anon">Create anonymous </string>
+    <string name="summary_vflow_data_create_anon_suffix"> (%s)</string>
+    <string name="summary_vflow_data_create_variable">Create variable </string>
+    <string name="summary_vflow_data_create_variable_suffix">Create variable</string>
+
+    <string name="summary_vflow_data_create_value_separator">=</string>
+    <string name="summary_vflow_data_get_variable">Read variable </string><string name="param_vflow_file_source_image">Source Image</string>
+    <string name="summary_vflow_file_adjust_image_none">No adjustment</string>
+    <string name="summary_vflow_file_apply_mask_prefix">Apply mask</string>
+    <string name="summary_vflow_file_apply_mask_middle">Source: </string><string name="summary_vflow_file_apply_mask_suffix">Mask: </string><string name="summary_vflow_file_save_image">Save Image</string><string name="summary_find_text_prefix">Use</string>
+    <string name="summary_find_text_middle">mode to find text</string>
+    <string name="summary_find_text_suffix">and output</string><string name="summary_unknown_workflow">Unknown workflow</string>
+    <string name="summary_no_workflow_selected">No workflow selected</string><string name="summary_end_for_each">End iteration</string><string name="summary_else">Else</string>
+    <string name="summary_end_if">End if</string><string name="summary_end_loop">End loop</string><string name="param_vflow_network_ai_provider">Provider</string>
+    <string name="param_vflow_network_ai_model">Model</string>
+    <string name="param_vflow_network_ai_prompt">Prompt</string>
+    <string name="param_vflow_network_ai_system_prompt">System Prompt</string>
+    <string name="param_vflow_network_ai_temperature">Randomness</string>
+    <string name="param_vflow_network_ai_show_advanced">Show Advanced Options</string><string name="summary_vflow_network_ai_prefix">Send to </string>
+    <string name="summary_vflow_network_ai_middle"> request</string>
+    <string name="summary_vflow_network_ai_with">AI: </string><string name="summary_vflow_network_get_ip">Get IP address</string>
+    <string name="summary_vflow_notification_remove">Remove notification</string>
+    <string name="summary_vflow_shizuku_alipay">Open Alipay</string>
+    <string name="summary_vflow_shizuku_wechat">Open WeChat</string>
+    <string name="summary_vflow_shizuku_coloros" translatable="false">ColorOS: </string>
+    <string name="summary_vflow_shizuku_gemini">Open Gemini</string>
+    <string name="summary_vflow_shizuku_shell">Execute Shell command</string>
+    <string name="summary_vflow_snippet_find_until">Find until appears</string><string name="summary_close_app_select">Select app to close</string>
+    <string name="summary_close_app_prefix">Close</string><string name="summary_empty_script">Empty script</string><string name="summary_vflow_trigger_key_event">Configure key trigger</string>
+    <string name="label_vflow_core_swipe_from">From</string>
+    <string name="label_vflow_core_swipe_to">to</string>
+    <string name="label_vflow_core_ms">ms</string>
+    <string name="label_vflow_duration_ms"> (%d ms)</string>
+    <string name="summary_vflow_notification_send_prefix">Send notification:</string>
+    <string name="summary_vflow_notification_send_separator"> - </string>
+    <string name="summary_vflow_trigger_share_prefix">Share received</string>
+    <string name="summary_vflow_trigger_share_suffix">triggered</string>
+    <string name="param_vflow_ui_title">Title</string>
+    <string name="param_vflow_ui_destroy_on_exit">Destroy on exit</string>
+    <string name="summary_vflow_ui_activity_start">Start activity</string>
+    <string name="msg_vflow_ui_activity_init">Initializing activity...</string>
+    <string name="summary_vflow_ui_activity_show">Show activity</string>
+    <string name="error_vflow_ui_session_missing">Session lost</string>
+    <string name="msg_vflow_ui_activity_wait">Waiting for events...</string>
+    <string name="msg_vflow_ui_activity_event">Event received: %s</string>
+    <string name="error_vflow_ui_empty_list">List is empty</string>
+    <string name="msg_vflow_ui_activity_starting">Starting activity...</string>
+    <string name="msg_vflow_ui_activity_started">Activity started</string>
+    <string name="summary_vflow_ui_activity_end">End activity</string>
+    <string name="param_vflow_ui_width">Width</string>
+    <string name="param_vflow_ui_height">Height</string>
+    <string name="param_vflow_ui_alpha">Alpha</string>
+    <string name="summary_vflow_ui_float_start">Start floating window</string>
+    <string name="msg_vflow_ui_float_init">Initializing floating window...</string>
+    <string name="summary_vflow_ui_float_show">Show floating window</string>
+    <string name="msg_vflow_ui_float_starting">Starting floating window...</string>
+    <string name="msg_vflow_ui_float_started">Floating window started</string>
+    <string name="summary_vflow_ui_float_end">End floating window</string>
+    <string name="summary_vflow_ui_on_event">Event listener</string>
+    <string name="error_vflow_ui_wrong_place">Invalid placement position</string>
+    <string name="error_vflow_ui_wrong_target">Invalid target</string>
+    <string name="summary_vflow_ui_on_event_end">End listener</string>
+    <string name="param_vflow_ui_target_component">Target component</string>
+    <string name="param_vflow_ui_new_text">New text</string>
+    <string name="param_vflow_ui_visibility">Visibility</string>
+    <string name="param_vflow_ui_padding">Padding</string>
+    <string name="param_vflow_ui_margin">Margin</string>
+    <string name="param_vflow_ui_text_size">Text size</string>
+    <string name="param_vflow_ui_background">Background color</string>
+    <string name="summary_vflow_ui_update">Update component</string>
+    <string name="error_vflow_ui_component_not_found">Component not found</string>
+    <string name="summary_vflow_ui_get_value">Get value</string>
+    <string name="summary_vflow_ui_exit">Exit UI</string>
+    <string name="error_vflow_ui_empty_target_id">Target ID is empty</string>
+    <string name="msg_vflow_ui_component_registered">Component registered</string>
+    <string name="error_vflow_ui_wrong_position">Invalid position</string>
+    <string name="param_vflow_ui_key_event_source">Key event source</string>
+    <string name="param_vflow_ui_button_text">Button text</string>
+    <string name="param_vflow_ui_trigger_event">Trigger event</string>
+    <string name="summary_prefix_button">Button: </string>
+    <string name="summary_prefix_button_suffix">Button</string>
+
+    <string name="param_vflow_ui_key_variable">Key variable</string>
+    <string name="param_vflow_ui_label">Label</string>
+    <string name="param_vflow_ui_hint">Hint text</string>
+    <string name="param_vflow_ui_default_value">Default value</string>
+    <string name="param_vflow_ui_input_trigger">Input trigger</string>
+    <string name="summary_prefix_input">Input: </string>
+    <string name="summary_prefix_input_suffix">Input</string>
+
+    <string name="param_vflow_ui_switch_default">Default state</string>
+    <string name="param_vflow_ui_switch_trigger">Toggle trigger</string>
+    <string name="summary_prefix_switch">Switch: </string>
+    <string name="summary_prefix_switch_suffix">Switch</string>
+
+    <string name="param_vflow_ui_content">Content</string>
+    <string name="param_vflow_ui_content_optional">Content (optional)</string>
+    <string name="summary_prefix_display_text">Display text</string></resources>

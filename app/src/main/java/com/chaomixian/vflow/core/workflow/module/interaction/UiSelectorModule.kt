@@ -34,6 +34,8 @@ class UiSelectorModule : BaseModule() {
 
     override val id = "vflow.interaction.ui_selector"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_interaction_ui_selector_name,
+        descriptionStringRes = R.string.module_vflow_interaction_ui_selector_desc,
         name = "UI选择器",
         description = "使用 GKD selector 语法查找屏幕控件。" +
                 "支持复杂的选择器表达式，包括属性匹配、连接操作符、逻辑运算等",
@@ -94,7 +96,7 @@ class UiSelectorModule : BaseModule() {
             }
 
             val parts = mutableListOf<Any>()
-            parts.add("UI选择器: ")
+            parts.add(context.getString(R.string.summary_vflow_interaction_ui_selector_prefix))
 
             val selectorPill = PillUtil.createPillFromParam(
                 step.parameters["selector"],
@@ -104,7 +106,7 @@ class UiSelectorModule : BaseModule() {
 
             PillUtil.buildSpannable(context, *parts.toTypedArray())
         } else {
-            "UI选择器"
+            context.getString(R.string.module_vflow_interaction_ui_selector_name)
         }
     }
 

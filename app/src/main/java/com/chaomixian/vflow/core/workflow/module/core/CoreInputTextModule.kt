@@ -23,8 +23,10 @@ class CoreInputTextModule : BaseModule() {
 
     override val id = "vflow.core.input_text"
     override val metadata = ActionMetadata(
-        name = "输入文本",
-        description = "使用 vFlow Core 输入文本，比无障碍服务更快速稳定。",
+        name = "输入文本",  // Fallback
+        nameStringRes = R.string.module_vflow_core_input_text_name,
+        description = "使用 vFlow Core 输入文本，比无障碍服务更快速稳定。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_input_text_desc,
         iconRes = R.drawable.rounded_keyboard_24,
         category = "Core (Beta)"
     )
@@ -36,11 +38,12 @@ class CoreInputTextModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "text",
-            name = "文本内容",
+            name = "文本内容",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
+            nameStringRes = R.string.param_vflow_interaction_input_text_text_name
         )
     )
 
@@ -53,7 +56,7 @@ class CoreInputTextModule : BaseModule() {
             step.parameters["text"],
             getInputs().find { it.id == "text" }
         )
-        return PillUtil.buildSpannable(context, "输入文本: ", textPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_input_text), textPill)
     }
 
     override suspend fun execute(

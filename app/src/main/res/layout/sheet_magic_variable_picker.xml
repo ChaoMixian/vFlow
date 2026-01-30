@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
         android:paddingBottom="8dp"
-        android:text="选择变量"
+        android:text="@string/desc_select_variable"
         android:textAppearance="?attr/textAppearanceTitleLarge" />
 
     <androidx.recyclerview.widget.RecyclerView

@@ -20,8 +20,10 @@ class InvokeModule : BaseModule() {
 
     override val id = "vflow.system.invoke"
     override val metadata = ActionMetadata(
-        name = "通用调用",
-        description = "执行 Intent、打开链接、发送广播或启动服务。",
+        name = "通用调用",  // Fallback
+        nameStringRes = R.string.module_vflow_system_invoke_name,
+        description = "执行 Intent、打开链接、发送广播或启动服务。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_system_invoke_desc,
         iconRes = R.drawable.rounded_call_to_action_24,
         category = "应用与系统"
     )
@@ -57,28 +59,28 @@ class InvokeModule : BaseModule() {
         return when (mode) {
             "链接/Uri" -> {
                 val uriPill = PillUtil.createPillFromParam(step.parameters["uri"], getInputs().find { it.id == "uri" })
-                PillUtil.buildSpannable(context, "打开链接 ", uriPill)
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_invoke_open_link), uriPill)
             }
             "Activity" -> {
                 // 如果有包名显示包名，否则显示Action，否则显示"Activity"
                 val pkg = step.parameters["package"] as? String
                 val action = step.parameters["action"] as? String
                 val desc = when {
-                    !pkg.isNullOrBlank() -> "应用 ($pkg)"
+                    !pkg.isNullOrBlank() -> context.getString(R.string.summary_vflow_system_invoke_app, pkg)
                     !action.isNullOrBlank() -> "Action ($action)"
                     else -> "Activity"
                 }
-                PillUtil.buildSpannable(context, "启动 $desc")
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_invoke_start, desc))
             }
             "Broadcast" -> {
-                val action = step.parameters["action"] as? String ?: "广播"
+                val action = step.parameters["action"] as? String ?: context.getString(R.string.summary_vflow_system_invoke_broadcast)
                 val actionPill = PillUtil.createPillFromParam(action, getInputs().find { it.id == "action" })
-                PillUtil.buildSpannable(context, "发送广播 ", actionPill)
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_invoke_send_broadcast), actionPill)
             }
             "Service" -> {
-                val pkg = step.parameters["package"] as? String ?: "服务"
+                val pkg = step.parameters["package"] as? String ?: context.getString(R.string.summary_vflow_system_invoke_service)
                 val pkgPill = PillUtil.createPillFromParam(pkg, getInputs().find { it.id == "package" })
-                PillUtil.buildSpannable(context, "启动服务 ", pkgPill)
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_invoke_start_service), pkgPill)
             }
             else -> metadata.name
         }

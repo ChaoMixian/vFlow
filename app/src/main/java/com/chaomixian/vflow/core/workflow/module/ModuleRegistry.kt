@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/module/ModuleRegistry.kt
 package com.chaomixian.vflow.core.module
 
+import android.content.Context
 import android.content.ContentValues.TAG
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.module.data.*
@@ -21,11 +22,16 @@ object ModuleRegistry {
     private val modules = mutableMapOf<String, ActionModule>()
     private var isCoreInitialized = false // 这里的Core是指内建额度模块
 
-    fun register(module: ActionModule) {
+    fun register(module: ActionModule, context: Context? = null) {
         if (modules.containsKey(module.id)) {
             DebugLogger.w(TAG,"警告: 模块ID '${module.id}' 被重复注册。")
         }
         modules[module.id] = module
+
+        // 如果是BaseModule且提供了Context，则注入Context
+        if (context != null && module is BaseModule) {
+            module.initContext(context)
+        }
     }
 
     fun getModule(id: String): ActionModule? = modules[id]
@@ -62,157 +68,161 @@ object ModuleRegistry {
         isCoreInitialized = false
     }
 
-    fun initialize() {
+    /**
+     * 初始化模块注册表
+     * @param context Application Context，用于注入到模块中以支持国际化
+     */
+    fun initialize(context: Context) {
         // 如果核心模块已经注册过，就不再执行 modules.clear()，防止误删用户模块
         if (isCoreInitialized) return
 
         modules.clear()
 
         // 触发器
-        register(ManualTriggerModule())
-        register(ReceiveShareTriggerModule())
-        register(AppStartTriggerModule())
-        register(KeyEventTriggerModule())
-        register(TimeTriggerModule())
-        register(BatteryTriggerModule())
-        register(WifiTriggerModule())
-        register(BluetoothTriggerModule())
-        register(SmsTriggerModule())
-        register(NotificationTriggerModule())
+        register(ManualTriggerModule(), context)
+        register(ReceiveShareTriggerModule(), context)
+        register(AppStartTriggerModule(), context)
+        register(KeyEventTriggerModule(), context)
+        register(TimeTriggerModule(), context)
+        register(BatteryTriggerModule(), context)
+        register(WifiTriggerModule(), context)
+        register(BluetoothTriggerModule(), context)
+        register(SmsTriggerModule(), context)
+        register(NotificationTriggerModule(), context)
 
         // 界面交互
-        register(FindTextModule())
-        register(FindElementModule())
-        register(UiSelectorModule())
-        register(ClickModule())
-        register(ScreenOperationModule())
-        register(SendKeyEventModule())
-        register(InputTextModule())
-        register(CaptureScreenModule())
-        register(OCRModule())
-        register(AgentModule())
-        register(AutoGLMModule())
-        register(FindTextUntilModule())
-        register(FindImageModule())
-        register(OperitModule())
+        register(FindTextModule(), context)
+        register(FindElementModule(), context)
+        register(UiSelectorModule(), context)
+        register(ClickModule(), context)
+        register(ScreenOperationModule(), context)
+        register(SendKeyEventModule(), context)
+        register(InputTextModule(), context)
+        register(CaptureScreenModule(), context)
+        register(OCRModule(), context)
+        register(AgentModule(), context)
+        register(AutoGLMModule(), context)
+        register(FindTextUntilModule(), context)
+        register(FindImageModule(), context)
+        register(OperitModule(), context)
 
         // 逻辑控制
-        register(IfModule())
-        register(ElseModule())
-        register(EndIfModule())
-        register(LoopModule())
-        register(EndLoopModule())
-        register(ForEachModule())
-        register(EndForEachModule())
-        register(JumpModule())
-        register(WhileModule())
-        register(EndWhileModule())
-        register(BreakLoopModule())
-        register(ContinueLoopModule())
-        register(StopWorkflowModule())
-        register(CallWorkflowModule())
-        register(StopAndReturnModule())
+        register(IfModule(), context)
+        register(ElseModule(), context)
+        register(EndIfModule(), context)
+        register(LoopModule(), context)
+        register(EndLoopModule(), context)
+        register(ForEachModule(), context)
+        register(EndForEachModule(), context)
+        register(JumpModule(), context)
+        register(WhileModule(), context)
+        register(EndWhileModule(), context)
+        register(BreakLoopModule(), context)
+        register(ContinueLoopModule(), context)
+        register(StopWorkflowModule(), context)
+        register(CallWorkflowModule(), context)
+        register(StopAndReturnModule(), context)
 
         // 数据
-        register(CreateVariableModule())
-        register(RandomVariableModule())
-        register(ModifyVariableModule())
-        register(GetVariableModule())
-        register(CalculationModule())
-        register(TextProcessingModule())
-        register(Base64EncodeOrDecodeModule())
+        register(CreateVariableModule(), context)
+        register(RandomVariableModule(), context)
+        register(ModifyVariableModule(), context)
+        register(GetVariableModule(), context)
+        register(CalculationModule(), context)
+        register(TextProcessingModule(), context)
+        register(Base64EncodeOrDecodeModule(), context)
 
         // 文件
-        register(ImportImageModule())
-        register(SaveImageModule())
-        register(AdjustImageModule())
-        register(RotateImageModule())
-        register(ApplyMaskModule())
+        register(ImportImageModule(), context)
+        register(SaveImageModule(), context)
+        register(AdjustImageModule(), context)
+        register(RotateImageModule(), context)
+        register(ApplyMaskModule(), context)
 
         // 网络
-        register(GetIpAddressModule())
-        register(HttpRequestModule())
-        register(AIModule())
+        register(GetIpAddressModule(), context)
+        register(HttpRequestModule(), context)
+        register(AIModule(), context)
 
         // 应用与系统
-        register(DelayModule())
-        register(InputModule())
-        register(QuickViewModule())
-        register(ToastModule())
-        register(LuaModule())
-        register(LaunchAppModule())
-        register(CloseAppModule())
-        register(GetClipboardModule())
-        register(SetClipboardModule())
-        register(ShareModule())
-        register(SendNotificationModule())
-        register(WifiModule())
-        register(BluetoothModule())
-        register(BrightnessModule())
-        register(WakeScreenModule())
-        register(SleepScreenModule())
-        register(ReadSmsModule())
-        register(FindNotificationModule())
-        register(RemoveNotificationModule())
-        register(GetAppUsageStatsModule())
-        register(InvokeModule())
-        register(SystemInfoModule())
+        register(DelayModule(), context)
+        register(InputModule(), context)
+        register(QuickViewModule(), context)
+        register(ToastModule(), context)
+        register(LuaModule(), context)
+        register(LaunchAppModule(), context)
+        register(CloseAppModule(), context)
+        register(GetClipboardModule(), context)
+        register(SetClipboardModule(), context)
+        register(ShareModule(), context)
+        register(SendNotificationModule(), context)
+        register(WifiModule(), context)
+        register(BluetoothModule(), context)
+        register(BrightnessModule(), context)
+        register(WakeScreenModule(), context)
+        register(SleepScreenModule(), context)
+        register(ReadSmsModule(), context)
+        register(FindNotificationModule(), context)
+        register(RemoveNotificationModule(), context)
+        register(GetAppUsageStatsModule(), context)
+        register(InvokeModule(), context)
+        register(SystemInfoModule(), context)
 
         // Core (Beta) 模块
         // 网络控制组
-        register(CoreBluetoothModule())           // 蓝牙控制（开启/关闭/切换）
-        register(CoreBluetoothStateModule())      // 读取蓝牙状态
-        register(CoreWifiModule())                // WiFi控制（开启/关闭/切换）
-        register(CoreWifiStateModule())           // 读取WiFi状态
-        register(CoreSetClipboardModule())        // 设置剪贴板
-        register(CoreGetClipboardModule())        // 读取剪贴板
+        register(CoreBluetoothModule(), context)           // 蓝牙控制（开启/关闭/切换）
+        register(CoreBluetoothStateModule(), context)      // 读取蓝牙状态
+        register(CoreWifiModule(), context)                // WiFi控制（开启/关闭/切换）
+        register(CoreWifiStateModule(), context)           // 读取WiFi状态
+        register(CoreSetClipboardModule(), context)        // 设置剪贴板
+        register(CoreGetClipboardModule(), context)        // 读取剪贴板
         // 屏幕控制组
-        register(CoreWakeScreenModule())          // 唤醒屏幕
-        register(CoreSleepScreenModule())         // 关闭屏幕
-        register(CoreScreenStatusModule())        // 读取屏幕状态
-        register(CoreCaptureScreenModule())       // 截屏（Core）
+        register(CoreWakeScreenModule(), context)          // 唤醒屏幕
+        register(CoreSleepScreenModule(), context)         // 关闭屏幕
+        register(CoreScreenStatusModule(), context)        // 读取屏幕状态
+        register(CoreCaptureScreenModule(), context)       // 截屏（Core）
         // 输入交互组
-        register(CoreScreenOperationModule())     // 屏幕操作（点击/滑动）
-        register(CoreInputTextModule())           // 输入文本
-        register(CorePressKeyModule())            // 按键
-        register(CoreTouchReplayModule())         // 触摸回放
+        register(CoreScreenOperationModule(), context)     // 屏幕操作（点击/滑动）
+        register(CoreInputTextModule(), context)           // 输入文本
+        register(CorePressKeyModule(), context)            // 按键
+        register(CoreTouchReplayModule(), context)         // 触摸回放
         // 应用管理组
-        register(CoreForceStopAppModule())        // 强制停止应用
+        register(CoreForceStopAppModule(), context)        // 强制停止应用
         // 系统控制组
-        register(CoreShellCommandModule())        // 执行命令
+        register(CoreShellCommandModule(), context)        // 执行命令
 
         // Shizuku 模块
-        register(ShellCommandModule())
-        register(AlipayShortcutsModule())
-        register(WeChatShortcutsModule())
-        register(ColorOSShortcutsModule())
-        register(GeminiAssistantModule())
+        register(ShellCommandModule(), context)
+        register(AlipayShortcutsModule(), context)
+        register(WeChatShortcutsModule(), context)
+        register(ColorOSShortcutsModule(), context)
+        register(GeminiAssistantModule(), context)
 
         // Snippet 模板
-        register(FindTextUntilSnippet())
+        register(FindTextUntilSnippet(), context)
 
         // UI 组件模块
         // 容器块 (Activity / 悬浮窗 / 对话框)
-        register(CreateActivityModule())
-        register(ShowActivityModule())
-        register(EndActivityModule())
-        register(CreateFloatWindowModule())
-        register(ShowFloatWindowModule())
-        register(EndFloatWindowModule())
+        register(CreateActivityModule(), context)
+        register(ShowActivityModule(), context)
+        register(EndActivityModule(), context)
+        register(CreateFloatWindowModule(), context)
+        register(ShowFloatWindowModule(), context)
+        register(EndFloatWindowModule(), context)
 
 
         // UI 组件 (文本 / 输入 / 按钮 / 开关)
-        register(UiTextModule())
-        register(UiInputModule())
-        register(UiButtonModule())
-        register(UiSwitchModule())
+        register(UiTextModule(), context)
+        register(UiInputModule(), context)
+        register(UiButtonModule(), context)
+        register(UiSwitchModule(), context)
 
         // 交互逻辑 (事件监听 / 更新 / 关闭 / 获取值)
-        register(OnUiEventModule())
-        register(EndOnUiEventModule())
-        register(UpdateUiComponentModule())
-        register(GetComponentValueModule())
-        register(ExitActivityModule())
+        register(OnUiEventModule(), context)
+        register(EndOnUiEventModule(), context)
+        register(UpdateUiComponentModule(), context)
+        register(GetComponentValueModule(), context)
+        register(ExitActivityModule(), context)
 
         isCoreInitialized = true
     }

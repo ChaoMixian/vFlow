@@ -16,13 +16,35 @@ import kotlinx.parcelize.Parcelize
  * @param description 模块的功能描述。
  * @param iconRes 模块的图标资源ID。
  * @param category 模块所属的分类。
+ * @param nameStringRes 模块显示名称的字符串资源ID（用于国际化，可选）
+ * @param descriptionStringRes 模块功能描述的字符串资源ID（用于国际化，可选）
  */
 data class ActionMetadata(
     val name: String,
     val description: String,
     val iconRes: Int,
-    val category: String
-)
+    val category: String,
+    val nameStringRes: Int? = null,
+    val descriptionStringRes: Int? = null
+) {
+    /**
+     * 获取本地化的模块名称
+     * @param context Android上下文
+     * @return 本地化的名称，优先使用字符串资源
+     */
+    fun getLocalizedName(context: Context): String {
+        return if (nameStringRes != null) context.getString(nameStringRes) else name
+    }
+
+    /**
+     * 获取本地化的模块描述
+     * @param context Android上下文
+     * @return 本地化的描述，优先使用字符串资源
+     */
+    fun getLocalizedDescription(context: Context): String {
+        return if (descriptionStringRes != null) context.getString(descriptionStringRes) else description
+    }
+}
 
 /**
  * 自定义编辑器视图的 ViewHolder 基类。
@@ -116,7 +138,10 @@ enum class ParameterType {
  * @param supportsRichText 此文本输入是否支持富文本编辑（内嵌变量药丸）。
  * @param isHidden 此参数是否在UI中隐藏 (例如，内部使用的参数)。
  * @param isFolded 此参数是否归类到"更多设置"折叠区域中。
- * @param hint 输入框的提示文本（如 placeholder）。如果为 null，则使用默认提示"值"。
+ * @param hint 输入框的提示文本（如 placeholder）。
+ * @param nameStringRes 参数显示名称的字符串资源ID（用于国际化，可选）
+ * @param optionsStringRes 如果 staticType 是 ENUM，这些是可选项的字符串资源ID列表（用于国际化，可选）
+ * @param hintStringRes 输入框提示文本的字符串资源ID（用于国际化，可选）
  */
 data class InputDefinition(
     val id: String,
@@ -130,8 +155,42 @@ data class InputDefinition(
     val supportsRichText: Boolean = false,
     val isHidden: Boolean = false,
     val isFolded: Boolean = false,
-    val hint: String? = null
-)
+    val hint: String? = null,
+    val nameStringRes: Int? = null,
+    val optionsStringRes: List<Int> = emptyList(),
+    val hintStringRes: Int? = null
+) {
+    /**
+     * 获取本地化的参数名称
+     * @param context Android上下文
+     * @return 本地化的名称，优先使用字符串资源
+     */
+    fun getLocalizedName(context: Context): String {
+        return if (nameStringRes != null) context.getString(nameStringRes) else name
+    }
+
+    /**
+     * 获取本地化的选项列表
+     * @param context Android上下文
+     * @return 本地化的选项列表，优先使用字符串资源
+     */
+    fun getLocalizedOptions(context: Context): List<String> {
+        return if (optionsStringRes.isNotEmpty()) {
+            optionsStringRes.map { context.getString(it) }
+        } else {
+            options
+        }
+    }
+
+    /**
+     * 获取本地化的提示文本
+     * @param context Android上下文
+     * @return 本地化的提示文本，优先使用字符串资源
+     */
+    fun getLocalizedHint(context: Context): String? {
+        return if (hintStringRes != null) context.getString(hintStringRes) else hint
+    }
+}
 
 /**
  * 条件选项的数据类。
@@ -151,14 +210,25 @@ data class ConditionalOption(val displayName: String, val value: String) : Parce
  * @param listElementType 如果 typeName 是列表类型，此字段指定列表元素的类型（可选）。
  *                         例如：typeName = "vflow.type.list", listElementType = "vflow.type.screen_element"
  *                         表示输出是 List<VScreenElement>
+ * @param nameStringRes 输出参数显示名称的字符串资源ID（用于国际化，可选）
  */
 data class OutputDefinition(
     val id: String,
     val name: String,
     val typeName: String,
     val conditionalOptions: List<ConditionalOption>? = null,
-    val listElementType: String? = null
-)
+    val listElementType: String? = null,
+    val nameStringRes: Int? = null
+) {
+    /**
+     * 获取本地化的输出名称
+     * @param context Android上下文
+     * @return 本地化的名称，优先使用字符串资源
+     */
+    fun getLocalizedName(context: Context): String {
+        return if (nameStringRes != null) context.getString(nameStringRes) else name
+    }
+}
 
 /**
  * 模块执行过程中的进度更新信息。

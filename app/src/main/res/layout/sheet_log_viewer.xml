@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
         android:paddingBottom="16dp"
-        android:text="执行日志"
+        android:text="@string/label_execution_log"
         android:textAppearance="?attr/textAppearanceHeadlineSmall"
         android:textStyle="bold" />
 

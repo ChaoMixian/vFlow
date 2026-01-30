@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Basic Type Properties -->
+    <string name="vtype_number_int">Integer part</string>
+    <string name="vtype_number_round">Round</string>
+    <string name="vtype_number_abs">Absolute value</string>
+
+    <string name="vtype_boolean_not">Invert</string>
+
+    <string name="vtype_string_length">Length</string>
+    <string name="vtype_string_uppercase">Uppercase</string>
+    <string name="vtype_string_lowercase">Lowercase</string>
+    <string name="vtype_string_trim">Trim spaces</string>
+    <string name="vtype_string_isempty">Is empty</string>
+
+    <!-- Collection Type Properties -->
+    <string name="vtype_list_count">Count</string>
+    <string name="vtype_list_first">First item</string>
+    <string name="vtype_list_last">Last item</string>
+    <string name="vtype_list_isempty">Is empty</string>
+    <string name="vtype_list_random">Random item</string>
+
+    <string name="vtype_dict_count">Count</string>
+    <string name="vtype_dict_keys">All keys</string>
+    <string name="vtype_dict_values">All values</string>
+
+    <!-- Complex Type Properties -->
+    <string name="vtype_image_width">Width</string>
+    <string name="vtype_image_height">Height</string>
+    <string name="vtype_image_path">File path</string>
+    <string name="vtype_image_uri">URI</string>
+    <string name="vtype_image_size">File size</string>
+    <string name="vtype_image_name">File name</string>
+
+    <string name="vtype_date_year">Year</string>
+    <string name="vtype_date_month">Month</string>
+    <string name="vtype_date_day">Day</string>
+    <string name="vtype_date_weekday">Weekday (1-7)</string>
+    <string name="vtype_date_timestamp">Timestamp</string>
+
+    <string name="vtype_time_hour">Hour</string>
+    <string name="vtype_time_minute">Minute</string>
+
+    <!-- Screen Element Properties -->
+    <string name="vtype_screen_element_text">Text content</string>
+    <string name="vtype_screen_element_content_description">Content description</string>
+    <string name="vtype_screen_element_id">View ID</string>
+    <string name="vtype_screen_element_class">Class name</string>
+    <string name="vtype_screen_element_center">Center point</string>
+    <string name="vtype_screen_element_region">Region</string>
+    <string name="vtype_screen_element_center_x">Center X</string>
+    <string name="vtype_screen_element_center_y">Center Y</string>
+    <string name="vtype_screen_element_left">Left</string>
+    <string name="vtype_screen_element_top">Top</string>
+    <string name="vtype_screen_element_right">Right</string>
+    <string name="vtype_screen_element_bottom">Bottom</string>
+    <string name="vtype_screen_element_width">Width</string>
+    <string name="vtype_screen_element_height">Height</string>
+    <string name="vtype_screen_element_clickable">Clickable</string>
+    <string name="vtype_screen_element_enabled">Enabled</string>
+    <string name="vtype_screen_element_checkable">Checkable</string>
+    <string name="vtype_screen_element_checked">Checked</string>
+    <string name="vtype_screen_element_editable">Editable</string>
+
+    <!-- UI Component Properties -->
+    <string name="vtype_uicomponent_id">Component ID</string>
+    <string name="vtype_uicomponent_type">Type</string>
+    <string name="vtype_uicomponent_label">Label</string>
+    <string name="vtype_uicomponent_value">Value</string>
+    <string name="vtype_uicomponent_defaultvalue">Default value</string>
+    <string name="vtype_uicomponent_placeholder">Placeholder</string>
+    <string name="vtype_uicomponent_required">Required</string>
+    <string name="vtype_uicomponent_triggerEvent">Trigger event</string>
+    <string name="vtype_uicomponent_istext">Is text</string>
+    <string name="vtype_uicomponent_isbutton">Is button</string>
+    <string name="vtype_uicomponent_isinput">Is input</string>
+    <string name="vtype_uicomponent_isswitch">Is switch</string>
+
+    <!-- Coordinate Properties -->
+    <string name="vtype_coordinate_x">X coordinate</string>
+    <string name="vtype_coordinate_y">Y coordinate</string>
+
+    <!-- Coordinate Region Properties -->
+    <string name="vtype_coord_region_left">Left</string>
+    <string name="vtype_coord_region_top">Top</string>
+    <string name="vtype_coord_region_right">Right</string>
+    <string name="vtype_coord_region_bottom">Bottom</string>
+    <string name="vtype_coord_region_width">Width</string>
+    <string name="vtype_coord_region_height">Height</string>
+    <string name="vtype_coord_region_center">Center point</string>
+    <string name="vtype_coord_region_center_x">Center X</string>
+    <string name="vtype_coord_region_center_y">Center Y</string>
+
+    <!-- Notification Properties -->
+    <string name="vtype_notification_title">Title</string>
+    <string name="vtype_notification_content">Content</string>
+    <string name="vtype_notification_package">Package name</string>
+    <string name="vtype_notification_id">Notification ID</string>
+</resources>

@@ -21,9 +21,11 @@ class CalculationModule : BaseModule() {
     override val id = "vflow.data.calculation"
 
     // 模块的元数据，定义其在编辑器中的显示名称、描述、图标和分类
-    override val metadata: ActionMetadata = ActionMetadata(
-        name = "计算",
-        description = "执行两个数字之间的数学运算。",
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_data_calculation_name,
+        descriptionStringRes = R.string.module_vflow_data_calculation_desc,
+        name = "计算",  // Fallback
+        description = "执行两个数字之间的数学运算",  // Fallback
         iconRes = R.drawable.rounded_calculate_24,
         category = "数据"
     )
@@ -35,6 +37,7 @@ class CalculationModule : BaseModule() {
         InputDefinition(
             id = "operand1",
             name = "数字1",
+            nameStringRes = R.string.param_vflow_data_calculation_operand1_name,
             // 将类型从 NUMBER 改为 STRING，以同时接受数字字面量和变量引用字符串
             staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
@@ -44,6 +47,7 @@ class CalculationModule : BaseModule() {
         InputDefinition(
             id = "operator",
             name = "符号",
+            nameStringRes = R.string.param_vflow_data_calculation_operator_name,
             staticType = ParameterType.ENUM,
             options = listOf("+", "-", "*", "/", "%"),
             defaultValue = "+",
@@ -52,6 +56,7 @@ class CalculationModule : BaseModule() {
         InputDefinition(
             id = "operand2",
             name = "数字2",
+            nameStringRes = R.string.param_vflow_data_calculation_operand2_name,
             // 为了支持命名变量，将类型从 NUMBER 改为 STRING
             staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
@@ -67,7 +72,8 @@ class CalculationModule : BaseModule() {
         OutputDefinition(
             id = "result",
             name = "结果",
-            typeName = VTypeRegistry.NUMBER.id
+            typeName = VTypeRegistry.NUMBER.id,
+            nameStringRes = R.string.output_vflow_data_calculation_result_name
         )
     )
 
@@ -86,10 +92,16 @@ class CalculationModule : BaseModule() {
         val num2 = convertToBigDecimal(operand2Value)
 
         if (num1 == null) {
-            return ExecutionResult.Failure("输入错误", "数字1无法解析: '${operand1Value?.toString() ?: "null"}'")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_data_calculation_input_error),
+                String.format(appContext.getString(R.string.error_vflow_data_calculation_operand1_parse_failed), operand1Value?.toString() ?: "null")
+            )
         }
         if (num2 == null) {
-            return ExecutionResult.Failure("输入错误", "数字2无法解析: '${operand2Value?.toString() ?: "null"}'")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_data_calculation_input_error),
+                String.format(appContext.getString(R.string.error_vflow_data_calculation_operand2_parse_failed), operand2Value?.toString() ?: "null")
+            )
         }
 
         val resultValue: BigDecimal = when (operator) {
@@ -98,21 +110,33 @@ class CalculationModule : BaseModule() {
             "*" -> num1.multiply(num2)
             "/" -> {
                 if (num2.compareTo(BigDecimal.ZERO) == 0) {
-                    return ExecutionResult.Failure("计算错误", "除数不能为零。")
+                    return ExecutionResult.Failure(
+                        appContext.getString(R.string.error_vflow_data_calculation_division_error),
+                        appContext.getString(R.string.error_vflow_data_calculation_division_by_zero)
+                    )
                 }
                 try {
                     num1.divide(num2, 2, RoundingMode.HALF_UP)
                 } catch (e: ArithmeticException) {
-                    return ExecutionResult.Failure("计算错误", "除法计算时发生错误: ${'$'}{e.message}")
+                    return ExecutionResult.Failure(
+                        appContext.getString(R.string.error_vflow_data_calculation_division_error),
+                        String.format(appContext.getString(R.string.error_vflow_data_calculation_division_failed), e.message ?: "")
+                    )
                 }
             }
             "%" -> {
                 if (num2.compareTo(BigDecimal.ZERO) == 0) {
-                    return ExecutionResult.Failure("计算错误", "除数不能为零。")
+                    return ExecutionResult.Failure(
+                        appContext.getString(R.string.error_vflow_data_calculation_division_error),
+                        appContext.getString(R.string.error_vflow_data_calculation_division_by_zero)
+                    )
                 }
                 num1.remainder(num2)
             }
-            else -> return ExecutionResult.Failure("计算错误", "无效的运算符: '${'$'}{operator}'.")
+            else -> return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_data_calculation_calculation_error),
+                String.format(appContext.getString(R.string.error_vflow_data_calculation_invalid_operator), operator)
+            )
         }
         return ExecutionResult.Success(mapOf("result" to VNumber(resultValue.toDouble())))
     }
@@ -161,6 +185,7 @@ class CalculationModule : BaseModule() {
             inputs.find { it.id == "operand2" }
         )
 
-        return PillUtil.buildSpannable(context, "计算 ", pillOperand1, " ", pillOperator, " ", pillOperand2)
+        val summaryPrefix = context.getString(R.string.summary_vflow_data_calculation_prefix)
+        return PillUtil.buildSpannable(context, "$summaryPrefix ", pillOperand1, " ", pillOperator, " ", pillOperand2)
     }
 }

@@ -70,7 +70,7 @@ class CoreTouchReplayModuleUIProvider : ModuleUIProvider {
         // 恢复录制数据
         val recordingData = currentParameters["recording_data"] as? String ?: ""
         holder.recordingData = recordingData
-        updateRecordingPreview(holder)
+        updateRecordingPreview(holder, context)
 
         // 恢复速度设置
         val speed = (currentParameters["speed"] as? Number)?.toFloat() ?: 1.0f
@@ -102,7 +102,7 @@ class CoreTouchReplayModuleUIProvider : ModuleUIProvider {
     private fun startRecording(context: Context, holder: ViewHolder) {
         // 检查权限
         if (!PermissionManager.isGranted(context, PermissionManager.OVERLAY)) {
-            Toast.makeText(context, "需要悬浮窗权限", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.toast_vflow_core_touch_replay_permission, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -118,36 +118,36 @@ class CoreTouchReplayModuleUIProvider : ModuleUIProvider {
                     val h = holderRef.get()
                     if (h != null && result != null) {
                         h.recordingData = result.toJson()
-                        updateRecordingPreview(h)
+                        updateRecordingPreview(h, context)
                         h.onParametersChangedCallback?.invoke()
                     }
 
                     contextRef.get()?.let {
                         val eventCount = result?.events?.size ?: 0
                         if (eventCount > 0) {
-                            Toast.makeText(it, "录制完成：$eventCount 个事件", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(it, it.getString(R.string.toast_vflow_core_touch_replay_completed, eventCount), Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(it, "录制已取消", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(it, R.string.toast_vflow_core_touch_replay_cancelled, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     contextRef.get()?.let {
-                        Toast.makeText(it, "录制失败：${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(it, it.getString(R.string.toast_vflow_core_touch_replay_failed, e.message ?: ""), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
     }
 
-    private fun updateRecordingPreview(holder: ViewHolder) {
+    private fun updateRecordingPreview(holder: ViewHolder, context: Context) {
         val data = TouchRecordingData.fromJson(holder.recordingData)
         if (data == null) {
-            holder.tvRecordingStatus.text = "未录制\n点击下方按钮录制触摸操作"
+            holder.tvRecordingStatus.text = context.getString(R.string.ui_vflow_core_touch_replay_not_recorded)
         } else {
-            holder.tvRecordingStatus.text = "已录制 ${data.events.size} 个事件\n" +
-                "时长：${data.duration / 1000} 秒 | 屏幕尺寸：${data.screenW}x${data.screenH}"
+            holder.tvRecordingStatus.text = context.getString(R.string.ui_vflow_core_touch_replay_recorded,
+                data.events.size, data.duration / 1000, data.screenW, data.screenH)
         }
     }
 }

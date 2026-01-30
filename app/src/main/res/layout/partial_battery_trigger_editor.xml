@@ -9,7 +9,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="触发条件"
+        android:text="@string/label_trigger_condition"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <com.google.android.material.chip.ChipGroup
@@ -25,20 +25,20 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="低于" />
+            android:text="@string/label_below" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_above"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="高于" />
+            android:text="@string/label_above" />
     </com.google.android.material.chip.ChipGroup>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="电量阈值"
+        android:text="@string/label_battery_threshold"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <com.google.android.material.slider.Slider

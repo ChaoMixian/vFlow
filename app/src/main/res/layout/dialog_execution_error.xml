@@ -16,13 +16,13 @@
         android:layout_height="64dp"
         android:src="@drawable/ic_alert"
         app:tint="?attr/colorError"
-        android:contentDescription="错误图标" />
+        android:contentDescription="@string/desc_error_icon" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="工作流执行出错"
+        android:text="@string/text_workflow_error"
         android:textAppearance="?attr/textAppearanceHeadlineSmall"
         android:textColor="?attr/colorError"
         android:textStyle="bold"/>
@@ -44,7 +44,7 @@
                 android:id="@+id/text_workflow_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="工作流：未命名"
+                android:text="@string/text_workflow_unnamed"
                 android:textAppearance="?attr/textAppearanceLabelLarge"
                 android:textColor="?attr/colorOnErrorContainer"
                 tools:text="工作流：每日签到" />
@@ -53,7 +53,7 @@
                 android:id="@+id/text_module_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="出错模块：#1 点击"
+                android:text="@string/text_error_module"
                 android:textAppearance="?attr/textAppearanceLabelLarge"
                 android:textColor="?attr/colorOnErrorContainer"
                 tools:text="出错模块：#1 点击" />
@@ -63,7 +63,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="错误原因"
+                android:text="@string/label_error_reason"
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:textColor="?attr/colorOnErrorContainer"
                 tools:text="找不到指定的控件：id/button_confirm" />

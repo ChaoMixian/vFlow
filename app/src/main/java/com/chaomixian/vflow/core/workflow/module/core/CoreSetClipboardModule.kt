@@ -23,8 +23,10 @@ class CoreSetClipboardModule : BaseModule() {
 
     override val id = "vflow.core.set_clipboard"
     override val metadata = ActionMetadata(
-        name = "设置剪贴板",
-        description = "使用 vFlow Core 设置剪贴板内容。",
+        name = "设置剪贴板",  // Fallback
+        nameStringRes = R.string.module_vflow_core_set_clipboard_name,
+        description = "使用 vFlow Core 设置剪贴板内容。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_set_clipboard_desc,
         iconRes = R.drawable.rounded_content_copy_24,
         category = "Core (Beta)"
     )
@@ -36,7 +38,8 @@ class CoreSetClipboardModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "text",
-            name = "文本内容",
+            name = "文本内容",  // Fallback
+            nameStringRes = R.string.param_vflow_core_set_clipboard_text_name,
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -57,7 +60,7 @@ class CoreSetClipboardModule : BaseModule() {
         )
         return PillUtil.buildSpannable(
             context,
-            "vFlow Core 设置剪贴板：",
+            context.getString(R.string.summary_vflow_core_set_clipboard),
             textPill
         )
     }

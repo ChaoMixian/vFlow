@@ -11,7 +11,7 @@
         android:id="@+id/label_event"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="事件"
+        android:text="@string/label_event"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <com.google.android.material.chip.ChipGroup
@@ -26,14 +26,14 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="打开时" />
+            android:text="@string/text_when_opened" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_app_close"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="关闭时" />
+            android:text="@string/text_when_closed" />
     </com.google.android.material.chip.ChipGroup>
 
     <com.google.android.material.divider.MaterialDivider
@@ -45,7 +45,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="目标应用/Activity"
+        android:text="@string/label_target_app"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <TextView
@@ -63,6 +63,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="选择应用或Activity" />
+        android:text="@string/button_select_app_activity" />
 
 </LinearLayout>

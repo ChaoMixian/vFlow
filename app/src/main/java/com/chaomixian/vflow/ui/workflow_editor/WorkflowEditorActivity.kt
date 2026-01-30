@@ -17,6 +17,7 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Toast
+import com.chaomixian.vflow.core.locale.toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
@@ -106,7 +107,7 @@ class WorkflowEditorActivity : BaseActivity() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             pendingExecutionWorkflow?.let {
-                Toast.makeText(this, "开始执行: ${it.name}", Toast.LENGTH_SHORT).show()
+                toast(getString(R.string.editor_toast_execution_start, it.name))
                 WorkflowExecutor.execute(it, this)
             }
         }
@@ -195,7 +196,7 @@ class WorkflowEditorActivity : BaseActivity() {
         executeButton.setOnClickListener {
             val name = nameEditText.text.toString().trim()
             if (name.isBlank()) {
-                Toast.makeText(this, "工作流名称不能为空", Toast.LENGTH_SHORT).show()
+                toast(R.string.editor_toast_workflow_name_empty)
                 return@setOnClickListener
             }
             val workflowToExecute = currentWorkflow?.copy(
@@ -225,7 +226,7 @@ class WorkflowEditorActivity : BaseActivity() {
             val intent = Intent(this, UiInspectorService::class.java)
             startService(intent)
             // moveTaskToBack(true)
-            Toast.makeText(this, "UI 检查器已开启，拖动图标选择控件", Toast.LENGTH_LONG).show()
+            toast(R.string.editor_toast_ui_inspector_started)
             true
         }
 
@@ -441,7 +442,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private fun executeWorkflow(workflow: Workflow) {
         val missingPermissions = PermissionManager.getMissingPermissions(this, workflow)
         if (missingPermissions.isEmpty()) {
-            Toast.makeText(this, "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
+            toast(getString(R.string.editor_toast_execution_start, workflow.name))
             WorkflowExecutor.execute(workflow, this)
         } else {
             pendingExecutionWorkflow = workflow
@@ -460,7 +461,7 @@ class WorkflowEditorActivity : BaseActivity() {
             .filter { it.moduleId == CreateVariableModule().id }
             .forEach { step ->
                 val varName = step.parameters["variableName"] as? String
-                val varType = step.parameters["type"] as? String ?: "文本"
+                val varType = step.parameters["type"] as? String ?: getString(R.string.variable_type_text)
                 if (!varName.isNullOrBlank()) {
                     // 使用统一的 VariableType 枚举获取 typeId，消除硬编码映射
                     val typeEnum = com.chaomixian.vflow.core.execution.VariableType.fromDisplayName(varType)
@@ -469,14 +470,14 @@ class WorkflowEditorActivity : BaseActivity() {
                     availableNamedVariables[varName] = MagicVariableItem(
                         variableReference = "[[$varName]]",
                         variableName = varName,
-                        originDescription = "命名变量 ($varType)",
+                        originDescription = getString(R.string.error_named_variable, varType),
                         typeId = typeId
                     )
                 }
             }
         // 将所有命名变量归入一个固定的组
         return if (availableNamedVariables.isNotEmpty()) {
-            mapOf("命名变量" to availableNamedVariables.values.toList())
+            mapOf(getString(R.string.editor_group_named_variables) to availableNamedVariables.values.toList())
         } else {
             emptyMap()
         }
@@ -582,7 +583,7 @@ class WorkflowEditorActivity : BaseActivity() {
                     actionSteps[i] = currentStep.copy(parameters = updatedParameters)
                 }
             }
-            Toast.makeText(this, "已自动更新对变量 '${oldVariableName}' 的引用", Toast.LENGTH_LONG).show()
+            toast(getString(R.string.editor_toast_variable_reference_updated, oldVariableName))
         }
 
         oldVariableName = null // 重置
@@ -630,7 +631,7 @@ class WorkflowEditorActivity : BaseActivity() {
         val targetInputDef = editingModule.getDynamicInputs(actionSteps.getOrNull(editingStepPosition), actionSteps).find { it.id == realInputId }
 
         if (targetInputDef == null) {
-            Toast.makeText(this, "无法找到输入定义: $targetInputId", Toast.LENGTH_SHORT).show()
+            toast(getString(R.string.editor_toast_input_definition_not_found, targetInputId))
             return
         }
 
@@ -651,11 +652,11 @@ class WorkflowEditorActivity : BaseActivity() {
             }
 
             if (outputs.isNotEmpty()) {
-                val groupName = "#$i ${module.metadata.name}"
+                val groupName = "#$i ${module.metadata.getLocalizedName(this)}"
                 val items = outputs.map { outputDef ->
                     MagicVariableItem(
                         variableReference = "{{${step.id}.${outputDef.id}}}",
-                        variableName = outputDef.name,
+                        variableName = outputDef.getLocalizedName(this),
                         originDescription = "(${outputDef.typeName.split('.').last()})",
                         typeId = outputDef.typeName
                     )
@@ -669,11 +670,11 @@ class WorkflowEditorActivity : BaseActivity() {
         if (enclosingLoopStep != null) {
             val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId) as? LoopModule
             if (loopModule != null) {
-                val groupName = "#${actionSteps.indexOf(enclosingLoopStep)} ${loopModule.metadata.name}"
+                val groupName = "#${actionSteps.indexOf(enclosingLoopStep)} ${loopModule.metadata.getLocalizedName(this)}"
                 val items = loopModule.getDynamicOutputs(enclosingLoopStep, actionSteps).map { outputDef ->
                     MagicVariableItem(
                         variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
-                        variableName = outputDef.name,
+                        variableName = outputDef.getLocalizedName(this),
                         originDescription = "(${outputDef.typeName.split('.').last()})",
                         typeId = outputDef.typeName
                     )
@@ -686,7 +687,7 @@ class WorkflowEditorActivity : BaseActivity() {
         if (enclosingForEachStep != null) {
             val forEachModule = ModuleRegistry.getModule(enclosingForEachStep.moduleId) as? ForEachModule
             if (forEachModule != null) {
-                val groupName = "#${actionSteps.indexOf(enclosingForEachStep)} ${forEachModule.metadata.name}"
+                val groupName = "#${actionSteps.indexOf(enclosingForEachStep)} ${forEachModule.metadata.getLocalizedName(this)}"
                 val items = forEachModule.getDynamicOutputs(enclosingForEachStep, actionSteps).map { outputDef ->
                     // 使用 listElementType 作为类型描述（如果有的话）
                     val typeDescription = when {
@@ -696,7 +697,7 @@ class WorkflowEditorActivity : BaseActivity() {
                     }
                     MagicVariableItem(
                         variableReference = "{{${enclosingForEachStep.id}.${outputDef.id}}}",
-                        variableName = outputDef.name,
+                        variableName = outputDef.getLocalizedName(this),
                         originDescription = typeDescription,
                         typeId = outputDef.listElementType ?: outputDef.typeName
                     )
@@ -785,7 +786,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         // 禁止复制触发器。
         if (position == 0) {
-            Toast.makeText(this, "触发器无法复制", Toast.LENGTH_SHORT).show()
+            toast(R.string.editor_toast_trigger_cannot_duplicate)
             return
         }
 
@@ -803,7 +804,7 @@ class WorkflowEditorActivity : BaseActivity() {
         actionSteps.addAll(insertPosition, stepsToDuplicate)
 
         recalculateAndNotify()
-        Toast.makeText(this, "已复制 ${stepsToDuplicate.size} 个步骤", Toast.LENGTH_SHORT).show()
+        toast(getString(R.string.editor_toast_steps_duplicated, stepsToDuplicate.size))
 
         // 滚动到新复制的位置
         recyclerView.smoothScrollToPosition(insertPosition)
@@ -917,7 +918,7 @@ class WorkflowEditorActivity : BaseActivity() {
                     actionSteps.clear()
                     actionSteps.addAll(newList)
                 } else {
-                    Toast.makeText(this@WorkflowEditorActivity, "无效的移动", Toast.LENGTH_SHORT).show()
+                    toast(R.string.editor_toast_invalid_move)
                     actionSteps.clear()
                     actionSteps.addAll(originalList)
                 }
@@ -1144,7 +1145,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 actionSteps.clear()
                 actionSteps.addAll(cleanedSteps)
                 // 通过 Toast 通知用户
-                Toast.makeText(this, "已自动移除 $removedCount 个未知或已过时的模块。", Toast.LENGTH_LONG).show()
+                toast(getString(R.string.editor_toast_unknown_modules_removed, removedCount))
             }
         }
 
@@ -1159,7 +1160,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun updateExecuteButton(isRunning: Boolean) {
         if (isRunning) {
-            executeButton.text = "停止"
+            executeButton.text = getString(R.string.editor_button_stop)
             executeButton.setIconResource(R.drawable.rounded_pause_24)
         } else {
             executeButton.text = getString(R.string.workflow_editor_execute)
@@ -1174,7 +1175,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         picker.onActionSelected = { module ->
-            if (module.metadata.category == "模板") {
+            if (module.metadata.category == getString(R.string.category_template)) {
                 val newSteps = module.createSteps()
                 actionSteps.addAll(newSteps)
                 recalculateAndNotify()
@@ -1246,7 +1247,7 @@ class WorkflowEditorActivity : BaseActivity() {
             if (module != null) {
                 val validationResult = module.validate(step, actionSteps)
                 if (!validationResult.isValid) {
-                    Toast.makeText(this, validationResult.errorMessage, Toast.LENGTH_LONG).show()
+                    toast(validationResult.errorMessage ?: "Unknown validation error")
                     return // 验证失败，停止保存
                 }
             }
@@ -1254,7 +1255,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         val name = nameEditText.text.toString().trim()
         if (name.isBlank()) {
-            Toast.makeText(this, "工作流名称不能为空", Toast.LENGTH_SHORT).show()
+            toast(R.string.editor_toast_workflow_name_empty)
         } else {
             val isNewWorkflow = currentWorkflow == null
             val workflowToSave = currentWorkflow?.copy(
@@ -1275,7 +1276,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 updateExecuteButton(WorkflowExecutor.isRunning(workflowToSave.id))
             }
 
-            Toast.makeText(this, "工作流已保存", Toast.LENGTH_SHORT).show()
+            toast(R.string.editor_toast_workflow_saved)
 
             if (shouldFinish) {
                 finish()
@@ -1302,25 +1303,25 @@ class WorkflowEditorActivity : BaseActivity() {
         // 覆盖现有步骤（策略可以是追加，但通常用户希望重写）
         if (actionSteps.isNotEmpty()) {
             MaterialAlertDialogBuilder(this)
-                .setTitle("覆盖现有步骤？")
-                .setMessage("AI 生成了新的工作流步骤。是否要清空当前编辑器的所有步骤并应用新生成的内容？")
-                .setPositiveButton("覆盖") { _, _ ->
+                .setTitle(R.string.editor_dialog_overwrite_title)
+                .setMessage(R.string.editor_dialog_overwrite_message)
+                .setPositiveButton(R.string.editor_button_overwrite) { _, _ ->
                     actionSteps.clear()
                     actionSteps.addAll(workflow.steps)
                     recalculateAndNotify()
-                    Toast.makeText(this, "已应用 AI 生成的工作流", Toast.LENGTH_SHORT).show()
+                    toast(R.string.editor_toast_ai_workflow_applied)
                 }
-                .setNeutralButton("追加到末尾") { _, _ ->
+                .setNeutralButton(R.string.editor_button_append_to_end) { _, _ ->
                     actionSteps.addAll(workflow.steps)
                     recalculateAndNotify()
-                    Toast.makeText(this, "已追加步骤", Toast.LENGTH_SHORT).show()
+                    toast(R.string.editor_toast_steps_appended)
                 }
-                .setNegativeButton("取消", null)
+                .setNegativeButton(R.string.common_cancel, null)
                 .show()
         } else {
             actionSteps.addAll(workflow.steps)
             recalculateAndNotify()
-            Toast.makeText(this, "已应用 AI 生成的工作流", Toast.LENGTH_SHORT).show()
+            toast(R.string.editor_toast_ai_workflow_applied)
         }
     }
 }

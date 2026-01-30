@@ -26,6 +26,8 @@ class ApplyMaskModule : BaseModule() {
 
     override val id = "vflow.file.apply_mask"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_file_apply_mask_name,
+        descriptionStringRes = R.string.module_vflow_file_apply_mask_desc,
         name = "应用蒙版",
         description = "为图片应用 Material You 风格圆角矩形蒙版。",
         iconRes = R.drawable.rounded_image_inset_24,
@@ -40,7 +42,8 @@ class ApplyMaskModule : BaseModule() {
             name = "源图像",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id),
+            nameStringRes = R.string.param_vflow_file_source_image
         ),
         InputDefinition(
             id = "mask_shape",
@@ -70,11 +73,11 @@ class ApplyMaskModule : BaseModule() {
 
         return PillUtil.buildSpannable(
             context,
-            "为图像 ",
+            context.getString(R.string.summary_vflow_file_apply_mask_prefix),
             imagePill,
-            " 应用 ",
+            context.getString(R.string.summary_vflow_file_apply_mask_middle),
             maskShapePill,
-            " 蒙版"
+            context.getString(R.string.summary_vflow_file_apply_mask_suffix)
         )
     }
 

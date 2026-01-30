@@ -22,8 +22,10 @@ class GetAppUsageStatsModule : BaseModule() {
 
     override val id = "vflow.system.get_usage_stats"
     override val metadata = ActionMetadata(
-        name = "获取应用使用情况",
-        description = "获取设备上应用的屏幕使用时间统计。",
+        name = "获取应用使用情况",  // Fallback
+        nameStringRes = R.string.module_vflow_system_get_usage_stats_name,
+        description = "获取设备上应用的屏幕使用时间统计。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_system_get_usage_stats_desc,
         iconRes = R.drawable.rounded_data_object_24,
         category = "应用与系统"
     )
@@ -63,7 +65,7 @@ class GetAppUsageStatsModule : BaseModule() {
             getInputs().find { it.id == "interval" },
             isModuleOption = true
         )
-        return PillUtil.buildSpannable(context, "获取 ", intervalPill, " 的应用使用排行")
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_get_usage_prefix), intervalPill, context.getString(R.string.summary_vflow_system_get_usage_suffix))
     }
 
     override suspend fun execute(

@@ -37,7 +37,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="源图像"
+            android:text="@string/label_source_image"
             android:textAppearance="?attr/textAppearanceTitleMedium" />
 
         <FrameLayout
@@ -68,7 +68,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="曝光" />
+                android:text="@string/text_exposure" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_exposure"
                 android:layout_width="match_parent"
@@ -81,7 +81,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="鲜明度" />
+                android:text="@string/text_saturation" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_vibrance"
                 android:layout_width="match_parent"
@@ -94,7 +94,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="高光" />
+                android:text="@string/text_highlights" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_highlights"
                 android:layout_width="match_parent"
@@ -107,7 +107,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="阴影" />
+                android:text="@string/text_shadows" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_shadows"
                 android:layout_width="match_parent"
@@ -120,7 +120,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="对比度" />
+                android:text="@string/text_contrast" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_contrast"
                 android:layout_width="match_parent"
@@ -133,7 +133,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="亮度" />
+                android:text="@string/text_brightness" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_brightness"
                 android:layout_width="match_parent"
@@ -146,7 +146,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="黑点" />
+                android:text="@string/text_blacks" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_black_point"
                 android:layout_width="match_parent"
@@ -159,7 +159,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="饱和度" />
+                android:text="@string/text_saturation" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_saturation"
                 android:layout_width="match_parent"
@@ -172,7 +172,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="色温" />
+                android:text="@string/text_temperature" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_warmth"
                 android:layout_width="match_parent"
@@ -185,7 +185,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="色调" />
+                android:text="@string/text_tint" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_tint"
                 android:layout_width="match_parent"
@@ -198,7 +198,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="暗角" />
+                android:text="@string/text_vignette" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_vignette"
                 android:layout_width="match_parent"
@@ -211,7 +211,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="锐化" />
+                android:text="@string/text_sharpen" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_sharpness"
                 android:layout_width="match_parent"
@@ -224,7 +224,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="清晰度" />
+                android:text="@string/text_clarity" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_clarity"
                 android:layout_width="match_parent"
@@ -237,7 +237,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="噪点消除" />
+                android:text="@string/text_noise_reduction" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_denoise"
                 android:layout_width="match_parent"

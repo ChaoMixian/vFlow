@@ -29,8 +29,10 @@ class AdjustImageModule : BaseModule() {
 
     override val id = "vflow.file.adjust_image"
     override val metadata = ActionMetadata(
-        name = "调整图像",
-        description = "调整图像的曝光、对比度、饱和度等参数。",
+        name = "调整图像",  // Fallback
+        nameStringRes = R.string.module_vflow_file_adjust_image_name,
+        description = "调整图像的曝光、对比度、饱和度等参数。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_file_adjust_image_desc,
         iconRes = R.drawable.rounded_photo_prints_24,
         category = "文件"
     )
@@ -57,21 +59,21 @@ class AdjustImageModule : BaseModule() {
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = INPUT_IMAGE, name = "源图像", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)),
-        InputDefinition(id = P_EXPOSURE, name = "曝光", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_CONTRAST, name = "对比度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_BRIGHTNESS, name = "亮度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_SATURATION, name = "饱和度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_VIBRANCE, name = "鲜明度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_HIGHLIGHTS, name = "高光", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_SHADOWS, name = "阴影", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_BLACK_POINT, name = "黑点", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_WARMTH, name = "色温", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_TINT, name = "色调", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_VIGNETTE, name = "暗角", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_SHARPNESS, name = "锐化", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_CLARITY, name = "清晰度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition(id = P_DENOISE, name = "噪点消除", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
+        InputDefinition(id = INPUT_IMAGE, name = "源图像", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id), nameStringRes = R.string.param_vflow_file_adjust_image_image_name),
+        InputDefinition(id = P_EXPOSURE, name = "曝光", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_exposure_name),
+        InputDefinition(id = P_CONTRAST, name = "对比度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_contrast_name),
+        InputDefinition(id = P_BRIGHTNESS, name = "亮度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_brightness_name),
+        InputDefinition(id = P_SATURATION, name = "饱和度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_saturation_name),
+        InputDefinition(id = P_VIBRANCE, name = "鲜明度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_vibrance_name),
+        InputDefinition(id = P_HIGHLIGHTS, name = "高光", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_highlights_name),
+        InputDefinition(id = P_SHADOWS, name = "阴影", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_shadows_name),
+        InputDefinition(id = P_BLACK_POINT, name = "黑点", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_blackPoint_name),
+        InputDefinition(id = P_WARMTH, name = "色温", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_warmth_name),
+        InputDefinition(id = P_TINT, name = "色调", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_tint_name),
+        InputDefinition(id = P_VIGNETTE, name = "暗角", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_vignette_name),
+        InputDefinition(id = P_SHARPNESS, name = "锐化", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_sharpness_name),
+        InputDefinition(id = P_CLARITY, name = "清晰度", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_clarity_name),
+        InputDefinition(id = P_DENOISE, name = "噪点消除", staticType = ParameterType.NUMBER, defaultValue = 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_file_adjust_image_denoise_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -86,7 +88,8 @@ class AdjustImageModule : BaseModule() {
                 if (paramValue is Number && paramValue.toDouble() != 0.0) "${it.name}: ${paramValue}" else null
             }
             .joinToString(", ")
-        return PillUtil.buildSpannable(context, "调整图像 ", imagePill, if (adjustments.isNotEmpty()) " 使用: $adjustments" else " (无调整)")
+        val suffix = if (adjustments.isNotEmpty()) context.getString(R.string.summary_vflow_file_adjust_image_with, adjustments) else context.getString(R.string.summary_vflow_file_adjust_image_none)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_file_adjust_image_prefix), imagePill, suffix)
     }
 
     override suspend fun execute(

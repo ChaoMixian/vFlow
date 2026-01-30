@@ -39,6 +39,8 @@ class FindImageModule : BaseModule() {
 
     override val id = "vflow.interaction.find_image"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_interaction_find_image_name,
+        descriptionStringRes = R.string.module_vflow_interaction_find_image_desc,
         name = "查找图片",
         description = "在屏幕上查找与模板图片相似的区域，返回匹配位置的中心坐标。",
         iconRes = R.drawable.rounded_image_search_24,
@@ -97,9 +99,9 @@ class FindImageModule : BaseModule() {
         val outputPill = PillUtil.Pill("最相似坐标", "")
 
         return if (templateUri.isNotEmpty()) {
-            PillUtil.buildSpannable(context, "在屏幕上查找图片 相似度 ", thresholdPill, " 并输出 ", outputPill)
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_find_image), thresholdPill, context.getString(R.string.summary_vflow_interaction_and_output), outputPill)
         } else {
-            "查找图片 (未设置模板)"
+            context.getString(R.string.summary_vflow_interaction_find_image_no_template)
         }
     }
 

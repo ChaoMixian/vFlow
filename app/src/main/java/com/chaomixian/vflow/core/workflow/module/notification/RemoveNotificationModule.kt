@@ -15,8 +15,10 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class RemoveNotificationModule : BaseModule() {
     override val id = "vflow.notification.remove"
     override val metadata = ActionMetadata(
-        name = "移除通知",
-        description = "从状态栏移除一个或多个通知。",
+        name = "移除通知",  // Fallback
+        nameStringRes = R.string.module_vflow_notification_remove_name,
+        description = "从状态栏移除一个或多个通知。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_notification_remove_desc,
         iconRes = R.drawable.rounded_close_small_24,
         category = "应用与系统"
     )
@@ -39,7 +41,7 @@ class RemoveNotificationModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val targetPill = PillUtil.createPillFromParam(step.parameters["target"], getInputs().find { it.id == "target" })
-        return PillUtil.buildSpannable(context, "移除通知 ", targetPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_notification_remove), targetPill)
     }
 
     override suspend fun execute(

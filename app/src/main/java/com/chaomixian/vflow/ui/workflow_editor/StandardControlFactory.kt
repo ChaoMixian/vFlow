@@ -44,7 +44,7 @@ object StandardControlFactory {
         onEnumItemSelected: ((String) -> Unit)? = null
     ): View {
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null, false)
-        row.findViewById<TextView>(R.id.input_name).text = inputDef.name
+        row.findViewById<TextView>(R.id.input_name).text = inputDef.getLocalizedName(context)
         val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
 
@@ -231,7 +231,8 @@ object StandardControlFactory {
         val pillText = pill.findViewById<TextView>(R.id.pill_text)
         pillText.text = PillRenderer.getDisplayNameForVariableReference(
             variableReference,
-            allSteps ?: emptyList()
+            allSteps ?: emptyList(),
+            context
         )
         onClick?.let { pill.setOnClickListener { it() } }
         return pill

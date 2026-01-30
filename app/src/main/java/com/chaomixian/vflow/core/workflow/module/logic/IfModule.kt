@@ -58,16 +58,23 @@ val ALL_OPERATORS = (OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT + OPERATORS_FOR_NUMB
  */
 class IfModule : BaseBlockModule() {
     override val id = IF_START_ID
-    override val metadata = ActionMetadata("如果", "根据条件执行不同的操作", R.drawable.rounded_alt_route_24, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_if_start_name,
+        descriptionStringRes = R.string.module_vflow_logic_if_start_desc,
+        name = "如果",
+        description = "根据条件执行不同的操作",
+        iconRes = R.drawable.rounded_alt_route_24,
+        category = "逻辑控制"
+    )
     override val pairingId = IF_PAIRING_ID
     override val stepIdsInBlock = listOf(IF_START_ID, ELSE_ID, IF_END_ID)
 
     /** 获取静态输入参数定义。 */
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(id = "input1", name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.BOOLEAN.id, VTypeRegistry.NUMBER.id, VTypeRegistry.STRING.id, VTypeRegistry.DICTIONARY.id, VTypeRegistry.LIST.id, VTypeRegistry.SCREEN_ELEMENT.id)),
-        InputDefinition(id = "operator", name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
-        InputDefinition(id = "value1", name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.NUMBER.id, VTypeRegistry.BOOLEAN.id)),
-        InputDefinition(id = "value2", name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
+        InputDefinition(id = "input1", nameStringRes = R.string.param_vflow_logic_if_start_input1_name, name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.BOOLEAN.id, VTypeRegistry.NUMBER.id, VTypeRegistry.STRING.id, VTypeRegistry.DICTIONARY.id, VTypeRegistry.LIST.id, VTypeRegistry.SCREEN_ELEMENT.id)),
+        InputDefinition(id = "operator", nameStringRes = R.string.param_vflow_logic_if_start_operator_name, name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
+        InputDefinition(id = "value1", nameStringRes = R.string.param_vflow_logic_if_start_value1_name, name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.NUMBER.id, VTypeRegistry.BOOLEAN.id)),
+        InputDefinition(id = "value2", nameStringRes = R.string.param_vflow_logic_if_start_value2_name, name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
     )
 
     /**
@@ -107,7 +114,7 @@ class IfModule : BaseBlockModule() {
     }
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "条件结果", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("result", nameStringRes = R.string.output_vflow_logic_if_start_result_name, name = "条件结果", typeName = VTypeRegistry.BOOLEAN.id)
     )
 
     /**
@@ -120,7 +127,7 @@ class IfModule : BaseBlockModule() {
         val input1Pill = PillUtil.createPillFromParam(step.parameters["input1"], allInputs.find { it.id == "input1" })
         val operatorPill = PillUtil.createPillFromParam(step.parameters["operator"], allInputs.find { it.id == "operator" }, isModuleOption = true)
 
-        val parts = mutableListOf<Any>("如果 ", input1Pill, " ", operatorPill)
+        val parts = mutableListOf<Any>(context.getString(R.string.summary_vflow_logic_if_prefix), input1Pill, " ", operatorPill)
 
         if (inputsForStep.any { it.id == "value1" }) {
             val value1Pill = PillUtil.createPillFromParam(step.parameters["value1"], allInputs.find { it.id == "value1" })
@@ -129,9 +136,9 @@ class IfModule : BaseBlockModule() {
         }
         if (inputsForStep.any { it.id == "value2" }) {
             val value2Pill = PillUtil.createPillFromParam(step.parameters["value2"], allInputs.find { it.id == "value2" })
-            parts.add(" 和 ")
+            parts.add(context.getString(R.string.summary_vflow_logic_and))
             parts.add(value2Pill)
-            parts.add(" 之间")
+            parts.add(context.getString(R.string.summary_vflow_logic_between))
         }
 
         return PillUtil.buildSpannable(context, *parts.toTypedArray())
@@ -258,9 +265,16 @@ class IfModule : BaseBlockModule() {
  */
 class ElseModule : BaseModule() {
     override val id = ELSE_ID
-    override val metadata = ActionMetadata("否则", "如果条件不满足，则执行这里的操作", R.drawable.rounded_alt_route_24, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_if_middle_name,
+        descriptionStringRes = R.string.module_vflow_logic_if_middle_desc,
+        name = "否则",
+        description = "如果条件不满足，则执行这里的操作",
+        iconRes = R.drawable.rounded_alt_route_24,
+        category = "逻辑控制"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, IF_PAIRING_ID, isIndividuallyDeletable = true)
-    override fun getSummary(context: Context, step: ActionStep): CharSequence = "否则"
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_else)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         val ifStepId = findPreviousStepInSameBlock(context.allSteps, context.currentStepIndex, IF_START_ID)
@@ -321,8 +335,15 @@ class ElseModule : BaseModule() {
  */
 class EndIfModule : BaseModule() {
     override val id = IF_END_ID
-    override val metadata = ActionMetadata("结束如果", "", R.drawable.rounded_alt_route_24, "逻辑控制")
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_if_end_name,
+        descriptionStringRes = R.string.module_vflow_logic_if_end_desc,
+        name = "结束如果",
+        description = "",
+        iconRes = R.drawable.rounded_alt_route_24,
+        category = "逻辑控制"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, IF_PAIRING_ID)
-    override fun getSummary(context: Context, step: ActionStep): CharSequence = "结束如果"
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_end_if)
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit) = ExecutionResult.Success()
 }

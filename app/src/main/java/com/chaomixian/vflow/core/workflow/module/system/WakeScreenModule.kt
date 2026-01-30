@@ -24,8 +24,10 @@ class WakeScreenModule : BaseModule() {
 
     override val id = "vflow.system.wake_screen"
     override val metadata = ActionMetadata(
-        name = "唤醒屏幕（无密码）",
-        description = "点亮息屏状态的屏幕并解除滑动锁屏。仅适用于未设置密码的设备，需要 Shizuku 或 Root 权限。",
+        nameStringRes = R.string.module_vflow_system_wake_screen_name,
+        descriptionStringRes = R.string.module_vflow_system_wake_screen_desc,
+        name = "唤醒屏幕（无密码）",  // Fallback
+        description = "点亮息屏状态的屏幕并解除滑动锁屏。仅适用于未设置密码的设备，需要 Shizuku 或 Root 权限。",  // Fallback
         iconRes = R.drawable.rounded_brightness_5_24,
         category = "应用与系统"
     )
@@ -37,12 +39,22 @@ class WakeScreenModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("screen_on", "屏幕是否点亮", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            id = "success",
+            name = "是否成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_system_wake_screen_success_name
+        ),
+        OutputDefinition(
+            id = "screen_on",
+            name = "屏幕是否点亮",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_system_wake_screen_screen_on_name
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return "唤醒屏幕并解除锁屏"
+        return context.getString(R.string.summary_vflow_system_wake_screen)
     }
 
     override suspend fun execute(
@@ -67,10 +79,16 @@ class WakeScreenModule : BaseModule() {
                     "screen_on" to VBoolean(isScreenOn)
                 ))
             } else {
-                ExecutionResult.Failure("唤醒失败", "无法唤醒屏幕，请检查 Shizuku 或 Root 权限。")
+                ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_system_wake_screen_failed),
+                    "无法唤醒屏幕，请检查 Shizuku 或 Root 权限。"
+                )
             }
         } catch (e: Exception) {
-            ExecutionResult.Failure("执行失败", e.localizedMessage ?: "发生未知错误")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_wake_screen_exec_failed),
+                e.localizedMessage ?: "发生未知错误"
+            )
         }
     }
 

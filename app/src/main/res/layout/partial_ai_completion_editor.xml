@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="服务提供商"
+        android:text="@string/label_service_provider"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <com.google.android.material.chip.ChipGroup
@@ -25,19 +25,19 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="OpenAI" />
+            android:text="@string/text_openai" />
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_deepseek"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="DeepSeek" />
+            android:text="@string/text_deepseek" />
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_custom"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="自定义" />
+            android:text="@string/text_custom" />
     </com.google.android.material.chip.ChipGroup>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -58,7 +58,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="模型名称">
+        android:hint="@string/hint_model_name">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_model"
             android:layout_width="match_parent"
@@ -70,7 +70,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="8dp"
-        android:text="提示词 (Prompt)"
+        android:text="@string/label_prompt"
         android:textAppearance="?attr/textAppearanceLabelMedium" />
 
     <FrameLayout
@@ -110,7 +110,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="高级设置 (URL/System)"
+                android:text="@string/label_advanced_settings_url"
                 android:textAppearance="?attr/textAppearanceLabelLarge" />
 
             <ImageView
@@ -146,7 +146,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:hint="系统提示词 (System Prompt)">
+                android:hint="@string/hint_system_prompt">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_system_prompt"
                     android:layout_width="match_parent"
@@ -158,7 +158,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="随机性 (Temperature)"
+                android:text="@string/label_randomness"
                 android:textAppearance="?attr/textAppearanceBodyMedium" />
 
             <LinearLayout

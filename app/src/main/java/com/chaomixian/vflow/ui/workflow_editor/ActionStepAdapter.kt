@@ -25,6 +25,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -99,12 +100,13 @@ class ActionStepAdapter(
 
             // 根据是否存在自定义预览来决定标题内容
             val rawSummary = module.getSummary(context, step)
+            val fallbackName = module.metadata.getLocalizedName(context)
             val headerSummary: CharSequence = if (hasCustomPreview) {
                 // 如果有自定义预览，标题只显示简洁的摘要（不包含值）
-                PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: module.metadata.name
+                PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: fallbackName
             } else {
-                // 否则，显示完整的、带“药丸”的摘要
-                PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: module.metadata.name
+                // 否则，显示完整的、带"药丸"的摘要
+                PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: fallbackName
             }
 
             // 总是创建并添加标题行

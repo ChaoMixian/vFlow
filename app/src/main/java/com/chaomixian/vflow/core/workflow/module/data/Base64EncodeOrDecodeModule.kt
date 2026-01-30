@@ -20,9 +20,11 @@ class Base64EncodeOrDecodeModule : BaseModule() {
     override val id: String = "vflow.data.base64"
     
     override val metadata: ActionMetadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_data_base64_name,
+        descriptionStringRes = R.string.module_vflow_data_base64_desc,
         name = "Base64 编解码",
         description = "对文本进行 Base64 编码或解码操作。",
-        iconRes = R.drawable.rounded_convert_to_text_24, // 采用与文本处理类似的图标
+        iconRes = R.drawable.rounded_convert_to_text_24,
         category = "数据"
     )
 
@@ -31,6 +33,7 @@ class Base64EncodeOrDecodeModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "operation",
+            nameStringRes = R.string.param_vflow_data_base64_operation_name,
             name = "操作",
             staticType = ParameterType.ENUM,
             defaultValue = "编码",
@@ -39,6 +42,7 @@ class Base64EncodeOrDecodeModule : BaseModule() {
         ),
         InputDefinition(
             id = "source_text",
+            nameStringRes = R.string.param_vflow_data_base64_source_text_name,
             name = "源文本",
             staticType = ParameterType.STRING,
             defaultValue = "",
@@ -48,7 +52,12 @@ class Base64EncodeOrDecodeModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result_text", "结果文本", VTypeRegistry.STRING.id)
+        OutputDefinition(
+            id = "result_text",
+            name = "结果文本",
+            nameStringRes = R.string.output_vflow_data_base64_result_text_name,
+            typeName = VTypeRegistry.STRING.id
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

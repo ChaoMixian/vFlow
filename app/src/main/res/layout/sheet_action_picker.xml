@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
         android:paddingBottom="16dp"
-        android:text="选择一个动作"
+        android:text="@string/label_select_action"
         android:textStyle="bold"
         android:textAppearance="?attr/textAppearanceTitleLarge" />
 
@@ -74,7 +74,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="未找到匹配的模块"
+            android:text="@string/text_no_matching_modules"
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:visibility="gone"
             tools:visibility="visible"/>

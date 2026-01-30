@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import com.chaomixian.vflow.core.locale.toast
 import androidx.fragment.app.Fragment
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
@@ -23,6 +24,7 @@ import com.chaomixian.vflow.services.ShellDiagnostic
 import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.changelog.ChangelogActivity
 import com.chaomixian.vflow.ui.settings.KeyTesterActivity
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -53,9 +55,9 @@ class SettingsFragment : Fragment() {
                     requireContext().contentResolver.openOutputStream(fileUri)?.use { outputStream ->
                         outputStream.write(DebugLogger.getLogs().toByteArray())
                     }
-                    Toast.makeText(requireContext(), "日志导出成功", Toast.LENGTH_SHORT).show()
+                    requireContext().toast(R.string.settings_toast_logs_exported)
                 } catch (e: Exception) {
-                    Toast.makeText(requireContext(), "导出失败: ${e.message}", Toast.LENGTH_LONG).show()
+                    requireContext().toast(getString(R.string.settings_toast_export_failed, e.message))
                 }
             }
         }
@@ -107,16 +109,16 @@ class SettingsFragment : Fragment() {
                 prefs.edit { putBoolean("forceKeepAliveEnabled", isChecked) }
                 if (isChecked) {
                     ShellManager.startWatcher(requireContext())
-                    Toast.makeText(requireContext(), "Shizuku 守护已开启", Toast.LENGTH_SHORT).show()
+                    requireContext().toast(R.string.settings_toast_shizuku_watcher_started)
                 } else {
                     ShellManager.stopWatcher(requireContext())
-                    Toast.makeText(requireContext(), "Shizuku 守护已关闭", Toast.LENGTH_SHORT).show()
+                    requireContext().toast(R.string.settings_toast_shizuku_watcher_stopped)
                 }
             }
         } else {
             forceKeepAliveSwitch.isEnabled = false
             forceKeepAliveSwitch.isChecked = false
-            forceKeepAliveSwitch.text = "${getString(R.string.settings_switch_force_keep_alive)} (Shizuku未激活)"
+            forceKeepAliveSwitch.text = getString(R.string.settings_switch_keep_alive_unavailable, getString(R.string.settings_switch_force_keep_alive))
         }
 
         // 自动开启无障碍服务开关逻辑
@@ -139,10 +141,10 @@ class SettingsFragment : Fragment() {
                     // 在主线程显示 Toast
                     launch(Dispatchers.Main) {
                         if (success) {
-                            val status = if (isChecked) "开启" else "关闭"
-                            Toast.makeText(requireContext(), "自动无障碍服务已$status", Toast.LENGTH_SHORT).show()
+                            val toastRes = if (isChecked) R.string.settings_toast_auto_accessibility_enabled else R.string.settings_toast_auto_accessibility_disabled
+                            requireContext().toast(toastRes)
                         } else {
-                            Toast.makeText(requireContext(), "操作失败，请检查Shell权限", Toast.LENGTH_SHORT).show()
+                            requireContext().toast(R.string.settings_toast_operation_failed)
                             autoEnableAccessibilitySwitch.isChecked = !isChecked
                             prefs.edit { putBoolean("autoEnableAccessibility", !isChecked) }
                         }
@@ -152,7 +154,7 @@ class SettingsFragment : Fragment() {
         } else {
             autoEnableAccessibilitySwitch.isEnabled = false
             autoEnableAccessibilitySwitch.isChecked = false
-            autoEnableAccessibilitySwitch.text = "自动开启无障碍服务 (Shizuku/Root 未授权)"
+            autoEnableAccessibilitySwitch.text = getString(R.string.settings_switch_auto_accessibility_unavailable)
         }
 
         // 权限与 Shell 设置
@@ -201,9 +203,9 @@ class SettingsFragment : Fragment() {
             clearButton.isEnabled = isChecked
             diagnoseButton.isEnabled = isChecked
             if (isChecked) {
-                Toast.makeText(requireContext(), "调试日志已开启", Toast.LENGTH_SHORT).show()
+                requireContext().toast(R.string.settings_toast_logging_enabled)
             } else {
-                Toast.makeText(requireContext(), "调试日志已关闭并清空", Toast.LENGTH_SHORT).show()
+                requireContext().toast(R.string.settings_toast_logging_disabled)
             }
         }
 
@@ -215,22 +217,22 @@ class SettingsFragment : Fragment() {
 
         clearButton.setOnClickListener {
             DebugLogger.clearLogs()
-            Toast.makeText(requireContext(), "日志已清空", Toast.LENGTH_SHORT).show()
+            requireContext().toast(R.string.settings_toast_logs_cleared)
         }
 
         // 运行全面诊断
         diagnoseButton.setOnClickListener {
             if (!ShellManager.isShizukuActive(requireContext())) {
-                Toast.makeText(requireContext(), "请先激活 Shizuku", Toast.LENGTH_SHORT).show()
+                requireContext().toast(R.string.settings_toast_shizuku_not_active)
                 return@setOnClickListener
             }
 
-            Toast.makeText(requireContext(), "正在运行诊断...", Toast.LENGTH_SHORT).show()
+            requireContext().toast(R.string.settings_toast_diagnostic_running)
             lifecycleScope.launch(Dispatchers.IO) {
                 ShellDiagnostic.diagnose(requireContext())
                 ShellDiagnostic.runKeyEventDiagnostic(requireContext())
                 launch(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "诊断完成，请点击“导出日志”查看详细结果", Toast.LENGTH_LONG).show()
+                    requireContext().toast(R.string.settings_toast_diagnostic_complete)
                 }
             }
         }
@@ -239,6 +241,11 @@ class SettingsFragment : Fragment() {
         keyTesterButton.setOnClickListener {
             val intent = Intent(requireContext(), KeyTesterActivity::class.java)
             startActivity(intent)
+        }
+
+        // 语言设置
+        view.findViewById<View>(R.id.btn_language_settings).setOnClickListener {
+            showLanguageDialog()
         }
 
         // 启动Core管理
@@ -306,6 +313,55 @@ class SettingsFragment : Fragment() {
     }
 
     /**
+     * 显示语言选择对话框
+     */
+    private fun showLanguageDialog() {
+        val currentLanguage = LocaleManager.getLanguage(requireContext())
+        val languages = LocaleManager.SUPPORTED_LANGUAGES.keys.toList()
+        val languageNames = LocaleManager.SUPPORTED_LANGUAGES.values.toList()
+
+        val checkedItem = languages.indexOf(currentLanguage)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_language_dialog_title)
+            .setSingleChoiceItems(languageNames.toTypedArray(), checkedItem) { dialog, which ->
+                val selectedLanguage = languages[which]
+                if (selectedLanguage != currentLanguage) {
+                    // 切换语言
+                    LocaleManager.setLanguage(requireContext(), selectedLanguage)
+
+                    // 显示重启提示
+                    showRestartDialog()
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
+    }
+
+    /**
+     * 显示重启应用对话框
+     */
+    private fun showRestartDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_toast_language_changed)
+            .setMessage(R.string.settings_toast_restart_needed)
+            .setPositiveButton(R.string.settings_button_restart) { _, _ ->
+                // 重启应用
+                val intent = requireContext().packageManager.getLaunchIntentForPackage(requireContext().packageName)
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+                requireActivity().finish()
+            }
+            .setNegativeButton(R.string.settings_button_later, null)
+            .setCancelable(false)
+            .show()
+    }
+
+    /**
      * 检查更新
      */
     private fun checkForUpdates(view: View) {
@@ -338,7 +394,7 @@ class SettingsFragment : Fragment() {
         val textUpdateVersion = view.findViewById<TextView>(R.id.text_update_version)
         val buttonUpdate = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_update)
 
-        textUpdateVersion.text = "发现新版本 v${info.latestVersion}"
+        textUpdateVersion.text = getString(R.string.settings_update_available, info.latestVersion)
 
         buttonUpdate.setOnClickListener {
             val intent = Intent(Intent.ACTION_VIEW,

@@ -18,8 +18,10 @@ class LaunchAppModule : BaseModule() {
 
     override val id = "vflow.system.launch_app"
     override val metadata = ActionMetadata(
-        name = "启动应用/活动",
-        description = "启动一个指定的应用程序或其内部的某个页面(Activity)。",
+        nameStringRes = R.string.module_vflow_system_launch_app_name,
+        descriptionStringRes = R.string.module_vflow_system_launch_app_desc,
+        name = "启动应用/活动",  // Fallback
+        description = "启动一个指定的应用程序或其内部的某个页面(Activity)",  // Fallback
         iconRes = R.drawable.rounded_activity_zone_24,
         category = "应用与系统"
     )
@@ -30,21 +32,28 @@ class LaunchAppModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "packageName",
-            name = "应用包名",
+            name = "应用包名",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "",
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_system_launch_app_packageName_name
         ),
         InputDefinition(
             id = "activityName",
-            name = "Activity 名称",
+            name = "Activity 名称",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "LAUNCH", // "LAUNCH" 是一个特殊值，代表仅启动应用
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_system_launch_app_activityName_name
         )
     )
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            id = "success",
+            name = "是否成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_system_launch_app_success_name
+        )
     )
 
 
@@ -53,7 +62,7 @@ class LaunchAppModule : BaseModule() {
         val activityName = step.parameters["activityName"] as? String
 
         if (packageName.isNullOrEmpty()) {
-            return "选择一个应用或Activity"
+            return context.getString(R.string.summary_vflow_system_launch_app_select)
         }
 
         val pm = context.packageManager
@@ -71,9 +80,11 @@ class LaunchAppModule : BaseModule() {
             activityName.substringAfterLast('.')
         }
 
+        val prefix = context.getString(R.string.summary_vflow_system_launch_app_prefix)
+
         return PillUtil.buildSpannable(context,
-            "启动 ",
-            // 创建一个药丸(Pill)，让用户可以点击它来重新选择应用/Activity
+            "$prefix ",
+            // 创建一个药丸，让用户可以点击它来重新选择应用/Activity
             PillUtil.Pill(displayText, "packageName")
         )
     }
@@ -85,7 +96,10 @@ class LaunchAppModule : BaseModule() {
         val activityName = context.variables["activityName"] as? String
 
         if (packageName.isNullOrBlank()) {
-            return ExecutionResult.Failure("参数错误", "应用包名不能为空。")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_launch_app_empty_package),
+                appContext.getString(R.string.error_vflow_system_launch_app_package_required)
+            )
         }
 
         val intent = if (activityName == "LAUNCH" || activityName.isNullOrBlank()) {
@@ -97,17 +111,25 @@ class LaunchAppModule : BaseModule() {
         }
 
         if (intent == null) {
-            return ExecutionResult.Failure("启动失败", "无法找到应用的启动意图。请确认应用已安装或Activity名称正确。")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_launch_app_launch_failed),
+                appContext.getString(R.string.error_vflow_system_launch_app_intent_not_found)
+            )
         }
 
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         return try {
             context.applicationContext.startActivity(intent)
-            onProgress(ProgressUpdate("已启动: $packageName"))
+
+            onProgress(ProgressUpdate(String.format(appContext.getString(R.string.msg_vflow_system_launch_app_launched), packageName)))
+
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } catch (e: Exception) {
-            ExecutionResult.Failure("启动异常", e.localizedMessage ?: "发生了未知错误")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_launch_app_exception),
+                e.localizedMessage ?: "发生了未知错误"
+            )
         }
     }
 }

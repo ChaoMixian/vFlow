@@ -18,8 +18,10 @@ class SystemInfoModule : BaseModule() {
 
     // 模块的元数据，定义其在编辑器中的显示名称、描述、图标和分类
     override val metadata: ActionMetadata = ActionMetadata(
-        name = "获取系统信息",
-        description = "获取当前系统的信息。",
+        name = "获取系统信息",  // Fallback
+        nameStringRes = R.string.module_vflow_system_systeminfo_name,
+        description = "获取当前系统的信息。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_system_systeminfo_desc,
         iconRes = R.drawable.baseline_perm_device_information_24,
         category = "应用与系统"
     )
@@ -92,6 +94,6 @@ class SystemInfoModule : BaseModule() {
             isModuleOption = true
         )
 
-        return PillUtil.buildSpannable(context,"获取 ",pillInfoType)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_get_info_prefix), pillInfoType)
     }
 }

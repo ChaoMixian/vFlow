@@ -31,18 +31,25 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  */
 class UiInputModule : BaseUiComponentModule() {
     override val id = "vflow.ui.component.input"
-    override val metadata = ActionMetadata("输入框", "文本输入框。", R.drawable.rounded_keyboard_external_input_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "输入框",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_component_input_name,
+        description = "文本输入框。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_component_input_desc,
+        iconRes = R.drawable.rounded_keyboard_external_input_24,
+        category = "UI 组件"
+    )
 
     override fun getInputs() = listOf(
-        InputDefinition("key", "ID (变量名)", ParameterType.STRING, "input1", acceptsMagicVariable = false),
-        InputDefinition("label", "标签", ParameterType.STRING, "请输入", acceptsMagicVariable = true),
-        InputDefinition("hint", "提示词", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("default_value", "默认值", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("trigger_event", "输入时触发事件", ParameterType.BOOLEAN, true)
+        InputDefinition("key", "ID (变量名)", ParameterType.STRING, "input1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_key_variable),
+        InputDefinition("label", "标签", ParameterType.STRING, "请输入", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_label),
+        InputDefinition("hint", "提示词", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_hint),
+        InputDefinition("default_value", "默认值", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_default_value),
+        InputDefinition("trigger_event", "输入时触发事件", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_input_trigger)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
-        PillUtil.buildSpannable(context, "输入框: ", PillUtil.createPillFromParam(step.parameters["key"], getInputs()[0]))
+        PillUtil.buildSpannable(context, context.getString(R.string.summary_prefix_input), PillUtil.createPillFromParam(step.parameters["key"], getInputs()[0]))
 
     override fun createUiElement(context: ExecutionContext, step: ActionStep): UiElement {
         val label = VariableResolver.resolve(step.parameters["label"]?.toString() ?: "", context)

@@ -26,8 +26,10 @@ class CoreCaptureScreenModule : BaseModule() {
 
     override val id = "vflow.core.capture_screen"
     override val metadata = ActionMetadata(
-        name = "截屏",
-        description = "使用 vFlow Core 捕获屏幕截图，基于scrcpy原理实现。",
+        name = "截屏",  // Fallback
+        nameStringRes = R.string.module_vflow_core_capture_screen_name,
+        description = "使用 vFlow Core 捕获屏幕截图，基于scrcpy原理实现。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_capture_screen_desc,
         iconRes = R.drawable.rounded_fullscreen_portrait_24,
         category = "Core (Beta)"
     )
@@ -39,22 +41,22 @@ class CoreCaptureScreenModule : BaseModule() {
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("output_format", "输出格式", ParameterType.ENUM, "PNG", options = outputFormatOptions, acceptsMagicVariable = false),
-        InputDefinition("quality", "JPEG质量", ParameterType.NUMBER, 90.0, acceptsMagicVariable = false, isHidden = false),
-        InputDefinition("max_width", "最大宽度", ParameterType.NUMBER, 0.0, acceptsMagicVariable = false, isHidden = false),
-        InputDefinition("max_height", "最大高度", ParameterType.NUMBER, 0.0, acceptsMagicVariable = false, isHidden = false)
+        InputDefinition("output_format", "输出格式", ParameterType.ENUM, "PNG", options = outputFormatOptions, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_core_capture_screen_output_format_name),
+        InputDefinition("quality", "JPEG质量", ParameterType.NUMBER, 90.0, acceptsMagicVariable = false, isHidden = false, nameStringRes = R.string.param_vflow_core_capture_screen_quality_name),
+        InputDefinition("max_width", "最大宽度", ParameterType.NUMBER, 0.0, acceptsMagicVariable = false, isHidden = false, nameStringRes = R.string.param_vflow_core_capture_screen_max_width_name),
+        InputDefinition("max_height", "最大高度", ParameterType.NUMBER, 0.0, acceptsMagicVariable = false, isHidden = false, nameStringRes = R.string.param_vflow_core_capture_screen_max_height_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("image", "截图图片", VTypeRegistry.IMAGE.id),
-        OutputDefinition("width", "图像宽度", VTypeRegistry.NUMBER.id),
-        OutputDefinition("height", "图像高度", VTypeRegistry.NUMBER.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_capture_screen_success_name),
+        OutputDefinition("image", "截图图片", VTypeRegistry.IMAGE.id, nameStringRes = R.string.output_vflow_core_capture_screen_image_name),
+        OutputDefinition("width", "图像宽度", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_capture_screen_width_name),
+        OutputDefinition("height", "图像高度", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_capture_screen_height_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val format = step.parameters["output_format"] as? String ?: "PNG"
-        return "截屏 ($format)"
+        return context.getString(R.string.summary_vflow_core_capture_screen, format)
     }
 
     override suspend fun execute(

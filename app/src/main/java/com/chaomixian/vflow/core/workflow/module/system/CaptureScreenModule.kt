@@ -46,7 +46,9 @@ class CaptureScreenModule : BaseModule() {
         name = "截屏",
         description = "捕获当前屏幕内容。",
         iconRes = R.drawable.rounded_fullscreen_portrait_24,
-        category = "界面交互"
+        category = "界面交互",
+        nameStringRes = R.string.module_vflow_system_capture_screen_name,
+        descriptionStringRes = R.string.module_vflow_system_capture_screen_desc
     )
 
     private val modeOptions = listOf("自动", "screencap") // 暂时移除MediaProjection入口
@@ -63,19 +65,21 @@ class CaptureScreenModule : BaseModule() {
             staticType = ParameterType.ENUM,
             defaultValue = "自动",
             options = modeOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_system_capture_screen_mode_name
         ),
         InputDefinition(
             id = "region",
             name = "区域 (可选)",
             staticType = ParameterType.STRING,
             defaultValue = "",
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_system_capture_screen_region_name
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("image", "截图", VTypeRegistry.IMAGE.id)
+        OutputDefinition("image", "截图", VTypeRegistry.IMAGE.id, nameStringRes = R.string.output_vflow_system_capture_screen_image_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -84,7 +88,7 @@ class CaptureScreenModule : BaseModule() {
             getInputs().find { it.id == "mode" },
             isModuleOption = true
         )
-        return PillUtil.buildSpannable(context, "使用 ", modePill, " 模式截屏")
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_capture_screen), modePill, context.getString(R.string.summary_vflow_system_capture_screen_suffix))
     }
 
     override suspend fun execute(

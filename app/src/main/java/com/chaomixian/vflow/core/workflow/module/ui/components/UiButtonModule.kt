@@ -34,16 +34,23 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  */
 class UiButtonModule : BaseUiComponentModule() {
     override val id = "vflow.ui.component.button"
-    override val metadata = ActionMetadata("按钮", "点击后提交表单或触发事件。", R.drawable.rounded_ads_click_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "按钮",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_component_button_name,
+        description = "点击后提交表单或触发事件。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_component_button_desc,
+        iconRes = R.drawable.rounded_ads_click_24,
+        category = "UI 组件"
+    )
 
     override fun getInputs() = listOf(
-        InputDefinition("key", "ID (事件源)", ParameterType.STRING, "btn1", acceptsMagicVariable = false),
-        InputDefinition("text", "按钮文字", ParameterType.STRING, "确定", acceptsMagicVariable = true),
-        InputDefinition("trigger_event", "仅触发事件 (不关闭窗口)", ParameterType.BOOLEAN, true)
+        InputDefinition("key", "ID (事件源)", ParameterType.STRING, "btn1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_key_event_source),
+        InputDefinition("text", "按钮文字", ParameterType.STRING, "确定", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_button_text),
+        InputDefinition("trigger_event", "仅触发事件 (不关闭窗口)", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_trigger_event)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
-        PillUtil.buildSpannable(context, "按钮: ", PillUtil.createPillFromParam(step.parameters["key"], getInputs()[0]), ": ", PillUtil.createPillFromParam(step.parameters["text"], getInputs()[1]))
+        PillUtil.buildSpannable(context, context.getString(R.string.summary_prefix_button), PillUtil.createPillFromParam(step.parameters["key"], getInputs()[0]), ": ", PillUtil.createPillFromParam(step.parameters["text"], getInputs()[1]))
 
     override fun createUiElement(context: ExecutionContext, step: ActionStep): UiElement {
         val text = VariableResolver.resolve(step.parameters["text"]?.toString() ?: "", context)

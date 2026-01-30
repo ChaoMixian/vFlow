@@ -24,8 +24,10 @@ class CorePressKeyModule : BaseModule() {
 
     override val id = "vflow.core.press_key"
     override val metadata = ActionMetadata(
-        name = "按键",
-        description = "使用 vFlow Core 发送按键事件，比无障碍服务更快速稳定。",
+        name = "按键",  // Fallback
+        nameStringRes = R.string.module_vflow_core_press_key_name,
+        description = "使用 vFlow Core 发送按键事件，比无障碍服务更快速稳定。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_press_key_desc,
         iconRes = R.drawable.rounded_keyboard_24,
         category = "Core (Beta)"
     )
@@ -37,11 +39,12 @@ class CorePressKeyModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "key_code",
-            name = "按键代码",
+            name = "按键代码",  // Fallback
             staticType = ParameterType.NUMBER,
             defaultValue = 4.0, // KEYCODE_BACK
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
+            nameStringRes = R.string.param_vflow_core_press_key_code_name
         )
     )
 
@@ -54,7 +57,7 @@ class CorePressKeyModule : BaseModule() {
             step.parameters["key_code"],
             getInputs().find { it.id == "key_code" }
         )
-        return PillUtil.buildSpannable(context, "发送按键: ", keyPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_press_key), keyPill)
     }
 
     override suspend fun execute(

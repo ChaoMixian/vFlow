@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="模型配置"
+        android:text="@string/label_model_config"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <com.google.android.material.chip.ChipGroup
@@ -25,19 +25,19 @@
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="阿里云百炼" />
+            android:text="@string/text_alibaba_cloud" />
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_bigmodel"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="智谱" />
+            android:text="@string/text_zhipu" />
         <com.google.android.material.chip.Chip
             android:id="@+id/chip_custom"
             style="@style/Widget.Material3.Chip.Filter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="自定义" />
+            android:text="@string/text_custom" />
     </com.google.android.material.chip.ChipGroup>
 
     <LinearLayout
@@ -65,7 +65,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="模型名称">
+            android:hint="@string/hint_model_name">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_model"
                 android:layout_width="match_parent"
@@ -114,7 +114,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="未选择任何工具"
+        android:text="@string/text_no_tools_selected"
         android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -124,7 +124,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="选择启用能力" />
+        android:text="@string/label_select_tools" />
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

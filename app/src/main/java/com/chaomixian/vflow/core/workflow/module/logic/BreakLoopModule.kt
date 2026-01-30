@@ -16,9 +16,11 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 class BreakLoopModule : BaseModule() {
     override val id = "vflow.logic.break_loop"
     override val metadata = ActionMetadata(
-        name = "跳出循环",
-        description = "立即终止当前循环的执行，并跳转到循环体之后的步骤。",
-        iconRes = R.drawable.rounded_logout_24, // 复用图标
+        nameStringRes = R.string.module_vflow_logic_break_loop_name,
+        descriptionStringRes = R.string.module_vflow_logic_break_loop_desc,
+        name = "跳出循环",  // Fallback
+        description = "立即终止当前循环的执行，并跳转到循环体之后的步骤",  // Fallback
+        iconRes = R.drawable.rounded_logout_24,
         category = "逻辑控制"
     )
 
@@ -28,7 +30,7 @@ class BreakLoopModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return "跳出当前循环"
+        return context.getString(R.string.summary_vflow_logic_break_loop)
     }
 
     override suspend fun execute(

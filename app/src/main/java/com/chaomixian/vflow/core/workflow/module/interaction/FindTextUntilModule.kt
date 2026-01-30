@@ -6,6 +6,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.net.Uri
 import android.view.accessibility.AccessibilityNodeInfo
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.logging.DebugLogger
@@ -35,9 +36,11 @@ import java.util.regex.Pattern
 class FindTextUntilModule : BaseModule() {
     override val id = "vflow.interaction.find_until"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_interaction_find_until_name,
+        descriptionStringRes = R.string.module_vflow_interaction_find_until_desc,
         name = "查找直到出现",
         description = "持续查找屏幕上的文本，直到出现或超时。支持 OCR 兜底。",
-        iconRes = com.chaomixian.vflow.R.drawable.rounded_search_24,
+        iconRes = R.drawable.rounded_search_24,
         category = "界面交互"
     )
 
@@ -71,7 +74,7 @@ class FindTextUntilModule : BaseModule() {
         val searchMode = step.parameters["searchMode"] as? String ?: "自动"
         val modeDesc = if (searchMode == "自动") "" else " ($searchMode)"
 
-        return PillUtil.buildSpannable(context, "等待 ", targetPill, " 出现$modeDesc (超时 ", timeoutPill, " s)")
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_wait_for_prefix), targetPill, context.getString(R.string.summary_vflow_device_wait_for_suffix), modeDesc, context.getString(R.string.summary_vflow_device_timeout_prefix), timeoutPill, context.getString(R.string.summary_vflow_device_timeout_suffix))
     }
 
     override val uiProvider: ModuleUIProvider? = null

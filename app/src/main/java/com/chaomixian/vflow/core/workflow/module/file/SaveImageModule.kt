@@ -34,10 +34,12 @@ class SaveImageModule : BaseModule() {
 
     override val id = "vflow.file.save_image"
     override val metadata = ActionMetadata(
-        name = "保存图片",
-        description = "将图片保存到相册。",
+        nameStringRes = R.string.module_vflow_file_save_image_name,
+        descriptionStringRes = R.string.module_vflow_file_save_image_desc,
+        name = "保存图片",  // Fallback
+        description = "将图片保存到相册",  // Fallback
         iconRes = R.drawable.rounded_save_24,
-        category = "文件" // 更新分类
+        category = "文件"
     )
 
     // 此模块需要存储权限
@@ -49,7 +51,8 @@ class SaveImageModule : BaseModule() {
             name = "图片",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id),
+            nameStringRes = R.string.param_vflow_file_save_image_image_name
         )
     )
 
@@ -57,8 +60,16 @@ class SaveImageModule : BaseModule() {
      * 增加 file_path 输出。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("file_path", "文件路径", VTypeRegistry.STRING.id)
+        OutputDefinition(
+            id = "success",
+            name = "是否成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id
+        ),
+        OutputDefinition(
+            id = "file_path",
+            name = "文件路径",  // Fallback
+            typeName = VTypeRegistry.STRING.id
+        )
     )
 
 
@@ -70,7 +81,7 @@ class SaveImageModule : BaseModule() {
 
         return PillUtil.buildSpannable(
             context,
-            "保存图片 ",
+            context.getString(R.string.summary_vflow_file_save_image),
             imagePill
         )
     }
@@ -84,7 +95,10 @@ class SaveImageModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val imageVar = context.magicVariables["image"] as? VImage
-            ?: return ExecutionResult.Failure("参数错误", "输入的不是一个有效的图片变量。")
+            ?: return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_file_save_image_param_error),
+                appContext.getString(R.string.error_vflow_file_save_image_invalid)
+            )
 
         val imageUri = Uri.parse(imageVar.uriString)
         val appContext = context.applicationContext
@@ -94,7 +108,10 @@ class SaveImageModule : BaseModule() {
         try {
             val resolver = appContext.contentResolver
             val inputStream = resolver.openInputStream(imageUri)
-                ?: return ExecutionResult.Failure("文件错误", "无法读取源图片文件。")
+                ?: return ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_file_save_image_file_error),
+                    appContext.getString(R.string.error_vflow_file_save_image_read_failed)
+                )
 
             val (mimeType, extension) = getMimeTypeAndExtension(imageUri.toString())
             val fileName = "vFlow_Image_${System.currentTimeMillis()}.${extension}"
@@ -112,10 +129,20 @@ class SaveImageModule : BaseModule() {
                 }
 
                 newImageUri = resolver.insert(collection, contentValues)
-                if (newImageUri == null) return ExecutionResult.Failure("保存失败", "无法在相册中创建新图片条目。")
+                if (newImageUri == null) {
+                    return ExecutionResult.Failure(
+                        appContext.getString(R.string.error_vflow_file_save_image_save_failed),
+                        appContext.getString(R.string.error_vflow_file_save_image_create_failed)
+                    )
+                }
 
                 resolver.openOutputStream(newImageUri).use { outputStream ->
-                    if (outputStream == null) return ExecutionResult.Failure("保存失败", "无法打开新图片文件的输出流。")
+                    if (outputStream == null) {
+                        return ExecutionResult.Failure(
+                            appContext.getString(R.string.error_vflow_file_save_image_save_failed),
+                            appContext.getString(R.string.error_vflow_file_save_image_open_failed)
+                        )
+                    }
                     inputStream.use { input -> input.copyTo(outputStream) }
                 }
 
@@ -157,7 +184,10 @@ class SaveImageModule : BaseModule() {
             )
 
         } catch (e: Exception) {
-            return ExecutionResult.Failure("保存异常", e.localizedMessage ?: "发生了未知错误")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_file_save_image_save_exception),
+                e.localizedMessage ?: appContext.getString(R.string.error_vflow_file_save_image_unknown)
+            )
         }
     }
 

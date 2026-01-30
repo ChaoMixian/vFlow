@@ -1,129 +1,131 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/VTypeRegistry.kt
 package com.chaomixian.vflow.core.types
 
+import com.chaomixian.vflow.R
+
 object VTypeRegistry {
     // --- 基础类型 ---
     val ANY = SimpleVType("vflow.type.any", "任意")
     val NUMBER = SimpleVType("vflow.type.number", "数字", ANY, listOf(
-        VPropertyDef("int", "整数部分", ANY),
-        VPropertyDef("round", "四舍五入", ANY),
-        VPropertyDef("abs", "绝对值", ANY)
+        VPropertyDef("int", "整数部分", ANY, R.string.vtype_number_int),
+        VPropertyDef("round", "四舍五入", ANY, R.string.vtype_number_round),
+        VPropertyDef("abs", "绝对值", ANY, R.string.vtype_number_abs)
     ))
     val BOOLEAN = SimpleVType("vflow.type.boolean", "布尔", ANY, listOf(
-        VPropertyDef("not", "反转", ANY)
+        VPropertyDef("not", "反转", ANY, R.string.vtype_boolean_not)
     ))
     val STRING = SimpleVType("vflow.type.string", "文本", ANY, listOf(
-        VPropertyDef("length", "长度", ANY),
-        VPropertyDef("uppercase", "大写", ANY),
-        VPropertyDef("lowercase", "小写", ANY),
-        VPropertyDef("trim", "去空格", ANY),
-        VPropertyDef("isempty", "是否为空", ANY)
+        VPropertyDef("length", "长度", ANY, R.string.vtype_string_length),
+        VPropertyDef("uppercase", "大写", ANY, R.string.vtype_string_uppercase),
+        VPropertyDef("lowercase", "小写", ANY, R.string.vtype_string_lowercase),
+        VPropertyDef("trim", "去空格", ANY, R.string.vtype_string_trim),
+        VPropertyDef("isempty", "是否为空", ANY, R.string.vtype_string_isempty)
     ))
 
     val NULL = SimpleVType("vflow.type.null", "空", ANY)
 
     // --- 集合类型 ---
     val LIST = SimpleVType("vflow.type.list", "列表", ANY, listOf(
-        VPropertyDef("count", "数量", ANY),
-        VPropertyDef("first", "第一项", ANY),
-        VPropertyDef("last", "最后一项", ANY),
-        VPropertyDef("isempty", "是否为空", ANY),
-        VPropertyDef("random", "随机一项", ANY)
+        VPropertyDef("count", "数量", ANY, R.string.vtype_list_count),
+        VPropertyDef("first", "第一项", ANY, R.string.vtype_list_first),
+        VPropertyDef("last", "最后一项", ANY, R.string.vtype_list_last),
+        VPropertyDef("isempty", "是否为空", ANY, R.string.vtype_list_isempty),
+        VPropertyDef("random", "随机一项", ANY, R.string.vtype_list_random)
     ))
 
     val DICTIONARY = SimpleVType("vflow.type.dictionary", "字典", ANY, listOf(
-        VPropertyDef("count", "数量", ANY),
-        VPropertyDef("keys", "所有键", ANY),
-        VPropertyDef("values", "所有值", ANY)
+        VPropertyDef("count", "数量", ANY, R.string.vtype_dict_count),
+        VPropertyDef("keys", "所有键", ANY, R.string.vtype_dict_keys),
+        VPropertyDef("values", "所有值", ANY, R.string.vtype_dict_values)
     ))
 
     // --- 复杂业务类型 ---
     val IMAGE = SimpleVType("vflow.type.image", "图片", ANY, listOf(
-        VPropertyDef("width", "宽度", ANY),
-        VPropertyDef("height", "高度", ANY),
-        VPropertyDef("path", "文件路径", ANY),
-        VPropertyDef("uri", "URI地址", ANY),
-        VPropertyDef("size", "文件大小", ANY),
-        VPropertyDef("name", "文件名", ANY)
+        VPropertyDef("width", "宽度", ANY, R.string.vtype_image_width),
+        VPropertyDef("height", "高度", ANY, R.string.vtype_image_height),
+        VPropertyDef("path", "文件路径", ANY, R.string.vtype_image_path),
+        VPropertyDef("uri", "URI地址", ANY, R.string.vtype_image_uri),
+        VPropertyDef("size", "文件大小", ANY, R.string.vtype_image_size),
+        VPropertyDef("name", "文件名", ANY, R.string.vtype_image_name)
     ))
 
     val DATE = SimpleVType("vflow.type.date", "日期", ANY, listOf(
-        VPropertyDef("year", "年", ANY),
-        VPropertyDef("month", "月", ANY),
-        VPropertyDef("day", "日", ANY),
-        VPropertyDef("weekday", "星期 (1-7)", ANY),
-        VPropertyDef("timestamp", "时间戳", ANY)
+        VPropertyDef("year", "年", ANY, R.string.vtype_date_year),
+        VPropertyDef("month", "月", ANY, R.string.vtype_date_month),
+        VPropertyDef("day", "日", ANY, R.string.vtype_date_day),
+        VPropertyDef("weekday", "星期 (1-7)", ANY, R.string.vtype_date_weekday),
+        VPropertyDef("timestamp", "时间戳", ANY, R.string.vtype_date_timestamp)
     ))
 
     val TIME = SimpleVType("vflow.type.time", "时间", ANY, listOf(
-        VPropertyDef("hour", "时", ANY),
-        VPropertyDef("minute", "分", ANY)
+        VPropertyDef("hour", "时", ANY, R.string.vtype_time_hour),
+        VPropertyDef("minute", "分", ANY, R.string.vtype_time_minute)
     ))
 
     val SCREEN_ELEMENT = SimpleVType("vflow.type.screen_element", "屏幕控件", ANY, listOf(
         // 文本属性
-        VPropertyDef("text", "文本内容", ANY),
-        VPropertyDef("content_description", "内容描述", ANY),
+        VPropertyDef("text", "文本内容", ANY, R.string.vtype_screen_element_text),
+        VPropertyDef("content_description", "内容描述", ANY, R.string.vtype_screen_element_content_description),
         // 标识属性
-        VPropertyDef("id", "控件ID", ANY),
-        VPropertyDef("class", "类名", ANY),
+        VPropertyDef("id", "控件ID", ANY, R.string.vtype_screen_element_id),
+        VPropertyDef("class", "类名", ANY, R.string.vtype_screen_element_class),
         // 位置属性
-        VPropertyDef("center", "中心点", ANY),
-        VPropertyDef("region", "区域", ANY),
-        VPropertyDef("center_x", "中心 X", ANY),
-        VPropertyDef("center_y", "中心 Y", ANY),
-        VPropertyDef("left", "左边界", ANY),
-        VPropertyDef("top", "上边界", ANY),
-        VPropertyDef("right", "右边界", ANY),
-        VPropertyDef("bottom", "下边界", ANY),
+        VPropertyDef("center", "中心点", ANY, R.string.vtype_screen_element_center),
+        VPropertyDef("region", "区域", ANY, R.string.vtype_screen_element_region),
+        VPropertyDef("center_x", "中心 X", ANY, R.string.vtype_screen_element_center_x),
+        VPropertyDef("center_y", "中心 Y", ANY, R.string.vtype_screen_element_center_y),
+        VPropertyDef("left", "左边界", ANY, R.string.vtype_screen_element_left),
+        VPropertyDef("top", "上边界", ANY, R.string.vtype_screen_element_top),
+        VPropertyDef("right", "右边界", ANY, R.string.vtype_screen_element_right),
+        VPropertyDef("bottom", "下边界", ANY, R.string.vtype_screen_element_bottom),
         // 尺寸属性
-        VPropertyDef("width", "宽度", ANY),
-        VPropertyDef("height", "高度", ANY),
+        VPropertyDef("width", "宽度", ANY, R.string.vtype_screen_element_width),
+        VPropertyDef("height", "高度", ANY, R.string.vtype_screen_element_height),
         // 交互状态
-        VPropertyDef("clickable", "可点击", ANY),
-        VPropertyDef("enabled", "已启用", ANY),
-        VPropertyDef("checkable", "可勾选", ANY),
-        VPropertyDef("checked", "已勾选", ANY),
-        VPropertyDef("editable", "可编辑", ANY)
+        VPropertyDef("clickable", "可点击", ANY, R.string.vtype_screen_element_clickable),
+        VPropertyDef("enabled", "已启用", ANY, R.string.vtype_screen_element_enabled),
+        VPropertyDef("checkable", "可勾选", ANY, R.string.vtype_screen_element_checkable),
+        VPropertyDef("checked", "已勾选", ANY, R.string.vtype_screen_element_checked),
+        VPropertyDef("editable", "可编辑", ANY, R.string.vtype_screen_element_editable)
     ))
 
     val UI_COMPONENT = SimpleVType("vflow.type.uicomponent", "UI组件", ANY, listOf(
-        VPropertyDef("id", "组件ID", ANY),
-        VPropertyDef("type", "类型", ANY),
-        VPropertyDef("label", "标签", ANY),
-        VPropertyDef("value", "值", ANY),
-        VPropertyDef("defaultvalue", "默认值", ANY),
-        VPropertyDef("placeholder", "占位符", ANY),
-        VPropertyDef("required", "必填", ANY),
-        VPropertyDef("triggerEvent", "触发事件", ANY),
-        VPropertyDef("istext", "是否文本", ANY),
-        VPropertyDef("isbutton", "是否按钮", ANY),
-        VPropertyDef("isinput", "是否输入框", ANY),
-        VPropertyDef("isswitch", "是否开关", ANY)
+        VPropertyDef("id", "组件ID", ANY, R.string.vtype_uicomponent_id),
+        VPropertyDef("type", "类型", ANY, R.string.vtype_uicomponent_type),
+        VPropertyDef("label", "标签", ANY, R.string.vtype_uicomponent_label),
+        VPropertyDef("value", "值", ANY, R.string.vtype_uicomponent_value),
+        VPropertyDef("defaultvalue", "默认值", ANY, R.string.vtype_uicomponent_defaultvalue),
+        VPropertyDef("placeholder", "占位符", ANY, R.string.vtype_uicomponent_placeholder),
+        VPropertyDef("required", "必填", ANY, R.string.vtype_uicomponent_required),
+        VPropertyDef("triggerEvent", "触发事件", ANY, R.string.vtype_uicomponent_triggerEvent),
+        VPropertyDef("istext", "是否文本", ANY, R.string.vtype_uicomponent_istext),
+        VPropertyDef("isbutton", "是否按钮", ANY, R.string.vtype_uicomponent_isbutton),
+        VPropertyDef("isinput", "是否输入框", ANY, R.string.vtype_uicomponent_isinput),
+        VPropertyDef("isswitch", "是否开关", ANY, R.string.vtype_uicomponent_isswitch)
     ))
 
     val COORDINATE = SimpleVType("vflow.type.coordinate", "坐标", ANY, listOf(
-        VPropertyDef("x", "X 坐标", ANY),
-        VPropertyDef("y", "Y 坐标", ANY)
+        VPropertyDef("x", "X 坐标", ANY, R.string.vtype_coordinate_x),
+        VPropertyDef("y", "Y 坐标", ANY, R.string.vtype_coordinate_y)
     ))
 
     val COORDINATE_REGION = SimpleVType("vflow.type.coordinate_region", "坐标区域", ANY, listOf(
-        VPropertyDef("left", "左边界", ANY),
-        VPropertyDef("top", "上边界", ANY),
-        VPropertyDef("right", "右边界", ANY),
-        VPropertyDef("bottom", "下边界", ANY),
-        VPropertyDef("width", "宽度", ANY),
-        VPropertyDef("height", "高度", ANY),
-        VPropertyDef("center", "中心点", COORDINATE),
-        VPropertyDef("center_x", "中心 X", ANY),
-        VPropertyDef("center_y", "中心 Y", ANY)
+        VPropertyDef("left", "左边界", ANY, R.string.vtype_coord_region_left),
+        VPropertyDef("top", "上边界", ANY, R.string.vtype_coord_region_top),
+        VPropertyDef("right", "右边界", ANY, R.string.vtype_coord_region_right),
+        VPropertyDef("bottom", "下边界", ANY, R.string.vtype_coord_region_bottom),
+        VPropertyDef("width", "宽度", ANY, R.string.vtype_coord_region_width),
+        VPropertyDef("height", "高度", ANY, R.string.vtype_coord_region_height),
+        VPropertyDef("center", "中心点", COORDINATE, R.string.vtype_coord_region_center),
+        VPropertyDef("center_x", "中心 X", ANY, R.string.vtype_coord_region_center_x),
+        VPropertyDef("center_y", "中心 Y", ANY, R.string.vtype_coord_region_center_y)
     ))
 
     val NOTIFICATION = SimpleVType("vflow.type.notification_object", "通知", ANY, listOf(
-        VPropertyDef("title", "标题", ANY),
-        VPropertyDef("content", "内容", ANY),
-        VPropertyDef("package", "应用包名", ANY),
-        VPropertyDef("id", "通知 ID", ANY)
+        VPropertyDef("title", "标题", ANY, R.string.vtype_notification_title),
+        VPropertyDef("content", "内容", ANY, R.string.vtype_notification_content),
+        VPropertyDef("package", "应用包名", ANY, R.string.vtype_notification_package),
+        VPropertyDef("id", "通知 ID", ANY, R.string.vtype_notification_id)
     ))
 
     val APP = SimpleVType("vflow.type.app", "应用", ANY) // 暂无属性
@@ -135,9 +137,9 @@ object VTypeRegistry {
     fun getPropertyType(typeId: String?, propertyName: String): VType? {
         val type = getType(typeId)
 
-        // 查找属性定义（支持通过名称或显示名匹配）
+        // 查找属性定义（仅通过属性名匹配）
         val propertyDef = type.properties.find { prop ->
-            prop.name == propertyName || prop.displayName == propertyName
+            prop.name == propertyName
         }
 
         return if (propertyDef != null && propertyDef.type != ANY) {

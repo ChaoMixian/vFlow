@@ -23,7 +23,14 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  */
 class OnUiEventModule : BaseBlockModule() {
     override val id = ON_EVENT_START_ID
-    override val metadata = ActionMetadata("当组件被操作", "监听指定组件的点击或修改事件。", R.drawable.rounded_earbuds_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "当组件被操作",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_interaction_on_event_name,
+        description = "监听指定组件的点击或修改事件。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_interaction_on_event_desc,
+        iconRes = R.drawable.rounded_earbuds_24,
+        category = "UI 组件"
+    )
     override val stepIdsInBlock = listOf(ON_EVENT_START_ID, ON_EVENT_END_ID)
     override val pairingId = ON_EVENT_PAIRING
 
@@ -41,16 +48,16 @@ class OnUiEventModule : BaseBlockModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
-        PillUtil.buildSpannable(context, "当 ", PillUtil.createPillFromParam(step.parameters["target_id"], getInputs()[0]), " 被操作时")
+        PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_ui_on_event), PillUtil.createPillFromParam(step.parameters["target_id"], getInputs()[0]))
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         // 获取当前事件
         val event = context.namedVariables[KEY_CURRENT_EVENT] as? UiEvent
-            ?: return ExecutionResult.Failure("环境错误", "此模块必须放在\"显示界面\"块内部。")
+            ?: return ExecutionResult.Failure("环境错误", appContext.getString(R.string.error_vflow_ui_wrong_place))
 
         // 获取目标组件（必须是 VUiComponent 对象）
         val targetComponent = context.magicVariables["target_id"] as? com.chaomixian.vflow.core.types.complex.VUiComponent
-            ?: return ExecutionResult.Failure("参数错误", "目标组件必须是 UI 组件对象")
+            ?: return ExecutionResult.Failure("参数错误", appContext.getString(R.string.error_vflow_ui_wrong_target))
 
         // 判断事件是否匹配目标组件
         if (event.elementId == targetComponent.getId()) {
@@ -67,9 +74,16 @@ class OnUiEventModule : BaseBlockModule() {
 
 class EndOnUiEventModule : BaseModule() {
     override val id = ON_EVENT_END_ID
-    override val metadata = ActionMetadata("结束监听", "", R.drawable.rounded_earbuds_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "结束监听",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_interaction_on_event_end_name,
+        description = "",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_interaction_on_event_end_desc,
+        iconRes = R.drawable.rounded_earbuds_24,
+        category = "UI 组件"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, ON_EVENT_PAIRING)
-    override fun getSummary(context: Context, step: ActionStep) = "结束监听"
+    override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_on_event_end)
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit) = ExecutionResult.Success()
 }
 
@@ -104,16 +118,23 @@ class EndOnUiEventModule : BaseModule() {
  */
 class UpdateUiComponentModule : BaseModule() {
     override val id = "vflow.ui.interaction.update"
-    override val metadata = ActionMetadata("更新组件", "修改组件属性（如文本、可见性、布局）。", R.drawable.rounded_dashboard_2_edit_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "更新组件",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_interaction_update_name,
+        description = "修改组件属性（如文本、可见性、布局）。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_interaction_update_desc,
+        iconRes = R.drawable.rounded_dashboard_2_edit_24,
+        category = "UI 组件"
+    )
 
     override fun getInputs() = listOf(
-        InputDefinition("target_id", "目标组件", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("text", "新文本", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("visible", "可见性", ParameterType.ENUM, "保持不变", options = listOf("保持不变", "显示", "隐藏")),
-        InputDefinition("padding", "内边距", ParameterType.NUMBER, 0),
-        InputDefinition("margin", "外边距", ParameterType.NUMBER, 0),
-        InputDefinition("textSize", "文本大小(sp)", ParameterType.NUMBER, 0),
-        InputDefinition("background", "背景色", ParameterType.STRING, "", acceptsMagicVariable = true)
+        InputDefinition("target_id", "目标组件", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_target_component),
+        InputDefinition("text", "新文本", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_new_text),
+        InputDefinition("visible", "可见性", ParameterType.ENUM, "保持不变", options = listOf("保持不变", "显示", "隐藏"), nameStringRes = R.string.param_vflow_ui_visibility),
+        InputDefinition("padding", "内边距", ParameterType.NUMBER, 0, nameStringRes = R.string.param_vflow_ui_padding),
+        InputDefinition("margin", "外边距", ParameterType.NUMBER, 0, nameStringRes = R.string.param_vflow_ui_margin),
+        InputDefinition("textSize", "文本大小(sp)", ParameterType.NUMBER, 0, nameStringRes = R.string.param_vflow_ui_text_size),
+        InputDefinition("background", "背景色", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_background)
     )
 
     override fun getOutputs(step: ActionStep?) = listOf(
@@ -121,11 +142,11 @@ class UpdateUiComponentModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
-        PillUtil.buildSpannable(context, "更新组件 ", PillUtil.createPillFromParam(step.parameters["target_id"], getInputs()[0]))
+        PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_ui_update), PillUtil.createPillFromParam(step.parameters["target_id"], getInputs()[0]))
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String
-            ?: return ExecutionResult.Failure("错误", "Session丢失")
+            ?: return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
 
         // 提取目标组件 ID（支持 VUiComponent 对象或字符串）
         val targetId = when (val obj = context.magicVariables["target_id"]) {
@@ -136,7 +157,7 @@ class UpdateUiComponentModule : BaseModule() {
 
         // 验证 targetId 不为空
         if (targetId.isEmpty()) {
-            return ExecutionResult.Failure("参数错误", "目标组件 ID 不能为空")
+            return ExecutionResult.Failure("参数错误", appContext.getString(R.string.error_vflow_ui_empty_target_id))
         }
 
         val payload = mutableMapOf<String, Any?>()
@@ -213,7 +234,14 @@ class UpdateUiComponentModule : BaseModule() {
  */
 class GetComponentValueModule : BaseModule() {
     override val id = "vflow.ui.interaction.get_value"
-    override val metadata = ActionMetadata("获取组件", "获取UI组件对象或其值。", R.drawable.rounded_earbuds_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "获取组件",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_interaction_get_value_name,
+        description = "获取UI组件对象或其值。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_interaction_get_value_desc,
+        iconRes = R.drawable.rounded_earbuds_24,
+        category = "UI 组件"
+    )
 
     override fun getInputs() = listOf(
         InputDefinition("component_id", "组件 ID", ParameterType.STRING, "", acceptsMagicVariable = true)
@@ -225,7 +253,7 @@ class GetComponentValueModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
-        PillUtil.buildSpannable(context, "获取组件 ", PillUtil.createPillFromParam(step.parameters["component_id"], getInputs()[0]))
+        PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_ui_get_value), PillUtil.createPillFromParam(step.parameters["component_id"], getInputs()[0]))
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         // 从 VString 对象或 VUiComponent 对象中提取组件 ID
@@ -261,7 +289,7 @@ class GetComponentValueModule : BaseModule() {
                 "value" to (currentValue ?: element.defaultValue)
             ))
         } else {
-            ExecutionResult.Failure("组件未找到", "组件 '$componentId' 不存在于当前界面")
+            ExecutionResult.Failure("组件未找到", appContext.getString(R.string.error_vflow_ui_component_not_found, componentId))
         }
     }
 }
@@ -284,18 +312,25 @@ class GetComponentValueModule : BaseModule() {
  */
 class ExitActivityModule : BaseModule() {
     override val id = "vflow.ui.interaction.exit"
-    override val metadata = ActionMetadata("退出界面", "主动退出并销毁当前界面。", R.drawable.rounded_close_small_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "退出界面",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_interaction_exit_name,
+        description = "主动退出并销毁当前界面。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_interaction_exit_desc,
+        iconRes = R.drawable.rounded_close_small_24,
+        category = "UI 组件"
+    )
 
-    override fun getSummary(context: Context, step: ActionStep) = "退出界面"
+    override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_exit)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String
-            ?: return ExecutionResult.Failure("错误", "Session丢失")
+            ?: return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
 
         // 检查是否在循环栈中
         val loopState = context.loopStack.peek() as? UiLoopState
         if (loopState?.sessionId != sessionId) {
-            return ExecutionResult.Failure("环境错误", "此模块必须放在\"显示界面\"块内部。")
+            return ExecutionResult.Failure("环境错误", appContext.getString(R.string.error_vflow_ui_wrong_place))
         }
 
         // 退出循环栈

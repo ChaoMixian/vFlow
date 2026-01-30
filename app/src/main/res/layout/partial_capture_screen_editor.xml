@@ -10,14 +10,14 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="区域选择 (可选)"
+        android:text="@string/label_region_select_optional"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="留空则截取全屏，点击下方按钮选择区域"
+        android:text="@string/text_empty_for_fullscreen"
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -61,7 +61,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="点击设置区域"
+                    android:text="@string/button_set_region"
                     android:textAppearance="?attr/textAppearanceBodyMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
@@ -82,7 +82,7 @@
                     android:id="@+id/tv_region_info"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="区域: 100,200,500,600"
+                    android:text="@string/text_region_example"
                     android:textColor="@android:color/white"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -102,7 +102,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="选择区域"
+            android:text="@string/button_select_region"
             app:icon="@drawable/rounded_crop_free_24" />
 
         <com.google.android.material.button.MaterialButton
@@ -111,7 +111,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:text="清除"
+            android:text="@string/button_clear"
             app:icon="@drawable/rounded_close_small_24" />
     </LinearLayout>
 

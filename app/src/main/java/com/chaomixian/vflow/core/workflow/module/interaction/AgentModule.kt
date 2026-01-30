@@ -48,6 +48,8 @@ class AgentModule : BaseModule() {
 
     override val id = "vflow.ai.agent"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_ai_agent_name,
+        descriptionStringRes = R.string.module_vflow_ai_agent_desc,
         name = "AI 智能体",
         description = "全自动 AI 助手。基于视觉和UI结构理解屏幕，自动完成任务。",
         iconRes = R.drawable.rounded_hexagon_nodes_24,
@@ -85,15 +87,15 @@ class AgentModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val rawInstruction = step.parameters["instruction"]?.toString() ?: ""
         val displayMode = step.parameters["display_mode"] as? String ?: "主屏幕"
-        val prefix = if (displayMode == "虚拟屏幕 (后台)") "[后台] " else ""
+        val prefix = if (displayMode == "虚拟屏幕 (后台)") context.getString(R.string.summary_vflow_agent_background_prefix) else ""
 
         // 如果指令复杂，只显示标题
         if (VariableResolver.isComplex(rawInstruction)) {
-            return "${prefix}AI Agent"
+            return prefix + metadata.getLocalizedName(context)
         }
 
         val instructionPill = PillUtil.createPillFromParam(step.parameters["instruction"], getInputs().find { it.id == "instruction" })
-        return PillUtil.buildSpannable(context, "${prefix}AI Agent: ", instructionPill)
+        return PillUtil.buildSpannable(context, prefix + metadata.getLocalizedName(context) + ": ", instructionPill)
     }
 
     // 定义工具 Schema

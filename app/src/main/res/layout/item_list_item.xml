@@ -19,7 +19,7 @@
         android:layout_height="48dp"
         android:src="@drawable/rounded_dataset_24"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="为该项目选择魔法变量"
+        android:contentDescription="@string/desc_select_magic_variable"
         app:tint="?attr/colorPrimary"/>
 
     <ImageButton
@@ -28,5 +28,5 @@
         android:layout_height="48dp"
         android:src="@drawable/ic_delete"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="删除此项目"/>
+        android:contentDescription="@string/desc_delete_item"/>
 </LinearLayout>

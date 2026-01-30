@@ -27,8 +27,10 @@ class FindElementModule : BaseModule() {
 
     override val id = "vflow.interaction.find_element"
     override val metadata = ActionMetadata(
-        name = "查找控件",
-        description = "通过文本、ID、区域等属性查找屏幕控件，支持多属性组合过滤",
+        name = "查找控件",  // Fallback
+        nameStringRes = R.string.module_vflow_interaction_find_element_name,
+        description = "通过文本、ID、区域等属性查找屏幕控件，支持多属性组合过滤",  // Fallback
+        descriptionStringRes = R.string.module_vflow_interaction_find_element_desc,
         iconRes = R.drawable.rounded_search_24,
         category = "界面交互"
     )
@@ -87,7 +89,7 @@ class FindElementModule : BaseModule() {
 
         // 构建条件列表，使用 PillUtil.createPillFromParam 创建 pill
         val parts = mutableListOf<Any>()
-        parts.add("查找控件")
+        parts.add(context.getString(R.string.summary_vflow_interaction_find_element_prefix))
 
         // 如果有查找条件，添加到摘要中
         val hasCondition = text.isNotEmpty() || viewId.isNotEmpty() || className.isNotEmpty()
@@ -103,7 +105,7 @@ class FindElementModule : BaseModule() {
                     step.parameters["text"],
                     getInputs().find { it.id == "text" }
                 )
-                conditions.add("文本=")
+                conditions.add(context.getString(R.string.summary_vflow_interaction_find_element_text_equals))
                 conditions.add(textPill)
                 first = false
             }
@@ -114,7 +116,7 @@ class FindElementModule : BaseModule() {
                     step.parameters["view_id"],
                     getInputs().find { it.id == "view_id" }
                 )
-                conditions.add("ID=")
+                conditions.add(context.getString(R.string.summary_vflow_interaction_find_element_id_equals))
                 conditions.add(idPill)
                 first = false
             }
@@ -125,7 +127,7 @@ class FindElementModule : BaseModule() {
                     step.parameters["class_name"],
                     getInputs().find { it.id == "class_name" }
                 )
-                conditions.add("类名=")
+                conditions.add(context.getString(R.string.summary_vflow_interaction_find_element_class_equals))
                 conditions.add(classPill)
             }
 

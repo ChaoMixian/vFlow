@@ -16,8 +16,10 @@ class KeyEventTriggerModule : BaseModule() {
 
     override val id = "vflow.trigger.key_event"
     override val metadata = ActionMetadata(
-        name = "按键触发",
-        description = "当指定的物理按键被按下时，触发此工作流（需要Shizuku或Root）。",
+        nameStringRes = R.string.module_vflow_trigger_key_event_name,
+        descriptionStringRes = R.string.module_vflow_trigger_key_event_desc,
+        name = "按键触发",  // Fallback
+        description = "当指定的物理按键被按下时，触发此工作流（需要Shizuku或Root）",  // Fallback
         iconRes = R.drawable.rounded_horizontal_align_bottom_24,
         category = "触发器"
     )
@@ -25,10 +27,28 @@ class KeyEventTriggerModule : BaseModule() {
     override val requiredPermissions: List<Permission>
         get() = ShellManager.getRequiredPermissions(LogManager.applicationContext)
 
-    private val presetOptions = listOf("手动/自定义", "一加 13T (侧键)", "一加 13 (三段式)")
-    private val onePlus13TActions = listOf("单击", "双击", "长按", "短按 (立即触发)")
-    private val onePlus13Actions = listOf("向下滑动", "向上滑动")
-    private val allActionOptions = (onePlus13TActions + onePlus13Actions).distinct()
+    private val presetOptions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_trigger_key_event_preset_manual),
+            appContext.getString(R.string.option_vflow_trigger_key_event_preset_oneplus_13t),
+            appContext.getString(R.string.option_vflow_trigger_key_event_preset_oneplus_13)
+        )
+    }
+    private val onePlus13TActions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_trigger_key_event_action_single_click),
+            appContext.getString(R.string.option_vflow_trigger_key_event_action_double_click),
+            appContext.getString(R.string.option_vflow_trigger_key_event_action_long_press),
+            appContext.getString(R.string.option_vflow_trigger_key_event_action_short_press)
+        )
+    }
+    private val onePlus13Actions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_trigger_key_event_action_swipe_down),
+            appContext.getString(R.string.option_vflow_trigger_key_event_action_swipe_up)
+        )
+    }
+    private val allActionOptions by lazy { (onePlus13TActions + onePlus13Actions).distinct() }
 
     override fun onParameterUpdated(
         step: ActionStep,
@@ -46,19 +66,19 @@ class KeyEventTriggerModule : BaseModule() {
             newParameters.remove("_internal_key_code")
 
             when (updatedValue as? String) {
-                "一加 13T (侧键)" -> {
-                    newParameters["action_type"] = "单击"
+                presetOptions[1] -> { // 一加 13T (侧键)
+                    newParameters["action_type"] = onePlus13TActions[0] // 单击
                     // [关键] 为后台服务准备好内部参数
                     newParameters["_internal_device_name"] = "key-handler"
                     newParameters["_internal_key_code"] = "BTN_TRIGGER_HAPPY32"
                 }
-                "一加 13 (三段式)" -> {
-                    newParameters["action_type"] = "向下滑动"
+                presetOptions[2] -> { // 一加 13 (三段式)
+                    newParameters["action_type"] = onePlus13Actions[0] // 向下滑动
                     newParameters["_internal_device_name"] = "oplus,hall_tri_state_key"
                     newParameters["_internal_key_code"] = "KEY_F3" // 虚拟按键码
                 }
                 else -> { // "手动/自定义"
-                    newParameters["action_type"] = "单击"
+                    newParameters["action_type"] = onePlus13TActions[0] // 单击
                 }
             }
         }
@@ -66,22 +86,22 @@ class KeyEventTriggerModule : BaseModule() {
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("device_preset", "设备预设", ParameterType.ENUM, "手动/自定义", options = presetOptions),
-        InputDefinition("device", "输入设备", ParameterType.STRING, "/dev/input/event0"),
-        InputDefinition("key_code", "按键码", ParameterType.STRING, "KEY_POWER"),
-        InputDefinition("action_type", "操作类型", ParameterType.ENUM, "单击", options = allActionOptions)
+        InputDefinition("device_preset", "设备预设", ParameterType.ENUM, presetOptions[0], options = presetOptions, nameStringRes = R.string.param_vflow_trigger_key_event_device_preset_name),
+        InputDefinition("device", "输入设备", ParameterType.STRING, "/dev/input/event0", nameStringRes = R.string.param_vflow_trigger_key_event_device_name),
+        InputDefinition("key_code", "按键码", ParameterType.STRING, "KEY_POWER", nameStringRes = R.string.param_vflow_trigger_key_event_key_code_name),
+        InputDefinition("action_type", "操作类型", ParameterType.ENUM, onePlus13TActions[0], options = allActionOptions, nameStringRes = R.string.param_vflow_trigger_key_event_action_type_name)
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val allInputs = getInputs()
-        val currentPreset = step?.parameters?.get("device_preset") as? String ?: "手动/自定义"
+        val currentPreset = step?.parameters?.get("device_preset") as? String ?: presetOptions[0]
         val dynamicInputs = mutableListOf(allInputs.first { it.id == "device_preset" })
 
         when (currentPreset) {
-            "一加 13T (侧键)" -> {
+            presetOptions[1] -> { // 一加 13T (侧键)
                 dynamicInputs.add(allInputs.first { it.id == "action_type" }.copy(options = onePlus13TActions))
             }
-            "一加 13 (三段式)" -> {
+            presetOptions[2] -> { // 一加 13 (三段式)
                 dynamicInputs.add(allInputs.first { it.id == "action_type" }.copy(options = onePlus13Actions))
             }
             else -> { // 手动/自定义
@@ -94,22 +114,34 @@ class KeyEventTriggerModule : BaseModule() {
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val preset = step.parameters["device_preset"] as? String ?: "手动/自定义"
+        val preset = step.parameters["device_preset"] as? String ?: presetOptions[0]
         val actionType = step.parameters["action_type"] as? String
 
         if (actionType.isNullOrEmpty()) return "配置按键触发器"
 
-        val presetPill = PillUtil.Pill(preset.replace(" (侧键)", "").replace(" (三段式)", ""), "device_preset", isModuleOption = true)
-        val actionTypePill = PillUtil.Pill(actionType.replace(" (立即触发)", ""), "action_type", isModuleOption = true)
+        val presetPill = PillUtil.Pill(
+            preset.replace(" (侧键)", "").replace(" (Side Key)", "").replace(" (三段式)", "").replace(" (Three-stage)", ""),
+            "device_preset",
+            isModuleOption = true
+        )
+        val actionTypePill = PillUtil.Pill(
+            actionType.replace(" (立即触发)", "").replace(" (Immediate)", ""),
+            "action_type",
+            isModuleOption = true
+        )
+
+        val customPrefix = context.getString(R.string.summary_vflow_trigger_key_event_custom_prefix)
+        val customSuffix = context.getString(R.string.summary_vflow_trigger_key_event_custom_suffix)
+        val presetSuffix = context.getString(R.string.summary_vflow_trigger_key_event_preset_suffix)
 
         return when (preset) {
-            "手动/自定义" -> {
+            presetOptions[0] -> { // 手动/自定义
                 val keyCode = step.parameters["key_code"] as? String ?: "N/A"
                 val keyCodePill = PillUtil.Pill(keyCode, "key_code")
-                PillUtil.buildSpannable(context, "当 ", actionTypePill, " ", keyCodePill, " 键时")
+                PillUtil.buildSpannable(context, customPrefix, actionTypePill, " ", keyCodePill, customSuffix)
             }
             else -> {
-                PillUtil.buildSpannable(context, "当 ", presetPill, " ", actionTypePill, " 时")
+                PillUtil.buildSpannable(context, customPrefix, presetPill, " ", actionTypePill, presetSuffix)
             }
         }
     }

@@ -23,45 +23,63 @@ class InputModule : BaseModule() {
 
     override val id = "vflow.data.input"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_data_input_name,
+        descriptionStringRes = R.string.module_vflow_data_input_desc,
         name = "请求输入",
         description = "弹出一个窗口，请求用户输入文本、数字、时间或日期。",
         iconRes = R.drawable.rounded_keyboard_external_input_24,
-        category = "应用与系统" // 更新分类
+        category = "应用与系统"
     )
 
     // 声明此模块需要悬浮窗权限
     override val requiredPermissions = listOf(PermissionManager.OVERLAY)
 
-    private val typeOptions = listOf("文本", "数字", "时间", "日期")
+    private val typeOptions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_data_input_type_text),
+            appContext.getString(R.string.option_vflow_data_input_type_number),
+            appContext.getString(R.string.option_vflow_data_input_type_time),
+            appContext.getString(R.string.option_vflow_data_input_type_date)
+        )
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "inputType",
+            nameStringRes = R.string.param_vflow_data_input_inputType_name,
             name = "输入类型",
             staticType = ParameterType.ENUM,
-            defaultValue = "文本",
+            defaultValue = R.string.option_vflow_data_input_type_text,
             options = typeOptions,
             acceptsMagicVariable = false
         ),
         InputDefinition(
             id = "prompt",
+            nameStringRes = R.string.param_vflow_data_input_prompt_name,
             name = "提示信息",
             staticType = ParameterType.STRING,
-            defaultValue = "请输入内容",
+            defaultValue = R.string.param_vflow_data_input_prompt_default,
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val inputType = step?.parameters?.get("inputType") as? String ?: "文本"
+        val textOption = R.string.option_vflow_data_input_type_text
+        val numberOption = R.string.option_vflow_data_input_type_number
+        val timeOption = R.string.option_vflow_data_input_type_time
+        val dateOption = R.string.option_vflow_data_input_type_date
+
+        val inputType = step?.parameters?.get("inputType") as? String ?: textOption
         val outputTypeName = when (inputType) {
-            "数字" -> VTypeRegistry.NUMBER.id
-            "时间" -> VTypeRegistry.TIME.id
-            "日期" -> VTypeRegistry.DATE.id
+            numberOption -> VTypeRegistry.NUMBER.id
+            timeOption -> VTypeRegistry.TIME.id
+            dateOption -> VTypeRegistry.DATE.id
             else -> VTypeRegistry.STRING.id
         }
-        return listOf(OutputDefinition("userInput", "用户输入 ($inputType)", outputTypeName))
+
+        val outputNameBase = R.string.output_vflow_data_input_userInput_name
+        return listOf(OutputDefinition("userInput", "$outputNameBase ($inputType)", outputTypeName))
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -76,11 +94,14 @@ class InputModule : BaseModule() {
             inputs.find { it.id == "prompt" }
         )
 
+        val prefix = context.getString(R.string.summary_vflow_data_input_prefix)
+        val middle = context.getString(R.string.summary_vflow_data_input_middle)
+
         return PillUtil.buildSpannable(
             context,
-            "请求 ",
+            prefix,
             inputTypePill,
-            " 输入，提示信息为 ",
+            middle,
             promptPill
         )
     }
@@ -90,22 +111,33 @@ class InputModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val uiService = context.services.get(ExecutionUIService::class)
-            ?: return ExecutionResult.Failure("服务缺失", "无法获取UI服务来请求用户输入。")
+            ?: return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_data_input_service_missing),
+                "无法获取UI服务来请求用户输入。"
+            )
 
-        val inputType = context.variables["inputType"] as? String ?: "文本"
+        val textOption = appContext.getString(R.string.option_vflow_data_input_type_text)
+        val numberOption = appContext.getString(R.string.option_vflow_data_input_type_number)
+        val timeOption = appContext.getString(R.string.option_vflow_data_input_type_time)
+        val dateOption = appContext.getString(R.string.option_vflow_data_input_type_date)
+
+        val inputType = context.variables["inputType"] as? String ?: textOption
         val prompt = (context.magicVariables["prompt"] as? VString)?.raw
             ?: context.variables["prompt"] as? String
-            ?: "请输入"
+            ?: appContext.getString(R.string.param_vflow_data_input_prompt_default)
 
         onProgress(ProgressUpdate("等待用户输入 ($inputType)..."))
 
         val userInput = uiService.requestInput(inputType, prompt)
-            ?: return ExecutionResult.Failure("用户取消", "用户取消了输入操作。")
+            ?: return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_data_input_user_cancelled),
+                "用户取消了输入操作。"
+            )
 
         val resultVariable = when (inputType) {
-            "数字" -> VNumber((userInput as? Double) ?: 0.0)
-            "时间" -> VTime(userInput.toString())
-            "日期" -> {
+            numberOption -> VNumber((userInput as? Double) ?: 0.0)
+            timeOption -> VTime(userInput.toString())
+            dateOption -> {
                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 // MaterialDatePicker 返回的是UTC毫秒，需要设置时区以保证日期正确
                 sdf.timeZone = TimeZone.getTimeZone("UTC")

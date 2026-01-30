@@ -102,7 +102,7 @@
                 android:id="@+id/buttonDownload"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="下载"
+                android:text="@string/button_download"
                 android:textSize="14sp"
                 android:paddingTop="4dp"
                 app:icon="@drawable/rounded_download_24"

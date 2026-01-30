@@ -14,7 +14,7 @@
             android:id="@+id/tv_detail_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="模块详情"
+            android:text="@string/label_module_details"
             android:textAppearance="?attr/textAppearanceHeadlineSmall"
             android:textColor="?attr/colorOnSurface" />
 
@@ -33,7 +33,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="输入参数 (Inputs)"
+            android:text="@string/label_inputs"
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:textColor="?attr/colorPrimary" />
 
@@ -46,7 +46,7 @@
             android:backgroundTint="?attr/colorSurfaceVariant"
             android:lineSpacingExtra="4dp"
             android:padding="12dp"
-            android:text="无"
+            android:text="@string/text_none"
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:fontFamily="monospace" />
 
@@ -54,7 +54,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="输出变量 (Outputs)"
+            android:text="@string/label_outputs"
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:textColor="?attr/colorPrimary" />
 
@@ -67,7 +67,7 @@
             android:backgroundTint="?attr/colorSurfaceVariant"
             android:lineSpacingExtra="4dp"
             android:padding="12dp"
-            android:text="无"
+            android:text="@string/text_none"
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:fontFamily="monospace" />
 
@@ -78,7 +78,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="end"
             android:layout_marginTop="16dp"
-            android:text="关闭" />
+            android:text="@string/button_close" />
 
     </LinearLayout>
 </ScrollView>

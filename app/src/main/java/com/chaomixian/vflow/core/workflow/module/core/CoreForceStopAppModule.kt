@@ -23,8 +23,10 @@ class CoreForceStopAppModule : BaseModule() {
 
     override val id = "vflow.core.force_stop_app"
     override val metadata = ActionMetadata(
-        name = "强制停止应用",
-        description = "使用 vFlow Core 强制停止指定应用。",
+        name = "强制停止应用",  // Fallback
+        nameStringRes = R.string.module_vflow_core_force_stop_app_name,
+        description = "使用 vFlow Core 强制停止指定应用。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_force_stop_app_desc,
         iconRes = R.drawable.rounded_stop_circle_24,
         category = "Core (Beta)"
     )
@@ -36,7 +38,8 @@ class CoreForceStopAppModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "package_name",
-            name = "应用包名",
+            name = "应用包名",  // Fallback
+            nameStringRes = R.string.param_vflow_core_force_stop_app_package_name_name,
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -53,7 +56,7 @@ class CoreForceStopAppModule : BaseModule() {
             step.parameters["package_name"],
             getInputs().find { it.id == "package_name" }
         )
-        return PillUtil.buildSpannable(context, "强制停止: ", packagePill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_force_stop_app), packagePill)
     }
 
     override suspend fun execute(

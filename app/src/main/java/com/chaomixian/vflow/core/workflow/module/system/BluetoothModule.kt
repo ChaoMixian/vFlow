@@ -22,8 +22,10 @@ class BluetoothModule : BaseModule() {
 
     override val id = "vflow.system.bluetooth"
     override val metadata = ActionMetadata(
-        name = "蓝牙设置",
-        description = "开启、关闭或切换蓝牙状态。",
+        name = "蓝牙设置",  // Fallback
+        nameStringRes = R.string.module_vflow_system_bluetooth_name,
+        description = "开启、关闭或切换蓝牙状态。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_system_bluetooth_desc,
         iconRes = R.drawable.rounded_bluetooth_24,
         category = "应用与系统"
     )
@@ -56,7 +58,7 @@ class BluetoothModule : BaseModule() {
             getInputs().find { it.id == "state" },
             isModuleOption = true
         )
-        return PillUtil.buildSpannable(context, statePill, " 蓝牙")
+        return PillUtil.buildSpannable(context, statePill, context.getString(R.string.summary_vflow_system_bluetooth_suffix))
     }
 
     @SuppressLint("MissingPermission")

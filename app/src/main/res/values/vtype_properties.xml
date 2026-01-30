@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 基础类型属性 -->
+    <string name="vtype_number_int">整数部分</string>
+    <string name="vtype_number_round">四舍五入</string>
+    <string name="vtype_number_abs">绝对值</string>
+
+    <string name="vtype_boolean_not">反转</string>
+
+    <string name="vtype_string_length">长度</string>
+    <string name="vtype_string_uppercase">大写</string>
+    <string name="vtype_string_lowercase">小写</string>
+    <string name="vtype_string_trim">去空格</string>
+    <string name="vtype_string_isempty">是否为空</string>
+
+    <!-- 集合类型属性 -->
+    <string name="vtype_list_count">数量</string>
+    <string name="vtype_list_first">第一项</string>
+    <string name="vtype_list_last">最后一项</string>
+    <string name="vtype_list_isempty">是否为空</string>
+    <string name="vtype_list_random">随机一项</string>
+
+    <string name="vtype_dict_count">数量</string>
+    <string name="vtype_dict_keys">所有键</string>
+    <string name="vtype_dict_values">所有值</string>
+
+    <!-- 复杂类型属性 -->
+    <string name="vtype_image_width">宽度</string>
+    <string name="vtype_image_height">高度</string>
+    <string name="vtype_image_path">文件路径</string>
+    <string name="vtype_image_uri">URI地址</string>
+    <string name="vtype_image_size">文件大小</string>
+    <string name="vtype_image_name">文件名</string>
+
+    <string name="vtype_date_year">年</string>
+    <string name="vtype_date_month">月</string>
+    <string name="vtype_date_day">日</string>
+    <string name="vtype_date_weekday">星期 (1-7)</string>
+    <string name="vtype_date_timestamp">时间戳</string>
+
+    <string name="vtype_time_hour">时</string>
+    <string name="vtype_time_minute">分</string>
+
+    <!-- 屏幕控件属性 -->
+    <string name="vtype_screen_element_text">文本内容</string>
+    <string name="vtype_screen_element_content_description">内容描述</string>
+    <string name="vtype_screen_element_id">控件ID</string>
+    <string name="vtype_screen_element_class">类名</string>
+    <string name="vtype_screen_element_center">中心点</string>
+    <string name="vtype_screen_element_region">区域</string>
+    <string name="vtype_screen_element_center_x">中心 X</string>
+    <string name="vtype_screen_element_center_y">中心 Y</string>
+    <string name="vtype_screen_element_left">左边界</string>
+    <string name="vtype_screen_element_top">上边界</string>
+    <string name="vtype_screen_element_right">右边界</string>
+    <string name="vtype_screen_element_bottom">下边界</string>
+    <string name="vtype_screen_element_width">宽度</string>
+    <string name="vtype_screen_element_height">高度</string>
+    <string name="vtype_screen_element_clickable">可点击</string>
+    <string name="vtype_screen_element_enabled">已启用</string>
+    <string name="vtype_screen_element_checkable">可勾选</string>
+    <string name="vtype_screen_element_checked">已勾选</string>
+    <string name="vtype_screen_element_editable">可编辑</string>
+
+    <!-- UI组件属性 -->
+    <string name="vtype_uicomponent_id">组件ID</string>
+    <string name="vtype_uicomponent_type">类型</string>
+    <string name="vtype_uicomponent_label">标签</string>
+    <string name="vtype_uicomponent_value">值</string>
+    <string name="vtype_uicomponent_defaultvalue">默认值</string>
+    <string name="vtype_uicomponent_placeholder">占位符</string>
+    <string name="vtype_uicomponent_required">必填</string>
+    <string name="vtype_uicomponent_triggerEvent">触发事件</string>
+    <string name="vtype_uicomponent_istext">是否文本</string>
+    <string name="vtype_uicomponent_isbutton">是否按钮</string>
+    <string name="vtype_uicomponent_isinput">是否输入框</string>
+    <string name="vtype_uicomponent_isswitch">是否开关</string>
+
+    <!-- 坐标属性 -->
+    <string name="vtype_coordinate_x">X 坐标</string>
+    <string name="vtype_coordinate_y">Y 坐标</string>
+
+    <!-- 坐标区域属性 -->
+    <string name="vtype_coord_region_left">左边界</string>
+    <string name="vtype_coord_region_top">上边界</string>
+    <string name="vtype_coord_region_right">右边界</string>
+    <string name="vtype_coord_region_bottom">下边界</string>
+    <string name="vtype_coord_region_width">宽度</string>
+    <string name="vtype_coord_region_height">高度</string>
+    <string name="vtype_coord_region_center">中心点</string>
+    <string name="vtype_coord_region_center_x">中心 X</string>
+    <string name="vtype_coord_region_center_y">中心 Y</string>
+
+    <!-- 通知属性 -->
+    <string name="vtype_notification_title">标题</string>
+    <string name="vtype_notification_content">内容</string>
+    <string name="vtype_notification_package">应用包名</string>
+    <string name="vtype_notification_id">通知 ID</string>
+</resources>

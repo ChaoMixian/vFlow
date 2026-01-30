@@ -28,21 +28,33 @@ class InputTextModule : BaseModule() {
 
     override val id = "vflow.interaction.input_text"
     override val metadata = ActionMetadata(
-        name = "输入文本",
-        description = "在当前聚焦的输入框中输入文本 (支持无障碍和Shell)。",
+        nameStringRes = R.string.module_vflow_interaction_input_text_name,
+        descriptionStringRes = R.string.module_vflow_interaction_input_text_desc,
+        name = "输入文本",  // Fallback
+        description = "在当前聚焦的输入框中输入文本 (支持无障碍和Shell)",  // Fallback
         iconRes = R.drawable.rounded_keyboard_24,
         category = "界面交互"
     )
 
-    private val modeOptions = listOf("自动", "无障碍", "Shell")
+    private val modeOptions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_interaction_input_text_mode_auto),
+            appContext.getString(R.string.option_vflow_interaction_input_text_mode_a11y),
+            appContext.getString(R.string.option_vflow_interaction_input_text_mode_shell)
+        )
+    }
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
-        val mode = step?.parameters?.get("mode") as? String ?: "自动"
+        val autoMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_auto)
+        val a11yMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_a11y)
+        val shellMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_shell)
+
+        val mode = step?.parameters?.get("mode") as? String ?: autoMode
         val perms = mutableListOf<Permission>()
-        if (mode == "自动" || mode == "无障碍") {
+        if (mode == autoMode || mode == a11yMode) {
             perms.add(PermissionManager.ACCESSIBILITY)
         }
-        if (mode == "自动" || mode == "Shell") {
+        if (mode == autoMode || mode == shellMode) {
             perms.addAll(ShellManager.getRequiredPermissions(LogManager.applicationContext))
         }
         return perms.distinct()
@@ -51,54 +63,63 @@ class InputTextModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "text",
-            name = "文本内容",
+            name = "文本内容",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
-            supportsRichText = true
+            supportsRichText = true,
+            nameStringRes = R.string.param_vflow_interaction_input_text_text_name
         ),
         InputDefinition(
             id = "mode",
-            name = "输入模式",
+            name = "输入模式",  // Fallback
             staticType = ParameterType.ENUM,
-            defaultValue = "自动",
+            defaultValue = appContext.getString(R.string.option_vflow_interaction_input_text_mode_auto),
             options = modeOptions,
             acceptsMagicVariable = false,
-            isHidden = true
+            isHidden = true,
+            nameStringRes = R.string.param_vflow_interaction_input_text_mode_name
         ),
         InputDefinition(
             id = "show_advanced",
-            name = "显示高级选项",
+            name = "显示高级选项",  // Fallback
             staticType = ParameterType.BOOLEAN,
             defaultValue = false,
             acceptsMagicVariable = false,
-            isHidden = true
+            isHidden = true,
+            nameStringRes = R.string.param_vflow_interaction_input_text_show_advanced_name
         )
     )
 
     override val uiProvider: ModuleUIProvider = InputTextModuleUIProvider()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            id = "success",
+            name = "是否成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_interaction_input_text_success_name
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val rawText = step.parameters["text"]?.toString() ?: ""
-        val mode = step.parameters["mode"] as? String ?: "自动"
+        val autoMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_auto)
+        val mode = step.parameters["mode"] as? String ?: autoMode
 
         // 如果内容复杂（包含变量或长文本），只返回简单标题，
         // 详细内容将由 RichTextUIProvider 创建的预览视图在下方显示。
         if (VariableResolver.isComplex(rawText)) {
-            return if (mode == "自动") "输入文本" else "使用 $mode 输入文本"
+            return if (mode == autoMode) context.getString(R.string.summary_vflow_interaction_input_text) else context.getString(R.string.summary_vflow_interaction_input_text_with_mode, mode)
         }
 
         // 内容简单时，在摘要中直接显示药丸
         val textPill = PillUtil.createPillFromParam(step.parameters["text"], getInputs().find { it.id == "text" })
-        return if (mode == "自动") {
-            PillUtil.buildSpannable(context, "输入文本 ", textPill)
+        return if (mode == autoMode) {
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_input_text), textPill)
         } else {
-            PillUtil.buildSpannable(context, "使用 $mode 输入文本 ", textPill)
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_input_text_with_mode, mode), textPill)
         }
     }
 
@@ -108,10 +129,16 @@ class InputTextModule : BaseModule() {
     ): ExecutionResult {
         val rawText = context.variables["text"]?.toString() ?: ""
         val text = VariableResolver.resolve(rawText, context)
-        val mode = context.variables["mode"] as? String ?: "自动"
+        val autoMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_auto)
+        val a11yMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_a11y)
+        val shellMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_shell)
+        val mode = context.variables["mode"] as? String ?: autoMode
 
         if (text.isEmpty()) {
-            return ExecutionResult.Failure("参数错误", "输入文本不能为空")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_interaction_input_text_param_error),
+                appContext.getString(R.string.error_vflow_interaction_input_text_empty)
+            )
         }
 
         onProgress(ProgressUpdate("准备输入文本..."))
@@ -119,7 +146,7 @@ class InputTextModule : BaseModule() {
         var success = false
 
         // 1. 无障碍输入
-        if (mode == "自动" || mode == "无障碍") {
+        if (mode == autoMode || mode == a11yMode) {
             success = performAccessibilityInput(text)
             if (success) {
                 onProgress(ProgressUpdate("已通过无障碍输入"))
@@ -154,7 +181,10 @@ class InputTextModule : BaseModule() {
         return if (success) {
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
-            ExecutionResult.Failure("输入失败", "无法输入文本，请确保有输入框处于聚焦状态。")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_interaction_input_text_failed),
+                appContext.getString(R.string.error_vflow_interaction_input_text_no_focus)
+            )
         }
     }
 

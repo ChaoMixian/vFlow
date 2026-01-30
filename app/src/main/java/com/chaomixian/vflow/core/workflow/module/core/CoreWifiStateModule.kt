@@ -21,8 +21,10 @@ class CoreWifiStateModule : BaseModule() {
 
     override val id = "vflow.core.wifi_state"
     override val metadata = ActionMetadata(
-        name = "读取WiFi状态",
-        description = "使用 vFlow Core 读取当前WiFi开关状态。",
+        name = "读取WiFi状态",  // Fallback
+        nameStringRes = R.string.module_vflow_core_wifi_state_name,
+        description = "使用 vFlow Core 读取当前WiFi开关状态。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_wifi_state_desc,
         iconRes = R.drawable.rounded_android_wifi_3_bar_24,
         category = "Core (Beta)"
     )
@@ -34,11 +36,11 @@ class CoreWifiStateModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("enabled", "WiFi状态", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("enabled", "WiFi状态", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_wifi_state_enabled_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return "读取WiFi状态"
+        return context.getString(R.string.summary_vflow_core_wifi_state)
     }
 
     override suspend fun execute(

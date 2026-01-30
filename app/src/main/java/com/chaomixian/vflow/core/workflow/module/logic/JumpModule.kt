@@ -20,6 +20,8 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class JumpModule : BaseModule() {
     override val id = "vflow.logic.jump"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_jump_name,
+        descriptionStringRes = R.string.module_vflow_logic_jump_desc,
         name = "跳转步骤",
         description = "跳转到工作流中指定的步骤继续执行。",
         iconRes = R.drawable.rounded_turn_slight_right_24,
@@ -29,6 +31,7 @@ class JumpModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "target_step_index",
+            nameStringRes = R.string.param_vflow_logic_jump_target_step_index_name,
             name = "目标步骤编号",
             staticType = ParameterType.NUMBER,
             defaultValue = 0L,
@@ -38,7 +41,7 @@ class JumpModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", nameStringRes = R.string.output_vflow_logic_jump_success_name, name = "是否成功", typeName = VTypeRegistry.BOOLEAN.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -46,7 +49,7 @@ class JumpModule : BaseModule() {
             step.parameters["target_step_index"],
             getInputs().find { it.id == "target_step_index" }
         )
-        return PillUtil.buildSpannable(context, "跳转到步骤 ", targetStepPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_logic_jump_to_step_prefix), targetStepPill)
     }
 
     override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {

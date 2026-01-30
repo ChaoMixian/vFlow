@@ -73,7 +73,7 @@ class WorkflowListFragment : Fragment() {
         if (checkOverlayPermission()) {
             showFavoriteWorkflowsFloat()
         } else {
-            Toast.makeText(requireContext(), "需要悬浮窗权限才能显示快速控制面板", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.toast_overlay_permission_required), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -86,8 +86,8 @@ class WorkflowListFragment : Fragment() {
                     try {
                         val jsonString = gson.toJson(workflow)
                         requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
-                        Toast.makeText(requireContext(), "导出成功", Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) { Toast.makeText(requireContext(), "导出失败: ${e.message}", Toast.LENGTH_LONG).show() }
+                        Toast.makeText(requireContext(), getString(R.string.toast_export_success), Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) { Toast.makeText(requireContext(), getString(R.string.toast_export_failed, e.message ?: ""), Toast.LENGTH_LONG).show() }
                 }
             }
             pendingExportWorkflow = null
@@ -102,8 +102,8 @@ class WorkflowListFragment : Fragment() {
                     val allWorkflows = workflowManager.getAllWorkflows()
                     val jsonString = gson.toJson(allWorkflows)
                     requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
-                    Toast.makeText(requireContext(), "备份成功", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) { Toast.makeText(requireContext(), "备份失败: ${e.message}", Toast.LENGTH_LONG).show() }
+                    Toast.makeText(requireContext(), getString(R.string.toast_backup_success), Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) { Toast.makeText(requireContext(), getString(R.string.toast_backup_failed, e.message ?: ""), Toast.LENGTH_LONG).show() }
             }
         }
 
@@ -115,26 +115,26 @@ class WorkflowListFragment : Fragment() {
                 try {
                     val jsonString = requireContext().contentResolver.openInputStream(fileUri)?.use {
                         BufferedReader(InputStreamReader(it)).readText()
-                    } ?: throw Exception("无法读取文件")
+                    } ?: throw Exception(getString(R.string.error_cannot_read_file))
 
                     val workflowsToImport = mutableListOf<Workflow>()
                     try {
                         val listType = object : TypeToken<List<Workflow>>() {}.type
                         val list: List<Workflow> = gson.fromJson(jsonString, listType)
-                        if (list.any { it.id == null || it.name == null }) throw JsonSyntaxException("备份文件格式错误")
+                        if (list.any { it.id == null || it.name == null }) throw JsonSyntaxException(getString(R.string.error_backup_format_invalid))
                         workflowsToImport.addAll(list)
                     } catch (e: JsonSyntaxException) {
                         val singleWorkflow: Workflow = gson.fromJson(jsonString, Workflow::class.java)
-                        if (singleWorkflow.id == null || singleWorkflow.name == null) throw JsonSyntaxException("单个工作流文件格式错误")
+                        if (singleWorkflow.id == null || singleWorkflow.name == null) throw JsonSyntaxException(getString(R.string.error_single_workflow_format_invalid))
                         workflowsToImport.add(singleWorkflow)
                     }
 
                     if (workflowsToImport.isNotEmpty()) {
                         startImportProcess(workflowsToImport)
                     } else {
-                        Toast.makeText(requireContext(), "文件中没有可导入的工作流", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.toast_no_workflow_in_file), Toast.LENGTH_SHORT).show()
                     }
-                } catch (e: Exception) { Toast.makeText(requireContext(), "导入失败: ${e.message}", Toast.LENGTH_LONG).show() }
+                } catch (e: Exception) { Toast.makeText(requireContext(), getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show() }
             }
         }
 
@@ -243,16 +243,16 @@ class WorkflowListFragment : Fragment() {
     private fun requestOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle("需要悬浮窗权限")
-                .setMessage("为了显示收藏工作流的快速控制面板，需要授予悬浮窗权限。")
-                .setPositiveButton("去设置") { _, _ ->
+                .setTitle(getString(R.string.dialog_overlay_permission_title))
+                .setMessage(getString(R.string.dialog_overlay_permission_message))
+                .setPositiveButton(getString(R.string.dialog_button_go_to_settings)) { _, _ ->
                     val intent = Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:${requireContext().packageName}")
                     )
                     overlayPermissionLauncher.launch(intent)
                 }
-                .setNegativeButton("取消", null)
+                .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
     }
@@ -307,7 +307,7 @@ class WorkflowListFragment : Fragment() {
                 onDelete = { workflow -> showDeleteConfirmationDialog(workflow) },
                 onDuplicate = { workflow ->
                     workflowManager.duplicateWorkflow(workflow.id)
-                    Toast.makeText(requireContext(), "已复制为 '${workflow.name} (副本)'", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.toast_copied_as, workflow.name), Toast.LENGTH_SHORT).show()
                     loadWorkflows()
                 },
                 onExport = { workflow ->
@@ -372,7 +372,7 @@ class WorkflowListFragment : Fragment() {
     private fun executeWorkflow(workflow: Workflow) {
         val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
         if (missingPermissions.isEmpty()) {
-            Toast.makeText(requireContext(), "开始执行: ${workflow.name}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.toast_starting_workflow, workflow.name), Toast.LENGTH_SHORT).show()
             WorkflowExecutor.execute(workflow, requireContext())
         } else {
             pendingWorkflow = workflow
@@ -394,7 +394,7 @@ class WorkflowListFragment : Fragment() {
     /** 处理导入队列中的下一个工作流。 */
     private fun processNextInImportQueue() {
         if (importQueue.isEmpty()) { // 队列为空，导入完成
-            Toast.makeText(requireContext(), "导入完成", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.toast_import_completed), Toast.LENGTH_SHORT).show()
             loadWorkflows()
             return
         }
@@ -420,20 +420,20 @@ class WorkflowListFragment : Fragment() {
         val rememberChoiceCheckbox = dialogView.findViewById<CheckBox>(R.id.checkbox_remember_choice)
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("导入冲突")
-            .setMessage("已存在一个名为 '${existing.name}' 的工作流 (ID: ${existing.id.substring(0, 8)}...)。您想如何处理来自文件中的 '${toImport.name}'?")
+            .setTitle(getString(R.string.dialog_import_conflict_title))
+            .setMessage(getString(R.string.dialog_import_conflict_message, existing.name, existing.id.substring(0, 8), toImport.name))
             .setView(dialogView)
-            .setPositiveButton("保留两者") { _, _ -> // 保留两者，导入的重命名
+            .setPositiveButton(getString(R.string.dialog_button_keep_both)) { _, _ -> // 保留两者，导入的重命名
                 if (rememberChoiceCheckbox.isChecked) conflictChoice = ConflictChoice.KEEP_ALL
                 handleKeepBoth(toImport)
                 processNextInImportQueue()
             }
-            .setNegativeButton("替换") { _, _ -> // 替换现有
+            .setNegativeButton(getString(R.string.dialog_button_replace)) { _, _ -> // 替换现有
                 if (rememberChoiceCheckbox.isChecked) conflictChoice = ConflictChoice.REPLACE_ALL
                 handleReplace(toImport)
                 processNextInImportQueue()
             }
-            .setNeutralButton("跳过") { _,_ -> processNextInImportQueue() } // 跳过此条
+            .setNeutralButton(getString(R.string.dialog_button_skip)) { _,_ -> processNextInImportQueue() } // 跳过此条
             .setCancelable(false)
             .show()
     }
@@ -441,17 +441,17 @@ class WorkflowListFragment : Fragment() {
     /** 处理替换操作。 */
     private fun handleReplace(workflow: Workflow) {
         workflowManager.saveWorkflow(workflow)
-        Toast.makeText(requireContext(), "'${workflow.name}' 已被替换", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), getString(R.string.toast_workflow_replaced, workflow.name), Toast.LENGTH_SHORT).show()
     }
 
     /** 处理保留两者操作 (重命名导入的工作流)。 */
     private fun handleKeepBoth(workflow: Workflow) {
         val newWorkflow = workflow.copy(
             id = UUID.randomUUID().toString(), // 生成新ID
-            name = "${workflow.name} (导入)" // 修改名称
+            name = getString(R.string.toast_workflow_imported_name, workflow.name) // 修改名称
         )
         workflowManager.saveWorkflow(newWorkflow)
-        Toast.makeText(requireContext(), "'${workflow.name}' 已作为副本导入", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), getString(R.string.toast_workflow_imported_as_copy, workflow.name), Toast.LENGTH_SHORT).show()
     }
 
     /** 显示删除确认对话框。 */

@@ -27,8 +27,10 @@ class SetClipboardModule : BaseModule() {
 
     override val id = "vflow.system.set_clipboard"
     override val metadata = ActionMetadata(
-        name = "写入剪贴板",
-        description = "将指定的文本或图片内容写入系统剪贴板。",
+        nameStringRes = R.string.module_vflow_system_set_clipboard_name,
+        descriptionStringRes = R.string.module_vflow_system_set_clipboard_desc,
+        name = "写入剪贴板",  // Fallback
+        description = "将指定的文本或图片内容写入系统剪贴板",  // Fallback
         iconRes = R.drawable.rounded_content_copy_24,
         category = "应用与系统"
     )
@@ -37,18 +39,24 @@ class SetClipboardModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "content",
-            name = "内容",
+            name = "内容",  // Fallback
             staticType = ParameterType.ANY,
             defaultValue = "",
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.IMAGE.id),
-            supportsRichText = false
+            supportsRichText = false,
+            nameStringRes = R.string.param_vflow_system_set_clipboard_content_name
         )
     )
 
     // 定义输出参数
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            id = "success",
+            name = "是否成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_system_set_clipboard_success_name
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -56,7 +64,11 @@ class SetClipboardModule : BaseModule() {
             step.parameters["content"],
             getInputs().find { it.id == "content" }
         )
-        return PillUtil.buildSpannable(context, "将 ", contentPill, " 写入剪贴板")
+
+        val prefix = context.getString(R.string.summary_vflow_system_set_clipboard_prefix)
+        val suffix = context.getString(R.string.summary_vflow_system_set_clipboard_suffix)
+
+        return PillUtil.buildSpannable(context, prefix, contentPill, suffix)
     }
 
     /**
@@ -94,7 +106,10 @@ class SetClipboardModule : BaseModule() {
                     }
                 } catch (e: Exception) {
                     // 捕获所有可能的异常，包括 URI 语法错误和文件不存在
-                    return ExecutionResult.Failure("文件URI错误", "无法为剪贴板创建安全的图片URI: ${e.message}")
+                    return ExecutionResult.Failure(
+                        appContext.getString(R.string.error_vflow_system_set_clipboard_uri_error),
+                        String.format(appContext.getString(R.string.error_vflow_system_set_clipboard_uri_create_failed), e.message ?: "")
+                    )
                 }
             }
             // 对于其他情况（文本变量、字符串、数字等），统一视为文本并解析
@@ -106,10 +121,13 @@ class SetClipboardModule : BaseModule() {
 
         if (clip != null) {
             clipboard.setPrimaryClip(clip)
-            onProgress(ProgressUpdate("已将内容写入剪贴板"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_set_clipboard_success)))
             return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         }
 
-        return ExecutionResult.Failure("未知错误", "无法创建剪贴板数据。")
+        return ExecutionResult.Failure(
+            appContext.getString(R.string.error_vflow_system_set_clipboard_unknown_error),
+            appContext.getString(R.string.error_vflow_system_set_clipboard_create_failed)
+        )
     }
 }

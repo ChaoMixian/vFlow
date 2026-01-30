@@ -30,8 +30,10 @@ class CoreScreenOperationModule : BaseModule() {
 
     override val id = "vflow.core.screen_operation"
     override val metadata = ActionMetadata(
-        name = "屏幕操作",
-        description = "使用 vFlow Core 执行点击、长按或滑动操作，比无障碍服务更快速稳定。",
+        name = "屏幕操作",  // Fallback
+        nameStringRes = R.string.module_vflow_core_screen_operation_name,
+        description = "使用 vFlow Core 执行点击、长按或滑动操作，比无障碍服务更快速稳定。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_screen_operation_desc,
         iconRes = R.drawable.rounded_ads_click_24,
         category = "Core (Beta)"
     )
@@ -47,35 +49,39 @@ class CoreScreenOperationModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "operation_type",
-            name = "操作类型",
+            name = "操作类型",  // Fallback
             staticType = ParameterType.ENUM,
             defaultValue = "点击",
             options = operationTypeOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_core_operation_type
         ),
         InputDefinition(
             id = "target",
-            name = "目标位置/起点",
+            name = "目标位置/起点",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "500,1000",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id),
+            nameStringRes = R.string.param_vflow_core_target_position
         ),
         InputDefinition(
             id = "target_end",
-            name = "滑动终点",
+            name = "滑动终点",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id),
+            nameStringRes = R.string.param_vflow_core_swipe_end
         ),
         InputDefinition(
             id = "duration",
-            name = "持续时间-毫秒",
+            name = "持续时间-毫秒",  // Fallback
             staticType = ParameterType.NUMBER,
             defaultValue = 0.0,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
+            nameStringRes = R.string.param_vflow_core_duration
         )
     )
 
@@ -103,7 +109,14 @@ class CoreScreenOperationModule : BaseModule() {
                     inputs.find { it.id == "duration" }
                 )
                 PillUtil.buildSpannable(
-                    context, "Core 滑动: ", targetPill, " → ", endPill, " ", durPill, "ms"
+                    context,
+                    context.getString(R.string.summary_vflow_core_screen_operation_swipe),
+                    targetPill,
+                    " → ",
+                    endPill,
+                    " ",
+                    durPill,
+                    "ms"
                 )
             }
             "长按" -> {
@@ -112,11 +125,20 @@ class CoreScreenOperationModule : BaseModule() {
                     inputs.find { it.id == "duration" }
                 )
                 PillUtil.buildSpannable(
-                    context, "Core 长按: ", targetPill, " ", durPill, "ms"
+                    context,
+                    context.getString(R.string.summary_vflow_core_screen_operation_long_press),
+                    targetPill,
+                    " ",
+                    durPill,
+                    "ms"
                 )
             }
             else -> {
-                PillUtil.buildSpannable(context, "Core 点击: ", targetPill)
+                PillUtil.buildSpannable(
+                    context,
+                    context.getString(R.string.summary_vflow_core_screen_operation_click),
+                    targetPill
+                )
             }
         }
     }

@@ -202,7 +202,7 @@ class VariableModuleUIProvider(
         if (type != "文本" && currentValue is String && (currentValue.isMagicVariable() || currentValue.isNamedVariable())) {
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
             val pillText = pill.findViewById<TextView>(R.id.pill_text)
-            pillText.text = PillRenderer.getDisplayNameForVariableReference(currentValue, holder.allSteps ?: emptyList())
+            pillText.text = PillRenderer.getDisplayNameForVariableReference(currentValue, holder.allSteps ?: emptyList(), context)
 
             // 允许点击药丸重新选择（包括“清除”以恢复列表编辑）
             pill.setOnClickListener {
@@ -320,7 +320,7 @@ class VariableModuleUIProvider(
                     // 显示变量药丸
                     val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, xValueContainer, false)
                     val pillText = pill.findViewById<TextView>(R.id.pill_text)
-                    pillText.text = PillRenderer.getDisplayNameForVariableReference(currentX, holder.allSteps ?: emptyList())
+                    pillText.text = PillRenderer.getDisplayNameForVariableReference(currentX, holder.allSteps ?: emptyList(), context)
                     pill.setOnClickListener {
                         holder.onMagicVariableRequested?.invoke("value.x")
                     }
@@ -355,7 +355,7 @@ class VariableModuleUIProvider(
                     // 显示变量药丸
                     val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, yValueContainer, false)
                     val pillText = pill.findViewById<TextView>(R.id.pill_text)
-                    pillText.text = PillRenderer.getDisplayNameForVariableReference(currentY, holder.allSteps ?: emptyList())
+                    pillText.text = PillRenderer.getDisplayNameForVariableReference(currentY, holder.allSteps ?: emptyList(), context)
                     pill.setOnClickListener {
                         holder.onMagicVariableRequested?.invoke("value.y")
                     }

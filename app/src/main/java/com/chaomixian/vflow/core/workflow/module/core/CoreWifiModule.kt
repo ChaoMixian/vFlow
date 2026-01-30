@@ -22,8 +22,10 @@ class CoreWifiModule : BaseModule() {
 
     override val id = "vflow.core.wifi"
     override val metadata = ActionMetadata(
-        name = "WiFi控制",
-        description = "使用 vFlow Core 控制WiFi开关状态（开启/关闭/切换）。",
+        name = "WiFi控制",  // Fallback
+        nameStringRes = R.string.module_vflow_core_wifi_name,
+        description = "使用 vFlow Core 控制WiFi开关状态（开启/关闭/切换）。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_core_wifi_desc,
         iconRes = R.drawable.rounded_android_wifi_3_bar_24,
         category = "Core (Beta)"
     )
@@ -41,7 +43,8 @@ class CoreWifiModule : BaseModule() {
             staticType = ParameterType.ENUM,
             defaultValue = "切换",
             options = actionOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_core_wifi_action_name
         )
     )
 
@@ -56,7 +59,7 @@ class CoreWifiModule : BaseModule() {
             getInputs().find { it.id == "action" },
             isModuleOption = true
         )
-        return PillUtil.buildSpannable(context, "WiFi：", actionPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_set_wifi), actionPill)
     }
 
     override suspend fun execute(

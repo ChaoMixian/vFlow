@@ -12,7 +12,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:hint="键">
+        android:hint="@string/hint_key">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/edit_text_key"
             android:layout_width="match_parent"
@@ -35,7 +35,7 @@
         android:layout_height="48dp"
         android:src="@drawable/rounded_dataset_24"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="选择魔法变量"
+        android:contentDescription="@string/desc_select_magic_variable"
         app:tint="?attr/colorPrimary"/>
 
     <ImageButton
@@ -44,5 +44,5 @@
         android:layout_height="48dp"
         android:src="@drawable/ic_delete"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="删除"/>
+        android:contentDescription="@string/desc_delete"/>
 </LinearLayout>

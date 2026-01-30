@@ -41,8 +41,10 @@ abstract class BaseShortcutModule : BaseModule() {
 class AlipayShortcutsModule : BaseShortcutModule() {
     override val id = "vflow.shizuku.alipay_shortcuts"
     override val metadata = ActionMetadata(
-        name = "支付宝",
-        description = "快速打开支付宝的扫一扫、付款码、收款码等。",
+        name = "支付宝",  // Fallback
+        nameStringRes = R.string.module_vflow_shizuku_alipay_shortcuts_name,
+        description = "快速打开支付宝的扫一扫、付款码、收款码等。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_shizuku_alipay_shortcuts_desc,
         iconRes = R.drawable.rounded_adb_24,
         category = "Shizuku"
     )
@@ -59,7 +61,7 @@ class AlipayShortcutsModule : BaseShortcutModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val actionPill = PillUtil.createPillFromParam(step.parameters["action"], getInputs().find { it.id == "action" }, isModuleOption = true)
-        return PillUtil.buildSpannable(context, "支付宝: ", actionPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_shizuku_alipay), actionPill)
     }
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
@@ -75,8 +77,10 @@ class AlipayShortcutsModule : BaseShortcutModule() {
 class WeChatShortcutsModule : BaseShortcutModule() {
     override val id = "vflow.shizuku.wechat_shortcuts"
     override val metadata = ActionMetadata(
-        name = "微信",
-        description = "快速打开微信的收款码、付款码。",
+        name = "微信",  // Fallback
+        nameStringRes = R.string.module_vflow_shizuku_wechat_shortcuts_name,
+        description = "快速打开微信的收款码、付款码。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_shizuku_wechat_shortcuts_desc,
         iconRes = R.drawable.rounded_adb_24,
         category = "Shizuku"
     )
@@ -92,7 +96,7 @@ class WeChatShortcutsModule : BaseShortcutModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val actionPill = PillUtil.createPillFromParam(step.parameters["action"], getInputs().find { it.id == "action" }, isModuleOption = true)
-        return PillUtil.buildSpannable(context, "微信: ", actionPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_shizuku_wechat), actionPill)
     }
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
@@ -109,8 +113,10 @@ class WeChatShortcutsModule : BaseShortcutModule() {
 class ColorOSShortcutsModule : BaseShortcutModule() {
     override val id = "vflow.shizuku.coloros_shortcuts"
     override val metadata = ActionMetadata(
-        name = "ColorOS",
-        description = "执行ColorOS系统相关的一些快捷操作。",
+        name = "ColorOS",  // Fallback
+        nameStringRes = R.string.module_vflow_shizuku_coloros_shortcuts_name,
+        description = "执行ColorOS系统相关的一些快捷操作。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_shizuku_coloros_shortcuts_desc,
         iconRes = R.drawable.rounded_adb_24,
         category = "Shizuku"
     )
@@ -143,15 +149,17 @@ class ColorOSShortcutsModule : BaseShortcutModule() {
 class GeminiAssistantModule : BaseShortcutModule() {
     override val id = "vflow.shizuku.gemini_shortcut"
     override val metadata = ActionMetadata(
-        name = "Gemini助理",
-        description = "启动 Google Gemini 语音助理。",
+        name = "Gemini助理",  // Fallback
+        nameStringRes = R.string.module_vflow_shizuku_gemini_shortcut_name,
+        description = "启动 Google Gemini 语音助理。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_shizuku_gemini_shortcut_desc,
         iconRes = R.drawable.rounded_adb_24,
         category = "Shizuku"
     )
 
     override fun getInputs(): List<InputDefinition> = emptyList()
 
-    override fun getSummary(context: Context, step: ActionStep): CharSequence = "启动 Gemini 助理"
+    override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_vflow_shizuku_gemini)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         val command = "am start -a android.intent.action.VOICE_COMMAND -p com.google.android.googlequicksearchbox"

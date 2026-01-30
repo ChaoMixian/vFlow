@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="请求方法"
+        android:text="@string/label_request_method"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
     <Spinner
         android:id="@+id/http_spinner_method"
@@ -49,7 +49,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="高级选项 (参数/Body)"
+                android:text="@string/label_advanced_options_body"
                 android:textAppearance="?attr/textAppearanceLabelLarge" />
 
             <ImageView
@@ -71,7 +71,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="查询参数"
+                android:text="@string/label_query_params"
                 android:textAppearance="?attr/textAppearanceTitleMedium" />
             <include layout="@layout/partial_dictionary_editor" android:id="@+id/http_query_params_editor"/>
 
@@ -79,7 +79,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="请求头"
+                android:text="@string/label_request_headers"
                 android:textAppearance="?attr/textAppearanceTitleMedium" />
             <include layout="@layout/partial_dictionary_editor" android:id="@+id/http_headers_editor"/>
 
@@ -92,7 +92,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="请求体"
+                    android:text="@string/label_request_body"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
                 <Spinner
                     android:id="@+id/http_spinner_body_type"

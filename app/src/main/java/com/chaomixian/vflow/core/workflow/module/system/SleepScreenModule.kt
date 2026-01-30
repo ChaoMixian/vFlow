@@ -22,8 +22,10 @@ class SleepScreenModule : BaseModule() {
 
     override val id = "vflow.system.sleep_screen"
     override val metadata = ActionMetadata(
-        name = "息屏",
-        description = "关闭屏幕，使设备进入息屏状态。需要 Shizuku 或 Root 权限。",
+        nameStringRes = R.string.module_vflow_system_sleep_screen_name,
+        descriptionStringRes = R.string.module_vflow_system_sleep_screen_desc,
+        name = "息屏",  // Fallback
+        description = "关闭屏幕，使设备进入息屏状态。需要 Shizuku 或 Root 权限。",  // Fallback
         iconRes = R.drawable.rounded_brightness_5_24,
         category = "应用与系统"
     )
@@ -35,12 +37,22 @@ class SleepScreenModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = emptyList()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("screen_off", "屏幕是否关闭", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            id = "success",
+            name = "是否成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_system_sleep_screen_success_name
+        ),
+        OutputDefinition(
+            id = "screen_off",
+            name = "屏幕是否关闭",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_system_sleep_screen_screen_off_name
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return "关闭屏幕"
+        return context.getString(R.string.summary_vflow_system_sleep_screen)
     }
 
     override suspend fun execute(
@@ -65,10 +77,16 @@ class SleepScreenModule : BaseModule() {
                     "screen_off" to VBoolean(isScreenOff)
                 ))
             } else {
-                ExecutionResult.Failure("息屏失败", "无法关闭屏幕，请检查 Shizuku 或 Root 权限。")
+                ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_system_sleep_screen_failed),
+                    "无法关闭屏幕，请检查 Shizuku 或 Root 权限。"
+                )
             }
         } catch (e: Exception) {
-            ExecutionResult.Failure("执行失败", e.localizedMessage ?: "发生未知错误")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_sleep_screen_exec_failed),
+                e.localizedMessage ?: "发生未知错误"
+            )
         }
     }
 

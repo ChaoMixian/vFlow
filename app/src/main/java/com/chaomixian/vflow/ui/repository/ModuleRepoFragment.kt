@@ -76,50 +76,52 @@ class ModuleRepoFragment : Fragment() {
 
             result.onSuccess { index ->
                 if (index.modules.isEmpty()) {
-                    binding.textError.text = "暂无模块"
+                    binding.textError.text = getString(R.string.text_no_modules)
                     binding.textError.visibility = View.VISIBLE
                 } else {
                     adapter.submitList(index.modules)
                 }
             }.onFailure { error ->
-                binding.textError.text = "加载失败: ${error.message}"
+                val errorMsg = getString(R.string.text_load_failed, error.message ?: "")
+                binding.textError.text = errorMsg
                 binding.textError.visibility = View.VISIBLE
-                Toast.makeText(requireContext(), "加载失败: ${error.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.toast_load_failed, error.message ?: ""), Toast.LENGTH_LONG).show()
             }
         }
     }
 
     private fun showDownloadConfirmDialog(repoModule: com.chaomixian.vflow.data.repository.model.RepoModule) {
         val permissionsText = if (repoModule.permissions.isEmpty()) {
-            "无"
+            getString(R.string.label_no_permissions)
         } else {
             repoModule.permissions.joinToString(", ")
         }
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("下载模块")
-            .setMessage("确定要下载 '${repoModule.name}' 吗？\n\n" +
-                    "描述: ${repoModule.description}\n\n" +
-                    "版本: v${repoModule.version}\n" +
-                    "分类: ${repoModule.category}\n" +
-                    "权限: $permissionsText")
-            .setPositiveButton("下载") { _, _ ->
+            .setTitle(getString(R.string.dialog_download_module_title))
+            .setMessage(getString(R.string.dialog_download_module_message,
+                repoModule.name,
+                repoModule.description,
+                repoModule.version,
+                repoModule.category,
+                permissionsText))
+            .setPositiveButton(getString(R.string.dialog_button_download)) { _, _ ->
                 downloadModule(repoModule)
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
     private fun downloadModule(repoModule: com.chaomixian.vflow.data.repository.model.RepoModule) {
         lifecycleScope.launch {
-            Toast.makeText(requireContext(), "正在下载: ${repoModule.name}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.toast_downloading, repoModule.name), Toast.LENGTH_SHORT).show()
 
             val result = RepositoryApiClient.downloadModule(repoModule.download_url)
 
             result.onSuccess { bytes ->
                 installModule(repoModule, bytes)
             }.onFailure { error ->
-                Toast.makeText(requireContext(), "下载失败: ${error.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.toast_download_failed, error.message ?: ""), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -152,15 +154,15 @@ class ModuleRepoFragment : Fragment() {
                         // 直接安装
                         ModuleManager.commitInstall(session)
                         tempFile.delete()
-                        Toast.makeText(requireContext(), "安装成功: ${session.manifest.name}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.toast_install_success, session.manifest.name), Toast.LENGTH_SHORT).show()
                     }
                 }.onFailure { error ->
                     tempFile.delete()
-                    Toast.makeText(requireContext(), "安装失败: ${error.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), getString(R.string.toast_install_failed, error.message ?: ""), Toast.LENGTH_LONG).show()
                 }
 
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "安装失败: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.toast_install_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -176,15 +178,15 @@ class ModuleRepoFragment : Fragment() {
         tempFile: File
     ) {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("模块冲突")
-            .setMessage("已存在一个ID为 '${session.manifest.id}' 的模块。您想如何处理来自仓库的 '${repoModule.name}'?")
-            .setPositiveButton("替换") { _, _ ->
+            .setTitle(getString(R.string.dialog_module_conflict_title))
+            .setMessage(getString(R.string.dialog_module_conflict_message, session.manifest.id, repoModule.name))
+            .setPositiveButton(getString(R.string.dialog_button_overwrite)) { _, _ ->
                 // 替换现有模块
                 ModuleManager.commitInstall(session)
                 tempFile.delete()
-                Toast.makeText(requireContext(), "'${repoModule.name}' 已替换", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.toast_module_replaced, repoModule.name), Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("跳过", null)
+            .setNegativeButton(getString(R.string.dialog_button_skip), null)
             .setCancelable(false)
             .show()
     }

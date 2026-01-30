@@ -35,6 +35,8 @@ class OCRModule : BaseModule() {
 
     override val id = "vflow.interaction.ocr"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_interaction_ocr_name,
+        descriptionStringRes = R.string.module_vflow_interaction_ocr_desc,
         name = "文字识别 (OCR)",
         description = "识别图片中的文字，或查找指定文字的坐标。",
         iconRes = R.drawable.rounded_feature_search_24,
@@ -89,9 +91,9 @@ class OCRModule : BaseModule() {
 
         return if (mode == "查找文本") {
             val targetPill = PillUtil.createPillFromParam(step.parameters["target_text"], getInputs().find { it.id == "target_text" })
-            PillUtil.buildSpannable(context, "在 ", imagePill, " 中查找文字 ", targetPill)
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_ocr_find_in), imagePill, context.getString(R.string.summary_vflow_device_ocr_find_middle), targetPill)
         } else {
-            PillUtil.buildSpannable(context, "识别 ", imagePill, " 中的文字")
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_ocr_recognize), imagePill, context.getString(R.string.summary_vflow_device_ocr_text_in_image))
         }
     }
 

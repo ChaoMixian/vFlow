@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="要调用的工作流"
+        android:text="@string/text_workflow_to_call"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <TextView
@@ -16,7 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="未选择"
+        android:text="@string/label_workflow_not_selected"
         android:textAppearance="?attr/textAppearanceBodyLarge" />
 
     <Button
@@ -25,6 +25,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="选择工作流" />
+        android:text="@string/button_select_workflow" />
 
 </LinearLayout>

@@ -16,9 +16,11 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 class StopWorkflowModule : BaseModule() {
     override val id = "vflow.logic.stop_workflow"
     override val metadata = ActionMetadata(
-        name = "停止工作流",
-        description = "正常地、无条件地终止当前工作流的执行。",
-        iconRes = R.drawable.rounded_stop_circle_24, // 使用一个合适的图标
+        nameStringRes = R.string.module_vflow_logic_stop_workflow_name,
+        descriptionStringRes = R.string.module_vflow_logic_stop_workflow_desc,
+        name = "停止工作流",  // Fallback
+        description = "正常地、无条件地终止当前工作流的执行",  // Fallback
+        iconRes = R.drawable.rounded_stop_circle_24,
         category = "逻辑控制"
     )
 
@@ -26,7 +28,7 @@ class StopWorkflowModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return "停止工作流"
+        return context.getString(R.string.summary_vflow_logic_stop_workflow)
     }
 
     override suspend fun execute(

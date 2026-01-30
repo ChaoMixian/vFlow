@@ -17,8 +17,10 @@ class BrightnessModule : BaseModule() {
 
     override val id = "vflow.system.brightness"
     override val metadata = ActionMetadata(
-        name = "屏幕亮度设置",
-        description = "设置屏幕的亮度值。",
+        nameStringRes = R.string.module_vflow_system_brightness_name,
+        descriptionStringRes = R.string.module_vflow_system_brightness_desc,
+        name = "屏幕亮度设置",  // Fallback
+        description = "设置屏幕的亮度值",  // Fallback
         iconRes = R.drawable.rounded_brightness_5_24,
         category = "应用与系统"
     )
@@ -28,7 +30,7 @@ class BrightnessModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "brightness_level",
-            name = "亮度值 (0-255)",
+            name = "亮度值 (0-255)",  // Fallback
             staticType = ParameterType.NUMBER,
             defaultValue = 128.0,
             acceptsMagicVariable = true,
@@ -37,7 +39,11 @@ class BrightnessModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            id = "success",
+            name = "是否成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -45,7 +51,10 @@ class BrightnessModule : BaseModule() {
             step.parameters["brightness_level"],
             getInputs().find { it.id == "brightness_level" }
         )
-        return PillUtil.buildSpannable(context, "设置屏幕亮度为 ", levelPill)
+
+        val prefix = context.getString(R.string.summary_vflow_system_brightness_prefix)
+
+        return PillUtil.buildSpannable(context, "$prefix ", levelPill)
     }
 
     override suspend fun execute(
@@ -62,7 +71,10 @@ class BrightnessModule : BaseModule() {
         }
 
         if (level == null || level !in 0..255) {
-            return ExecutionResult.Failure("参数错误", "亮度值必须是 0 到 255 之间的数字。")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_brightness_invalid_level),
+                appContext.getString(R.string.error_vflow_system_brightness_invalid_level_detail)
+            )
         }
 
         onProgress(ProgressUpdate("正在设置屏幕亮度为 $level..."))
@@ -75,7 +87,10 @@ class BrightnessModule : BaseModule() {
             Settings.System.putInt(resolver, Settings.System.SCREEN_BRIGHTNESS, level)
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } catch (e: Exception) {
-            ExecutionResult.Failure("设置失败", e.localizedMessage ?: "发生未知错误")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_brightness_set_failed),
+                e.localizedMessage ?: "发生未知错误"
+            )
         }
     }
 }

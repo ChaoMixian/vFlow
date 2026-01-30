@@ -28,8 +28,10 @@ class OperitModule : BaseModule() {
 
     override val id = "vflow.interaction.operit"
     override val metadata = ActionMetadata(
-        name = "Operit 交互",
-        description = "与 Operit AI 助手交互：发送消息或触发工作流。",
+        name = "Operit 交互",  // Fallback
+        nameStringRes = R.string.module_vflow_interaction_operit_name,
+        description = "与 Operit AI 助手交互：发送消息或触发工作流。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_interaction_operit_desc,
         iconRes = R.drawable.rounded_smart_toy_24,
         category = "界面交互"
     )
@@ -174,11 +176,11 @@ class OperitModule : BaseModule() {
         // 使用 RichTextUIProvider 时，getSummary 只返回简单标题
         // 富文本预览会自动显示在下方
         return when (mode) {
-            "发送消息" -> "向 Operit 发送消息"
+            "发送消息" -> context.getString(R.string.summary_vflow_interaction_operit_send)
             "触发工作流" -> {
                 val action = step.parameters["workflow_action"] as? String ?: ACTION_TRIGGER_WORKFLOW
                 val actionPill = PillUtil.createPillFromParam(action, getInputs().find { it.id == "workflow_action" })
-                PillUtil.buildSpannable(context, "触发 Operit 工作流 ", actionPill)
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_operit_trigger), actionPill)
             }
             else -> metadata.name
         }

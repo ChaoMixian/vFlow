@@ -33,8 +33,10 @@ import java.io.IOException
 class HttpRequestModule : BaseModule() {
     override val id = "vflow.network.http_request"
     override val metadata = ActionMetadata(
-        name = "HTTP 请求",
-        description = "发送 HTTP 请求并获取响应。",
+        nameStringRes = R.string.module_vflow_network_http_request_name,
+        descriptionStringRes = R.string.module_vflow_network_http_request_desc,
+        name = "HTTP 请求",  // Fallback
+        description = "发送 HTTP 请求并获取响应",  // Fallback
         iconRes = R.drawable.rounded_public_24,
         category = "网络"
     )
@@ -188,7 +190,10 @@ class HttpRequestModule : BaseModule() {
                     .callTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
 
-                val httpUrlBuilder = urlString.toHttpUrlOrNull()?.newBuilder() ?: return@withContext ExecutionResult.Failure("URL格式错误", "无法解析URL: $urlString")
+                val httpUrlBuilder = urlString.toHttpUrlOrNull()?.newBuilder() ?: return@withContext ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_network_http_request_url_format_error),
+                    String.format(appContext.getString(R.string.error_vflow_network_http_request_url_parse_failed), urlString)
+                )
                 queryParams.forEach { (key, value) -> httpUrlBuilder.addQueryParameter(key, value) }
                 val finalUrl = httpUrlBuilder.build()
 
@@ -201,14 +206,14 @@ class HttpRequestModule : BaseModule() {
                 headers.forEach { (key, value) -> requestBuilder.addHeader(key, value) }
                 requestBuilder.method(method, requestBody)
 
-                onProgress(ProgressUpdate("正在发送 $method 请求到 $finalUrl"))
+                onProgress(ProgressUpdate(String.format(appContext.getString(R.string.msg_vflow_network_http_request_sending), method, finalUrl)))
                 val response = client.newCall(requestBuilder.build()).execute()
 
                 val statusCode = response.code
                 val responseBody = response.body?.string() ?: ""
                 val responseHeaders = response.headers.toMultimap().mapValues { it.value.joinToString(", ") }
 
-                onProgress(ProgressUpdate("收到响应，状态码: $statusCode"))
+                onProgress(ProgressUpdate(String.format(appContext.getString(R.string.msg_vflow_network_http_request_received), statusCode)))
 
                 ExecutionResult.Success(mapOf(
                     "response_body" to VString(responseBody),
@@ -218,9 +223,15 @@ class HttpRequestModule : BaseModule() {
                 ))
 
             } catch (e: IOException) {
-                ExecutionResult.Failure("网络错误", e.message ?: "未知网络错误")
+                ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_network_http_request_network_error),
+                    e.message ?: appContext.getString(R.string.error_vflow_network_http_request_unknown_network)
+                )
             } catch (e: Exception) {
-                ExecutionResult.Failure("执行失败", e.localizedMessage ?: "发生未知错误")
+                ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_network_http_request_execution_failed),
+                    e.localizedMessage ?: appContext.getString(R.string.error_vflow_network_http_request_unknown_error)
+                )
             }
         }
     }

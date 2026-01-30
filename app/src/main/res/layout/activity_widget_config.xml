@@ -25,7 +25,7 @@
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="选择插槽 1" />
+            android:text="@string/text_select_slot_1" />
 
         <Button
             android:id="@+id/btn_select_slot_2"
@@ -33,7 +33,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="选择插槽 2" />
+            android:text="@string/text_select_slot_2" />
 
         <Button
             android:id="@+id/btn_select_slot_3"
@@ -41,7 +41,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="选择插槽 3" />
+            android:text="@string/text_select_slot_3" />
 
         <Button
             android:id="@+id/btn_select_slot_4"
@@ -49,13 +49,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="选择插槽 4" />
+            android:text="@string/text_select_slot_4" />
 
         <Button
             android:id="@+id/btn_save_widget"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:text="完成配置" />
+            android:text="@string/button_complete_config" />
     </LinearLayout>
 </LinearLayout>

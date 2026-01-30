@@ -12,8 +12,10 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class ModifyVariableModule : BaseModule() {
     override val id = "vflow.variable.modify"
     override val metadata = ActionMetadata(
-        name = "修改变量",
-        description = "修改一个已存在的命名变量的值。",
+        nameStringRes = R.string.module_vflow_variable_modify_name,
+        descriptionStringRes = R.string.module_vflow_variable_modify_desc,
+        name = "修改变量",  // Fallback
+        description = "修改一个已存在的命名变量的值",  // Fallback
         iconRes = R.drawable.ic_variable_type,
         category = "数据"
     )
@@ -21,7 +23,8 @@ class ModifyVariableModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "variable", // ID 从 "variableName" 改为 "variable"
-            name = "变量",     // 名称从 "变量名称" 改为 "变量"
+            name = "变量",
+            nameStringRes = R.string.param_vflow_variable_modify_variable_name,
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = false, // 不接受步骤输出作为变量名
@@ -30,6 +33,7 @@ class ModifyVariableModule : BaseModule() {
         InputDefinition(
             id = "newValue",
             name = "新值",
+            nameStringRes = R.string.param_vflow_variable_modify_newValue_name,
             staticType = ParameterType.ANY,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -48,7 +52,9 @@ class ModifyVariableModule : BaseModule() {
             step.parameters["newValue"],
             getInputs().find { it.id == "newValue" }
         )
-        return PillUtil.buildSpannable(context, "修改变量 ", namePill, " 的值为 ", valuePill)
+        val prefix = context.getString(R.string.summary_vflow_variable_modify_prefix)
+        val middle = context.getString(R.string.summary_vflow_variable_modify_middle)
+        return PillUtil.buildSpannable(context, prefix, namePill, middle, valuePill)
     }
 
     override suspend fun execute(
@@ -58,14 +64,18 @@ class ModifyVariableModule : BaseModule() {
         // 执行逻辑现在需要解析命名变量的引用格式 "[[...]]"
         val variableRef = context.variables["variable"] as? String
         if (variableRef.isNullOrBlank() || !variableRef.isNamedVariable()) {
-            return ExecutionResult.Failure("参数错误", "请选择一个有效的命名变量。")
+            val title = appContext.getString(R.string.error_vflow_variable_modify_param_error)
+            val message = appContext.getString(R.string.error_vflow_variable_modify_invalid)
+            return ExecutionResult.Failure(title, message)
         }
 
         // 从 "[[...]]" 中提取变量名
         val variableName = variableRef.removeSurrounding("[[", "]]")
 
         if (!context.namedVariables.containsKey(variableName)) {
-            return ExecutionResult.Failure("执行错误", "找不到名为 '$variableName' 的变量。请先使用“创建变量”模块创建它。")
+            val title = appContext.getString(R.string.error_vflow_variable_modify_param_error)
+            val message = String.format(appContext.getString(R.string.error_vflow_variable_modify_not_found), variableName)
+            return ExecutionResult.Failure(title, message)
         }
 
         // 新值统一从 magicVariables 中获取

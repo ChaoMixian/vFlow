@@ -17,8 +17,10 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class FindNotificationModule : BaseModule() {
     override val id = "vflow.notification.find"
     override val metadata = ActionMetadata(
-        name = "查找通知",
-        description = "查找当前状态栏中所有可见的通知。",
+        name = "查找通知",  // Fallback
+        nameStringRes = R.string.module_vflow_notification_find_name,
+        description = "查找当前状态栏中所有可见的通知。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_notification_find_desc,
         iconRes = R.drawable.rounded_search_24,
         category = "应用与系统"
     )

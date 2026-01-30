@@ -4,6 +4,7 @@
 
 package com.chaomixian.vflow.core.module
 
+import android.content.Context
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 
@@ -12,6 +13,23 @@ import com.chaomixian.vflow.permissions.Permission
  * 提供了大多数方法的默认实现，使得具体模块开发者可以更专注于核心功能的实现。
  */
 abstract class BaseModule : ActionModule {
+
+    /**
+     * Application Context，用于访问字符串资源进行国际化
+     * 由ModuleRegistry在模块注册时注入
+     */
+    protected lateinit var appContext: Context
+        private set
+
+    /**
+     * 初始化模块的Context（内部方法）
+     * 由ModuleRegistry调用，用于注入ApplicationContext
+     *
+     * @param context Application Context
+     */
+    internal fun initContext(context: Context) {
+        appContext = context.applicationContext
+    }
 
     // 模块所需的权限列表。默认实现为空列表，表示不需要任何特殊权限。
     // 作为子类方便覆盖的属性

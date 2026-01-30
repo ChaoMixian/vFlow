@@ -27,12 +27,19 @@ import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
  */
 class UiTextModule : BaseUiComponentModule() {
     override val id = "vflow.ui.component.text"
-    override val metadata = ActionMetadata("文本展示", "显示一段静态文字。", R.drawable.rounded_convert_to_text_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "文本展示",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_component_text_name,
+        description = "显示一段静态文字。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_component_text_desc,
+        iconRes = R.drawable.rounded_convert_to_text_24,
+        category = "UI 组件"
+    )
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("content")
 
     override fun getInputs() = listOf(
-        InputDefinition("content", "内容", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("key", "ID (可选)", ParameterType.STRING, "", isHidden = true)
+        InputDefinition("content", "内容", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_ui_content),
+        InputDefinition("key", "ID (可选)", ParameterType.STRING, "", isHidden = true, nameStringRes = R.string.param_vflow_ui_content_optional)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -40,7 +47,7 @@ class UiTextModule : BaseUiComponentModule() {
 
         // 如果内容复杂（包含变量），只显示模块名称，让 RichTextUIProvider 显示富文本预览卡片
         if (VariableResolver.isComplex(rawText)) {
-            return metadata.name
+            return metadata.getLocalizedName(context)
         }
 
         // 内容简单，显示完整的摘要
@@ -48,7 +55,7 @@ class UiTextModule : BaseUiComponentModule() {
             step.parameters["content"],
             getInputs().find { it.id == "content" }
         )
-        return PillUtil.buildSpannable(context, "展示文本: ", contentPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_prefix_display_text), contentPill)
     }
 
     override fun createUiElement(context: ExecutionContext, step: ActionStep): UiElement {

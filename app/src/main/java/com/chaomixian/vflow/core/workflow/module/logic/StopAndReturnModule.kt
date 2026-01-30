@@ -15,6 +15,8 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class StopAndReturnModule : BaseModule() {
     override val id = "vflow.logic.return"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_return_name,
+        descriptionStringRes = R.string.module_vflow_logic_return_desc,
         name = "停止并返回",
         description = "停止当前工作流的执行并返回一个值。",
         iconRes = R.drawable.rounded_output_24,
@@ -24,6 +26,7 @@ class StopAndReturnModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "value",
+            nameStringRes = R.string.param_vflow_logic_return_value_name,
             name = "返回值",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
@@ -36,7 +39,7 @@ class StopAndReturnModule : BaseModule() {
             step.parameters["value"],
             getInputs().find { it.id == "value" }
         )
-        return PillUtil.buildSpannable(context, "返回 ", valuePill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_logic_stop_and_return_prefix), valuePill)
     }
 
     override suspend fun execute(

@@ -48,17 +48,24 @@ import java.util.UUID
  */
 class CreateActivityModule : BaseBlockModule() {
     override val id = ACTIVITY_START_ID
-    override val metadata = ActionMetadata("创建界面", "开始定义界面布局。", R.drawable.rounded_activity_zone_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "创建界面",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_activity_start_name,
+        description = "开始定义界面布局。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_activity_start_desc,
+        iconRes = R.drawable.rounded_activity_zone_24,
+        category = "UI 组件"
+    )
     override val stepIdsInBlock = listOf(ACTIVITY_START_ID, ACTIVITY_SHOW_ID, ACTIVITY_END_ID) // 定义三段结构
     override val pairingId = ACTIVITY_PAIRING
 
     override fun getInputs() = listOf(
-        InputDefinition("title", "标题", ParameterType.STRING, "用户界面", acceptsMagicVariable = true),
-        InputDefinition("destroy_on_exit", "退出随即销毁页面", ParameterType.BOOLEAN, true)
+        InputDefinition("title", "标题", ParameterType.STRING, "用户界面", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_title),
+        InputDefinition("destroy_on_exit", "退出随即销毁页面", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_destroy_on_exit)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
-        PillUtil.buildSpannable(context, "创建界面: ", PillUtil.createPillFromParam(step.parameters["title"], getInputs()[0]))
+        PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_ui_activity_start), PillUtil.createPillFromParam(step.parameters["title"], getInputs()[0]))
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         // 初始化组件列表
@@ -70,7 +77,7 @@ class CreateActivityModule : BaseBlockModule() {
         val destroyOnExit = currentStep.parameters["destroy_on_exit"] as? Boolean ?: true
         context.namedVariables[KEY_UI_DESTROY_ON_EXIT] = destroyOnExit
 
-        onProgress(ProgressUpdate("初始化界面定义..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_init)))
         return ExecutionResult.Success()
     }
 }
@@ -83,14 +90,21 @@ class CreateActivityModule : BaseBlockModule() {
  */
 class ShowActivityModule : BaseModule() {
     override val id = ACTIVITY_SHOW_ID
-    override val metadata = ActionMetadata("显示界面 (事件循环)", "界面定义结束，启动界面并开始监听事件。", R.drawable.rounded_play_arrow_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "显示界面 (事件循环)",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_activity_show_name,
+        description = "界面定义结束，启动界面并开始监听事件。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_activity_show_desc,
+        iconRes = R.drawable.rounded_play_arrow_24,
+        category = "UI 组件"
+    )
     // 标记为 Middle 块，且不可独立删除
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, ACTIVITY_PAIRING, isIndividuallyDeletable = false)
 
-    override fun getSummary(context: Context, step: ActionStep) = "显示界面并开始监听事件"
+    override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_activity_show)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String ?: return ExecutionResult.Failure("错误", "Session丢失")
+        val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String ?: return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
 
         // 获取 destroy_on_exit 参数
         val destroyOnExit = context.namedVariables[KEY_UI_DESTROY_ON_EXIT] as? Boolean ?: true
@@ -110,7 +124,7 @@ class ShowActivityModule : BaseModule() {
             }
 
             // 2. 挂起等待下一个事件
-            onProgress(ProgressUpdate("等待用户操作..."))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_wait)))
             val event = UiSessionBus.waitForEvent(sessionId)
 
             // 3. 检查session是否已关闭
@@ -135,7 +149,7 @@ class ShowActivityModule : BaseModule() {
                 context.namedVariables["component_value.$componentId"] = value
             }
 
-            onProgress(ProgressUpdate("收到事件: ${event.elementId} - ${event.type}"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_event, event.elementId, event.type)))
             return ExecutionResult.Success() // 继续执行内部的监听积木
 
         } else {
@@ -143,11 +157,11 @@ class ShowActivityModule : BaseModule() {
 
             @Suppress("UNCHECKED_CAST")
             val elements = context.namedVariables[KEY_UI_ELEMENTS_LIST] as? List<UiElement>
-                ?: return ExecutionResult.Failure("配置错误", "组件列表为空")
+                ?: return ExecutionResult.Failure("配置错误", appContext.getString(R.string.error_vflow_ui_empty_list))
 
             val title = VariableResolver.resolve(context.variables["title"]?.toString() ?: "界面", context)
 
-            onProgress(ProgressUpdate("正在启动界面..."))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_starting)))
 
             // 先注册 Session（必须在 startActivity 之前，否则 Activity 的命令监听器无法获取到 flow）
             UiSessionBus.registerSession(sessionId)
@@ -166,7 +180,7 @@ class ShowActivityModule : BaseModule() {
             context.loopStack.push(UiLoopState(sessionId))
 
             // 为了复用代码，这里直接进入等待逻辑：
-            onProgress(ProgressUpdate("界面已启动，等待操作..."))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_started)))
             val event = UiSessionBus.waitForEvent(sessionId)
 
             // 检查session是否已关闭
@@ -201,10 +215,17 @@ class ShowActivityModule : BaseModule() {
  */
 class EndActivityModule : BaseModule() {
     override val id = ACTIVITY_END_ID
-    override val metadata = ActionMetadata("结束界面", "界面生命周期结束。", R.drawable.rounded_stop_circle_24, "UI 组件")
+    override val metadata = ActionMetadata(
+        name = "结束界面",  // Fallback
+        nameStringRes = R.string.module_vflow_ui_activity_end_name,
+        description = "界面生命周期结束。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_ui_activity_end_desc,
+        iconRes = R.drawable.rounded_stop_circle_24,
+        category = "UI 组件"
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, ACTIVITY_PAIRING)
 
-    override fun getSummary(context: Context, step: ActionStep) = "结束界面"
+    override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_activity_end)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String

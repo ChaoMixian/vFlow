@@ -22,8 +22,10 @@ class ShareModule : BaseModule() {
 
     override val id = "vflow.system.share"
     override val metadata = ActionMetadata(
-        name = "分享",
-        description = "调用系统分享功能来分享文本或图片。",
+        nameStringRes = R.string.module_vflow_system_share_name,
+        descriptionStringRes = R.string.module_vflow_system_share_desc,
+        name = "分享",  // Fallback
+        description = "调用系统分享功能来分享文本或图片。",  // Fallback
         iconRes = R.drawable.rounded_ios_share_24, // 使用新图标
         category = "应用与系统"
     )
@@ -32,7 +34,8 @@ class ShareModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "content",
-            name = "分享内容",
+            nameStringRes = R.string.param_vflow_system_share_content_name,
+            name = "分享内容",  // Fallback
             staticType = ParameterType.ANY,
             defaultValue = "",
             acceptsMagicVariable = true,
@@ -54,7 +57,7 @@ class ShareModule : BaseModule() {
             step.parameters["content"],
             getInputs().find { it.id == "content" }
         )
-        return PillUtil.buildSpannable(context, "分享 ", contentPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_share_prefix), contentPill)
     }
 
     /**

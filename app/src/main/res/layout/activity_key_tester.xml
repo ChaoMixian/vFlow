@@ -21,7 +21,7 @@
         android:layout_height="wrap_content"
         android:background="?attr/colorSurfaceVariant"
         android:padding="16dp"
-        android:text="准备就绪"
+        android:text="@string/text_ready"
         android:textAppearance="?attr/textAppearanceLabelLarge"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -36,7 +36,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
-            android:text="等待数据..."
+            android:text="@string/text_waiting_data"
             android:textSize="12sp"
             android:textColor="?attr/colorOnSurface" />
     </ScrollView>

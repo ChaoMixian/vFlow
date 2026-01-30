@@ -15,7 +15,7 @@ import com.google.android.material.color.MaterialColors
 /**
  * 权限列表的 RecyclerView.Adapter。
  * @param permissions 要显示的权限列表。
- * @param onGrantClick 当用户点击“授权”按钮时的回调。
+ * @param onGrantClick 当用户点击"授权"按钮时的回调。
  */
 class PermissionAdapter(
     private val permissions: List<Permission>,
@@ -41,8 +41,8 @@ class PermissionAdapter(
         val permission = permissions[position]
         val context = holder.itemView.context
 
-        holder.name.text = permission.name
-        holder.description.text = permission.description
+        holder.name.text = permission.getLocalizedName(context)
+        holder.description.text = permission.getLocalizedDescription(context)
 
         val isGranted = PermissionManager.isGranted(context, permission)
 

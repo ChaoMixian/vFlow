@@ -13,6 +13,8 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 class CallWorkflowModule : BaseModule() {
     override val id = "vflow.logic.call_workflow"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_logic_call_workflow_name,
+        descriptionStringRes = R.string.module_vflow_logic_call_workflow_desc,
         name = "调用工作流",
         description = "执行另一个工作流作为子程序。",
         iconRes = R.drawable.rounded_swap_calls_24,
@@ -24,6 +26,7 @@ class CallWorkflowModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "workflow_id",
+            nameStringRes = R.string.param_vflow_logic_call_workflow_workflow_id_name,
             name = "工作流",
             staticType = ParameterType.STRING,
             acceptsMagicVariable = false,
@@ -33,18 +36,18 @@ class CallWorkflowModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "子工作流返回值", "vflow.type.any")
+        OutputDefinition("result", nameStringRes = R.string.output_vflow_logic_call_workflow_result_name, name = "子工作流返回值", typeName = "vflow.type.any")
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val workflowId = step.parameters["workflow_id"] as? String
         val workflowName = if (workflowId != null) {
-            WorkflowManager(context).getWorkflow(workflowId)?.name ?: "未知工作流"
+            WorkflowManager(context).getWorkflow(workflowId)?.name ?: context.getString(R.string.summary_unknown_workflow)
         } else {
-            "未选择"
+            context.getString(R.string.summary_no_workflow_selected)
         }
         val workflowPill = PillUtil.Pill(workflowName, "workflow_id")
-        return PillUtil.buildSpannable(context, "调用工作流 ", workflowPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_logic_call_workflow_prefix), workflowPill)
     }
 
     override suspend fun execute(

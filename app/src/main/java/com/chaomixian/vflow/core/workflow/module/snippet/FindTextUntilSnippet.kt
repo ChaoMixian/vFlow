@@ -26,9 +26,11 @@ class FindTextUntilSnippet : BaseModule() {
 
     override val id = "vflow.snippet.find_until"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_snippet_find_until_name,
+        descriptionStringRes = R.string.module_vflow_snippet_find_until_desc,
         name = "查找直到",
         description = "在屏幕上循环查找指定的文本，直到找到为止。",
-        iconRes = R.drawable.rounded_search_24, // 使用搜索图标
+        iconRes = R.drawable.rounded_search_24,
         category = "模板"
     )
 
@@ -67,7 +69,7 @@ class FindTextUntilSnippet : BaseModule() {
             step.parameters["targetText"],
             inputs.find { it.id == "targetText" }
         )
-        return PillUtil.buildSpannable(context, "查找直到找到文本 ", targetPill)
+        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_snippet_find_until), targetPill)
     }
 
     override fun createSteps(): List<ActionStep> {

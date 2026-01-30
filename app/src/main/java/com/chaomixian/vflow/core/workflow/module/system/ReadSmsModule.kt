@@ -18,8 +18,10 @@ import java.util.regex.Pattern
 class ReadSmsModule : BaseModule() {
     override val id = "vflow.system.read_sms"
     override val metadata = ActionMetadata(
-        name = "读取短信",
-        description = "从收件箱中按条件查找短信，并支持提取验证码。",
+        name = "读取短信",  // Fallback
+        nameStringRes = R.string.module_vflow_system_read_sms_name,
+        description = "从收件箱中按条件查找短信，并支持提取验证码。",  // Fallback
+        descriptionStringRes = R.string.module_vflow_system_read_sms_desc,
         iconRes = R.drawable.rounded_sms_24,
         category = "应用与系统"
     )
@@ -50,25 +52,25 @@ class ReadSmsModule : BaseModule() {
         val filterBy = params["filter_by"] as? String ?: filterOptions.first()
         val extractCode = params["extract_code"] as? Boolean ?: false
 
-        val parts = mutableListOf<Any>("读取")
+        val parts = mutableListOf<Any>(context.getString(R.string.summary_vflow_system_read_sms_prefix))
 
         if (filterBy != "最新一条") {
             if (filterBy == "来自发件人" || filterBy == "发件人与内容") {
-                parts.add("来自 ")
+                parts.add(context.getString(R.string.summary_vflow_system_read_sms_from))
                 parts.add(PillUtil.createPillFromParam(params["sender"], getInputs().find { it.id == "sender" }))
             }
             if (filterBy == "包含内容" || filterBy == "发件人与内容") {
-                parts.add(" 内容含 ")
+                parts.add(context.getString(R.string.summary_vflow_system_read_sms_content))
                 if (extractCode) {
                     // 更新 Pill 的构造以匹配新的签名
-                    parts.add(PillUtil.Pill("验证码", "extract_code"))
+                    parts.add(PillUtil.Pill(context.getString(R.string.summary_vflow_system_read_sms_code), "extract_code"))
                 } else {
                     parts.add(PillUtil.createPillFromParam(params["content"], getInputs().find { it.id == "content" }))
                 }
             }
-            parts.add(" 的最新短信")
+            parts.add(context.getString(R.string.summary_vflow_system_read_sms_suffix))
         } else {
-            parts.add("最新一条短信")
+            parts.add(context.getString(R.string.summary_vflow_system_read_sms_latest))
         }
 
         return PillUtil.buildSpannable(context, *parts.toTypedArray())

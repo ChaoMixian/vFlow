@@ -33,8 +33,15 @@ import kotlinx.coroutines.CompletableDeferred
 class ClickModule : BaseModule() {
     // 模块的唯一ID
     override val id = "vflow.device.click"
-    // 模块的元数据，用于在UI中展示
-    override val metadata = ActionMetadata("点击", "点击一个屏幕元素、坐标或视图ID", R.drawable.rounded_ads_click_24, "界面交互") // 更新分类
+    // 模块的元数据
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_device_click_name,
+        descriptionStringRes = R.string.module_vflow_device_click_desc,
+        name = "点击",                                // Fallback
+        description = "点击一个屏幕元素、坐标或视图ID", // Fallback
+        iconRes = R.drawable.rounded_ads_click_24,
+        category = "界面交互"
+    )
     // 此模块需要的权限列表
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
@@ -44,15 +51,16 @@ class ClickModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "target",
-            name = "目标", // 点击的目标，可以是元素、坐标或ID
-            staticType = ParameterType.STRING, // 静态类型为字符串，实际可以是多种动态类型
-            acceptsMagicVariable = true,       // 允许使用魔法变量
-            acceptedMagicVariableTypes = setOf( // 定义接受的魔法变量类型
+            name = "目标",  // Fallback
+            staticType = ParameterType.STRING,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(
                 VTypeRegistry.SCREEN_ELEMENT.id,
                 VTypeRegistry.COORDINATE.id,
                 VTypeRegistry.STRING.id
             ),
-            defaultValue = "" // 默认值为空字符串
+            defaultValue = "",
+            nameStringRes = R.string.param_vflow_device_click_target_name
         )
     )
 
@@ -60,21 +68,29 @@ class ClickModule : BaseModule() {
      * 定义模块的输出参数。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "点击成功", VTypeRegistry.BOOLEAN.id) // 输出一个布尔值表示点击是否成功
+        OutputDefinition(
+            id = "success",
+            name = "点击成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_device_click_success_name
+        )
     )
 
     /**
      * 生成在工作流编辑器中显示模块摘要的文本。
-     * 例如：“点击 [目标元素]”
+     * 例如："点击 [目标元素]"
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val targetPill = PillUtil.createPillFromParam(
             step.parameters["target"],
             getInputs().find { it.id == "target" }
         )
+
+        val prefix = context.getString(R.string.summary_vflow_device_click_prefix)
+
         return PillUtil.buildSpannable(
             context,
-            "点击 ",
+            "$prefix ",
             targetPill
         )
     }
@@ -88,7 +104,10 @@ class ClickModule : BaseModule() {
     ): ExecutionResult {
         // 获取无障碍服务实例
         val service = context.services.get(VFlowAccessibilityService::class)
-            ?: return ExecutionResult.Failure("服务未运行", "执行点击需要无障碍服务，但该服务当前未运行。")
+            ?: return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_device_click_service_not_running),
+                "执行点击需要无障碍服务，但该服务当前未运行。"
+            )
 
         // 获取点击目标，优先从魔法变量，其次从静态变量
         val target = context.magicVariables["target"] ?: context.variables["target"]

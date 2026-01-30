@@ -33,7 +33,14 @@ class FindTextModule : BaseModule() {
     // 模块的唯一ID
     override val id = "vflow.device.find.text"
     // 模块的元数据
-    override val metadata = ActionMetadata("查找文本", "在屏幕上查找元素", R.drawable.rounded_feature_search_24, "界面交互") // 更新分类
+    override val metadata = ActionMetadata(
+        name = "查找文本",
+        description = "在屏幕上查找元素",
+        nameStringRes = R.string.module_vflow_device_find_text_name,
+        descriptionStringRes = R.string.module_vflow_device_find_text_desc,
+        iconRes = R.drawable.rounded_feature_search_24,
+        category = "界面交互"
+    ) // 更新分类
     // 此模块需要的权限
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
@@ -123,11 +130,11 @@ class FindTextModule : BaseModule() {
 
         return PillUtil.buildSpannable(
             context,
-            "使用 ",
+            context.getString(R.string.summary_find_text_prefix),
             modePill,
-            " 模式查找文本 ",
+            context.getString(R.string.summary_find_text_middle),
             targetPill,
-            " 并输出 ",
+            context.getString(R.string.summary_find_text_suffix),
             formatPill
         )
     }

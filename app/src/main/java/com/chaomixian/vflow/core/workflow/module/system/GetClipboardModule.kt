@@ -25,9 +25,11 @@ class GetClipboardModule : BaseModule() {
 
     override val id = "vflow.system.get_clipboard"
     override val metadata = ActionMetadata(
-        name = "读取剪贴板",
-        description = "获取系统剪贴板的当前内容（文本或图片）。",
-        iconRes = R.drawable.rounded_content_paste_24, // 使用新图标
+        nameStringRes = R.string.module_vflow_system_get_clipboard_name,
+        descriptionStringRes = R.string.module_vflow_system_get_clipboard_desc,
+        name = "读取剪贴板",  // Fallback
+        description = "获取系统剪贴板的当前内容（文本或图片）",  // Fallback
+        iconRes = R.drawable.rounded_content_paste_24,
         category = "应用与系统"
     )
 
@@ -36,12 +38,22 @@ class GetClipboardModule : BaseModule() {
 
     // 输出文本和图片两种变量
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("text_content", "剪贴板文本", VTypeRegistry.STRING.id),
-        OutputDefinition("image_content", "剪贴板图片", VTypeRegistry.IMAGE.id)
+        OutputDefinition(
+            id = "text_content",
+            name = "剪贴板文本",  // Fallback
+            typeName = VTypeRegistry.STRING.id,
+            nameStringRes = R.string.output_vflow_system_get_clipboard_text_content_name
+        ),
+        OutputDefinition(
+            id = "image_content",
+            name = "剪贴板图片",  // Fallback
+            typeName = VTypeRegistry.IMAGE.id,
+            nameStringRes = R.string.output_vflow_system_get_clipboard_image_content_name
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        return "读取剪贴板内容"
+        return context.getString(R.string.summary_vflow_system_get_clipboard)
     }
 
     /**
@@ -55,7 +67,7 @@ class GetClipboardModule : BaseModule() {
         val outputs = mutableMapOf<String, Any?>()
 
         if (!clipboard.hasPrimaryClip()) {
-            onProgress(ProgressUpdate("剪贴板为空"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_get_clipboard_empty)))
             outputs["text_content"] = VString("")
             return ExecutionResult.Success(outputs)
         }
@@ -67,7 +79,8 @@ class GetClipboardModule : BaseModule() {
             if (clipData.description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
                 val text = item.text?.toString() ?: ""
                 outputs["text_content"] = VString(text)
-                onProgress(ProgressUpdate("已读取剪贴板文本内容"))
+
+                onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_get_clipboard_text_read)))
             }
 
             // 检查URI（可能是图片）
@@ -83,9 +96,10 @@ class GetClipboardModule : BaseModule() {
                             }
                         }
                         outputs["image_content"] = VImage(tempFile.toURI().toString())
-                        onProgress(ProgressUpdate("已读取剪贴板图片内容"))
+
+                        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_get_clipboard_image_read)))
                     } catch (e: Exception) {
-                        onProgress(ProgressUpdate("读取剪贴板图片失败: ${e.message}"))
+                        onProgress(ProgressUpdate(String.format(appContext.getString(R.string.msg_vflow_system_get_clipboard_image_failed), e.message ?: "")))
                     }
                 }
             }

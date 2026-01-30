@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
-        android:text="AI 辅助生成"
+        android:text="@string/text_ai_assisted_generation"
         android:textAppearance="?attr/textAppearanceHeadlineSmall"
         android:textStyle="bold" />
 
@@ -23,7 +23,7 @@
         android:layout_marginTop="4dp"
         android:paddingHorizontal="16dp"
         android:paddingBottom="8dp"
-        android:text="描述您的需求，AI 将自动为您构建工作流。"
+        android:text="@string/text_describe_requirements"
         android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -43,7 +43,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
-                android:hint="我想...">
+                android:hint="@string/hint_ai_prompt">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_requirement"
@@ -89,7 +89,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:layout_weight="1"
-                            android:text="模型配置"
+                            android:text="@string/label_model_config"
                             android:textAppearance="?attr/textAppearanceLabelLarge" />
 
                         <ImageView
@@ -118,19 +118,19 @@
                                 style="@style/Widget.Material3.Chip.Filter"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="智谱" />
+                                android:text="@string/text_zhipu" />
                             <com.google.android.material.chip.Chip
                                 android:id="@+id/chip_dashscope"
                                 style="@style/Widget.Material3.Chip.Filter"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="阿里云" />
+                                android:text="@string/text_alibaba_cloud" />
                             <com.google.android.material.chip.Chip
                                 android:id="@+id/chip_custom"
                                 style="@style/Widget.Material3.Chip.Filter"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="自定义" />
+                                android:text="@string/text_custom" />
                         </com.google.android.material.chip.ChipGroup>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -149,7 +149,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:hint="模型名称">
+                            android:hint="@string/hint_model_name">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/et_model"
                                 android:layout_width="match_parent"
@@ -182,7 +182,7 @@
                     style="@style/Widget.Material3.Button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="生成工作流" />
+                    android:text="@string/label_generate_workflow" />
             </LinearLayout>
 
         </LinearLayout>

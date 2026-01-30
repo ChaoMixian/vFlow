@@ -21,12 +21,15 @@ import kotlinx.coroutines.delay
 class DelayModule : BaseModule() {
     // 模块的唯一ID
     override val id = "vflow.device.delay"
-    // 模块的元数据，用于在UI中展示
+
+    // 模块的元数据
     override val metadata = ActionMetadata(
-        name = "延迟",
-        description = "暂停工作流一段时间",
-        iconRes = R.drawable.rounded_avg_time_24, // 使用一个与时间相关的图标
-        category = "应用与系统" // 更新分类
+        nameStringRes = R.string.module_vflow_device_delay_name,
+        descriptionStringRes = R.string.module_vflow_device_delay_desc,
+        name = "延迟",                      // Fallback
+        description = "暂停工作流一段时间", // Fallback
+        iconRes = R.drawable.rounded_avg_time_24,
+        category = "应用与系统"
     )
 
     /**
@@ -35,11 +38,12 @@ class DelayModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "duration",
-            name = "延迟时间", // 用户需要设置的延迟毫秒数
-            staticType = ParameterType.NUMBER, // 参数类型为数字
-            defaultValue = 1000L, // 默认延迟1000毫秒（1秒）
-            acceptsMagicVariable = true, // 允许使用魔法变量指定延迟时间
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id) // 接受数字类型的魔法变量
+            name = "延迟时间",  // Fallback
+            staticType = ParameterType.NUMBER,
+            defaultValue = 1000L,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
+            nameStringRes = R.string.param_vflow_device_delay_duration_name
         )
     )
 
@@ -47,12 +51,17 @@ class DelayModule : BaseModule() {
      * 定义模块的输出参数。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id) // 输出一个布尔值表示延迟是否成功完成
+        OutputDefinition(
+            id = "success",
+            name = "是否成功",  // Fallback
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_device_delay_success_name
+        )
     )
 
     /**
      * 生成在工作流编辑器中显示模块摘要的文本。
-     * 例如：“延迟 [1000] 毫秒”
+     * 例如："延迟 [1000] 毫秒"
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
@@ -61,11 +70,13 @@ class DelayModule : BaseModule() {
             inputs.find { it.id == "duration" }
         )
 
+        val summaryPrefix = context.getString(R.string.summary_vflow_device_delay_prefix)
+        val summarySuffix = context.getString(R.string.summary_vflow_device_delay_suffix)
         return PillUtil.buildSpannable(
             context,
-            "延迟 ",
+            "$summaryPrefix ",
             durationPill,
-            " 毫秒"
+            " $summarySuffix"
         )
     }
 
@@ -81,19 +92,28 @@ class DelayModule : BaseModule() {
                 // 如果不是魔法变量，尝试转换为长整型并检查是否为负
                 if (!duration.isMagicVariable()) {
                     if (duration.toLong() < 0) {
-                        return ValidationResult(false, "延迟时间不能为负数")
+                        return ValidationResult(
+                            false,
+                            appContext.getString(R.string.error_vflow_device_delay_negative_validation)
+                        )
                     }
                 }
             } catch (e: Exception) {
                 // 如果转换失败且不是魔法变量，则格式无效
                 if (!duration.isMagicVariable()) {
-                    return ValidationResult(false, "无效的数字格式")
+                    return ValidationResult(
+                        false,
+                        appContext.getString(R.string.error_vflow_device_delay_invalid_format)
+                    )
                 }
             }
-        } else if (duration is Number && duration.toLong() < 0) { // 如果参数直接是数字类型，检查是否为负
-            return ValidationResult(false, "延迟时间不能为负数")
+        } else if (duration is Number && duration.toLong() < 0) {
+            return ValidationResult(
+                false,
+                appContext.getString(R.string.error_vflow_device_delay_negative_validation)
+            )
         }
-        return ValidationResult(true) // 默认有效
+        return ValidationResult(true)
     }
 
     /**
@@ -116,12 +136,15 @@ class DelayModule : BaseModule() {
 
         // 检查延迟时间是否为负
         if (duration < 0) {
-            return ExecutionResult.Failure("参数错误", "延迟时间不能为负数: $duration ms")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_device_delay_parameter_error),
+                appContext.getString(R.string.error_vflow_device_delay_negative)
+            )
         }
 
         // 如果延迟时间大于0，则执行实际的协程延迟
         if (duration > 0) {
-            onProgress(ProgressUpdate("正在延迟 ${duration}ms..."))
+            onProgress(ProgressUpdate(String.format(appContext.getString(R.string.msg_vflow_device_delay_delaying), duration)))
             delay(duration)
         }
         // 返回成功结果
