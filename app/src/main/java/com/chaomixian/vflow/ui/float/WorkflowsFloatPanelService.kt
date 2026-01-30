@@ -7,11 +7,16 @@ import android.app.Service
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -46,6 +51,7 @@ class WorkflowsFloatPanelService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var windowManager: WindowManager
     private var floatView: View? = null
+    private var collapsedView: View? = null
     private lateinit var workflowManager: WorkflowManager
     private lateinit var adapter: WorkflowFloatPanelAdapter
     private var favoriteWorkflows = mutableListOf<Workflow>()
@@ -56,9 +62,22 @@ class WorkflowsFloatPanelService : Service() {
     private var initialTouchX = 0f
     private var initialTouchY = 0f
 
+    // 自动收缩相关
+    private var isCollapsed = false
+    private var isAutoCollapsing = true // 是否启用自动收缩
+    private val autoCollapseDelay = 3000L // 3秒
+    private val idleTimer = Handler(Looper.getMainLooper())
+    private var isUserInteracting = false
+    private var screenWidth = 0
+    private var params: WindowManager.LayoutParams? = null
+    private var collapsedParams: WindowManager.LayoutParams? = null
+    private var isFirstPositionUpdate = true
+
     companion object {
         const val ACTION_SHOW = "com.chaomixian.vflow.ACTION_SHOW_FLOAT_PANEL"
         const val ACTION_HIDE = "com.chaomixian.vflow.ACTION_HIDE_FLOAT_PANEL"
+        private const val COLLAPSED_WIDTH = 8 // dp
+        private const val COLLAPSED_HEIGHT = 80 // dp
     }
 
     override fun onCreate() {
@@ -83,6 +102,10 @@ class WorkflowsFloatPanelService : Service() {
     private fun showFloatWindow() {
         if (floatView != null) return // 已经显示
 
+        // 获取屏幕宽度
+        val displayMetrics = resources.displayMetrics
+        screenWidth = displayMetrics.widthPixels
+
         // 创建带主题的 Context（根据用户设置选择动态取色或默认主题）
         val themedContext = ThemeUtils.createThemedContext(this)
 
@@ -90,7 +113,7 @@ class WorkflowsFloatPanelService : Service() {
         floatView = LayoutInflater.from(themedContext).inflate(R.layout.workflows_float_panel, null)
 
         // 设置窗口参数
-        val params = WindowManager.LayoutParams(
+        params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -103,12 +126,12 @@ class WorkflowsFloatPanelService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 100
-            y = 200
+            x = (100 * displayMetrics.density).toInt()
+            y = (200 * displayMetrics.density).toInt()
         }
 
         // 设置拖拽
-        setupDragBehavior(floatView!!, params)
+        setupDragBehavior(floatView!!, params!!)
 
         // 设置关闭按钮
         floatView?.findViewById<MaterialButton>(R.id.btn_close)?.setOnClickListener {
@@ -139,16 +162,185 @@ class WorkflowsFloatPanelService : Service() {
 
         // 订阅执行状态更新
         observeExecutionState()
+
+        // 启动自动收缩计时器
+        startAutoCollapseTimer()
+
+        // 监听位置变化（用于边缘吸附和自动收缩）
+        observeViewPosition()
+    }
+
+    /**
+     * 创建收缩后的侧边栏视图
+     */
+    private fun createCollapsedView(): View {
+        val themedContext = ThemeUtils.createThemedContext(this)
+        val collapsedView = LayoutInflater.from(themedContext).inflate(R.layout.workflows_float_panel_collapsed, null)
+
+        // 设置点击展开
+        collapsedView.setOnClickListener {
+            expandFromCollapsed()
+        }
+
+        // 设置悬停展开
+        collapsedView.setOnHoverListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_HOVER_ENTER -> {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    expandFromCollapsed()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        return collapsedView
+    }
+
+    /**
+     * 收缩为侧边栏
+     */
+    private fun collapseToSidebar() {
+        val currentParams = params ?: return
+        if (isCollapsed) return
+
+        // 获取当前视图的测量宽度和Y位置
+        floatView?.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val panelWidth = floatView?.measuredWidth ?: (200 * resources.displayMetrics.density).toInt()
+        val currentY = currentParams.y
+
+        // 计算贴边位置（左边贴边或右边贴边）
+        val displayMetrics = resources.displayMetrics
+        val collapsedWidthPx = (COLLAPSED_WIDTH * displayMetrics.density).toInt()
+        val collapsedHeightPx = (COLLAPSED_HEIGHT * displayMetrics.density).toInt()
+
+        // 判断应该贴哪边
+        val attachToRight = currentParams.x > screenWidth / 2
+
+        // 创建侧边栏窗口参数
+        collapsedParams = WindowManager.LayoutParams(
+            collapsedWidthPx,
+            collapsedHeightPx,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or if (attachToRight) Gravity.END else Gravity.START
+            x = 0
+            y = currentY
+        }
+
+        // 创建侧边栏视图
+        collapsedView = createCollapsedView()
+
+        // 先添加侧边栏
+        windowManager.addView(collapsedView, collapsedParams)
+
+        // 移除展开的视图
+        windowManager.removeView(floatView)
+
+        isCollapsed = true
+        idleTimer.removeCallbacksAndMessages(null)
+    }
+
+    /**
+     * 从侧边栏展开
+     */
+    private fun expandFromCollapsed() {
+        if (!isCollapsed) return
+        isCollapsed = false
+
+        // 移除侧边栏
+        collapsedView?.let {
+            windowManager.removeView(it)
+            collapsedView = null
+        }
+
+        // 恢复展开视图的位置
+        val displayMetrics = resources.displayMetrics
+        params?.apply {
+            x = (100 * displayMetrics.density).toInt()
+            y = (200 * displayMetrics.density).toInt()
+        }
+
+        // 重新添加展开视图
+        windowManager.addView(floatView, params)
+
+        // 重新启动自动收缩计时器
+        startAutoCollapseTimer()
+    }
+
+    /**
+     * 启动自动收缩计时器
+     */
+    private fun startAutoCollapseTimer() {
+        if (!isAutoCollapsing) return
+        // 只有贴边时才启动自动收缩计时器
+        if (!isDocked()) return
+        idleTimer.removeCallbacksAndMessages(null)
+        idleTimer.postDelayed({
+            if (!isUserInteracting && !isCollapsed && isDocked()) {
+                collapseToSidebar()
+            }
+        }, autoCollapseDelay)
+    }
+
+    /**
+     * 检查是否贴边（左侧贴左边缘或右侧贴右边缘）
+     */
+    private fun isDocked(): Boolean {
+        val currentParams = params ?: return false
+        floatView?.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val panelWidth = floatView?.measuredWidth ?: (200 * resources.displayMetrics.density).toInt()
+        val edgeThreshold = (16 * resources.displayMetrics.density).toInt() // 16dp容差
+
+        val dockedToLeft = currentParams.x <= edgeThreshold
+        val dockedToRight = currentParams.x >= screenWidth - panelWidth - edgeThreshold
+        return dockedToLeft || dockedToRight
+    }
+
+    /**
+     * 监听视图位置变化
+     */
+    private fun observeViewPosition() {
+        val view = floatView ?: return
+
+        view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                if (isFirstPositionUpdate && !isCollapsed) {
+                    isFirstPositionUpdate = false
+                    // 初始位置检查，贴边时启动5秒后自动收缩
+                    startAutoCollapseTimer()
+                }
+            }
+        })
     }
 
     /**
      * 隐藏悬浮窗
      */
     private fun hideFloatWindow() {
+        // 清除计时器
+        idleTimer.removeCallbacksAndMessages(null)
+
+        // 移除展开视图
         floatView?.let {
             windowManager.removeView(it)
             floatView = null
         }
+
+        // 移除侧边栏视图
+        collapsedView?.let {
+            windowManager.removeView(it)
+            collapsedView = null
+        }
+
+        isCollapsed = false
         stopSelf()
     }
 
@@ -187,7 +379,7 @@ class WorkflowsFloatPanelService : Service() {
         val dragHandle = view.findViewById<LinearLayout>(R.id.drag_handle)
         val dragIndicator = view.findViewById<ImageView>(R.id.drag_indicator)
 
-        dragIndicator.setOnTouchListener(object : View.OnTouchListener {
+        val touchListener = object : View.OnTouchListener {
             override fun onTouch(v: View?, event: MotionEvent?): Boolean {
                 when (event?.action) {
                     MotionEvent.ACTION_DOWN -> {
@@ -195,6 +387,8 @@ class WorkflowsFloatPanelService : Service() {
                         initialY = params.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
+                        isUserInteracting = true
+                        idleTimer.removeCallbacksAndMessages(null)
                         return true
                     }
                     MotionEvent.ACTION_MOVE -> {
@@ -203,32 +397,43 @@ class WorkflowsFloatPanelService : Service() {
                         windowManager.updateViewLayout(view, params)
                         return true
                     }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        isUserInteracting = false
+                        // 边缘吸附
+                        snapToEdge(params, view)
+                        // 重新启动计时器
+                        startAutoCollapseTimer()
+                        return true
+                    }
                     else -> return false
                 }
             }
-        })
+        }
 
-        // 整个标题栏也可以拖拽
-        dragHandle.setOnTouchListener(object : View.OnTouchListener {
-            override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-                when (event?.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        initialX = params.x
-                        initialY = params.y
-                        initialTouchX = event.rawX
-                        initialTouchY = event.rawY
-                        return true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        params.x = initialX + (event.rawX - initialTouchX).toInt()
-                        params.y = initialY + (event.rawY - initialTouchY).toInt()
-                        windowManager.updateViewLayout(view, params)
-                        return true
-                    }
-                    else -> return false
-                }
-            }
-        })
+        dragIndicator.setOnTouchListener(touchListener)
+        dragHandle.setOnTouchListener(touchListener)
+    }
+
+    /**
+     * 边缘吸附
+     */
+    private fun snapToEdge(params: WindowManager.LayoutParams, view: View) {
+        val displayMetrics = resources.displayMetrics
+        val halfScreen = screenWidth / 2
+        val panelWidth = view.measuredWidth
+
+        // 判断贴左边还是右边
+        val targetX = if (params.x < halfScreen) {
+            0 // 贴左边
+        } else {
+            screenWidth - panelWidth // 贴右边
+        }
+
+        // 如果已经接近边缘，不需要移动
+        if (Math.abs(params.x - targetX) < 50 * displayMetrics.density) {
+            params.x = targetX
+            windowManager.updateViewLayout(view, params)
+        }
     }
 
     /**

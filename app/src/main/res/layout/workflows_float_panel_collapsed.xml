@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 收缩后的竖条 (半透明) -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/collapsed_panel"
+    android:layout_width="8dp"
+    android:layout_height="80dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="#66FFFFFF"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    app:strokeWidth="0dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66FFFFFF"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <!-- 展开图标 -->
+<!--        <ImageView-->
+<!--            android:id="@+id/iv_expand_icon"-->
+<!--            android:layout_width="8dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:adjustViewBounds="true"-->
+<!--            android:contentDescription="@string/content_desc_expand_panel"-->
+<!--            android:rotation="0"-->
+<!--            android:src="@drawable/rounded_drag_indicator_24"-->
+<!--            app:tint="?attr/colorOnSurfaceVariant"-->
+<!--            tools:ignore="ContentDescription" />-->
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
