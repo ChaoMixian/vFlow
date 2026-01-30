@@ -104,10 +104,10 @@ class OCRModule : BaseModule() {
         // 获取参数
         val imageVar = context.magicVariables["image"] as? VImage
             ?: return ExecutionResult.Failure("参数错误", "请提供一张有效的图片。")
-        val mode = context.variables["mode"] as? String ?: "识别全文"
-        val language = context.variables["language"] as? String ?: "中英混合"
-        val strategy = context.variables["search_strategy"] as? String ?: "默认 (从上到下)"
-        val rawTargetText = context.variables["target_text"]?.toString() ?: ""
+        val mode = context.getVariableAsString("mode", "识别全文")
+        val language = context.getVariableAsString("language", "中英混合")
+        val strategy = context.getVariableAsString("search_strategy", "默认 (从上到下)")
+        val rawTargetText = context.getVariableAsString("target_text", "")
         val targetText = VariableResolver.resolve(rawTargetText, context)
 
         // 获取识别区域参数（支持多种输入方式）
@@ -264,7 +264,7 @@ class OCRModule : BaseModule() {
         if (magicRegion != null) return magicRegion
 
         // 尝试从 variables 获取字符串（可能是变量引用或手动输入）
-        val rawRegion = context.variables["region"]?.toString()
+        val rawRegion = context.getVariableAsString("region", "")
         if (rawRegion.isNullOrBlank()) return null
 
         // 如果是变量引用，解析变量

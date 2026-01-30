@@ -98,6 +98,42 @@ data class ExecutionContext(
     }
 
     /**
+     * 获取变量值的原始类型值，自动解包 VObject。
+     *
+     * 适用于需要原始值而不是 VObject 包装的场景：
+     * - VString -> String (raw)
+     * - VNumber -> Double/Int
+     * - VBoolean -> Boolean
+     * - 其他 VObject -> asString()
+     *
+     * @param key 变量名
+     * @return 原始类型的值，如果变量不存在则返回 null
+     */
+    fun getVariableAsRaw(key: String): Any? {
+        val value = getVariable(key)
+        return when (value) {
+            is VObject -> value.raw
+            else -> value
+        }
+    }
+
+    /**
+     * 获取变量值作为原始字符串（解包 VString）。
+     *
+     * @param key 变量名
+     * @param defaultValue 默认值
+     * @return 原始字符串值
+     */
+    fun getVariableAsRawString(key: String, defaultValue: String = ""): String {
+        val value = getVariable(key)
+        return when (value) {
+            is VObject -> value.raw as? String ?: value.asString()
+            null -> defaultValue
+            else -> value.toString()
+        }
+    }
+
+    /**
      * 获取步骤输出的 VObject
      *
      * @param stepId 步骤ID

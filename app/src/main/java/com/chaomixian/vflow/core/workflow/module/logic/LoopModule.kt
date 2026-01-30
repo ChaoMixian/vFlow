@@ -88,7 +88,7 @@ class LoopModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val countVar = context.magicVariables["count"] ?: context.variables["count"]
+        val countVar = context.getVariable("count")
         val actualCount = when (countVar) {
             is VNumber -> countVar.raw.toLong()
             is Number -> countVar.toLong()

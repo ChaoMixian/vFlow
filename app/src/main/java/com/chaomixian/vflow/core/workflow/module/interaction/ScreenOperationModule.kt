@@ -96,22 +96,22 @@ class ScreenOperationModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val opType = context.variables["operation_type"] as? String ?: "点击"
-        val mode = context.variables["execution_mode"] as? String ?: "自动"
+        val opType = context.getVariableAsString("operation_type", "点击")
+        val mode = context.getVariableAsString("execution_mode", "自动")
 
-        val durationVal = context.magicVariables["duration"] ?: context.variables["duration"]
+        val durationVal = context.getVariable("duration")
         val duration = (durationVal as? Number)?.toLong() ?:
         (durationVal as? String)?.toLongOrNull() ?:
         (if (opType == "长按") 1000L else if (opType == "滑动") 500L else 50L)
 
         // 1. 解析坐标
-        val targetObj = context.magicVariables["target"] ?: context.variables["target"]
+        val targetObj = context.getVariable("target")
         val startPoint = resolveTargetToPoint(context, targetObj)
             ?: return ExecutionResult.Failure("无效目标", "无法解析起点位置: $targetObj")
 
         var endPoint: Point? = null
         if (opType == "滑动") {
-            val endObj = context.magicVariables["target_end"] ?: context.variables["target_end"]
+            val endObj = context.getVariable("target_end")
             endPoint = resolveTargetToPoint(context, endObj)
                 ?: return ExecutionResult.Failure("无效目标", "无法解析终点位置: $endObj")
         }

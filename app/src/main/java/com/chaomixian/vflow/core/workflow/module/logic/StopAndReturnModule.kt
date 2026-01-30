@@ -47,7 +47,7 @@ class StopAndReturnModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         onProgress(ProgressUpdate("准备返回值..."))
-        val returnValue = context.magicVariables["value"] ?: context.variables["value"]
+        val returnValue = context.getVariable("value")
         return ExecutionResult.Signal(ExecutionSignal.Return(returnValue))
     }
 }

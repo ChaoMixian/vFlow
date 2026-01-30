@@ -98,8 +98,8 @@ class CoreShellCommandModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val modeStr = context.variables["mode"] as? String ?: "自动"
-        val rawCommand = context.variables["command"]?.toString() ?: ""
+        val modeStr = context.getVariableAsString("mode", "自动")
+        val rawCommand = context.getVariableAsString("command", "")
         val command = VariableResolver.resolve(rawCommand, context)
 
         if (command.isBlank()) {

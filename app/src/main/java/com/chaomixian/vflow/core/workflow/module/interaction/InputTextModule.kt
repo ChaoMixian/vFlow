@@ -127,12 +127,12 @@ class InputTextModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val rawText = context.variables["text"]?.toString() ?: ""
+        val rawText = context.getVariableAsString("text", "")
         val text = VariableResolver.resolve(rawText, context)
         val autoMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_auto)
         val a11yMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_a11y)
         val shellMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_shell)
-        val mode = context.variables["mode"] as? String ?: autoMode
+        val mode = context.getVariableAsString("mode", autoMode)
 
         if (text.isEmpty()) {
             return ExecutionResult.Failure(

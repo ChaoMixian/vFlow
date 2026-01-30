@@ -72,7 +72,7 @@ class GetAppUsageStatsModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val intervalStr = context.variables["interval"] as? String ?: "今天"
+        val intervalStr = context.getVariableAsString("interval", "今天")
         val maxResults = ((context.magicVariables["max_results"] as? VNumber)?.raw
             ?: (context.variables["max_results"] as? Number)?.toDouble()
             ?: 10.0).toInt()

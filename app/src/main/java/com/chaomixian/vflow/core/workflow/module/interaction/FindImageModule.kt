@@ -111,12 +111,12 @@ class FindImageModule : BaseModule() {
     ): ExecutionResult {
         val appContext = context.applicationContext
 
-        val templateUri = context.variables["template_uri"] as? String
+        val templateUri = context.getVariableAsString("template_uri", "")
         if (templateUri.isNullOrEmpty()) {
             return ExecutionResult.Failure("参数错误", "请先设置模板图片。")
         }
 
-        val thresholdStr = context.variables["threshold"] as? String ?: "80% (推荐)"
+        val thresholdStr = context.getVariableAsString("threshold", "80% (推荐)")
         // 将用户阈值转换为内部阈值（允许的最大差异百分比）
         val maxDiffPercent = when {
             thresholdStr.startsWith("90") -> 0.10  // 90%相似 = 最多10%差异

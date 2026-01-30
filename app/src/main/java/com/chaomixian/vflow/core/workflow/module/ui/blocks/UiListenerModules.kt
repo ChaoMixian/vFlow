@@ -152,7 +152,7 @@ class UpdateUiComponentModule : BaseModule() {
         val targetId = when (val obj = context.magicVariables["target_id"]) {
             is com.chaomixian.vflow.core.types.basic.VString -> obj.raw
             is com.chaomixian.vflow.core.types.complex.VUiComponent -> obj.getId()
-            else -> context.variables["target_id"]?.toString() ?: ""
+            else -> context.getVariableAsRawString("target_id")
         }
 
         // 验证 targetId 不为空
@@ -163,10 +163,10 @@ class UpdateUiComponentModule : BaseModule() {
         val payload = mutableMapOf<String, Any?>()
 
         // 解析 text 参数（支持魔法变量、命名变量和组件属性）
-        // 使用 getVariable 自动从 magicVariables 和 variables 中查找
-        val rawText = context.getVariable("text")?.toString()
+        // 使用 getVariableAsRawString 自动处理 VString 解包
+        val rawText = context.getVariableAsRawString("text")
         if (!rawText.isNullOrEmpty()) {
-            // getVariable 已经解析过魔法变量了，但如果返回的还是魔法变量引用，再次解析
+            // getVariableAsRawString 已经解析过魔法变量了，但如果返回的还是魔法变量引用，再次解析
             val resolvedText = if (com.chaomixian.vflow.core.execution.VariableResolver.hasVariableReference(rawText)) {
                 com.chaomixian.vflow.core.execution.VariableResolver.resolve(rawText, context)
             } else {
@@ -176,7 +176,7 @@ class UpdateUiComponentModule : BaseModule() {
         }
 
         // 解析可见性参数
-        val visible = context.variables["visible"] as? String
+        val visible = context.getVariableAsString("visible", "")
         if (visible == "显示") payload["visible"] = true
         else if (visible == "隐藏") payload["visible"] = false
 
@@ -196,7 +196,7 @@ class UpdateUiComponentModule : BaseModule() {
             payload["textSize"] = textSize.toFloat()
         }
 
-        val background = context.variables["background"]?.toString()
+        val background = context.getVariableAsRawString("background")
         if (!background.isNullOrEmpty()) {
             payload["background"] = background
         }
@@ -260,7 +260,7 @@ class GetComponentValueModule : BaseModule() {
         val componentId = when (val obj = context.magicVariables["component_id"]) {
             is com.chaomixian.vflow.core.types.basic.VString -> obj.raw
             is com.chaomixian.vflow.core.types.complex.VUiComponent -> obj.getId()
-            else -> context.variables["component_id"]?.toString() ?: ""
+            else -> context.getVariableAsRawString("component_id")
         }
 
         // 创建 VUiComponent 对象

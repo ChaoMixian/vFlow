@@ -56,7 +56,7 @@ class GetVariableModule : BaseModule() {
         val variableValue = context.magicVariables["source"]
 
         if (variableValue == null) {
-            val sourceRef = context.variables["source"] as? String ?: "未知"
+            val sourceRef = context.getVariableAsString("source", "未知")
             return ExecutionResult.Failure(
                 appContext.getString(R.string.error_vflow_variable_get_not_exist),
                 "找不到变量 '$sourceRef' 的值"

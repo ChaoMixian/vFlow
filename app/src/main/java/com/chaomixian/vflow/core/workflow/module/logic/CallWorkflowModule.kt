@@ -54,7 +54,7 @@ class CallWorkflowModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val workflowId = context.variables["workflow_id"] as? String
+        val workflowId = context.getVariableAsString("workflow_id", "")
             ?: return ExecutionResult.Failure("参数错误", "未选择要调用的工作流。")
 
         val workflowToCall = WorkflowManager(context.applicationContext).getWorkflow(workflowId)

@@ -154,14 +154,14 @@ class RandomVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = context.variables["type"] as? String ?: typeOptions[0]
-        val varName = context.variables["variableName"]?.toString()
+        val type = context.getVariableAsString("type", typeOptions[0])
+        val varName = context.getVariableAsString("variableName", "")
 
         val resultVariable: Parcelable = when (type) {
             typeOptions[0] -> { // 数字
-                val min = context.variables["min"]?.toString()?.toDoubleOrNull() ?: 0.0
-                val max = context.variables["max"]?.toString()?.toDoubleOrNull() ?: 100.0
-                val step = context.variables["step"]?.toString()?.toDoubleOrNull() ?: 1.0
+                val min = context.getVariableAsString("min", "0").toDoubleOrNull() ?: 0.0
+                val max = context.getVariableAsString("max", "100").toDoubleOrNull() ?: 100.0
+                val step = context.getVariableAsString("step", "1").toDoubleOrNull() ?: 1.0
 
                 if (min > max) {
                     val title = appContext.getString(R.string.error_vflow_variable_random_param_error)
@@ -191,8 +191,8 @@ class RandomVariableModule : BaseModule() {
                 }
             }
             typeOptions[1] -> { // 文本
-                val length = context.variables["length"]?.toString()?.toDoubleOrNull()?.toInt() ?: 8
-                val customChars = context.variables["custom_chars"]?.toString()
+                val length = context.getVariableAsString("length", "8").toDoubleOrNull()?.toInt() ?: 8
+                val customChars = context.getVariableAsString("custom_chars", "")
 
                 val charPool = if (customChars.isNullOrEmpty()) {
                     (('a'..'z') + ('A'..'Z') + ('0'..'9')).toList()

@@ -82,12 +82,12 @@ class AIModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         // 获取并解析参数
-        val baseUrl = context.variables["base_url"] as? String ?: "https://api.openai.com/v1"
-        val apiKey = context.variables["api_key"] as? String ?: ""
-        val model = context.variables["model"] as? String ?: "gpt-3.5-turbo"
-        val rawPrompt = context.variables["prompt"] as? String ?: ""
+        val baseUrl = context.getVariableAsString("base_url", "https://api.openai.com/v1")
+        val apiKey = context.getVariableAsString("api_key", "")
+        val model = context.getVariableAsString("model", "gpt-3.5-turbo")
+        val rawPrompt = context.getVariableAsString("prompt", "")
         val prompt = VariableResolver.resolve(rawPrompt, context)
-        val systemPrompt = context.variables["system_prompt"] as? String ?: "You are a helpful assistant."
+        val systemPrompt = context.getVariableAsString("system_prompt", "You are a helpful assistant.")
         val temperature = (context.variables["temperature"] as? Number)?.toDouble() ?: 0.7
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")

@@ -67,7 +67,7 @@ class BluetoothModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val appContext = context.applicationContext
-        val state = context.variables["state"] as? String ?: "切换"
+        val state = context.getVariableAsString("state", "切换")
 
         val bluetoothManager = appContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter

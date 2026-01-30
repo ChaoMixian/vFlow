@@ -108,7 +108,7 @@ class HttpRequestModule : BaseModule() {
         return withContext(Dispatchers.IO) {
             try {
                 // 使用 VariableResolver 解析 URL
-                val rawUrl = context.variables["url"]?.toString() ?: ""
+                val rawUrl = context.getVariableAsString("url", "")
                 var urlString = VariableResolver.resolve(rawUrl, context)
 
                 if (urlString.isEmpty()) return@withContext ExecutionResult.Failure("参数错误", "URL不能为空")
@@ -117,25 +117,25 @@ class HttpRequestModule : BaseModule() {
                     urlString = "https://$urlString"
                 }
 
-                val method = context.variables["method"] as? String ?: "GET"
+                val method = context.getVariableAsString("method", "GET")
 
                 // 解析 Headers (支持变量)
                 @Suppress("UNCHECKED_CAST")
                 val rawHeaders = (context.magicVariables["headers"] as? VDictionary)?.raw
-                    ?: (context.variables["headers"] as? Map<String, Any?>)
+                    ?: (context.getVariable("headers") as? Map<String, Any?>)
                     ?: emptyMap()
                 val headers = resolveMap(rawHeaders, context)
 
                 // 解析 Query Params (支持变量)
                 @Suppress("UNCHECKED_CAST")
                 val rawQueryParams = (context.magicVariables["query_params"] as? VDictionary)?.raw
-                    ?: (context.variables["query_params"] as? Map<String, Any?>)
+                    ?: (context.getVariable("query_params") as? Map<String, Any?>)
                     ?: emptyMap()
                 val queryParams = resolveMap(rawQueryParams, context)
 
                 // 解析 Body
-                val bodyType = context.variables["body_type"] as? String ?: "无"
-                val bodyDataRaw = context.variables["body"]
+                val bodyType = context.getVariableAsString("body_type", "无")
+                val bodyDataRaw = context.getVariable("body")
 
                 val bodyData: Any? = when (bodyType) {
                     "原始文本" -> {

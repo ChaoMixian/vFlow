@@ -159,7 +159,7 @@ class ShowActivityModule : BaseModule() {
             val elements = context.namedVariables[KEY_UI_ELEMENTS_LIST] as? List<UiElement>
                 ?: return ExecutionResult.Failure("配置错误", appContext.getString(R.string.error_vflow_ui_empty_list))
 
-            val title = VariableResolver.resolve(context.variables["title"]?.toString() ?: "界面", context)
+            val title = VariableResolver.resolve(context.getVariableAsString("title", "界面"), context)
 
             onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_starting)))
 

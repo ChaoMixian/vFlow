@@ -68,7 +68,7 @@ class JumpModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val indexValue = context.magicVariables["target_step_index"] ?: context.variables["target_step_index"]
+        val indexValue = context.getVariable("target_step_index")
         val targetIndex = (indexValue as? Number)?.toInt() ?: 0
 
         if (targetIndex < 0 || targetIndex >= context.allSteps.size) {

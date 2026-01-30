@@ -190,7 +190,7 @@ class OperitModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.variables["mode"] as? String ?: "发送消息"
+        val mode = context.getVariableAsString("mode", "发送消息")
 
         return when (mode) {
             "发送消息" -> executeExternalChat(context, onProgress)
@@ -209,7 +209,7 @@ class OperitModule : BaseModule() {
         val appContext = execContext.applicationContext
 
         // 解析参数
-        val rawMessage = execContext.variables["message"]?.toString() ?: ""
+        val rawMessage = execContext.getVariableAsString("message", "")
         val message = VariableResolver.resolve(rawMessage, execContext)
 
         if (message.isBlank()) {
@@ -217,16 +217,16 @@ class OperitModule : BaseModule() {
         }
 
         val requestId = VariableResolver.resolve(
-            execContext.variables["request_id"]?.toString() ?: "",
+            execContext.getVariableAsString("request_id", ""),
             execContext
         )
         val createNewChat = execContext.variables["create_new_chat"] as? Boolean ?: false
         val group = VariableResolver.resolve(
-            execContext.variables["group"]?.toString() ?: "",
+            execContext.getVariableAsString("group", ""),
             execContext
         )
         val chatId = VariableResolver.resolve(
-            execContext.variables["chat_id"]?.toString() ?: "",
+            execContext.getVariableAsString("chat_id", ""),
             execContext
         )
         val showFloating = execContext.variables["show_floating"] as? Boolean ?: false
@@ -327,12 +327,12 @@ class OperitModule : BaseModule() {
         val appContext = execContext.applicationContext
 
         // 解析参数
-        val rawAction = execContext.variables["workflow_action"]?.toString() ?: ACTION_TRIGGER_WORKFLOW
+        val rawAction = execContext.getVariableAsString("workflow_action", ACTION_TRIGGER_WORKFLOW)
         val workflowAction = VariableResolver.resolve(rawAction, execContext)
 
         @Suppress("UNCHECKED_CAST")
         val extrasMap = (execContext.magicVariables["workflow_extras"] as? VDictionary)?.raw
-            ?: (execContext.variables["workflow_extras"] as? Map<String, Any?>)
+            ?: (execContext.getVariable("workflow_extras") as? Map<String, Any?>)
             ?: emptyMap()
 
         if (workflowAction.isBlank()) {

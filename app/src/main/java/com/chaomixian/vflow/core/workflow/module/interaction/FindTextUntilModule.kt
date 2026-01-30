@@ -83,10 +83,10 @@ class FindTextUntilModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val rawTarget = context.variables["targetText"]?.toString() ?: ""
+        val rawTarget = context.getVariableAsString("targetText", "")
         val targetText = VariableResolver.resolve(rawTarget, context)
-        val matchMode = context.variables["matchMode"] as? String ?: "包含"
-        val searchMode = context.variables["searchMode"] as? String ?: "自动"
+        val matchMode = context.getVariableAsString("matchMode", "包含")
+        val searchMode = context.getVariableAsString("searchMode", "自动")
 
         val timeoutSec = ((context.magicVariables["timeout"] as? VNumber)?.raw
             ?: (context.variables["timeout"] as? Number)?.toDouble() ?: 10.0).toLong()

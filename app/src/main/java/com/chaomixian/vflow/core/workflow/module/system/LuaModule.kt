@@ -70,7 +70,7 @@ class LuaModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val script = context.variables["script"] as? String
+        val script = context.getVariableAsString("script", "")
         if (script.isNullOrBlank()) {
             return ExecutionResult.Failure("脚本错误", "Lua脚本内容不能为空。")
         }

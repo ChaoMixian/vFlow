@@ -131,9 +131,9 @@ class CreateVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = context.variables["type"] as? String ?: "文本"
-        val rawValue = context.magicVariables["value"] ?: context.variables["value"]
-        val variableName = context.variables["variableName"] as? String
+        val type = context.getVariableAsString("type", "文本")
+        val rawValue = context.getVariable("value")
+        val variableName = context.getVariableAsString("variableName", "")
 
         val variable = when (type) {
             "文本" -> {

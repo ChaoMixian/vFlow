@@ -96,8 +96,8 @@ class GetIpAddressModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = context.variables["type"] as? String ?: "本地"
-        val ipVersion = context.variables["ip_version"] as? String ?: "IPv4"
+        val type = context.getVariableAsString("type", "本地")
+        val ipVersion = context.getVariableAsString("ip_version", "IPv4")
         onProgress(ProgressUpdate("正在获取 $type $ipVersion 地址..."))
 
         return try {

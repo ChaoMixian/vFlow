@@ -65,7 +65,10 @@ class AlipayShortcutsModule : BaseShortcutModule() {
     }
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val action = context.variables["action"] as? String ?: return ExecutionResult.Failure("参数错误", "未选择操作")
+        val action = context.getVariableAsString("action", "")
+        if (action.isEmpty()) {
+            return ExecutionResult.Failure("参数错误", "未选择操作")
+        }
         val command = actions[action] ?: return ExecutionResult.Failure("参数错误", "无效的操作")
         return executeCommand(context, command, onProgress)
     }
@@ -100,7 +103,10 @@ class WeChatShortcutsModule : BaseShortcutModule() {
     }
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val action = context.variables["action"] as? String ?: return ExecutionResult.Failure("参数错误", "未选择操作")
+        val action = context.getVariableAsString("action", "")
+        if (action.isEmpty()) {
+            return ExecutionResult.Failure("参数错误", "未选择操作")
+        }
         val command = actions[action] ?: return ExecutionResult.Failure("参数错误", "无效的操作")
         return executeCommand(context, command, onProgress)
     }
@@ -137,7 +143,10 @@ class ColorOSShortcutsModule : BaseShortcutModule() {
     }
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val action = context.variables["action"] as? String ?: return ExecutionResult.Failure("参数错误", "未选择操作")
+        val action = context.getVariableAsString("action", "")
+        if (action.isEmpty()) {
+            return ExecutionResult.Failure("参数错误", "未选择操作")
+        }
         val command = actions[action] ?: return ExecutionResult.Failure("参数错误", "无效的操作")
         return executeCommand(context, command, onProgress)
     }

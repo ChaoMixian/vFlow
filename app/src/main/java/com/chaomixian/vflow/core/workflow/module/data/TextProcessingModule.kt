@@ -130,7 +130,10 @@ class TextProcessingModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val operation = context.variables["operation"] as? String ?: return ExecutionResult.Failure("参数错误", "未指定操作类型")
+        val operation = context.getVariableAsString("operation", "")
+        if (operation.isEmpty()) {
+            return ExecutionResult.Failure("参数错误", "未指定操作类型")
+        }
 
         return when (operation) {
             "拼接" -> executeJoin(context)
@@ -143,12 +146,12 @@ class TextProcessingModule : BaseModule() {
 
     private fun executeJoin(context: ExecutionContext): ExecutionResult {
         // 使用 VariableResolver 解析所有文本参数
-        val prefix = VariableResolver.resolve(context.variables["join_prefix"]?.toString() ?: "", context)
-        val suffix = VariableResolver.resolve(context.variables["join_suffix"]?.toString() ?: "", context)
-        val delimiter = VariableResolver.resolve(context.variables["join_delimiter"]?.toString() ?: ",", context)
+        val prefix = VariableResolver.resolve(context.getVariableAsString("join_prefix", ""), context)
+        val suffix = VariableResolver.resolve(context.getVariableAsString("join_suffix", ""), context)
+        val delimiter = VariableResolver.resolve(context.getVariableAsString("join_delimiter", ","), context)
 
         // 列表变量通常直接引用，使用 resolveValue
-        val rawList = context.variables["join_list"]
+        val rawList = context.getVariable("join_list")
         val listToJoin = if (rawList is String) {
             (VariableResolver.resolveValue(rawList, context) as? VList)?.raw ?: (VariableResolver.resolveValue(rawList, context) as? List<*>)
         } else {
@@ -165,8 +168,8 @@ class TextProcessingModule : BaseModule() {
 
     private fun executeSplit(context: ExecutionContext): ExecutionResult {
         // 统一解析
-        val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
-        val delimiter = VariableResolver.resolve(context.variables["split_delimiter"]?.toString() ?: ",", context)
+        val source = VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
+        val delimiter = VariableResolver.resolve(context.getVariableAsString("split_delimiter", ","), context)
 
         if (source.isEmpty()) {
             return ExecutionResult.Failure("输入错误", "源文本不能为空。")
@@ -178,9 +181,9 @@ class TextProcessingModule : BaseModule() {
 
     private fun executeReplace(context: ExecutionContext): ExecutionResult {
         // 统一解析
-        val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
-        val from = VariableResolver.resolve(context.variables["replace_from"]?.toString() ?: "", context)
-        val to = VariableResolver.resolve(context.variables["replace_to"]?.toString() ?: "", context)
+        val source = VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
+        val from = VariableResolver.resolve(context.getVariableAsString("replace_from", ""), context)
+        val to = VariableResolver.resolve(context.getVariableAsString("replace_to", ""), context)
 
         if (source.isEmpty() || from.isEmpty()) {
             return ExecutionResult.Failure("输入错误", "源文本和查找内容不能为空。")
@@ -192,11 +195,11 @@ class TextProcessingModule : BaseModule() {
 
     private fun executeRegex(context: ExecutionContext): ExecutionResult {
         // 统一解析
-        val source = VariableResolver.resolve(context.variables["source_text"]?.toString() ?: "", context)
-        val patternStr = VariableResolver.resolve(context.variables["regex_pattern"]?.toString() ?: "", context)
+        val source = VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
+        val patternStr = VariableResolver.resolve(context.getVariableAsString("regex_pattern", ""), context)
 
         // 组号通常是数字
-        val groupVar = context.magicVariables["regex_group"] ?: context.variables["regex_group"]
+        val groupVar = context.getVariable("regex_group")
         val group = when(groupVar) {
             is VNumber -> groupVar.raw.toInt()
             is Number -> groupVar.toInt()

@@ -162,10 +162,10 @@ class IfModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val input1 = context.magicVariables["input1"] ?: context.variables["input1"]
-        val operator = context.variables["operator"] as? String ?: OP_EXISTS
-        val value1 = context.magicVariables["value1"] ?: context.variables["value1"]
-        val value2 = context.magicVariables["value2"] ?: context.variables["value2"]
+        val input1 = context.getVariable("input1")
+        val operator = context.getVariableAsString("operator", OP_EXISTS)
+        val value1 = context.getVariable("value1")
+        val value2 = context.getVariable("value2")
 
         val result = ConditionEvaluator.evaluateCondition(input1, operator, value1, value2)
         onProgress(ProgressUpdate("条件判断: $result (操作: $operator)"))

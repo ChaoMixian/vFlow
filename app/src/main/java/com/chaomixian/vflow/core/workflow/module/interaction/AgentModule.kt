@@ -119,12 +119,12 @@ class AgentModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         // 获取参数
-        val baseUrl = context.variables["base_url"] as? String ?: ""
-        val apiKey = context.variables["api_key"] as? String ?: ""
-        val model = context.variables["model"] as? String ?: "glm-4.6v-flash"
-        val instruction = VariableResolver.resolve(context.variables["instruction"]?.toString() ?: "", context)
+        val baseUrl = context.getVariableAsString("base_url", "")
+        val apiKey = context.getVariableAsString("api_key", "")
+        val model = context.getVariableAsString("model", "glm-4.6v-flash")
+        val instruction = VariableResolver.resolve(context.getVariableAsString("instruction", ""), context)
         val maxSteps = (context.variables["max_steps"] as? Number)?.toInt() ?: 15
-        val displayMode = context.variables["display_mode"] as? String ?: "主屏幕"
+        val displayMode = context.getVariableAsString("display_mode", "主屏幕")
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
 

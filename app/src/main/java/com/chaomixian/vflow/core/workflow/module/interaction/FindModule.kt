@@ -152,8 +152,7 @@ class FindTextModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务未运行", "查找文本需要无障碍服务，但该服务当前未运行。")
 
         // 获取目标文本，优先从魔法变量，其次从静态变量
-        val targetText = (context.magicVariables["targetText"] as? VString)?.raw
-            ?: context.variables["targetText"] as? String
+        val targetText = context.getVariableAsRawString("targetText")
 
         // 校验目标文本是否为空
         if (targetText.isNullOrBlank()) {
@@ -164,12 +163,12 @@ class FindTextModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务错误", "无法获取到当前窗口的根节点。")
 
         try {
-            val matchModeStr = context.variables["matchMode"] as? String ?: "完全匹配"
+            val matchModeStr = context.getVariableAsString("matchMode", "完全匹配")
             onProgress(ProgressUpdate("正在以 [${matchModeStr}] 模式查找文本: '$targetText'"))
 
             val nodes = findNodesByText(rootNode, targetText, matchModeStr)
             val count = nodes.size
-            val outputFormat = context.variables["outputFormat"] as? String ?: "元素"
+            val outputFormat = context.getVariableAsString("outputFormat", "元素")
             val outputs = mutableMapOf<String, Any?>()
 
             outputs["count"] = VNumber(count.toDouble())

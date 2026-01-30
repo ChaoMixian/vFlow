@@ -62,7 +62,7 @@ class ModifyVariableModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         // 执行逻辑现在需要解析命名变量的引用格式 "[[...]]"
-        val variableRef = context.variables["variable"] as? String
+        val variableRef = context.getVariableAsString("variable", "")
         if (variableRef.isNullOrBlank() || !variableRef.isNamedVariable()) {
             val title = appContext.getString(R.string.error_vflow_variable_modify_param_error)
             val message = appContext.getString(R.string.error_vflow_variable_modify_invalid)
@@ -79,7 +79,7 @@ class ModifyVariableModule : BaseModule() {
         }
 
         // 新值统一从 magicVariables 中获取
-        val newValue = context.magicVariables["newValue"] ?: context.variables["newValue"]
+        val newValue = context.getVariable("newValue")
         context.namedVariables[variableName] = newValue
         onProgress(ProgressUpdate("已修改变量 '$variableName' 的值"))
         return ExecutionResult.Success()

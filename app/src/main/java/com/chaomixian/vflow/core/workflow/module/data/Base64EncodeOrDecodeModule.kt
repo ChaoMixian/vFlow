@@ -87,8 +87,8 @@ class Base64EncodeOrDecodeModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val operation = context.variables["operation"] as? String ?: "编码"
-        val rawSource = context.variables["source_text"]?.toString() ?: ""
+        val operation = context.getVariableAsString("operation", "编码")
+        val rawSource = context.getVariableAsString("source_text", "")
 
         // 解析可能包含变量药丸的文本
         val source = VariableResolver.resolve(rawSource, context)

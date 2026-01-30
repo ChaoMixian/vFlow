@@ -185,10 +185,10 @@ class WhileModule : BaseBlockModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         // 优先从 magicVariables 中获取已解析的值
-        val input1 = context.magicVariables["input1"] ?: context.variables["input1"]
-        val operator = context.variables["operator"] as? String ?: OP_EXISTS
-        val value1 = context.magicVariables["value1"] ?: context.variables["value1"]
-        val value2 = context.magicVariables["value2"] ?: context.variables["value2"]
+        val input1 = context.getVariable("input1")
+        val operator = context.getVariableAsString("operator", OP_EXISTS)
+        val value1 = context.getVariable("value1")
+        val value2 = context.getVariable("value2")
 
         // 使用 ConditionEvaluator
         val result = ConditionEvaluator.evaluateCondition(input1, operator, value1, value2)

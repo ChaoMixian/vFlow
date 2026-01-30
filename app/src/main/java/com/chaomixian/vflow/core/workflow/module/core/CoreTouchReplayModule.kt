@@ -87,7 +87,7 @@ class CoreTouchReplayModule : BaseModule() {
         }
 
         // 2. 获取参数
-        val recordingData = context.variables["recording_data"] as? String
+        val recordingData = context.getVariableAsString("recording_data", "")
         if (recordingData.isNullOrEmpty()) {
             return ExecutionResult.Failure("未录制", "请先在编辑器中录制触摸操作")
         }

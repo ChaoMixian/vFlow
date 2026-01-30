@@ -119,8 +119,8 @@ class UiSelectorModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务不可用", "无障碍服务未启动")
 
         // 2. 解析参数
-        val selectorString = context.variables["selector"]?.toString()
-        val resultSelection = context.variables["result_selection"] as? String ?: "第一个"
+        val selectorString = context.getVariableAsString("selector", "")
+        val resultSelection = context.getVariableAsString("result_selection", "第一个")
         val depthLimit = (context.variables["depth_limit"] as? Number)?.toInt() ?: 50
 
         // 3. 验证参数

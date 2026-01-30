@@ -95,8 +95,8 @@ class CaptureScreenModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.variables["mode"] as? String ?: "自动"
-        val regionStr = context.variables["region"] as? String ?: ""
+        val mode = context.getVariableAsString("mode", "自动")
+        val regionStr = context.getVariableAsString("region", "")
         val appContext = context.applicationContext
 
         onProgress(ProgressUpdate("准备截屏 (模式: $mode)..."))

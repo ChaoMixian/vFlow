@@ -75,7 +75,7 @@ class CoreForceStopAppModule : BaseModule() {
         }
 
         // 2. 获取参数
-        val packageName = (context.magicVariables["package_name"] ?: context.variables["package_name"])?.toString()
+        val packageName = context.getVariableAsRawString("package_name")
 
         if (packageName.isNullOrBlank()) {
             return ExecutionResult.Failure("参数错误", "应用包名不能为空")

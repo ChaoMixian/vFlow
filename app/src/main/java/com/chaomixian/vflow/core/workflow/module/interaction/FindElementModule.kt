@@ -146,27 +146,27 @@ class FindElementModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务不可用", "无障碍服务未启动")
 
         // === 解析参数 ===
-        val text = context.variables["text"]?.toString()
-        val textMatchMode = context.variables["text_match_mode"] as? String ?: "包含"
+        val text = context.getVariableAsString("text", "")
+        val textMatchMode = context.getVariableAsString("text_match_mode", "包含")
 
-        val viewId = context.variables["view_id"]?.toString()
-        val idMatchMode = context.variables["id_match_mode"] as? String ?: "包含"
+        val viewId = context.getVariableAsString("view_id", "")
+        val idMatchMode = context.getVariableAsString("id_match_mode", "包含")
 
-        val className = context.variables["class_name"]?.toString()
-        val classMatchMode = context.variables["class_match_mode"] as? String ?: "完全匹配"
+        val className = context.getVariableAsString("class_name", "")
+        val classMatchMode = context.getVariableAsString("class_match_mode", "完全匹配")
 
         val searchRegion = context.variables["search_region"] as? VCoordinateRegion
 
-        val clickable = parseBooleanFilter(context.variables["clickable"]?.toString())
-        val enabled = parseBooleanFilter(context.variables["enabled"]?.toString())
-        val checkable = parseBooleanFilter(context.variables["checkable"]?.toString())
-        val checked = parseBooleanFilter(context.variables["checked"]?.toString())
-        val editable = parseBooleanFilter(context.variables["editable"]?.toString())
-        val focusable = parseBooleanFilter(context.variables["focusable"]?.toString())
-        val scrollable = parseBooleanFilter(context.variables["scrollable"]?.toString())
+        val clickable = parseBooleanFilter(context.getVariableAsString("clickable", ""))
+        val enabled = parseBooleanFilter(context.getVariableAsString("enabled", ""))
+        val checkable = parseBooleanFilter(context.getVariableAsString("checkable", ""))
+        val checked = parseBooleanFilter(context.getVariableAsString("checked", ""))
+        val editable = parseBooleanFilter(context.getVariableAsString("editable", ""))
+        val focusable = parseBooleanFilter(context.getVariableAsString("focusable", ""))
+        val scrollable = parseBooleanFilter(context.getVariableAsString("scrollable", ""))
 
         val depthLimit = (context.variables["depth_limit"] as? Number)?.toInt() ?: 50
-        val resultSelection = context.variables["result_selection"] as? String ?: "第一个"
+        val resultSelection = context.getVariableAsString("result_selection", "第一个")
 
         // === 检查是否至少有一个查找条件 ===
         // 注意：search_region 的默认值是空字符串，不是 null，所以需要特别处理

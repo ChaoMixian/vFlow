@@ -90,25 +90,25 @@ class InvokeModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.variables["mode"] as? String ?: "链接/Uri"
+        val mode = context.getVariableAsString("mode", "链接/Uri")
 
         // 解析所有参数
-        val rawUri = context.variables["uri"]?.toString() ?: ""
+        val rawUri = context.getVariableAsString("uri", "")
         val uriStr = VariableResolver.resolve(rawUri, context)
 
-        val rawAction = context.variables["action"]?.toString() ?: ""
+        val rawAction = context.getVariableAsString("action", "")
         val actionStr = VariableResolver.resolve(rawAction, context).ifBlank { null }
 
-        val pkgStr = VariableResolver.resolve(context.variables["package"]?.toString() ?: "", context).ifBlank { null }
-        val clsStr = VariableResolver.resolve(context.variables["class"]?.toString() ?: "", context).ifBlank { null }
-        val typeStr = VariableResolver.resolve(context.variables["type"]?.toString() ?: "", context).ifBlank { null }
+        val pkgStr = VariableResolver.resolve(context.getVariableAsString("package", ""), context).ifBlank { null }
+        val clsStr = VariableResolver.resolve(context.getVariableAsString("class", ""), context).ifBlank { null }
+        val typeStr = VariableResolver.resolve(context.getVariableAsString("type", ""), context).ifBlank { null }
 
-        val rawFlags = context.variables["flags"]?.toString() ?: ""
+        val rawFlags = context.getVariableAsString("flags", "")
         val flagsInt = rawFlags.toIntOrNull()
 
         @Suppress("UNCHECKED_CAST")
         val extrasMap = (context.magicVariables["extras"] as? VDictionary)?.raw
-            ?: (context.variables["extras"] as? Map<String, Any?>)
+            ?: (context.getVariable("extras") as? Map<String, Any?>)
             ?: emptyMap()
 
         val intent = Intent()

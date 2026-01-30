@@ -84,9 +84,9 @@ class CalculationModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val operand1Value = context.magicVariables["operand1"] ?: context.variables["operand1"]
-        val operator = context.variables["operator"] as? String ?: "+"
-        val operand2Value = context.magicVariables["operand2"] ?: context.variables["operand2"]
+        val operand1Value = context.getVariable("operand1")
+        val operator = context.getVariableAsString("operator", "+")
+        val operand2Value = context.getVariable("operand2")
 
         val num1 = convertToBigDecimal(operand1Value)
         val num2 = convertToBigDecimal(operand2Value)
