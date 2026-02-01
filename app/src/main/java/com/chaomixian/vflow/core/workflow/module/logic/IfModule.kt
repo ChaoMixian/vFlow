@@ -4,6 +4,7 @@ package com.chaomixian.vflow.core.workflow.module.logic
 import com.chaomixian.vflow.core.types.basic.VBoolean
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
@@ -90,8 +91,15 @@ class IfModule : BaseBlockModule() {
             return listOf(staticInputs.first { it.id == "input1" })
         }
 
-        val input1TypeName = resolveVariableType(input1Value, allSteps, step)
-        val availableOperators = getOperatorsForVariableType(input1TypeName)
+        // 获取是否禁用类型限制的设置
+        val disableTypeFilter = isTypeFilterDisabled()
+
+        val availableOperators = if (disableTypeFilter) {
+            ALL_OPERATORS  // 禁用类型限制时，使用所有操作符
+        } else {
+            val input1TypeName = resolveVariableType(input1Value, allSteps, step)
+            getOperatorsForVariableType(input1TypeName)
+        }
 
         val dynamicInputs = mutableListOf<InputDefinition>()
         dynamicInputs.add(staticInputs.first { it.id == "input1" })
@@ -256,6 +264,20 @@ class IfModule : BaseBlockModule() {
             "图像" -> VTypeRegistry.IMAGE.id
             "坐标" -> VTypeRegistry.COORDINATE.id
             else -> null
+        }
+    }
+
+    /**
+     * 检查是否禁用了变量类型限制。
+     * 通过 SharedPreferences 获取用户设置。
+     */
+    private fun isTypeFilterDisabled(): Boolean {
+        return try {
+            val prefs = com.chaomixian.vflow.core.logging.LogManager.applicationContext
+                .getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+            prefs.getBoolean("disableTypeFilter", false)
+        } catch (e: Exception) {
+            false
         }
     }
 }
