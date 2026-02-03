@@ -70,7 +70,8 @@ class WifiModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val appContext = context.applicationContext
-        val state = context.variables["state"] as? String ?: "切换"
+        // 现在 variables 是 Map<String, VObject>，使用 getVariableAsString 获取
+        val state = context.getVariableAsString("state", "切换")
         onProgress(ProgressUpdate("正在尝试 $state Wi-Fi..."))
 
         // 1. 优先尝试 Shell (Root 或 Shizuku)

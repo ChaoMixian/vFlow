@@ -91,18 +91,17 @@ class ScriptedModule(
         // 解析所有输入参数
         val inputs = mutableMapOf<String, Any?>()
         getInputs().forEach { inputDef ->
-            val rawValue = context.variables[inputDef.id]
+            val vObj = context.getVariable(inputDef.id)
             if (inputDef.acceptsMagicVariable) {
-                val magicValue = context.magicVariables[inputDef.id]
-                if (magicValue != null) {
-                    inputs[inputDef.id] = magicValue
-                } else if (rawValue is String) {
-                    inputs[inputDef.id] = VariableResolver.resolve(rawValue, context)
+                if (vObj !is VNull) {
+                    inputs[inputDef.id] = vObj.raw
+                } else if (vObj is VString) {
+                    inputs[inputDef.id] = VariableResolver.resolve(vObj.raw, context)
                 } else {
-                    inputs[inputDef.id] = rawValue
+                    inputs[inputDef.id] = vObj.raw
                 }
             } else {
-                inputs[inputDef.id] = rawValue
+                inputs[inputDef.id] = vObj.raw
             }
         }
 

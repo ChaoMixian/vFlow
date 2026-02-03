@@ -7,10 +7,11 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.*
-import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.types.complex.VCoordinate
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -132,128 +133,97 @@ class CreateVariableModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val type = context.getVariableAsString("type", "文本")
-        val rawValue = context.getVariable("value")
+        val rawValue = context.getVariable("value")  // 现在直接返回 VObject
         val variableName = context.getVariableAsString("variableName", "")
 
-        val variable = when (type) {
+        // 使用 VObjectFactory 统一包装值，简化类型转换逻辑
+        val variable: VObject = when (type) {
             "文本" -> {
-                val resolvedText = VariableResolver.resolve(rawValue?.toString() ?: "", context)
-                VString(resolvedText)
+                // 如果是 VString，直接使用；否则解析并创建
+                if (rawValue is VString) {
+                    rawValue
+                } else {
+                    val resolvedText = VariableResolver.resolve(rawValue.asString(), context)
+                    VString(resolvedText)
+                }
             }
             "数字" -> {
-                val numValue = when (rawValue) {
-                    is VNumber -> rawValue.raw
-                    is Number -> rawValue.toDouble()
-                    is String -> rawValue.toDoubleOrNull()
-                    else -> 0.0
-                } ?: 0.0
+                val numValue = rawValue.asNumber() ?: 0.0
                 VNumber(numValue)
             }
-            "布尔" -> VBoolean(
-                when (rawValue) {
-                    is VBoolean -> rawValue.raw
-                    is Boolean -> rawValue
-                    else -> rawValue?.toString().toBoolean()
-                }
-            )
+            "布尔" -> {
+                VBoolean(rawValue.asBoolean())
+            }
             "字典" -> {
-                val map = (rawValue as? Map<*, *>)?.mapKeys { it.key.toString() }?.mapValues { entry ->
-                    // Convert Any? to VObject
-                    when (val value = entry.value) {
-                        is VObject -> value
-                        is String -> VString(value)
-                        is Number -> VNumber(value.toDouble())
-                        is Boolean -> VBoolean(value)
-                        is List<*> -> {
-                            val items = value.map { item ->
-                                when (item) {
-                                    is VObject -> item
-                                    is String -> VString(item)
-                                    is Number -> VNumber(item.toDouble())
-                                    is Boolean -> VBoolean(item)
-                                    else -> VNull
-                                }
-                            }
-                            VList(items)
-                        }
-                        else -> VNull
+                // 如果已经是 VDictionary，直接使用
+                if (rawValue is VDictionary) {
+                    rawValue
+                } else {
+                    // 尝试从 Map 或其他类型转换
+                    val mapValue = rawValue.raw as? Map<*, *> ?: emptyMap<String, VObject>()
+                    val vMap = mapValue.entries.associate { entry ->
+                        entry.key.toString() to VObjectFactory.from(entry.value)
                     }
-                } as? Map<String, VObject> ?: emptyMap()
-                VDictionary(map)
+                    VDictionary(vMap)
+                }
             }
             "列表" -> {
-                val list: List<VObject> = when (rawValue) {
-                    is VList -> rawValue.raw
-                    is List<*> -> rawValue.map { item ->
-                        when (item) {
-                            is VObject -> item
-                            is String -> VString(item)
-                            is Number -> VNumber(item.toDouble())
-                            is Boolean -> VBoolean(item)
-                            else -> VNull
-                        }
-                    }
-                    is String -> rawValue.lines().filter { it.isNotEmpty() }.map { VString(it) }
-                    else -> emptyList()
+                // 如果已经是 VList，直接使用
+                if (rawValue is VList) {
+                    rawValue
+                } else {
+                    val listValue = rawValue.raw as? List<*> ?: emptyList<Any?>()
+                    VList(listValue.map { VObjectFactory.from(it) })
                 }
-                VList(list)
             }
-            "图像" -> VImage(rawValue?.toString() ?: "")
+            "图像" -> {
+                VImage(rawValue.asString())
+            }
             "坐标" -> {
-                fun resolveCoordValue(value: Any?): Int {
-                    return when (value) {
-                        is Number -> value.toInt()
-                        is String -> {
-                            if (value.isMagicVariable() || value.isNamedVariable()) {
-                                // 解析变量引用
-                                val resolved = VariableResolver.resolveValue(value, context)
-                                when (resolved) {
-                                    is Number -> resolved.toInt()
-                                    else -> resolved.toString().toIntOrNull() ?: 0
-                                }
+                // 如果已经是 VCoordinate，直接使用
+                if (rawValue is VCoordinate) {
+                    rawValue
+                } else {
+                    // 尝试从 Map 或 List 转换
+                    val mapValue = rawValue.raw as? Map<*, *>
+                    val listValue = rawValue.raw as? List<*>
+                    when {
+                        mapValue != null -> {
+                            val x = (mapValue["x"] as? Number)?.toInt() ?: 0
+                            val y = (mapValue["y"] as? Number)?.toInt() ?: 0
+                            VCoordinate(x, y)
+                        }
+                        listValue != null && listValue.size >= 2 -> {
+                            val x = (listValue[0] as? Number)?.toInt() ?: 0
+                            val y = (listValue[1] as? Number)?.toInt() ?: 0
+                            VCoordinate(x, y)
+                        }
+                        else -> {
+                            // 尝试从字符串解析 "x,y" 格式
+                            val str = rawValue.asString()
+                            val parts = str.split(",")
+                            if (parts.size == 2) {
+                                val x = parts[0].trim().toIntOrNull() ?: 0
+                                val y = parts[1].trim().toIntOrNull() ?: 0
+                                VCoordinate(x, y)
                             } else {
-                                value.toIntOrNull() ?: 0
+                                VCoordinate(0, 0)
                             }
                         }
-                        else -> 0
                     }
                 }
-
-                val coordValue = when (rawValue) {
-                    is VCoordinate -> rawValue
-                    is Map<*, *> -> {
-                        val x = resolveCoordValue(rawValue["x"])
-                        val y = resolveCoordValue(rawValue["y"])
-                        VCoordinate(x, y)
-                    }
-                    is List<*> -> {
-                        val x = resolveCoordValue(rawValue.getOrNull(0))
-                        val y = resolveCoordValue(rawValue.getOrNull(1))
-                        VCoordinate(x, y)
-                    }
-                    else -> {
-                        // 尝试从字符串解析 "x,y" 格式
-                        val str = rawValue?.toString() ?: ""
-                        val parts = str.split(",")
-                        if (parts.size == 2) {
-                            val x = parts[0].trim().toIntOrNull() ?: 0
-                            val y = parts[1].trim().toIntOrNull() ?: 0
-                            VCoordinate(x, y)
-                        } else {
-                            VCoordinate(0, 0)
-                        }
-                    }
-                }
-                coordValue
             }
-            else -> VString(rawValue?.toString() ?: "")
+            else -> VString(rawValue.asString())
         }
 
         if (!variableName.isNullOrBlank()) {
-            if (context.namedVariables.containsKey(variableName)) {
+            // 检查变量是否存在
+            val existingVar = context.getVariable(variableName)
+            if (existingVar !is VNull) {
                 return ExecutionResult.Failure("命名冲突", "变量 '$variableName' 已存在。")
             }
-            context.namedVariables[variableName] = variable
+            // 现在直接存储 VObject，无需转换
+            context.setVariable(variableName, variable)
             onProgress(ProgressUpdate("已创建命名变量 '$variableName'"))
         }
 

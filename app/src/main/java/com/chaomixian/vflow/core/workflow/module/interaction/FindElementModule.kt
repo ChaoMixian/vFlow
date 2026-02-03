@@ -155,7 +155,8 @@ class FindElementModule : BaseModule() {
         val className = context.getVariableAsString("class_name", "")
         val classMatchMode = context.getVariableAsString("class_match_mode", "完全匹配")
 
-        val searchRegion = context.variables["search_region"] as? VCoordinateRegion
+        // 现在 variables 是 Map<String, VObject>，使用 getVariable 获取并检查类型
+        val searchRegion = context.getVariable("search_region") as? VCoordinateRegion
 
         val clickable = parseBooleanFilter(context.getVariableAsString("clickable", ""))
         val enabled = parseBooleanFilter(context.getVariableAsString("enabled", ""))
@@ -165,7 +166,8 @@ class FindElementModule : BaseModule() {
         val focusable = parseBooleanFilter(context.getVariableAsString("focusable", ""))
         val scrollable = parseBooleanFilter(context.getVariableAsString("scrollable", ""))
 
-        val depthLimit = (context.variables["depth_limit"] as? Number)?.toInt() ?: 50
+        // 使用 getVariableAsInt 获取数字类型
+        val depthLimit = context.getVariableAsInt("depth_limit") ?: 50
         val resultSelection = context.getVariableAsString("result_selection", "第一个")
 
         // === 检查是否至少有一个查找条件 ===
@@ -181,7 +183,7 @@ class FindElementModule : BaseModule() {
         // 检查是否有任何非空、非默认值的参数
         // 排除有默认值的参数（depth_limit, text_match_mode, id_match_mode, class_match_mode, result_selection）
         val hasValidParameter = context.variables.entries.any { (key, value) ->
-            value != null && value != "" &&
+            value !is com.chaomixian.vflow.core.types.basic.VNull &&
             key !in setOf("depth_limit", "text_match_mode", "id_match_mode", "class_match_mode", "result_selection")
         }
 

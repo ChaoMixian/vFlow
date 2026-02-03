@@ -6,10 +6,12 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
-import com.chaomixian.vflow.core.types.complex.VImage
-import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNull
+import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -72,23 +74,21 @@ class ShareModule : BaseModule() {
         val uiService = context.services.get(ExecutionUIService::class)
             ?: return ExecutionResult.Failure("服务缺失", "无法获取UI服务来执行分享操作。")
 
-        // 特殊处理：图片变量需要保留原始类型，不能解析
-        // 先检查原始值是否为图片
-        val rawContent = context.magicVariables["content"] ?: context.variables["content"]
+        // 获取内容变量
+        val rawContent = context.getVariable("content")
 
-        val content = when (rawContent) {
+        // 处理不同类型的内容
+        val content: Any? = when (rawContent) {
             is VImage -> rawContent  // 图片变量直接使用，不解析
-            is VString -> {
-                // TextVariable 需要获取其值并解析（因为值可能包含变量引用）
-                context.getVariableAsString("content")
-            }
+            is VNull -> null  // 空内容
             else -> {
-                // 其他类型使用统一的变量访问方法
-                context.getVariable("content")
+                // 其他类型使用统一的变量访问方法获取字符串
+                val strValue = context.getVariableAsString("content")
+                if (strValue.isEmpty()) null else strValue
             }
         }
 
-        if (content == null || (content is String && content.isEmpty())) {
+        if (content == null) {
             return ExecutionResult.Failure("内容为空", "没有可分享的内容。")
         }
 

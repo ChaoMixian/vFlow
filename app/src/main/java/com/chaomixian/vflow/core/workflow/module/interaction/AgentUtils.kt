@@ -17,6 +17,7 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.annotation.RequiresApi
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ExecutionResult
+import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.utils.VirtualDisplayManager
@@ -45,7 +46,7 @@ object AgentUtils {
         execContext: com.chaomixian.vflow.core.execution.ExecutionContext
     ): ScreenshotResult {
         // 检查是否有目标显示 ID
-        val displayId = (execContext.variables["_target_display_id"] as? Number)?.toInt() ?: 0
+        val displayId = execContext.getVariableAsInt("_target_display_id") ?: 0
 
         // 针对虚拟屏幕的处理逻辑 (ID > 0)
         if (displayId > 0) {
@@ -87,7 +88,7 @@ object AgentUtils {
             return ScreenshotResult(null, null, 0, 0)
         }
 
-        val tempContext = execContext.copy(variables = mutableMapOf("mode" to "自动"))
+        val tempContext = execContext.copy(variables = mutableMapOf("mode" to VObjectFactory.from("自动")))
         val result = captureModule.execute(tempContext) { }
 
         if (result is ExecutionResult.Success) {

@@ -199,16 +199,16 @@
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_disable_type_filter"
+                    android:id="@+id/switch_enable_type_filter"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="@string/settings_switch_disable_type_filter" />
+                    android:text="@string/settings_switch_enable_type_filter" />
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="@string/settings_switch_disable_type_filter_desc"
+                    android:text="@string/settings_switch_enable_type_filter_desc"
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
             </LinearLayout>

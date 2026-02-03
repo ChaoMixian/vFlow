@@ -11,6 +11,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNull
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 /**
@@ -54,8 +56,14 @@ class JumpModule : BaseModule() {
 
     override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
         val targetIndex = step.parameters["target_step_index"]
-        val index = (targetIndex as? Number)?.toInt()
 
+        // 如果是魔法变量引用，跳过类型检查，执行时再验证
+        if (targetIndex is String && targetIndex.isMagicVariable()) {
+            return ValidationResult(true)
+        }
+
+        // 对于直接输入的值，验证是否为有效的非负整数
+        val index = (targetIndex as? Number)?.toInt()
         if (index == null || index < 0) {
             return ValidationResult(false, "步骤编号必须是一个非负整数。")
         }
@@ -68,9 +76,26 @@ class JumpModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val indexValue = context.getVariable("target_step_index")
-        val targetIndex = (indexValue as? Number)?.toInt() ?: 0
+        // 获取原始值用于错误消息
+        val rawValue = context.getVariable("target_step_index")
+        val rawValueStr = when (rawValue) {
+            is VString -> rawValue.raw
+            is VNull -> "空值"
+            is VNumber -> rawValue.raw.toString()
+            else -> rawValue?.toString() ?: "未知"
+        }
 
+        // 使用 getVariableAsNumber 获取可空值
+        val targetIndexDouble = context.getVariableAsNumber("target_step_index")
+
+        if (targetIndexDouble == null || targetIndexDouble.isNaN()) {
+            return ExecutionResult.Failure(
+                "类型错误",
+                "无法将 '$rawValueStr' 解析为有效的步骤编号。"
+            )
+        }
+
+        val targetIndex = targetIndexDouble.toInt()
         if (targetIndex < 0 || targetIndex >= context.allSteps.size) {
             return ExecutionResult.Failure("无效的步骤编号", "目标步骤编号 $targetIndex 无效或超出范围。")
         }

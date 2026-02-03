@@ -76,9 +76,10 @@ class CoreCaptureScreenModule : BaseModule() {
 
         // 2. 获取参数
         val outputFormat = context.getVariableAsString("output_format", "PNG")
-        val quality = (context.variables["quality"] as? Number)?.toInt() ?: 90
-        val maxWidth = (context.variables["max_width"] as? Number)?.toInt() ?: 0
-        val maxHeight = (context.variables["max_height"] as? Number)?.toInt() ?: 0
+        // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
+        val quality = context.getVariableAsInt("quality") ?: 90
+        val maxWidth = context.getVariableAsInt("max_width") ?: 0
+        val maxHeight = context.getVariableAsInt("max_height") ?: 0
 
         val format = outputFormat.lowercase()
 

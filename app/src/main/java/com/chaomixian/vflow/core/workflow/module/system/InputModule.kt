@@ -122,7 +122,7 @@ class InputModule : BaseModule() {
         val dateOption = appContext.getString(R.string.option_vflow_data_input_type_date)
 
         val inputType = context.getVariableAsString("inputType", textOption)
-        val prompt = context.getVariableAsRawString("prompt").ifBlank { appContext.getString(R.string.param_vflow_data_input_prompt_default) }
+        val prompt = context.getVariableAsString("prompt").ifBlank { appContext.getString(R.string.param_vflow_data_input_prompt_default) }
 
         onProgress(ProgressUpdate("等待用户输入 ($inputType)..."))
 

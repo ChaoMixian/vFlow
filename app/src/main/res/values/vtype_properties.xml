@@ -96,4 +96,10 @@
     <string name="vtype_notification_content">内容</string>
     <string name="vtype_notification_package">应用包名</string>
     <string name="vtype_notification_id">通知 ID</string>
+
+    <!-- UI事件属性 -->
+    <string name="vtype_event_session_id">会话ID</string>
+    <string name="vtype_event_element_id">组件ID</string>
+    <string name="vtype_event_type">事件类型</string>
+    <string name="vtype_event_value">事件值</string>
 </resources>

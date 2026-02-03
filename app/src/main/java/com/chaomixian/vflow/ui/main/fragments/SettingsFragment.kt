@@ -157,11 +157,11 @@ class SettingsFragment : Fragment() {
             autoEnableAccessibilitySwitch.text = getString(R.string.settings_switch_auto_accessibility_unavailable)
         }
 
-        // 禁用变量类型限制开关逻辑
-        val disableTypeFilterSwitch = view.findViewById<MaterialSwitch>(R.id.switch_disable_type_filter)
-        disableTypeFilterSwitch.isChecked = prefs.getBoolean("disableTypeFilter", false)
-        disableTypeFilterSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean("disableTypeFilter", isChecked) }
+        // 启用变量类型限制开关（默认关闭，快捷指令风格）
+        val enableTypeFilterSwitch = view.findViewById<MaterialSwitch>(R.id.switch_enable_type_filter)
+        enableTypeFilterSwitch.isChecked = prefs.getBoolean("enableTypeFilter", false)
+        enableTypeFilterSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean("enableTypeFilter", isChecked) }
         }
 
         // 权限与 Shell 设置

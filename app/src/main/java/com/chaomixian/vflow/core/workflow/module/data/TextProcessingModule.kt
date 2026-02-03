@@ -202,7 +202,7 @@ class TextProcessingModule : BaseModule() {
         val groupVar = context.getVariable("regex_group")
         val group = when(groupVar) {
             is VNumber -> groupVar.raw.toInt()
-            is Number -> groupVar.toInt()
+            is VString -> groupVar.raw.toIntOrNull() ?: 0
             else -> 0
         }
 

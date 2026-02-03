@@ -17,7 +17,7 @@ class VObjectPropertyTest {
         val length = str.getProperty("length")
         assertNotNull(length)
         assertTrue(length is VNumber)
-        assertEquals(5.0, (length as VNumber).raw, 0.01)
+        assertEquals(5.0, (length as VNumber).raw.toDouble(), 0.01)
     }
 
     @Test
@@ -25,7 +25,7 @@ class VObjectPropertyTest {
         val str = VString("Hello")
         val length = str.getProperty("长度")
         assertNotNull(length)
-        assertEquals(5.0, (length as VNumber).raw, 0.01)
+        assertEquals(5.0, (length as VNumber).raw.toDouble(), 0.01)
     }
 
     @Test
@@ -33,7 +33,7 @@ class VObjectPropertyTest {
         val str = VString("Hello")
         val length = str.getProperty("len")
         assertNotNull(length)
-        assertEquals(5.0, (length as VNumber).raw, 0.01)
+        assertEquals(5.0, (length as VNumber).raw.toDouble(), 0.01)
     }
 
     @Test
@@ -70,7 +70,7 @@ class VObjectPropertyTest {
         val intVal = num.getProperty("int")
         assertNotNull(intVal)
         assertTrue(intVal is VNumber)
-        assertEquals(3.0, (intVal as VNumber).raw, 0.01)
+        assertEquals(3.0, (intVal as VNumber).raw.toDouble(), 0.01)
     }
 
     @Test
@@ -78,7 +78,7 @@ class VObjectPropertyTest {
         val num = VNumber(3.14)
         val intVal = num.getProperty("整数")
         assertNotNull(intVal)
-        assertEquals(3.0, (intVal as VNumber).raw, 0.01)
+        assertEquals(3.0, (intVal as VNumber).raw.toDouble(), 0.01)
     }
 
     @Test
@@ -86,7 +86,7 @@ class VObjectPropertyTest {
         val num = VNumber(3.7)
         val rounded = num.getProperty("round")
         assertNotNull(rounded)
-        assertEquals(4.0, (rounded as VNumber).raw, 0.01)
+        assertEquals(4.0, (rounded as VNumber).raw.toDouble(), 0.01)
     }
 
     @Test
@@ -94,7 +94,7 @@ class VObjectPropertyTest {
         val num = VNumber(-5.5)
         val absVal = num.getProperty("abs")
         assertNotNull(absVal)
-        assertEquals(5.5, (absVal as VNumber).raw, 0.01)
+        assertEquals(5.5, (absVal as VNumber).raw.toDouble(), 0.01)
     }
 
     @Test
@@ -156,7 +156,7 @@ class VObjectPropertyTest {
     fun `test VNumber abs with negative value`() {
         val num = VNumber(-10.0)
         val absVal = num.getProperty("abs")
-        assertEquals(10.0, (absVal as VNumber).raw, 0.01)
+        assertEquals(10.0, (absVal as VNumber).raw.toDouble(), 0.01)
     }
 
     @Test
@@ -173,15 +173,15 @@ class VObjectPropertyTest {
         val length1 = num1.getProperty("length")
         assertNotNull(length1)
         assertTrue(length1 is VNumber)
-        assertEquals(1.0, (length1 as VNumber).raw, 0.01) // 3.14.toLong() = 3, "3".length = 1
+        assertEquals(1.0, (length1 as VNumber).raw.toDouble(), 0.01) // 3.14.toLong() = 3, "3".length = 1
 
         val num2 = VNumber(100.0)
         val length2 = num2.getProperty("length")
-        assertEquals(3.0, (length2 as VNumber).raw, 0.01) // 100.toLong() = 100, "100".length = 3
+        assertEquals(3.0, (length2 as VNumber).raw.toDouble(), 0.01) // 100.toLong() = 100, "100".length = 3
 
         val num3 = VNumber(-5.5)
         val length3 = num3.getProperty("length")
-        assertEquals(2.0, (length3 as VNumber).raw, 0.01) // -5.5.toLong() = -5, "-5".length = 2
+        assertEquals(2.0, (length3 as VNumber).raw.toDouble(), 0.01) // -5.5.toLong() = -5, "-5".length = 2
     }
 
     @Test
@@ -189,7 +189,7 @@ class VObjectPropertyTest {
         val num = VNumber(123.45)
         val length = num.getProperty("长度")
         assertNotNull(length)
-        assertEquals(3.0, (length as VNumber).raw, 0.01) // 123.45.toLong() = 123, "123".length = 3
+        assertEquals(3.0, (length as VNumber).raw.toDouble(), 0.01) // 123.45.toLong() = 123, "123".length = 3
     }
 
     @Test
@@ -197,7 +197,7 @@ class VObjectPropertyTest {
         val num = VNumber(42.0)
         val length = num.getProperty("len")
         assertNotNull(length)
-        assertEquals(2.0, (length as VNumber).raw, 0.01) // "42"的长度是2
+        assertEquals(2.0, (length as VNumber).raw.toDouble(), 0.01) // "42"的长度是2
     }
 
     @Test
@@ -208,6 +208,6 @@ class VObjectPropertyTest {
         assertNotNull(lengthOfText)
         val lengthOfLength = lengthOfText?.getProperty("length")
         assertNotNull(lengthOfLength)
-        assertEquals(1.0, (lengthOfLength as VNumber).raw, 0.01) // "5"的长度是1
+        assertEquals(1.0, (lengthOfLength as VNumber).raw.toDouble(), 0.01) // "5"的长度是1
     }
 }

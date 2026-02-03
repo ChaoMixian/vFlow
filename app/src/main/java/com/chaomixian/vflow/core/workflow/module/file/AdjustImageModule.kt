@@ -96,13 +96,13 @@ class AdjustImageModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val imageVar = context.magicVariables[INPUT_IMAGE] as? VImage
+        val imageVar = context.getVariable(INPUT_IMAGE) as? VImage
             ?: return ExecutionResult.Failure("参数错误", "需要一个图像变量作为输入。")
 
         val appContext = context.applicationContext
         val params = getInputs().associate {
-            it.id to ((context.magicVariables[it.id] as? VNumber)?.raw?.toFloat()
-                ?: (context.variables[it.id] as? Number)?.toFloat() ?: 0f)
+            // 现在 variables 是 Map<String, VObject>，使用 getVariableAsNumber 获取
+            it.id to (context.getVariableAsNumber(it.id) ?: 0.0).toFloat()
         }
 
         onProgress(ProgressUpdate("正在加载图像..."))

@@ -7,6 +7,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
@@ -86,7 +87,9 @@ class ModifyVariableModule : BaseModule() {
         // 从 "[[...]]" 中提取变量名
         val variableName = variableRef.removeSurrounding("[[", "]]")
 
-        if (!context.namedVariables.containsKey(variableName)) {
+        // 检查变量是否存在
+        val existingVar = context.getVariable(variableName)
+        if (existingVar is VNull) {
             val title = appContext.getString(R.string.error_vflow_variable_modify_param_error)
             val message = String.format(appContext.getString(R.string.error_vflow_variable_modify_not_found), variableName)
             return ExecutionResult.Failure(title, message)
@@ -94,7 +97,7 @@ class ModifyVariableModule : BaseModule() {
 
         // 新值统一从 magicVariables 中获取
         val newValue = context.getVariable("newValue")
-        context.namedVariables[variableName] = newValue
+        context.setVariable(variableName, newValue)
         onProgress(ProgressUpdate("已修改变量 '$variableName' 的值"))
         return ExecutionResult.Success()
     }

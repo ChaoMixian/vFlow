@@ -5,8 +5,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VCoordinate
@@ -175,8 +177,8 @@ class CoreScreenOperationModule : BaseModule() {
     ): ExecutionResult {
         val target = parseCoordinate(context, "target")
         if (target == null) {
-            val value = context.magicVariables["target"] ?: context.variables["target"]
-            return if (value == null) {
+            val value = context.getVariable("target")
+            return if (value is VNull) {
                 ExecutionResult.Failure("参数错误", "目标位置为空。请确保已设置坐标或连接了上游模块的坐标输出。")
             } else {
                 ExecutionResult.Failure("参数错误", "目标位置格式错误。需要 Coordinate 类型的坐标或 \"x,y\" 格式的字符串。实际类型: ${value.javaClass.simpleName}")
@@ -201,8 +203,8 @@ class CoreScreenOperationModule : BaseModule() {
     ): ExecutionResult {
         val target = parseCoordinate(context, "target")
         if (target == null) {
-            val value = context.magicVariables["target"] ?: context.variables["target"]
-            return if (value == null) {
+            val value = context.getVariable("target")
+            return if (value is VNull) {
                 ExecutionResult.Failure("参数错误", "目标位置为空。请确保已设置坐标或连接了上游模块的坐标输出。")
             } else {
                 ExecutionResult.Failure("参数错误", "目标位置格式错误。需要 Coordinate 类型的坐标或 \"x,y\" 格式的字符串。实际类型: ${value.javaClass.simpleName}")
@@ -234,8 +236,8 @@ class CoreScreenOperationModule : BaseModule() {
     ): ExecutionResult {
         val start = parseCoordinate(context, "target")
         if (start == null) {
-            val value = context.magicVariables["target"] ?: context.variables["target"]
-            return if (value == null) {
+            val value = context.getVariable("target")
+            return if (value is VNull) {
                 ExecutionResult.Failure("参数错误", "起点坐标为空。请确保已设置坐标或连接了上游模块的坐标输出。")
             } else {
                 ExecutionResult.Failure("参数错误", "起点坐标格式错误。需要 Coordinate 类型的坐标或 \"x,y\" 格式的字符串。实际类型: ${value.javaClass.simpleName}")
@@ -244,8 +246,8 @@ class CoreScreenOperationModule : BaseModule() {
 
         val end = parseCoordinate(context, "target_end")
         if (end == null) {
-            val value = context.magicVariables["target_end"] ?: context.variables["target_end"]
-            return if (value == null) {
+            val value = context.getVariable("target_end")
+            return if (value is VNull) {
                 ExecutionResult.Failure("参数错误", "终点坐标为空。请确保已设置坐标或连接了上游模块的坐标输出。")
             } else {
                 ExecutionResult.Failure("参数错误", "终点坐标格式错误。需要 Coordinate 类型的坐标或 \"x,y\" 格式的字符串。实际类型: ${value.javaClass.simpleName}")
@@ -285,10 +287,10 @@ class CoreScreenOperationModule : BaseModule() {
         context: ExecutionContext,
         paramKey: String
     ): Point? {
-        val value = context.magicVariables[paramKey] ?: context.variables[paramKey]
+        val value = context.getVariable(paramKey)
 
-        // 检查值是否存在
-        if (value == null) {
+        // 检查值是否存在（VNull 表示不存在）
+        if (value is VNull) {
             DebugLogger.w(TAG, "坐标参数 '$paramKey' 为空")
             return null
         }
@@ -306,7 +308,7 @@ class CoreScreenOperationModule : BaseModule() {
             return parseStringToCoordinate(coordStr)
         }
 
-        val coordStr = value.toString()
+        val coordStr = value.asString()
         DebugLogger.w(TAG, "坐标参数 '$paramKey' 不是已知类型，而是: ${value.javaClass.simpleName}, 值: $coordStr")
 
         // 解析字符串 "x,y"
@@ -347,8 +349,7 @@ class CoreScreenOperationModule : BaseModule() {
         context: ExecutionContext,
         default: Long
     ): Long {
-        val duration = (context.magicVariables["duration"]
-            ?: context.variables["duration"]) as? Number
-        return duration?.toLong()?.coerceAtLeast(100) ?: default
+        val duration = context.getVariableAsLong("duration") ?: return default.coerceAtLeast(100)
+        return duration.coerceAtLeast(100)
     }
 }

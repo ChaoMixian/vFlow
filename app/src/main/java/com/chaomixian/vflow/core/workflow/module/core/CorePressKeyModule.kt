@@ -7,7 +7,9 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -76,13 +78,19 @@ class CorePressKeyModule : BaseModule() {
         }
 
         // 2. 获取参数
-        val keyCode = (context.magicVariables["key_code"] ?: context.variables["key_code"]) as? Number
+        val keyCodeInt = context.getVariableAsInt("key_code")
 
-        if (keyCode == null) {
-            return ExecutionResult.Failure("参数错误", "按键代码必须为数字")
+        if (keyCodeInt == null) {
+            val rawValue = context.getVariable("key_code")
+            val rawValueStr = when (rawValue) {
+                is VString -> rawValue.raw
+                is VNull -> "空值"
+                is VNumber -> rawValue.raw.toString()
+                else -> rawValue?.toString() ?: "未知"
+            }
+            return ExecutionResult.Failure("参数错误", "无法将 '$rawValueStr' 解析为有效的按键代码。")
         }
 
-        val keyCodeInt = keyCode.toInt()
         val keyName = KeyEvent.keyCodeToString(keyCodeInt)
 
         onProgress(ProgressUpdate("正在使用 vFlow Core 发送按键: $keyName..."))

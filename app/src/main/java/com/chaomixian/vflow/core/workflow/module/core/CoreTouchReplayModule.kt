@@ -92,7 +92,8 @@ class CoreTouchReplayModule : BaseModule() {
             return ExecutionResult.Failure("未录制", "请先在编辑器中录制触摸操作")
         }
 
-        val speed = (context.variables["speed"] as? Number)?.toFloat() ?: 1.0f
+        // 现在 variables 是 Map<String, VObject>，使用 getVariableAsNumber 获取
+        val speed = context.getVariableAsNumber("speed")?.toFloat() ?: 1.0f
         val data = TouchRecordingData.fromJson(recordingData)
             ?: return ExecutionResult.Failure("数据错误", "录制数据已损坏")
 

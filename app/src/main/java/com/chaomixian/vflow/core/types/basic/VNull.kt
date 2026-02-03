@@ -21,7 +21,7 @@ object VNull : EnhancedBaseVObject() {
     override val propertyRegistry = PropertyRegistry()
 
     override fun asString(): String = "" // 空对象转字符串为空串
-    override fun asNumber(): Double? = 0.0
+    override fun asNumber(): Double? = null  // 与 VString 解析失败保持一致
     override fun asBoolean(): Boolean = false
 
     // 空对象的任何属性都返回空对象，支持链式安全调用 (Safe Navigation)

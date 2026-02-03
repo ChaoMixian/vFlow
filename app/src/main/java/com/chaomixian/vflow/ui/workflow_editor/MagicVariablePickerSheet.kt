@@ -61,7 +61,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
             acceptsMagicVariable: Boolean,
             acceptsNamedVariable: Boolean,
             acceptedMagicVariableTypes: Set<String> = emptySet(),
-            disableTypeFilter: Boolean = false
+            enableTypeFilter: Boolean = false
         ): MagicVariablePickerSheet {
             return MagicVariablePickerSheet().apply {
                 arguments = Bundle().apply {
@@ -70,7 +70,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                     putBoolean("acceptsMagic", acceptsMagicVariable)
                     putBoolean("acceptsNamed", acceptsNamedVariable)
                     putSerializable("acceptedTypes", HashSet(acceptedMagicVariableTypes))
-                    putBoolean("disableTypeFilter", disableTypeFilter)
+                    putBoolean("enableTypeFilter", enableTypeFilter)
                 }
             }
         }
@@ -127,14 +127,14 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         @Suppress("UNCHECKED_CAST")
         val acceptedTypes = arguments?.getSerializable("acceptedTypes") as? Set<String> ?: emptySet()
 
-        // 检查是否禁用了类型限制
-        val disableTypeFilter = arguments?.getBoolean("disableTypeFilter", false) ?: false
+        // 检查是否启用了类型限制（默认关闭，快捷指令风格）
+        val enableTypeFilter = arguments?.getBoolean("enableTypeFilter", false) ?: false
 
         val type = VTypeRegistry.getType(item.typeId)
         val allProperties = type.properties
 
-        // 如果禁用了类型限制，或者没有指定接受的类型，则显示所有属性
-        val properties = if (disableTypeFilter || acceptedTypes.isEmpty()) {
+        // 如果未启用类型限制，或者没有指定接受的类型，则显示所有属性
+        val properties = if (!enableTypeFilter || acceptedTypes.isEmpty()) {
             allProperties
         } else {
             // 只显示匹配的属性
@@ -166,11 +166,11 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
     ) {
         val options = mutableListOf<String>()
 
-        // 检查是否禁用了类型限制
-        val disableTypeFilter = arguments?.getBoolean("disableTypeFilter", false) ?: false
+        // 检查是否启用了类型限制（默认关闭，快捷指令风格）
+        val enableTypeFilter = arguments?.getBoolean("enableTypeFilter", false) ?: false
 
         // 只有当类型本身被接受时，才显示"使用变量本身"选项
-        if (disableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
+        if (!enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
             options.add("使用 ${item.variableName} 本身")
         }
 
@@ -180,7 +180,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("字典: ${item.variableName}")
             .setItems(options.toTypedArray()) { _, which ->
-                val hasUseSelfOption = disableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
+                val hasUseSelfOption = !enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
                 val offset = if (hasUseSelfOption) 1 else 0
 
                 when {
@@ -265,11 +265,11 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
     ) {
         val options = mutableListOf<String>()
 
-        // 检查是否禁用了类型限制
-        val disableTypeFilter = arguments?.getBoolean("disableTypeFilter", false) ?: false
+        // 检查是否启用了类型限制（默认关闭，快捷指令风格）
+        val enableTypeFilter = arguments?.getBoolean("enableTypeFilter", false) ?: false
 
         // 只有当类型本身被接受时，才显示"使用变量本身"选项
-        if (disableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
+        if (!enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
             options.add("使用 ${item.variableName} 本身")
         }
 
@@ -279,7 +279,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("列表: ${item.variableName}")
             .setItems(options.toTypedArray()) { _, which ->
-                val hasUseSelfOption = disableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
+                val hasUseSelfOption = !enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
                 val offset = if (hasUseSelfOption) 1 else 0
 
                 when {
@@ -365,11 +365,11 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
     ) {
         val options = mutableListOf<String>()
 
-        // 检查是否禁用了类型限制
-        val disableTypeFilter = arguments?.getBoolean("disableTypeFilter", false) ?: false
+        // 检查是否启用了类型限制（默认关闭，快捷指令风格）
+        val enableTypeFilter = arguments?.getBoolean("enableTypeFilter", false) ?: false
 
         // 只有当类型本身被接受时，才显示"使用变量本身"选项
-        if (disableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
+        if (!enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
             options.add("使用 ${item.variableName} 本身")
         }
 
@@ -378,7 +378,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("选择 ${item.variableName} 的属性")
             .setItems(options.toTypedArray()) { _, which ->
-                val hasUseSelfOption = disableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
+                val hasUseSelfOption = !enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
                 val offset = if (hasUseSelfOption) 1 else 0
 
                 if (hasUseSelfOption && which == 0) {

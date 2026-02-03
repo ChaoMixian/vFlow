@@ -92,8 +92,9 @@ class LaunchAppModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val packageName = context.variables["packageName"] as? String
-        val activityName = context.variables["activityName"] as? String
+        // 现在 variables 是 Map<String, VObject>，需要使用 getVariableAsString 获取
+        val packageName = context.getVariableAsString("packageName", "")
+        val activityName = context.getVariableAsString("activityName", "LAUNCH")
 
         if (packageName.isNullOrBlank()) {
             return ExecutionResult.Failure(

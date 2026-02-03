@@ -15,7 +15,6 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
-import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -28,6 +27,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import android.util.Base64
+import com.chaomixian.vflow.core.types.basic.VNull
 import kotlin.math.abs
 import kotlin.math.min
 

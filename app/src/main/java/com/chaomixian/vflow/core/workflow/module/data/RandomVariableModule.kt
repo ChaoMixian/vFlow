@@ -1,12 +1,13 @@
 package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
-import android.os.Parcelable
 import android.util.Log
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -157,7 +158,7 @@ class RandomVariableModule : BaseModule() {
         val type = context.getVariableAsString("type", typeOptions[0])
         val varName = context.getVariableAsString("variableName", "")
 
-        val resultVariable: Parcelable = when (type) {
+        val resultVariable: VObject = when (type) {
             typeOptions[0] -> { // 数字
                 val min = context.getVariableAsString("min", "0").toDoubleOrNull() ?: 0.0
                 val max = context.getVariableAsString("max", "100").toDoubleOrNull() ?: 100.0
@@ -222,12 +223,12 @@ class RandomVariableModule : BaseModule() {
 
         // 如果指定了变量名，存储到命名变量中
         if (!varName.isNullOrEmpty()) {
-            if (context.namedVariables.containsKey(varName)) {
+            if (context.getVariable(varName) !is VNull) {
                 val title = appContext.getString(R.string.error_vflow_variable_random_name_conflict)
                 val message = String.format(appContext.getString(R.string.error_vflow_variable_random_exists), varName)
                 return ExecutionResult.Failure(title, message)
             }
-            context.namedVariables[varName] = resultVariable
+            context.setVariable(varName, resultVariable)
             onProgress(ProgressUpdate("已创建命名变量 '$varName'"))
         }
 

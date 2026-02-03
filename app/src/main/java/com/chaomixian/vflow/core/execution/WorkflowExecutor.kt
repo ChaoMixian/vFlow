@@ -150,18 +150,18 @@ object WorkflowExecutor {
                     ServiceStateBus.getAccessibilityService()?.let { services.add(it) }
                     services.add(ExecutionUIService(context.applicationContext))
 
-                    // 创建初始执行上下文
+                    // 创建初始执行上下文（所有变量都统一为 VObject 类型）
                     val initialContext = ExecutionContext(
                         applicationContext = context.applicationContext,
-                        variables = mutableMapOf(),
-                        magicVariables = mutableMapOf(),
+                        variables = mutableMapOf<String, VObject>(),
+                        magicVariables = mutableMapOf<String, VObject>(),
                         services = services,
                         allSteps = workflow.steps,
                         currentStepIndex = -1, // 初始索引
                         stepOutputs = mutableMapOf(),
                         loopStack = Stack(),
                         triggerData = triggerData,
-                        namedVariables = ConcurrentHashMap(),
+                        namedVariables = ConcurrentHashMap<String, VObject>(),
                         workflowStack = Stack<String>().apply { push(workflow.id) },
                         workDir = workDir
                     )
@@ -280,13 +280,13 @@ object WorkflowExecutor {
                     val loopOutputs = when {
                         loopStartStep.moduleId == LOOP_START_ID && loopState is LoopState.CountLoopState -> {
                             mapOf(
-                                "loop_index" to VNumber((loopState.currentIteration + 1).toDouble()),
-                                "loop_total" to VNumber(loopState.totalIterations.toDouble())
+                                "loop_index" to VNumber(loopState.currentIteration + 1),
+                                "loop_total" to VNumber(loopState.totalIterations)
                             )
                         }
                         loopStartStep.moduleId == FOREACH_START_ID && loopState is LoopState.ForEachLoopState -> {
                             mapOf(
-                                "index" to VNumber((loopState.currentIndex + 1).toDouble()),
+                                "index" to VNumber(loopState.currentIndex + 1),
                                 "item" to loopState.itemList.getOrNull(loopState.currentIndex)
                             )
                         }
@@ -308,9 +308,10 @@ object WorkflowExecutor {
             ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(progress, progressMessage))
 
             // 为当前步骤创建执行上下文
+            // 注意：step.parameters 是 Map<String, Any?>，需要转换为 Map<String, VObject>
             val executionContext = initialContext.copy(
-                variables = step.parameters.toMutableMap(),
-                magicVariables = mutableMapOf(),
+                variables = step.parameters.mapValues { (_, value) -> VObjectFactory.from(value) }.toMutableMap(),
+                magicVariables = mutableMapOf<String, VObject>(),
                 currentStepIndex = pc,
                 stepOutputs = stepOutputs,
                 loopStack = loopStack,
@@ -340,10 +341,8 @@ object WorkflowExecutor {
                                             val nextVObj = currentVObj.getProperty(propName)
                                             currentVObj = nextVObj ?: VNull
                                         }
-                                        // 存入 raw 值 (例如 Double, String)
-                                        if (currentVObj.raw != null) {
-                                            executionContext.magicVariables[key] = currentVObj.raw!!
-                                        }
+                                        // 保留 VObject 包装，支持隐式类型转换
+                                        executionContext.magicVariables[key] = currentVObj
                                     } else {
                                         // 无属性访问，直接引用原始对象 (保留 ImageVariable 类型，适配旧模块)
                                         executionContext.magicVariables[key] = rootObj
@@ -368,20 +367,20 @@ object WorkflowExecutor {
                                         val nextVObj = currentVObj.getProperty(propName)
                                         currentVObj = nextVObj ?: VNull
                                     }
-                                    if (currentVObj.raw != null) {
-                                        executionContext.magicVariables[key] = currentVObj.raw!!
-                                    }
+                                    // 保留 VObject 包装，支持隐式类型转换
+                                    executionContext.magicVariables[key] = currentVObj
                                 } else {
-                                    executionContext.magicVariables[key] = rootObj
+                                    // rootObj 可能是 null，需要处理
+                                    executionContext.magicVariables[key] = rootObj ?: VNull
                                 }
                             }
                         }
 
                         // 3. 混合情况：包含变量引用的普通字符串 (如 "静态文本{{uuid.success}}")
                         VariableResolver.isComplex(value) -> {
-                            // 使用 VariableResolverV2 解析混合字符串
+                            // 使用 VariableResolver 解析混合字符串，然后包装为 VString
                             val resolved = VariableResolver.resolve(value, executionContext)
-                            executionContext.magicVariables[key] = resolved
+                            executionContext.magicVariables[key] = VString(resolved)
                         }
                     }
                 }

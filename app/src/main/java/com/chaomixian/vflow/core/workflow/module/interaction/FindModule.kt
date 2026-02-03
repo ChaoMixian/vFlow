@@ -152,7 +152,7 @@ class FindTextModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务未运行", "查找文本需要无障碍服务，但该服务当前未运行。")
 
         // 获取目标文本，优先从魔法变量，其次从静态变量
-        val targetText = context.getVariableAsRawString("targetText")
+        val targetText = context.getVariableAsString("targetText")
 
         // 校验目标文本是否为空
         if (targetText.isNullOrBlank()) {

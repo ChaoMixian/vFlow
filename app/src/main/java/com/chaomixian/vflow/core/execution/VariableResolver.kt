@@ -5,6 +5,7 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.basic.VNull
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.parser.TemplateParser
 import com.chaomixian.vflow.core.types.parser.TemplateSegment
 import java.util.regex.Matcher
@@ -115,6 +116,7 @@ object VariableResolver {
 
     /**
      * 核心寻址逻辑：Path -> VObject
+     * 所有变量现在直接存储为 VObject，无需再包装
      */
     private fun resolveVariableObject(
         segment: TemplateSegment.Variable,

@@ -120,8 +120,8 @@
     <string name="settings_switch_background_service_desc">Shows a permanent notification in the status bar when running in the background. Disabling this may cause the background service to be killed by the system, affecting trigger stability.</string>
     <string name="settings_switch_auto_enable_accessibility">Auto Enable Accessibility Service</string>
     <string name="settings_switch_auto_enable_accessibility_desc">Automatically re-enables the accessibility service when it closes unexpectedly via Shizuku / Root. This feature requires Shizuku / Root permissions.</string>
-    <string name="settings_switch_disable_type_filter">Disable Variable Type Filter</string>
-    <string name="settings_switch_disable_type_filter_desc">When enabled, the variable picker will show all types of variables without filtering by module input type.</string>
+    <string name="settings_switch_enable_type_filter">Enable Variable Type Filter</string>
+    <string name="settings_switch_enable_type_filter_desc">When enabled, the variable picker filters variables by module input type, and IF/Loop module operators are also filtered by variable type. When disabled, it uses Shortcuts-style loose typing.</string>
     <string name="settings_section_permissions_shell">Permissions &amp; Shell</string>
     <string name="settings_shell_preference">Shell Preference</string>
     <string name="settings_shell_preference_desc">For executing screenshots, Shell commands, and other operations</string>

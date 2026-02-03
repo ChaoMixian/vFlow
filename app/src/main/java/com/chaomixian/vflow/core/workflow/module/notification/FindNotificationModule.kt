@@ -85,9 +85,10 @@ class FindNotificationModule : BaseModule() {
         val listener = NotificationTriggerHandler.notificationListener
             ?: return ExecutionResult.Failure("服务未连接", "需要通知使用权才能查找通知。")
 
-        val appFilter = (context.magicVariables["app_filter"] as? VString)?.raw ?: context.variables["app_filter"] as? String
-        val titleFilter = (context.magicVariables["title_filter"] as? VString)?.raw ?: context.variables["title_filter"] as? String
-        val contentFilter = (context.magicVariables["content_filter"] as? VString)?.raw ?: context.variables["content_filter"] as? String
+        // 现在 variables 是 Map<String, VObject>，统一使用 getVariableAsString 获取
+        val appFilter = context.getVariableAsString("app_filter", "")
+        val titleFilter = context.getVariableAsString("title_filter", "")
+        val contentFilter = context.getVariableAsString("content_filter", "")
 
         onProgress(ProgressUpdate("正在查找通知..."))
 

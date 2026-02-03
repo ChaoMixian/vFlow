@@ -128,6 +128,13 @@ object VTypeRegistry {
         VPropertyDef("id", "通知 ID", ANY, R.string.vtype_notification_id)
     ))
 
+    val EVENT = SimpleVType("vflow.type.event", "UI事件", ANY, listOf(
+        VPropertyDef("sessionId", "会话ID", ANY, R.string.vtype_event_session_id),
+        VPropertyDef("elementId", "组件ID", ANY, R.string.vtype_event_element_id),
+        VPropertyDef("type", "事件类型", ANY, R.string.vtype_event_type),
+        VPropertyDef("value", "事件值", ANY, R.string.vtype_event_value)
+    ))
+
     val APP = SimpleVType("vflow.type.app", "应用", ANY) // 暂无属性
 
     /**
@@ -313,6 +320,7 @@ object VTypeRegistry {
             COORDINATE.id -> COORDINATE
             COORDINATE_REGION.id -> COORDINATE_REGION
             NOTIFICATION.id -> NOTIFICATION
+            EVENT.id -> EVENT
             else -> ANY
         }
     }

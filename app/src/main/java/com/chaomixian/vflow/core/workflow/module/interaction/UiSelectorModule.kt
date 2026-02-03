@@ -121,7 +121,8 @@ class UiSelectorModule : BaseModule() {
         // 2. 解析参数
         val selectorString = context.getVariableAsString("selector", "")
         val resultSelection = context.getVariableAsString("result_selection", "第一个")
-        val depthLimit = (context.variables["depth_limit"] as? Number)?.toInt() ?: 50
+        // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
+        val depthLimit = context.getVariableAsInt("depth_limit") ?: 50
 
         // 3. 验证参数
         if (selectorString.isNullOrBlank()) {

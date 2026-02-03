@@ -100,7 +100,8 @@ class WifiTriggerModule : BaseModule() {
     ): ExecutionResult {
         onProgress(ProgressUpdate("Wi-Fi 事件已触发"))
         val ssid = context.triggerData as? VString
-        val bssid = context.variables["bssid"] as? VString
+        // 现在 variables 是 Map<String, VObject>，使用 getVariable 获取并检查类型
+        val bssid = context.getVariable("bssid") as? VString
         return ExecutionResult.Success(outputs = mapOf(
             "ssid" to (ssid ?: VString("")),
             "bssid" to (bssid ?: VString(""))

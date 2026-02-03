@@ -94,9 +94,8 @@ class CloseAppModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 支持魔法变量 (例如从之前的步骤获取包名)
-        val packageName = (context.magicVariables["packageName"] as? VString)?.raw
-            ?: context.variables["packageName"] as? String
+        // 现在 variables 是 Map<String, VObject>，统一使用 getVariableAsString 获取
+        val packageName = context.getVariableAsString("packageName", "")
 
         if (packageName.isNullOrBlank()) {
             return ExecutionResult.Failure(

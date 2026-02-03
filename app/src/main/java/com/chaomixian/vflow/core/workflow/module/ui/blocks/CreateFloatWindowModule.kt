@@ -8,6 +8,11 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.UiLoopState
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObjectFactory
+import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.logic.BlockNavigator
 import com.chaomixian.vflow.core.workflow.module.ui.UiCommand
@@ -82,18 +87,18 @@ class CreateFloatWindowModule : BaseBlockModule() {
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         // 初始化组件列表
-        context.namedVariables[KEY_UI_ELEMENTS_LIST] = mutableListOf<UiElement>()
+        context.namedVariables[KEY_UI_ELEMENTS_LIST] = VObjectFactory.from(mutableListOf<UiElement>())
         // 生成 Session ID
-        context.namedVariables[KEY_UI_SESSION_ID] = UUID.randomUUID().toString()
+        context.namedVariables[KEY_UI_SESSION_ID] = VString(UUID.randomUUID().toString())
         // 保存悬浮窗参数
         val currentStep = context.allSteps[context.currentStepIndex]
-        context.namedVariables[KEY_FLOAT_TITLE] = currentStep.parameters["title"] as? String ?: ""
-        context.namedVariables[KEY_FLOAT_WIDTH] = (currentStep.parameters["width"] as? Number)?.toInt() ?: 300
-        context.namedVariables[KEY_FLOAT_HEIGHT] = (currentStep.parameters["height"] as? Number)?.toInt() ?: 400
-        context.namedVariables[KEY_FLOAT_ALPHA] = (currentStep.parameters["alpha"] as? Number)?.toFloat() ?: 0.95f
+        context.namedVariables[KEY_FLOAT_TITLE] = VString(currentStep.parameters["title"] as? String ?: "")
+        context.namedVariables[KEY_FLOAT_WIDTH] = VNumber((currentStep.parameters["width"] as? Number)?.toInt() ?: 300)
+        context.namedVariables[KEY_FLOAT_HEIGHT] = VNumber((currentStep.parameters["height"] as? Number)?.toInt() ?: 400)
+        context.namedVariables[KEY_FLOAT_ALPHA] = VNumber((currentStep.parameters["alpha"] as? Number)?.toFloat() ?: 0.95f)
         // 保存退出及销毁页面参数
         val destroyOnExit = currentStep.parameters["destroy_on_exit"] as? Boolean ?: true
-        context.namedVariables[KEY_UI_DESTROY_ON_EXIT] = destroyOnExit
+        context.namedVariables[KEY_UI_DESTROY_ON_EXIT] = VBoolean(destroyOnExit)
 
         onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_float_init)))
         return ExecutionResult.Success()
@@ -121,10 +126,12 @@ class ShowFloatWindowModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_float_show)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String ?: return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
+        val sessionId = context.getVariableAsString(KEY_UI_SESSION_ID).ifEmpty {
+            return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
+        }
 
         // 获取 destroy_on_exit 参数
-        val destroyOnExit = context.namedVariables[KEY_UI_DESTROY_ON_EXIT] as? Boolean ?: true
+        val destroyOnExit = context.getVariableAsBoolean(KEY_UI_DESTROY_ON_EXIT) ?: true
 
         // --- 检查是否已经在循环中 ---
         val loopState = if (context.loopStack.isNotEmpty()) context.loopStack.peek() else null
@@ -159,11 +166,11 @@ class ShowFloatWindowModule : BaseModule() {
             }
 
             // 5. 将事件存入上下文，供内部的监听模块使用
-            context.namedVariables[KEY_CURRENT_EVENT] = event
+            context.namedVariables[KEY_CURRENT_EVENT] = VObjectFactory.from(event)
 
             // 6. 将所有组件的值存入 namedVariables，方便其他模块使用
             event.allComponentValues.forEach { (componentId, value) ->
-                context.namedVariables["component_value.$componentId"] = value
+                context.namedVariables["component_value.$componentId"] = VObjectFactory.from(value)
             }
 
             onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_activity_event, event.elementId, event.type)))
@@ -172,14 +179,18 @@ class ShowFloatWindowModule : BaseModule() {
         } else {
             // === 首次启动逻辑 (Start) ===
 
+            val elementsListVObject = context.getVariable(KEY_UI_ELEMENTS_LIST)
             @Suppress("UNCHECKED_CAST")
-            val elements = context.namedVariables[KEY_UI_ELEMENTS_LIST] as? List<UiElement>
-                ?: return ExecutionResult.Failure("配置错误", appContext.getString(R.string.error_vflow_ui_empty_list))
+            val elements = if (elementsListVObject is VList) {
+                elementsListVObject.raw.mapNotNull { it.raw as? UiElement }
+            } else {
+                return ExecutionResult.Failure("配置错误", appContext.getString(R.string.error_vflow_ui_empty_list))
+            }
 
-            val width = context.namedVariables[KEY_FLOAT_WIDTH] as? Int ?: 300
-            val height = context.namedVariables[KEY_FLOAT_HEIGHT] as? Int ?: 400
-            val alpha = context.namedVariables[KEY_FLOAT_ALPHA] as? Float ?: 0.95f
-            val title = context.namedVariables[KEY_FLOAT_TITLE] as? String ?: ""
+            val width = context.getVariableAsInt(KEY_FLOAT_WIDTH) ?: 300
+            val height = context.getVariableAsInt(KEY_FLOAT_HEIGHT) ?: 400
+            val alpha = context.getVariableAsNumber(KEY_FLOAT_ALPHA)?.toFloat() ?: 0.95f
+            val title = context.getVariableAsString(KEY_FLOAT_TITLE)
 
             onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_float_starting)))
 
@@ -188,7 +199,7 @@ class ShowFloatWindowModule : BaseModule() {
 
             // 启动悬浮窗服务
             val intent = Intent(context.applicationContext, DynamicFloatWindowService::class.java).apply {
-                putExtra(DynamicFloatWindowService.EXTRA_ELEMENTS, ArrayList(elements))
+                putExtra(DynamicFloatWindowService.EXTRA_ELEMENTS, ArrayList<UiElement>(elements))
                 putExtra(DynamicFloatWindowService.EXTRA_SESSION_ID, sessionId)
                 putExtra(DynamicFloatWindowService.EXTRA_TITLE, title)
                 putExtra(DynamicFloatWindowService.EXTRA_WIDTH, width)
@@ -212,17 +223,17 @@ class ShowFloatWindowModule : BaseModule() {
             }
 
             // 处理系统事件（关闭、返回键）
-            if (event.type == "closed" || (destroyOnExit && event.type == "back_pressed")) {
+            if (event!!.type == "closed" || (destroyOnExit && event!!.type == "back_pressed")) {
                 context.loopStack.pop()
                 val endPos = BlockNavigator.findEndBlockPosition(context.allSteps, context.currentStepIndex, FLOAT_WIN_PAIRING)
                 return ExecutionResult.Signal(ExecutionSignal.Jump(endPos))
             }
 
-            context.namedVariables[KEY_CURRENT_EVENT] = event
+            context.namedVariables[KEY_CURRENT_EVENT] = VObjectFactory.from(event!!)
 
             // 将所有组件的值存入 namedVariables
-            event.allComponentValues.forEach { (componentId, value) ->
-                context.namedVariables["component_value.$componentId"] = value
+            event!!.allComponentValues.forEach { (componentId, value) ->
+                context.namedVariables["component_value.$componentId"] = VObjectFactory.from(value)
             }
 
             return ExecutionResult.Success()
@@ -249,7 +260,7 @@ class EndFloatWindowModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_float_end)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String
+        val sessionId = context.getVariableAsString(KEY_UI_SESSION_ID)
 
         // 如果还在循环栈中，说明是正常的一轮逻辑执行完毕，需要跳回 Middle 继续等待
         if (!context.loopStack.isEmpty()) {

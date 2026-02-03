@@ -5,6 +5,8 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObjectFactory
+import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.ui.blocks.KEY_UI_ELEMENTS_LIST
@@ -44,11 +46,26 @@ abstract class BaseUiComponentModule : BaseModule() {
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         @Suppress("UNCHECKED_CAST")
-        val list = context.namedVariables[KEY_UI_ELEMENTS_LIST] as? MutableList<UiElement>
+        val listVObject = context.getVariable(KEY_UI_ELEMENTS_LIST)
+        @Suppress("UNCHECKED_CAST")
+        val list = if (listVObject is VList) {
+            // 获取底层的 MutableList<UiElement>，如果不存在则创建
+            val rawList = listVObject.raw.mapNotNull { it.raw as? UiElement }.toMutableList()
+            // 更新 VList 中的数据
+            val newListVObject = VObjectFactory.from(rawList)
+            context.namedVariables[KEY_UI_ELEMENTS_LIST] = newListVObject
+            rawList
+        } else {
+            null
+        }
 
         if (list != null) {
             val element = createUiElement(context, step = context.allSteps[context.currentStepIndex])
             list.add(element)
+            // 同步更新 VList
+            val newListVObject = VObjectFactory.from(list)
+            context.namedVariables[KEY_UI_ELEMENTS_LIST] = newListVObject
+
             onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_ui_component_registered, element.id)))
 
             // 保存对 namedVariables 的引用，用于动态获取组件值

@@ -10,8 +10,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver // 引入解析器
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -78,15 +80,11 @@ class SetClipboardModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 逻辑分支判断：如果是变量对象，直接使用；如果是文本，尝试解析
-        val rawContent = context.variables["content"]
-        val magicContent = context.magicVariables["content"]
+        // 获取内容变量
+        val contentObj = context.getVariable("content")
 
         val appContext = context.applicationContext
         val clipboard = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-
-        // 优先使用魔法变量对象（例如图片变量）
-        val contentObj = magicContent ?: rawContent
 
         val clip: ClipData? = when (contentObj) {
             is VImage -> {
@@ -112,9 +110,13 @@ class SetClipboardModule : BaseModule() {
                     )
                 }
             }
-            // 对于其他情况（文本变量、字符串、数字等），统一视为文本并解析
+            is VNull -> {
+                // 空内容，跳过
+                null
+            }
+            // 对于其他情况（文本变量、数字等），统一视为文本并解析
             else -> {
-                val resolvedText = VariableResolver.resolve(rawContent?.toString() ?: "", context)
+                val resolvedText = VariableResolver.resolve(contentObj.asString(), context)
                 ClipData.newPlainText("vFlow Text", resolvedText)
             }
         }

@@ -75,7 +75,7 @@ class CoreInputTextModule : BaseModule() {
         }
 
         // 2. 获取参数
-        val text = context.getVariableAsRawString("text")
+        val text = context.getVariableAsString("text")
 
         if (text == null) {
             return ExecutionResult.Failure("参数错误", "文本内容不能为空")

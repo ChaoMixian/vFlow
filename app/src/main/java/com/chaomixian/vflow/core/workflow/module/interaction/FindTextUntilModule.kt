@@ -11,6 +11,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNumber
@@ -88,10 +89,8 @@ class FindTextUntilModule : BaseModule() {
         val matchMode = context.getVariableAsString("matchMode", "包含")
         val searchMode = context.getVariableAsString("searchMode", "自动")
 
-        val timeoutSec = ((context.magicVariables["timeout"] as? VNumber)?.raw
-            ?: (context.variables["timeout"] as? Number)?.toDouble() ?: 10.0).toLong()
-
-        val interval = ((context.variables["interval"] as? Number)?.toLong() ?: 1000L).coerceAtLeast(100L)
+        val timeoutSec = context.getVariableAsLong("timeout") ?: 10
+        val interval = (context.getVariableAsLong("interval") ?: 1000).coerceAtLeast(100)
 
         if (targetText.isEmpty()) return ExecutionResult.Failure("参数错误", "查找文本不能为空")
 
@@ -176,7 +175,7 @@ class FindTextUntilModule : BaseModule() {
 
     private suspend fun performOCR(context: ExecutionContext, targetText: String, matchMode: String): VScreenElement? {
         val captureModule = ModuleRegistry.getModule("vflow.system.capture_screen") ?: return null
-        val tempContext = context.copy(variables = mutableMapOf("mode" to "自动"))
+        val tempContext = context.copy(variables = mutableMapOf("mode" to VObjectFactory.from("自动")))
         val result = captureModule.execute(tempContext) { }
 
         if (result is ExecutionResult.Success) {

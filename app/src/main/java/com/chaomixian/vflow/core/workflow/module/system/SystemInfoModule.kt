@@ -5,6 +5,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -59,7 +60,7 @@ class SystemInfoModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
 
-        val resultValue: String = when (context.variables["infotype"]) {
+        val resultValue: String = when (context.getVariableAsString("infotype", "")) {
             "设备型号" -> Build.MODEL
             "设备厂商" -> Build.BRAND
             "安卓版本" -> Build.VERSION.RELEASE

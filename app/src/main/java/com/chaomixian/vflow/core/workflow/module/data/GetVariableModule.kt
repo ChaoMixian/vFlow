@@ -4,8 +4,12 @@ package com.chaomixian.vflow.core.workflow.module.data
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -53,13 +57,22 @@ class GetVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val variableValue = context.magicVariables["source"]
+        // 解析源变量引用（支持 {{step.output}} 或 [[varName]] 格式）
+        val sourceParam = context.getVariableAsString("source")
+        val variableValue: VObject = if (VariableResolver.hasVariableReference(sourceParam)) {
+            // 处理变量引用
+            val raw = VariableResolver.resolveValue(sourceParam, context)
+            VObjectFactory.from(raw)
+        } else {
+            // 直接从 namedVariables 或 magicVariables 获取
+            context.getVariable(sourceParam)
+        }
 
-        if (variableValue == null) {
-            val sourceRef = context.getVariableAsString("source", "未知")
+        // 检查变量是否存在（VNull 表示不存在）
+        if (variableValue is VNull) {
             return ExecutionResult.Failure(
                 appContext.getString(R.string.error_vflow_variable_get_not_exist),
-                "找不到变量 '$sourceRef' 的值"
+                "找不到变量 '$sourceParam' 的值"
             )
         }
 

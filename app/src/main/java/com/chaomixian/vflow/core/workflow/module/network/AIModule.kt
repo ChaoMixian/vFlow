@@ -88,7 +88,8 @@ class AIModule : BaseModule() {
         val rawPrompt = context.getVariableAsString("prompt", "")
         val prompt = VariableResolver.resolve(rawPrompt, context)
         val systemPrompt = context.getVariableAsString("system_prompt", "You are a helpful assistant.")
-        val temperature = (context.variables["temperature"] as? Number)?.toDouble() ?: 0.7
+        // 现在 variables 是 Map<String, VObject>，使用 getVariableAsNumber 获取
+        val temperature = context.getVariableAsNumber("temperature") ?: 0.7
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
         if (prompt.isBlank()) return ExecutionResult.Failure("配置错误", "提示词不能为空")

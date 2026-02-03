@@ -51,11 +51,12 @@ class RemoveNotificationModule : BaseModule() {
         val listener = NotificationTriggerHandler.notificationListener
             ?: return ExecutionResult.Failure("服务未连接", "需要通知使用权才能移除通知。")
 
-        val target = context.magicVariables["target"]
+        val target = context.getVariable("target")
 
         val notificationsToRemove = when (target) {
             is NotificationObject -> listOf(target)
             is VList -> target.raw.filterIsInstance<NotificationObject>()
+            is VNull -> emptyList()
             else -> emptyList()
         }
 

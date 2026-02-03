@@ -96,4 +96,10 @@
     <string name="vtype_notification_content">Content</string>
     <string name="vtype_notification_package">Package name</string>
     <string name="vtype_notification_id">Notification ID</string>
+
+    <!-- UI Event Properties -->
+    <string name="vtype_event_session_id">Session ID</string>
+    <string name="vtype_event_element_id">Component ID</string>
+    <string name="vtype_event_type">Event type</string>
+    <string name="vtype_event_value">Event value</string>
 </resources>

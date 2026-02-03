@@ -5,10 +5,14 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.types.complex.*
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
+import com.chaomixian.vflow.core.workflow.module.ui.UiEvent
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 
 /**
  * 工厂类：负责将任意对象包装为 VObject。
+ *
+ * 设计原则：保留原始类型信息以支持严格等于比较。
+ * 数字类型（Int, Long, Float, Double）不会被转换为 Double，而是保留原始类型。
  */
 object VObjectFactory {
 
@@ -23,15 +27,17 @@ object VObjectFactory {
 
             // --- 基础类型 ---
             is String -> VString(value)
-            is Int -> VNumber(value.toDouble())
-            is Long -> VNumber(value.toDouble())
-            is Float -> VNumber(value.toDouble())
+            // 保留原始数字类型，不转换为 Double
+            is Int -> VNumber(value)
+            is Long -> VNumber(value)
+            is Float -> VNumber(value)
             is Double -> VNumber(value)
             is Boolean -> VBoolean(value)
 
             // --- 业务对象 ---
             is NotificationObject -> VNotification(value)
             is UiElement -> VUiComponent(value, null)
+            is UiEvent -> VEvent(value)
 
             // --- 集合类型 ---
             is Collection<*> -> fromCollection(value)

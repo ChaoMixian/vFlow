@@ -6,7 +6,9 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.delay
@@ -123,15 +125,21 @@ class DelayModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 获取延迟时间，优先从魔法变量，其次从静态变量
-        val durationValue = context.magicVariables["duration"] ?: context.variables["duration"]
+        // 获取延迟时间
+        val duration = context.getVariableAsLong("duration")
 
-        // 将获取到的值转换为长整型毫秒数
-        val duration = when(durationValue) {
-            is VNumber -> durationValue.raw.toLong() // 如果是 VNumber
-            is Number -> durationValue.toLong() // 如果是普通 Number 类型
-            is String -> durationValue.toLongOrNull() ?: 1000L // 如果是字符串，尝试解析，失败则用默认值
-            else -> 1000L // 其他未知类型，使用默认值
+        if (duration == null) {
+            val rawValue = context.getVariable("duration")
+            val rawValueStr = when (rawValue) {
+                is VString -> rawValue.raw
+                is VNull -> "空值"
+                is VNumber -> rawValue.raw.toString()
+                else -> rawValue?.toString() ?: "未知"
+            }
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_device_delay_parameter_error),
+                "无法将 '$rawValueStr' 解析为有效的延迟时间。"
+            )
         }
 
         // 检查延迟时间是否为负

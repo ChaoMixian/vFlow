@@ -34,7 +34,7 @@ object LuaValueConverter {
 
             // --- VObject 类型拆箱 ---
             is VString -> LuaValue.valueOf(value.raw)
-            is VNumber -> LuaValue.valueOf(value.raw)
+            is VNumber -> LuaValue.valueOf(value.raw.toDouble())
             is VBoolean -> LuaValue.valueOf(value.raw)
             // 列表和字典递归调用自身进行转换
             is VDictionary -> coerceToLua(value.raw)

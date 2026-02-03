@@ -7,6 +7,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.UiLoopState
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.complex.VEvent
+import com.chaomixian.vflow.core.types.VObjectFactory
+import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.logic.BlockNavigator
 import com.chaomixian.vflow.core.workflow.module.ui.UiCommand
@@ -52,8 +55,12 @@ class OnUiEventModule : BaseBlockModule() {
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         // 获取当前事件
-        val event = context.namedVariables[KEY_CURRENT_EVENT] as? UiEvent
-            ?: return ExecutionResult.Failure("环境错误", appContext.getString(R.string.error_vflow_ui_wrong_place))
+        val eventVObject = context.getVariable(KEY_CURRENT_EVENT)
+        val event = if (eventVObject is VEvent) {
+            eventVObject.event
+        } else {
+            return ExecutionResult.Failure("环境错误", appContext.getString(R.string.error_vflow_ui_wrong_place))
+        }
 
         // 获取目标组件（必须是 VUiComponent 对象）
         val targetComponent = context.magicVariables["target_id"] as? com.chaomixian.vflow.core.types.complex.VUiComponent
@@ -145,14 +152,15 @@ class UpdateUiComponentModule : BaseModule() {
         PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_ui_update), PillUtil.createPillFromParam(step.parameters["target_id"], getInputs()[0]))
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String
-            ?: return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
+        val sessionId = context.getVariableAsString(KEY_UI_SESSION_ID).ifEmpty {
+            return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
+        }
 
         // 提取目标组件 ID（支持 VUiComponent 对象或字符串）
         val targetId = when (val obj = context.magicVariables["target_id"]) {
             is com.chaomixian.vflow.core.types.basic.VString -> obj.raw
             is com.chaomixian.vflow.core.types.complex.VUiComponent -> obj.getId()
-            else -> context.getVariableAsRawString("target_id")
+            else -> context.getVariableAsRaw("target_id") as? String ?: ""
         }
 
         // 验证 targetId 不为空
@@ -163,8 +171,8 @@ class UpdateUiComponentModule : BaseModule() {
         val payload = mutableMapOf<String, Any?>()
 
         // 解析 text 参数（支持魔法变量、命名变量和组件属性）
-        // 使用 getVariableAsRawString 自动处理 VString 解包
-        val rawText = context.getVariableAsRawString("text")
+        // 使用 getVariableAsRaw 自动处理 VString 解包
+        val rawText = context.getVariableAsRaw("text") as? String
         if (!rawText.isNullOrEmpty()) {
             // getVariableAsRawString 已经解析过魔法变量了，但如果返回的还是魔法变量引用，再次解析
             val resolvedText = if (com.chaomixian.vflow.core.execution.VariableResolver.hasVariableReference(rawText)) {
@@ -196,7 +204,7 @@ class UpdateUiComponentModule : BaseModule() {
             payload["textSize"] = textSize.toFloat()
         }
 
-        val background = context.getVariableAsRawString("background")
+        val background = context.getVariableAsRaw("background") as? String
         if (!background.isNullOrEmpty()) {
             payload["background"] = background
         }
@@ -260,17 +268,23 @@ class GetComponentValueModule : BaseModule() {
         val componentId = when (val obj = context.magicVariables["component_id"]) {
             is com.chaomixian.vflow.core.types.basic.VString -> obj.raw
             is com.chaomixian.vflow.core.types.complex.VUiComponent -> obj.getId()
-            else -> context.getVariableAsRawString("component_id")
+            else -> context.getVariableAsRaw("component_id") as? String ?: ""
         }
 
         // 创建 VUiComponent 对象
         @Suppress("UNCHECKED_CAST")
-        val elementsList = context.namedVariables[KEY_UI_ELEMENTS_LIST] as? List<com.chaomixian.vflow.core.workflow.module.ui.model.UiElement>
-        val element = elementsList?.find { it.id == componentId }
+        val elementsListVObject = context.getVariable(KEY_UI_ELEMENTS_LIST)
+        @Suppress("UNCHECKED_CAST")
+        val elementsList: List<com.chaomixian.vflow.core.workflow.module.ui.model.UiElement>? = if (elementsListVObject is VList) {
+            elementsListVObject.raw.mapNotNull { (it.raw as? com.chaomixian.vflow.core.workflow.module.ui.model.UiElement) }
+        } else {
+            null
+        }
+        val element = elementsList?.find { uiElement -> uiElement.id == componentId }
 
         return if (element != null) {
             // 创建一个 valueProvider 来动态获取组件值
-            val valueProvider = {
+            val valueProvider: () -> com.chaomixian.vflow.core.types.VObject? = {
                 context.namedVariables["component_value.$componentId"]
             }
 
@@ -280,13 +294,13 @@ class GetComponentValueModule : BaseModule() {
             // 创建 VUiComponent 对象，传入 valueProvider 以支持动态获取值
             val vComponent = com.chaomixian.vflow.core.types.complex.VUiComponent(
                 element,
-                currentValue ?: element.defaultValue,
+                currentValue ?: VObjectFactory.from(element.defaultValue),
                 valueProvider
             )
 
             ExecutionResult.Success(mapOf(
                 "component" to vComponent,
-                "value" to (currentValue ?: element.defaultValue)
+                "value" to (currentValue ?: VObjectFactory.from(element.defaultValue))
             ))
         } else {
             ExecutionResult.Failure("组件未找到", appContext.getString(R.string.error_vflow_ui_component_not_found, componentId))
@@ -324,8 +338,9 @@ class ExitActivityModule : BaseModule() {
     override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_exit)
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val sessionId = context.namedVariables[KEY_UI_SESSION_ID] as? String
-            ?: return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
+        val sessionId = context.getVariableAsString(KEY_UI_SESSION_ID).ifEmpty {
+            return ExecutionResult.Failure("错误", appContext.getString(R.string.error_vflow_ui_session_missing))
+        }
 
         // 检查是否在循环栈中
         val loopState = context.loopStack.peek() as? UiLoopState

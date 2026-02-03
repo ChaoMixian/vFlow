@@ -75,7 +75,7 @@ class CoreForceStopAppModule : BaseModule() {
         }
 
         // 2. 获取参数
-        val packageName = context.getVariableAsRawString("package_name")
+        val packageName = context.getVariableAsString("package_name")
 
         if (packageName.isNullOrBlank()) {
             return ExecutionResult.Failure("参数错误", "应用包名不能为空")

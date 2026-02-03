@@ -114,7 +114,7 @@ class ForEachModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val listVar = context.magicVariables["input_list"] as? VList
+        val listVar = context.getVariable("input_list") as? VList
         val items = listVar?.raw
 
         if (items == null) {

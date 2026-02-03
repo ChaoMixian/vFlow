@@ -6,7 +6,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.math.BigDecimal
@@ -94,13 +96,13 @@ class CalculationModule : BaseModule() {
         if (num1 == null) {
             return ExecutionResult.Failure(
                 appContext.getString(R.string.error_vflow_data_calculation_input_error),
-                String.format(appContext.getString(R.string.error_vflow_data_calculation_operand1_parse_failed), operand1Value?.toString() ?: "null")
+                String.format(appContext.getString(R.string.error_vflow_data_calculation_operand1_parse_failed), valueToString(operand1Value))
             )
         }
         if (num2 == null) {
             return ExecutionResult.Failure(
                 appContext.getString(R.string.error_vflow_data_calculation_input_error),
-                String.format(appContext.getString(R.string.error_vflow_data_calculation_operand2_parse_failed), operand2Value?.toString() ?: "null")
+                String.format(appContext.getString(R.string.error_vflow_data_calculation_operand2_parse_failed), valueToString(operand2Value))
             )
         }
 
@@ -146,11 +148,22 @@ class CalculationModule : BaseModule() {
      */
     private fun convertToBigDecimal(value: Any?): BigDecimal? {
         return when (value) {
-            is VNumber -> value.raw.toBigDecimal()
+            is VNumber -> value.raw.toDouble().toBigDecimal()
+            is VString -> value.raw.toBigDecimalOrNull()
             is Number -> value.toString().toBigDecimalOrNull()
             is String -> value.toBigDecimalOrNull()
             else -> null
         }
+    }
+
+    /**
+     * 安全获取值的字符串表示（用于错误消息）。
+     */
+    private fun valueToString(value: Any?): String = when (value) {
+        is VString -> value.raw
+        is VNumber -> value.raw.toString()
+        is VNull -> "空值"
+        else -> value?.toString() ?: "null"
     }
 
     /**

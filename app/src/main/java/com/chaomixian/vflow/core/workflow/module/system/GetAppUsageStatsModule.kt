@@ -73,9 +73,8 @@ class GetAppUsageStatsModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val intervalStr = context.getVariableAsString("interval", "今天")
-        val maxResults = ((context.magicVariables["max_results"] as? VNumber)?.raw
-            ?: (context.variables["max_results"] as? Number)?.toDouble()
-            ?: 10.0).toInt()
+        // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
+        val maxResults = context.getVariableAsInt("max_results") ?: 10
 
         val usageStatsManager = context.applicationContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val pm = context.applicationContext.packageManager

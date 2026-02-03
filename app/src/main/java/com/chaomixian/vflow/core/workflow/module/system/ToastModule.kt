@@ -93,7 +93,10 @@ class ToastModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val richTextMessage = context.variables["message"] as? String
+        // 现在 variables 是 Map<String, VObject>，需要使用 getVariable 获取
+        val messageObj = context.getVariable("message")
+        val richTextMessage = messageObj.asString()
+
         if (richTextMessage.isNullOrBlank()) {
             return ExecutionResult.Failure(
                 appContext.getString(R.string.error_vflow_device_toast_message_empty),

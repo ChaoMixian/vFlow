@@ -23,15 +23,14 @@ const val OP_EXISTS = "存在"
 const val OP_NOT_EXISTS = "不存在"
 const val OP_IS_EMPTY = "为空"
 const val OP_IS_NOT_EMPTY = "不为空"
-const val OP_TEXT_EQUALS = "等于(文本)"
-const val OP_TEXT_NOT_EQUALS = "不等于(文本)"
+const val OP_EQUALS = "等于"              // 弱类型，自动类型转换
+const val OP_STRICT_EQUALS = "严格等于"    // 强类型，类型和值都必须相同
+const val OP_NOT_EQUALS = "不等于"
 const val OP_CONTAINS = "包含"
 const val OP_NOT_CONTAINS = "不包含"
 const val OP_STARTS_WITH = "开头是"
 const val OP_ENDS_WITH = "结尾是"
 const val OP_MATCHES_REGEX = "匹配正则"
-const val OP_NUM_EQ = "等于"
-const val OP_NUM_NEQ = "不等于"
 const val OP_NUM_GT = "大于"
 const val OP_NUM_GTE = "大于等于"
 const val OP_NUM_LT = "小于"
@@ -41,15 +40,15 @@ const val OP_IS_TRUE = "为真"
 const val OP_IS_FALSE = "为假"
 
 val OPERATORS_REQUIRING_ONE_INPUT = setOf(
-    OP_TEXT_EQUALS, OP_TEXT_NOT_EQUALS, OP_CONTAINS, OP_NOT_CONTAINS,
+    OP_EQUALS, OP_NOT_EQUALS, OP_CONTAINS, OP_NOT_CONTAINS,
     OP_STARTS_WITH, OP_ENDS_WITH, OP_MATCHES_REGEX,
-    OP_NUM_EQ, OP_NUM_NEQ, OP_NUM_GT, OP_NUM_GTE, OP_NUM_LT, OP_NUM_LTE
+    OP_STRICT_EQUALS, OP_NUM_GT, OP_NUM_GTE, OP_NUM_LT, OP_NUM_LTE
 )
 val OPERATORS_REQUIRING_TWO_INPUTS = setOf(OP_NUM_BETWEEN)
 
 val OPERATORS_FOR_ANY = listOf(OP_EXISTS, OP_NOT_EXISTS)
-val OPERATORS_FOR_TEXT = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY, OP_TEXT_EQUALS, OP_TEXT_NOT_EQUALS, OP_CONTAINS, OP_NOT_CONTAINS, OP_STARTS_WITH, OP_ENDS_WITH, OP_MATCHES_REGEX)
-val OPERATORS_FOR_NUMBER = listOf(OP_NUM_EQ, OP_NUM_NEQ, OP_NUM_GT, OP_NUM_GTE, OP_NUM_LT, OP_NUM_LTE, OP_NUM_BETWEEN)
+val OPERATORS_FOR_TEXT = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY, OP_EQUALS, OP_NOT_EQUALS, OP_CONTAINS, OP_NOT_CONTAINS, OP_STARTS_WITH, OP_ENDS_WITH, OP_MATCHES_REGEX)
+val OPERATORS_FOR_NUMBER = listOf(OP_EQUALS, OP_STRICT_EQUALS, OP_NOT_EQUALS, OP_NUM_GT, OP_NUM_GTE, OP_NUM_LT, OP_NUM_LTE, OP_NUM_BETWEEN)
 val OPERATORS_FOR_BOOLEAN = listOf(OP_IS_TRUE, OP_IS_FALSE)
 val OPERATORS_FOR_COLLECTION = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY)
 val ALL_OPERATORS = (OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT + OPERATORS_FOR_NUMBER + OPERATORS_FOR_BOOLEAN + OPERATORS_FOR_COLLECTION).distinct()
@@ -80,32 +79,30 @@ class IfModule : BaseBlockModule() {
 
     /**
      * 获取动态输入参数，根据主输入类型和所选操作符调整后续输入项。
-     * 这是模块化思想的正确实践：模块自身根据上下文决定其UI结构。
+     * 条件输入（operator、value1、value2）始终显示，不依赖 input1 是否已连接。
      */
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val staticInputs = getInputs()
         val currentParameters = step?.parameters ?: emptyMap()
+
+        // 获取是否启用类型限制的设置（默认关闭，快捷指令风格）
+        val enableTypeFilter = isTypeFilterEnabled()
+
+        val dynamicInputs = mutableListOf<InputDefinition>()
+        dynamicInputs.add(staticInputs.first { it.id == "input1" })
+
+        // 根据 input1 是否已连接来决定可用的操作符
         val input1Value = currentParameters["input1"] as? String
-
-        if (input1Value == null) {
-            return listOf(staticInputs.first { it.id == "input1" })
-        }
-
-        // 获取是否禁用类型限制的设置
-        val disableTypeFilter = isTypeFilterDisabled()
-
-        val availableOperators = if (disableTypeFilter) {
-            ALL_OPERATORS  // 禁用类型限制时，使用所有操作符
+        val availableOperators = if (!enableTypeFilter || input1Value == null) {
+            ALL_OPERATORS  // 未启用类型限制或 input1 未连接时，使用所有操作符
         } else {
             val input1TypeName = resolveVariableType(input1Value, allSteps, step)
             getOperatorsForVariableType(input1TypeName)
         }
 
-        val dynamicInputs = mutableListOf<InputDefinition>()
-        dynamicInputs.add(staticInputs.first { it.id == "input1" })
         dynamicInputs.add(staticInputs.first { it.id == "operator" }.copy(options = availableOperators))
 
-        val selectedOperator = currentParameters["operator"] as? String
+        val selectedOperator = currentParameters["operator"] as? String ?: OP_EXISTS
 
         if (OPERATORS_REQUIRING_ONE_INPUT.contains(selectedOperator)) {
             dynamicInputs.add(staticInputs.first { it.id == "value1" })
@@ -268,14 +265,14 @@ class IfModule : BaseBlockModule() {
     }
 
     /**
-     * 检查是否禁用了变量类型限制。
-     * 通过 SharedPreferences 获取用户设置。
+     * 检查是否启用了变量类型限制。
+     * 默认关闭（快捷指令风格），通过 SharedPreferences 获取用户设置。
      */
-    private fun isTypeFilterDisabled(): Boolean {
+    private fun isTypeFilterEnabled(): Boolean {
         return try {
             val prefs = com.chaomixian.vflow.core.logging.LogManager.applicationContext
                 .getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-            prefs.getBoolean("disableTypeFilter", false)
+            prefs.getBoolean("enableTypeFilter", false)
         } catch (e: Exception) {
             false
         }

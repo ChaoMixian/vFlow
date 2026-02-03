@@ -121,15 +121,17 @@ class HttpRequestModule : BaseModule() {
 
                 // 解析 Headers (支持变量)
                 @Suppress("UNCHECKED_CAST")
-                val rawHeaders = (context.magicVariables["headers"] as? VDictionary)?.raw
-                    ?: (context.getVariable("headers") as? Map<String, Any?>)
+                val headersObj = context.getVariable("headers")
+                val rawHeaders = (headersObj as? VDictionary)?.raw
+                    ?: (headersObj as? Map<String, Any?>)
                     ?: emptyMap()
                 val headers = resolveMap(rawHeaders, context)
 
                 // 解析 Query Params (支持变量)
                 @Suppress("UNCHECKED_CAST")
-                val rawQueryParams = (context.magicVariables["query_params"] as? VDictionary)?.raw
-                    ?: (context.getVariable("query_params") as? Map<String, Any?>)
+                val queryParamsObj = context.getVariable("query_params")
+                val rawQueryParams = (queryParamsObj as? VDictionary)?.raw
+                    ?: (queryParamsObj as? Map<String, Any?>)
                     ?: emptyMap()
                 val queryParams = resolveMap(rawQueryParams, context)
 
@@ -140,11 +142,11 @@ class HttpRequestModule : BaseModule() {
                 val bodyData: Any? = when (bodyType) {
                     "原始文本" -> {
                         // 原始文本：直接解析富文本字符串
-                        VariableResolver.resolve(bodyDataRaw?.toString() ?: "", context)
+                        VariableResolver.resolve(bodyDataRaw?.asString() ?: "", context)
                     }
                     "表单" -> {
                         // 表单：必须使用字符串转换（表单编码要求）
-                        val mapData = (context.magicVariables["body"] as? VDictionary)?.raw
+                        val mapData = (bodyDataRaw as? VDictionary)?.raw
                             ?: (bodyDataRaw as? Map<*, *>)
                         if (mapData is Map<*, *>) {
                             @Suppress("UNCHECKED_CAST")
@@ -155,7 +157,7 @@ class HttpRequestModule : BaseModule() {
                     }
                     "JSON" -> {
                         // JSON：支持字符串输入（来自 RichTextView）或 Map 输入（来自变量引用）
-                        val mapData = (context.magicVariables["body"] as? VDictionary)?.raw
+                        val mapData = (bodyDataRaw as? VDictionary)?.raw
                             ?: (bodyDataRaw as? Map<*, *>)
 
                         if (mapData is Map<*, *>) {
@@ -177,14 +179,13 @@ class HttpRequestModule : BaseModule() {
                     "文件" -> {
                         // 文件：不解析变量，直接传递原始文本（稍后在 createRequestBody 中处理）
                         // 这样可以保留 {{step1.image}}{{step2.image}} 格式的变量引用
-                        bodyDataRaw?.toString() ?: ""
+                        bodyDataRaw?.asString() ?: ""
                     }
-                    else -> context.magicVariables["body"] ?: bodyDataRaw
+                    else -> bodyDataRaw
                 }
 
-                val timeout = ((context.magicVariables["timeout"] as? VNumber)?.raw
-                    ?: (context.variables["timeout"] as? Number)?.toDouble()
-                    ?: 10.0).toLong()
+                // 现在 variables 是 Map<String, VObject>，使用 getVariableAsLong 获取
+                val timeout = context.getVariableAsLong("timeout") ?: 10
 
                 val client = OkHttpClient.Builder()
                     .callTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
@@ -293,7 +294,7 @@ class HttpRequestModule : BaseModule() {
                             VariableResolver.resolve(rawStr, context)
                         }
                     }
-                    is VNumber -> value.raw  // 保留 Double 类型
+                    is VNumber -> value.raw.toDouble()  // 转换为 Double 以保持兼容性
                     is VBoolean -> value.raw  // 保留 Boolean 类型
                     is VList -> value.raw.map { resolveValuePreservingType(it, context) }
                     is VDictionary -> {
@@ -364,7 +365,7 @@ class HttpRequestModule : BaseModule() {
                 if (images.isEmpty()) {
                     android.util.Log.e("HttpRequestModule", "No images found, trying magicVariables")
                     // 没有找到图片，尝试直接作为单个 VImage 处理
-                    val image = (context.magicVariables["body"] as? VImage)
+                    val image = context.getVariable("body") as? VImage
                     android.util.Log.d("HttpRequestModule", "Magic variable image: $image")
                     if (image != null) {
                         createSingleFileUpload(context, image)
@@ -415,7 +416,7 @@ class HttpRequestModule : BaseModule() {
                 outputValue as? VImage
             } else {
                 // 格式：只有 outputId（从当前步骤的魔法变量获取）
-                val magicVar = context.magicVariables[outputId]
+                val magicVar = context.getVariable(outputId)
                 android.util.Log.d("HttpRequestModule", "Magic variable type: ${magicVar?.javaClass?.name}")
                 magicVar as? VImage
             }

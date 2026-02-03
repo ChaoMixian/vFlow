@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/interaction/AgentModule.kt
 package com.chaomixian.vflow.core.workflow.module.interaction
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.basic.*
 
 import android.content.ContentValues.TAG
@@ -123,7 +124,8 @@ class AgentModule : BaseModule() {
         val apiKey = context.getVariableAsString("api_key", "")
         val model = context.getVariableAsString("model", "glm-4.6v-flash")
         val instruction = VariableResolver.resolve(context.getVariableAsString("instruction", ""), context)
-        val maxSteps = (context.variables["max_steps"] as? Number)?.toInt() ?: 15
+        // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
+        val maxSteps = context.getVariableAsInt("max_steps") ?: 15
         val displayMode = context.getVariableAsString("display_mode", "主屏幕")
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
@@ -140,7 +142,7 @@ class AgentModule : BaseModule() {
                 return ExecutionResult.Failure("环境错误", "虚拟屏幕创建失败。")
             }
             // 将 displayId 注入到变量中，供 AgentTools 和 AgentUtils 使用
-            context.variables["_target_display_id"] = targetDisplayId
+            context.setVariable("_target_display_id", VObjectFactory.from(targetDisplayId))
             DebugLogger.i("AgentModule", "Agent 将运行在 Display ID: $targetDisplayId")
         }
 
@@ -524,7 +526,8 @@ class AgentModule : BaseModule() {
 
         } finally {
             // 销毁前清理虚拟屏幕上的应用
-            val targetDisplayId = context.variables["_target_display_id"] as? Int ?: 0
+            // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
+            val targetDisplayId = context.getVariableAsInt("_target_display_id") ?: 0
             if (targetDisplayId > 0) {
                 AgentUtils.killTopAppOnDisplay(context.applicationContext, targetDisplayId)
                 DebugLogger.i(TAG, "释放虚拟屏幕...")

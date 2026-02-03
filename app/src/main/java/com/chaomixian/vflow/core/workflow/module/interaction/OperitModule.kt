@@ -220,7 +220,7 @@ class OperitModule : BaseModule() {
             execContext.getVariableAsString("request_id", ""),
             execContext
         )
-        val createNewChat = execContext.variables["create_new_chat"] as? Boolean ?: false
+        val createNewChat = execContext.getVariableAsBoolean("create_new_chat") ?: false
         val group = VariableResolver.resolve(
             execContext.getVariableAsString("group", ""),
             execContext
@@ -229,11 +229,11 @@ class OperitModule : BaseModule() {
             execContext.getVariableAsString("chat_id", ""),
             execContext
         )
-        val showFloating = execContext.variables["show_floating"] as? Boolean ?: false
-        val autoExitAfterMs = (execContext.variables["auto_exit_after_ms"] as? Number)?.toLong() ?: -1L
-        val stopAfter = execContext.variables["stop_after"] as? Boolean ?: false
-        val waitForResult = execContext.variables["wait_for_result"] as? Boolean ?: true
-        val timeoutMs = (execContext.variables["timeout_ms"] as? Number)?.toLong() ?: 30000L
+        val showFloating = execContext.getVariableAsBoolean("show_floating") ?: false
+        val autoExitAfterMs = execContext.getVariableAsLong("auto_exit_after_ms") ?: -1L
+        val stopAfter = execContext.getVariableAsBoolean("stop_after") ?: false
+        val waitForResult = execContext.getVariableAsBoolean("wait_for_result") ?: true
+        val timeoutMs = execContext.getVariableAsLong("timeout_ms") ?: 30000L
 
         onProgress(ProgressUpdate("正在发送消息到 Operit..."))
 
@@ -331,8 +331,9 @@ class OperitModule : BaseModule() {
         val workflowAction = VariableResolver.resolve(rawAction, execContext)
 
         @Suppress("UNCHECKED_CAST")
-        val extrasMap = (execContext.magicVariables["workflow_extras"] as? VDictionary)?.raw
-            ?: (execContext.getVariable("workflow_extras") as? Map<String, Any?>)
+        val extrasObj = execContext.getVariable("workflow_extras")
+        val extrasMap = (extrasObj as? VDictionary)?.raw
+            ?: (extrasObj as? Map<String, Any?>)
             ?: emptyMap()
 
         if (workflowAction.isBlank()) {

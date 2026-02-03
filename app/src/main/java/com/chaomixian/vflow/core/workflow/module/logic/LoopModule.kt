@@ -7,7 +7,9 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.LoopState
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -89,22 +91,21 @@ class LoopModule : BaseBlockModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val countVar = context.getVariable("count")
-        val actualCount = when (countVar) {
+        val actualCount: Long? = when (countVar) {
             is VNumber -> countVar.raw.toLong()
-            is Number -> countVar.toLong()
-            is String -> countVar.toLongOrNull() ?: (getInputs().firstOrNull { it.id == "count" }?.defaultValue as? Number ?: 0L).toLong()
-            else -> (getInputs().firstOrNull { it.id == "count" }?.defaultValue as? Number ?: 0L).toLong()
+            is VString -> countVar.raw.toLongOrNull()
+            is VNull -> null
+            else -> null
         }
 
-        if (actualCount <= 0) { // 次数为0或负数，则跳过整个循环块
-            onProgress(ProgressUpdate("循环次数为 $actualCount，跳过循环块。"))
-            // 使用 BlockNavigator
-            val endPc = BlockNavigator.findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(LOOP_END_ID))
-            return if (endPc != -1) {
-                ExecutionResult.Signal(ExecutionSignal.Jump(endPc))
-            } else {
-                ExecutionResult.Failure("执行错误", "找不到配对的结束循环块")
+        // 无法转换为有效数字时报错
+        if (actualCount == null || actualCount <= 0) {
+            val errorMsg = when (countVar) {
+                is VString -> "无法将 '${countVar.raw}' 解析为有效的循环次数"
+                is VNull -> "循环次数不能为空"
+                else -> "循环次数必须是有效的数字"
             }
+            return ExecutionResult.Failure("参数错误", errorMsg)
         }
 
         onProgress(ProgressUpdate("循环开始，总次数: $actualCount"))

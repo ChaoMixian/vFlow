@@ -28,25 +28,29 @@ class WhileModule : BaseBlockModule() {
     override val pairingId = WHILE_PAIRING_ID
     override val stepIdsInBlock = listOf(WHILE_START_ID, WHILE_END_ID)
 
-    /** 获取动态输入参数，与 IfModule 类似。 */
+    /** 获取动态输入参数，与 IfModule 类似。条件输入始终显示，不依赖 input1 是否已连接。 */
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val staticInputs = getInputs()
         val currentParameters = step?.parameters ?: emptyMap()
-        val input1Value = currentParameters["input1"] as? String
 
-        if (input1Value == null) {
-            return listOf(staticInputs.first { it.id == "input1" })
-        }
-
-        // **核心修改点**：调用新的 resolveVariableType 方法
-        val input1TypeName = resolveVariableType(input1Value, allSteps, step)
-        val availableOperators = getOperatorsForVariableType(input1TypeName)
+        // 获取是否启用类型限制的设置（默认关闭，快捷指令风格）
+        val enableTypeFilter = isTypeFilterEnabled()
 
         val dynamicInputs = mutableListOf<InputDefinition>()
         dynamicInputs.add(staticInputs.first { it.id == "input1" })
+
+        // 根据 input1 是否已连接来决定可用的操作符
+        val input1Value = currentParameters["input1"] as? String
+        val availableOperators = if (!enableTypeFilter || input1Value == null) {
+            ALL_OPERATORS  // 未启用类型限制或 input1 未连接时，使用所有操作符
+        } else {
+            val input1TypeName = resolveVariableType(input1Value, allSteps, step)
+            getOperatorsForVariableType(input1TypeName)
+        }
+
         dynamicInputs.add(staticInputs.first { it.id == "operator" }.copy(options = availableOperators))
 
-        val selectedOperator = currentParameters["operator"] as? String
+        val selectedOperator = currentParameters["operator"] as? String ?: OP_EXISTS
 
         if (OPERATORS_REQUIRING_ONE_INPUT.contains(selectedOperator)) {
             dynamicInputs.add(staticInputs.first { it.id == "value1" })
@@ -211,6 +215,20 @@ class WhileModule : BaseBlockModule() {
             }
         }
         return ExecutionResult.Failure("执行错误", "找不到配对的结束循环块")
+    }
+
+    /**
+     * 检查是否启用了变量类型限制。
+     * 默认关闭（快捷指令风格），通过 SharedPreferences 获取用户设置。
+     */
+    private fun isTypeFilterEnabled(): Boolean {
+        return try {
+            val prefs = com.chaomixian.vflow.core.logging.LogManager.applicationContext
+                .getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+            prefs.getBoolean("enableTypeFilter", false)
+        } catch (e: Exception) {
+            false
+        }
     }
 }
 

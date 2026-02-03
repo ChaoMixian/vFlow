@@ -7,8 +7,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
-import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNull
+import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -61,16 +63,23 @@ class BrightnessModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val levelValue = context.magicVariables["brightness_level"] ?: context.variables["brightness_level"]
+        val level = context.getVariableAsInt("brightness_level")
 
-        val level = when (levelValue) {
-            is VNumber -> levelValue.raw.toInt()
-            is Number -> levelValue.toInt()
-            is String -> levelValue.toIntOrNull()
-            else -> null
+        if (level == null) {
+            val rawValue = context.getVariable("brightness_level")
+            val rawValueStr = when (rawValue) {
+                is VString -> rawValue.raw
+                is VNull -> "空值"
+                is VNumber -> rawValue.raw.toString()
+                else -> rawValue?.toString() ?: "未知"
+            }
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_brightness_invalid_level),
+                "无法将 '$rawValueStr' 解析为有效的亮度值 (0-255)。"
+            )
         }
 
-        if (level == null || level !in 0..255) {
+        if (level !in 0..255) {
             return ExecutionResult.Failure(
                 appContext.getString(R.string.error_vflow_system_brightness_invalid_level),
                 appContext.getString(R.string.error_vflow_system_brightness_invalid_level_detail)

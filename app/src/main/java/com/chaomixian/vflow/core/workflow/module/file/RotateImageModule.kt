@@ -13,7 +13,6 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
-import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -82,16 +81,10 @@ class RotateImageModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val imageVar = context.magicVariables["image"] as? VImage
+        val imageVar = context.getVariable("image") as? VImage
             ?: return ExecutionResult.Failure("参数错误", "需要一个图像变量作为输入。")
 
-        val degreesValue = context.magicVariables["degrees"] ?: context.variables["degrees"]
-        val degrees = when(degreesValue) {
-            is VNumber -> degreesValue.raw.toFloat()
-            is Number -> degreesValue.toFloat()
-            is String -> degreesValue.toFloatOrNull() ?: 90f
-            else -> 90f
-        }
+        val degrees = context.getVariableAsNumber("degrees")?.toFloat() ?: 90.0f
 
         val appContext = context.applicationContext
         onProgress(ProgressUpdate("正在加载图像..."))

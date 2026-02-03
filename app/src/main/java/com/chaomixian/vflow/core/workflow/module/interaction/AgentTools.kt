@@ -16,6 +16,8 @@ import androidx.annotation.RequiresApi
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ExecutionResult
+import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.types.complex.VScreenElement
@@ -40,8 +42,9 @@ class AgentTools(private val context: ExecutionContext) {
     private val TAG = "AgentTools"
 
     // 获取目标显示 ID，默认为 0 (主屏幕)
+    // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
     private val targetDisplayId: Int
-        get() = (context.variables["_target_display_id"] as? Number)?.toInt() ?: 0
+        get() = context.getVariableAsInt("_target_display_id") ?: 0
 
     // 辅助方法：构建 shell 命令的 display 参数
     private fun getDisplayOption(): String {
@@ -408,7 +411,7 @@ class AgentTools(private val context: ExecutionContext) {
 
         // 2. 执行截图
         // 使用临时的 Context，避免污染主流程变量
-        val captureContext = context.copy(variables = mutableMapOf("mode" to "自动"))
+        val captureContext = context.copy(variables = mutableMapOf("mode" to VObjectFactory.from("自动")))
         val captureRes = captureModule.execute(captureContext) { } // 静默执行
 
         val imagePath = if (captureRes is ExecutionResult.Success) {
@@ -428,10 +431,10 @@ class AgentTools(private val context: ExecutionContext) {
             "search_strategy" to "默认 (从上到下)"
         )
 
-        val ocrMagicVars = mutableMapOf<String, Any?>("image" to VImage(imagePath))
+        val ocrMagicVars: MutableMap<String, VObject> = mutableMapOf("image" to VImage(imagePath))
 
         val ocrContext = context.copy(
-            variables = ocrParams,
+            variables = ExecutionContext.mutableMapToVObjectMap(ocrParams).toMutableMap(),
             magicVariables = ocrMagicVars
         )
 

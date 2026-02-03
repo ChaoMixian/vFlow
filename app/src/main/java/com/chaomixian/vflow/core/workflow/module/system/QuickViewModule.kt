@@ -16,6 +16,7 @@ import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ExecutionUIService
@@ -102,29 +103,20 @@ class QuickViewModule : BaseModule() {
         val uiService = context.services.get(ExecutionUIService::class)
             ?: return ExecutionResult.Failure("服务缺失", "无法获取UI服务来显示内容。")
 
-        // 使用统一的变量访问方法，自动处理递归解析
-        val content = context.getVariable("content")
-
         onProgress(ProgressUpdate("正在显示内容..."))
 
-        // 检查内容是否为图片变量
-        if (content is VImage) {
-            // 如果是图片，调用专门显示图片的服务
-            uiService.showQuickViewImage("快速查看", content.uriString)
+        // 先获取原始内容，检查是否为图片变量
+        val contentRaw = context.getVariable("content")
+
+        // 如果原始内容是图片，直接显示图片
+        if (contentRaw is VImage) {
+            uiService.showQuickViewImage("快速查看", contentRaw.uriString)
         } else {
-            // 否则，将内容转换为字符串并显示
-            val contentAsString = when (content) {
-                is VString -> content.raw
-                is VNumber -> content.raw.toString()
-                is VBoolean -> content.raw.toString()
-                is VDictionary -> content.raw.entries.joinToString("\n") { "${it.key}: ${it.value.asString()}" }
-                is VList -> content.raw.joinToString("\n") { it.asString() }
-                is String -> content  // 已经是解析后的字符串
-                null -> "[空值]"
-                else -> content.toString()
-            }
-            // 调用UI服务显示文本内容，并等待用户关闭悬浮窗
-            uiService.showQuickView("快速查看", contentAsString)
+            // 否则解析变量并显示文本内容
+            val contentAsString = contentRaw.asString()
+            val resolvedContent = VariableResolver.resolve(contentAsString, context)
+            val displayText = if (resolvedContent.isNullOrBlank()) "[空值]" else resolvedContent
+            uiService.showQuickView("快速查看", displayText)
         }
 
         onProgress(ProgressUpdate("用户已关闭查看窗口"))

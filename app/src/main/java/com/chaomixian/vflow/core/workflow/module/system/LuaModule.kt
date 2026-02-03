@@ -76,7 +76,12 @@ class LuaModule : BaseModule() {
         }
 
         val scriptInputs = mutableMapOf<String, Any?>()
-        val inputMappings = context.variables["inputs"] as? Map<String, String> ?: emptyMap()
+        // 现在 variables 是 Map<String, VObject>，inputs 存储为 VDictionary
+        val inputsObj = context.getVariable("inputs")
+        val inputMappings = when (inputsObj) {
+            is VDictionary -> inputsObj.raw.mapValues { it.value.asString() }
+            else -> emptyMap()
+        }
 
         inputMappings.forEach { (varName, magicVarRef) ->
             if (magicVarRef.isMagicVariable()) {

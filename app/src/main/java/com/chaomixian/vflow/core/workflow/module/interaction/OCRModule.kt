@@ -102,7 +102,7 @@ class OCRModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         // 获取参数
-        val imageVar = context.magicVariables["image"] as? VImage
+        val imageVar = context.getVariable("image") as? VImage
             ?: return ExecutionResult.Failure("参数错误", "请提供一张有效的图片。")
         val mode = context.getVariableAsString("mode", "识别全文")
         val language = context.getVariableAsString("language", "中英混合")
@@ -259,8 +259,9 @@ class OCRModule : BaseModule() {
      * 3. 手动输入的坐标字符串（格式：x1,y1,x2,y2）
      */
     private fun parseRegionParameter(context: ExecutionContext): VCoordinateRegion? {
-        // 优先尝试从 magicVariables 获取 VCoordinateRegion
-        val magicRegion = context.magicVariables["region"] as? VCoordinateRegion
+        // 尝试从变量获取 VCoordinateRegion
+        val regionObj = context.getVariable("region")
+        val magicRegion = regionObj as? VCoordinateRegion
         if (magicRegion != null) return magicRegion
 
         // 尝试从 variables 获取字符串（可能是变量引用或手动输入）

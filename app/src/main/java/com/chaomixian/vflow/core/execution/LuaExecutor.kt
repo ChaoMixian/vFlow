@@ -3,6 +3,7 @@ package com.chaomixian.vflow.core.execution
 
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObjectFactory
 import kotlinx.coroutines.runBlocking
 import org.luaj.vm2.*
 import org.luaj.vm2.lib.OneArgFunction
@@ -40,10 +41,12 @@ class LuaExecutor(private val executionContext: ExecutionContext) {
         globals.set("inputs", MapProxy(inputs))
 
         // 'sys': 访问执行上下文中的魔法变量 (只读/读写取决于需求，这里给读写权限)
-        globals.set("sys", MapProxy(executionContext.magicVariables))
+        // 使用 VObjectMapProxy 以支持统一 VObject 类型系统
+        globals.set("sys", VObjectMapProxy(executionContext.magicVariables))
 
         // 'vars': 访问全局命名变量
-        globals.set("vars", MapProxy(executionContext.namedVariables))
+        // 使用 VObjectMapProxy 以支持统一 VObject 类型系统
+        globals.set("vars", VObjectMapProxy(executionContext.namedVariables))
 
         // 自动构建并注入 vFlow 模块树 (_G.vflow)
         injectVFlowModules(globals)
@@ -142,7 +145,7 @@ class ModuleWrapperFunction(
         // 注意：这里我们创建了一个新的 Context 用于模块执行，
         // 但我们可以将上面创建的 MapProxy 再次利用，或者让模块只需处理 params
         val moduleContext = executionContext.copy(
-            variables = params,
+            variables = ExecutionContext.mutableMapToVObjectMap(params),
             // 魔法变量通常在进入 Lua 前已经解析，这里传空或传引用均可
             magicVariables = mutableMapOf()
         )

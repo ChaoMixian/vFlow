@@ -10,8 +10,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
+import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.types.complex.VScreenElement
@@ -110,7 +112,15 @@ class ClickModule : BaseModule() {
             )
 
         // 获取点击目标，优先从魔法变量，其次从静态变量
-        val target = context.magicVariables["target"] ?: context.variables["target"]
+        val target = context.getVariable("target")
+
+        // VNull 表示目标不存在
+        if (target is VNull) {
+            return ExecutionResult.Failure(
+                "参数错误",
+                "目标位置为空。请确保已设置坐标或连接了上游模块的输出。"
+            )
+        }
 
         // 根据目标的不同类型执行相应的点击逻辑
         val clickSuccess: Boolean = when (target) {
@@ -134,9 +144,10 @@ class ClickModule : BaseModule() {
                 onProgress(ProgressUpdate("正在点击视图ID: $viewId"))
                 performViewIdClick(service, viewId, onProgress)
             }
-            is String -> {
-                // 尝试解析为坐标
-                val parts = target.split(",")
+            else -> {
+                // 尝试解析为坐标字符串
+                val coordStr = target.asString()
+                val parts = coordStr.split(",")
                 if (parts.size == 2) {
                     val x = parts[0].trim().toIntOrNull()
                     val y = parts[1].trim().toIntOrNull()
@@ -144,17 +155,13 @@ class ClickModule : BaseModule() {
                         onProgress(ProgressUpdate("正在点击坐标: ($x, $y)"))
                         performGestureClick(service, x, y, onProgress)
                     } else {
-                        onProgress(ProgressUpdate("正在点击视图ID: $target"))
-                        performViewIdClick(service, target, onProgress)
+                        onProgress(ProgressUpdate("正在点击视图ID: $coordStr"))
+                        performViewIdClick(service, coordStr, onProgress)
                     }
                 } else {
-                    onProgress(ProgressUpdate("正在点击视图ID: $target"))
-                    performViewIdClick(service, target, onProgress)
+                    onProgress(ProgressUpdate("正在点击视图ID: $coordStr"))
+                    performViewIdClick(service, coordStr, onProgress)
                 }
-            }
-            else -> {
-                onProgress(ProgressUpdate("点击失败：目标无效"))
-                false
             }
         }
         // 返回执行结果，包含点击是否成功的布尔值
