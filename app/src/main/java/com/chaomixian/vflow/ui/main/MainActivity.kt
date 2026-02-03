@@ -19,6 +19,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.opencv.OpenCVManager
 import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
@@ -27,6 +28,7 @@ import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.chaomixian.vflow.services.CoreManagementService
 
@@ -64,6 +66,12 @@ class MainActivity : BaseActivity() {
         // 移除此处对 ExecutionLogger 的初始化，因为它已在 TriggerService 中完成
         LogManager.initialize(applicationContext)
         DebugLogger.initialize(applicationContext) // 初始化调试日志记录器
+
+        // 初始化 OpenCV (在后台线程)
+        lifecycleScope.launch(Dispatchers.IO) {
+            OpenCVManager.initialize(applicationContext)
+        }
+
         // 应用启动时，立即发起 Shizuku 预连接
         ShellManager.proactiveConnect(applicationContext)
         // 检查并自动启动 vFlow Core

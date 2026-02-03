@@ -14,6 +14,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.opencv.OpenCVImageMatcher
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VCoordinate
@@ -148,7 +149,7 @@ class FindImageModule : BaseModule() {
         onProgress(ProgressUpdate("正在进行图片匹配 (模板: ${templateBitmap.width}x${templateBitmap.height})..."))
 
         val matches = withContext(Dispatchers.Default) {
-            ImageMatcher.findAll(screenBitmap, templateBitmap, maxDiffPercent)
+            OpenCVImageMatcher.findAll(screenBitmap, templateBitmap, maxDiffPercent)
         }
 
         templateBitmap.recycle()
@@ -277,9 +278,10 @@ data class MatchResult(
 }
 
 /**
- * 图片匹配器
- * 使用简单直接的像素差异比较算法
+ * 图片匹配器（已废弃）
+ * @deprecated 使用 OpenCVImageMatcher 获得更好的性能和准确度
  */
+@Deprecated("Use OpenCVImageMatcher instead")
 object ImageMatcher {
 
     /**

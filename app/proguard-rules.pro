@@ -43,8 +43,6 @@
 -keep class com.chaomixian.vflow.core.types.** { *; }
 -keep class com.chaomixian.vflow.core.module.*Variable { *; }
 -keep class com.chaomixian.vflow.core.workflow.module.notification.NotificationObject { *; }
--keep class com.chaomixian.vflow.core.workflow.module.interaction.ScreenElement { *; }
--keep class com.chaomixian.vflow.core.workflow.module.interaction.Coordinate { *; }
 
 # 5. 保留 Gson 相关
 -keepattributes Signature
@@ -159,3 +157,8 @@
 -keepclassmembers class * extends android.os.Binder {
     <methods>;
 }
+
+# 25. OpenCV native library
+-keep class org.opencv.** { *; }
+-keepclassmembers class org.opencv.** { *; }
+-dontwarn org.opencv.**
