@@ -565,6 +565,9 @@
     <string name="error_vflow_data_base64_invalid_format">Input text is not a valid Base64 encoded format</string>
     <string name="error_vflow_data_base64_execution_error">Execution Error</string>
     <string name="error_vflow_data_base64_unknown">Unknown error</string>
+    <string name="module_vflow_data_comment_name">Comment</string>
+    <string name="module_vflow_data_comment_desc">Add comments to document your workflow design. Will be skipped during execution.</string>
+    <string name="param_vflow_data_comment_content_name">Comment Content</string>
 
     <!-- HttpRequestModule -->
     <string name="module_vflow_network_http_request_name">HTTP Request</string>

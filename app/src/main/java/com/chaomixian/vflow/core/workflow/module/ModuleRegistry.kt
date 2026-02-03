@@ -134,6 +134,7 @@ object ModuleRegistry {
         register(CalculationModule(), context)
         register(TextProcessingModule(), context)
         register(Base64EncodeOrDecodeModule(), context)
+        register(CommentModule(), context)
 
         // 文件
         register(ImportImageModule(), context)

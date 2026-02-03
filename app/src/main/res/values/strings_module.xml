@@ -493,6 +493,9 @@
     <string name="error_vflow_data_base64_invalid_format">输入的文本不是有效的 Base64 编码格式</string>
     <string name="error_vflow_data_base64_execution_error">执行出错</string>
     <string name="error_vflow_data_base64_unknown">未知错误</string>
+    <string name="module_vflow_data_comment_name">注释</string>
+    <string name="module_vflow_data_comment_desc">添加注释说明，用于记录工作流的设计思路和目的。执行时会被跳过。</string>
+    <string name="param_vflow_data_comment_content_name">注释内容</string>
     <string name="module_vflow_network_http_request_name">HTTP 请求</string>
     <string name="module_vflow_network_http_request_desc">发送 HTTP 请求并获取响应</string>
     <string name="param_vflow_network_http_request_url_name">URL</string>
