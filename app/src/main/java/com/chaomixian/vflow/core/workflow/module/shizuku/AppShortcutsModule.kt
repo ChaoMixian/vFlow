@@ -10,6 +10,7 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -76,8 +77,9 @@ class AlipayShortcutsModule : BaseShortcutModule() {
 
 /**
  * 微信快捷方式模块。
+ * 需要使用 am start -n 命令直接启动微信的特定 Activity，必须使用 ROOT 权限。
  */
-class WeChatShortcutsModule : BaseShortcutModule() {
+class WeChatShortcutsModule : BaseModule() {
     override val id = "vflow.shizuku.wechat_shortcuts"
     override val metadata = ActionMetadata(
         name = "微信",  // Fallback
@@ -92,6 +94,10 @@ class WeChatShortcutsModule : BaseShortcutModule() {
         "收款码" to "am start -n com.tencent.mm/.plugin.collect.ui.CollectMainUI",
         "付款码" to "am start -n com.tencent.mm/.plugin.offline.ui.WalletOfflineCoinPurseUI"
     )
+
+    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
+        return listOf(PermissionManager.ROOT)
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("action", "操作", ParameterType.ENUM, actions.keys.first(), options = actions.keys.toList())
@@ -108,8 +114,19 @@ class WeChatShortcutsModule : BaseShortcutModule() {
             return ExecutionResult.Failure("参数错误", "未选择操作")
         }
         val command = actions[action] ?: return ExecutionResult.Failure("参数错误", "无效的操作")
-        return executeCommand(context, command, onProgress)
+        onProgress(ProgressUpdate("正在执行快捷指令..."))
+        val result = ShellManager.execShellCommand(context.applicationContext, command, ShellManager.ShellMode.ROOT)
+
+        return if (result.startsWith("Error:")) {
+            ExecutionResult.Failure("执行失败", result)
+        } else {
+            ExecutionResult.Success(mapOf("result" to VString(result)))
+        }
     }
+
+    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
+        OutputDefinition("result", "命令输出", VTypeRegistry.STRING.id)
+    )
 }
 
 /**
