@@ -56,6 +56,9 @@ class FindElementModule : BaseModule() {
         // === 区域限制 ===
         InputDefinition("search_region", "搜索区域", ParameterType.ANY, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id), hint = "如：100,200,500,600 留空则搜索全屏"),
 
+        // === 输出过滤 ===
+        InputDefinition("only_leaf_nodes", "仅保留叶子节点", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, hint = "只返回没有子节点匹配的控件"),
+
         // === 交互状态过滤 ===
         InputDefinition("clickable", "可点击", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
         InputDefinition("enabled", "已启用", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
@@ -169,6 +172,7 @@ class FindElementModule : BaseModule() {
         // 使用 getVariableAsInt 获取数字类型
         val depthLimit = context.getVariableAsInt("depth_limit") ?: 50
         val resultSelection = context.getVariableAsString("result_selection", "第一个")
+        val onlyLeafNodes = context.getVariableAsBoolean("only_leaf_nodes") ?: false
 
         // === 检查是否至少有一个查找条件 ===
         // 注意：search_region 的默认值是空字符串，不是 null，所以需要特别处理
@@ -181,10 +185,10 @@ class FindElementModule : BaseModule() {
                 focusable != null || scrollable != null
 
         // 检查是否有任何非空、非默认值的参数
-        // 排除有默认值的参数（depth_limit, text_match_mode, id_match_mode, class_match_mode, result_selection）
+        // 排除有默认值的参数（depth_limit, only_leaf_nodes, text_match_mode, id_match_mode, class_match_mode, result_selection）
         val hasValidParameter = context.variables.entries.any { (key, value) ->
             value !is com.chaomixian.vflow.core.types.basic.VNull &&
-            key !in setOf("depth_limit", "text_match_mode", "id_match_mode", "class_match_mode", "result_selection")
+            key !in setOf("depth_limit", "only_leaf_nodes", "text_match_mode", "id_match_mode", "class_match_mode", "result_selection")
         }
 
         if (!hasTextCondition && !hasIdCondition && !hasClassCondition &&
@@ -283,8 +287,22 @@ class FindElementModule : BaseModule() {
 
             traverseNode(rootNode, 0)
 
+            // === 过滤叶子节点 ===
+            val finalElements = if (onlyLeafNodes) {
+                // 过滤掉有任何子节点也在匹配列表中的节点
+                allElements.filterNot { parent ->
+                    allElements.any { child ->
+                        // 判断 child 是否是 parent 的子孙节点
+                        child.depth > parent.depth &&
+                        parent.bounds.contains(child.bounds)
+                    }
+                }
+            } else {
+                allElements
+            }
+
             // === 检查结果 ===
-            if (allElements.isEmpty()) {
+            if (finalElements.isEmpty()) {
                 return ExecutionResult.Failure(
                     "未找到控件",
                     "没有匹配的控件",
@@ -300,31 +318,31 @@ class FindElementModule : BaseModule() {
 
             // === 选择结果 ===
             val selectedElement = when (resultSelection) {
-                "最后一个" -> allElements.last()
+                "最后一个" -> finalElements.last()
                 "最接近中心" -> {
                     val screenBounds = Rect()
                     rootNode.getBoundsInScreen(screenBounds)
                     val centerX = searchRegion?.centerX ?: screenBounds.centerX()
                     val centerY = searchRegion?.centerY ?: screenBounds.centerY()
 
-                    allElements.minByOrNull { element ->
+                    finalElements.minByOrNull { element ->
                         val dx = element.centerX - centerX
                         val dy = element.centerY - centerY
                         dx * dx + dy * dy
-                    } ?: allElements.first()
+                    } ?: finalElements.first()
                 }
-                "最接近顶部" -> allElements.minByOrNull { it.bounds.top } ?: allElements.first()
-                else -> allElements.first() // "第一个"
+                "最接近顶部" -> finalElements.minByOrNull { it.bounds.top } ?: finalElements.first()
+                else -> finalElements.first() // "第一个"
             }
 
-            onProgress(ProgressUpdate("找到 ${allElements.size} 个控件"))
+            onProgress(ProgressUpdate("找到 ${finalElements.size} 个控件"))
 
             return ExecutionResult.Success(mapOf(
                 "success" to VBoolean(true),
                 "found" to VBoolean(true),
-                "count" to VNumber(allElements.size.toDouble()),
+                "count" to VNumber(finalElements.size.toDouble()),
                 "element" to selectedElement,
-                "all_elements" to allElements
+                "all_elements" to finalElements
             ))
 
         } catch (e: Exception) {
