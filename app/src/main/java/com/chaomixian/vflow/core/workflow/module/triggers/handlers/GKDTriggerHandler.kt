@@ -406,6 +406,19 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
         val ruleName = ruleObj["name"]?.jsonPrimitive?.content ?: "未命名规则"
         val ruleKey = ruleObj["key"]?.jsonPrimitive?.int
 
+        // 解析 preKeys（可能是单个数字或数组）
+        val preKeys = when (val preKeysElement = ruleObj["preKeys"]) {
+            null -> emptyList()
+            is JsonArray -> preKeysElement.mapNotNull { it.jsonPrimitive.int }
+            else -> {
+                // 尝试作为单个数字解析
+                listOfNotNull(preKeysElement.jsonPrimitive.int)
+            }
+        }
+
+        // 解析 resetMatch
+        val resetMatch = ruleObj["resetMatch"]?.jsonPrimitive?.content
+
         // 解析选择器
         val matches = parseSelectors(ruleObj["matches"])
         val anyMatches = parseSelectors(ruleObj["anyMatches"])
@@ -427,13 +440,22 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
             anyMatches = anyMatches,
             excludeMatches = excludeMatches,
             excludeAllMatches = excludeAllMatches,
+            key = ruleKey,
+            preKeys = preKeys,
+            resetMatch = resetMatch,
             actionCd = ruleObj["actionCd"]?.jsonPrimitive?.long,
             actionDelay = ruleObj["actionDelay"]?.jsonPrimitive?.long,
             matchDelay = ruleObj["matchDelay"]?.jsonPrimitive?.long,
             matchTime = ruleObj["matchTime"]?.jsonPrimitive?.long,
             matchRoot = ruleObj["matchRoot"]?.jsonPrimitive?.boolean,
             fastQuery = ruleObj["fastQuery"]?.jsonPrimitive?.boolean,
-            actionMaximum = ruleObj["actionMaximum"]?.jsonPrimitive?.int
+            actionMaximum = ruleObj["actionMaximum"]?.jsonPrimitive?.int,
+            // 新增字段
+            actionCdKey = ruleObj["actionCdKey"]?.jsonPrimitive?.int,
+            actionMaximumKey = ruleObj["actionMaximumKey"]?.jsonPrimitive?.int,
+            forcedTime = ruleObj["forcedTime"]?.jsonPrimitive?.long,
+            priorityTime = ruleObj["priorityTime"]?.jsonPrimitive?.long,
+            priorityActionMaximum = ruleObj["priorityActionMaximum"]?.jsonPrimitive?.int
         )
     }
 
@@ -534,6 +556,33 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
 
         for (state in triggerStates) {
             try {
+                // 检测应用/Activity 切换，处理 resetMatch
+                val oldPackage = state.currentPackage
+                val oldActivity = state.currentActivity
+
+                if (oldPackage != currentPackage || oldActivity != currentActivity) {
+                    // 应用或 Activity 发生变化
+                    DebugLogger.d(TAG, "应用/Activity 切换: $oldPackage/$oldActivity -> $currentPackage/$currentActivity")
+
+                    // 检查每个规则是否需要重置
+                    for (rule in state.rules) {
+                        if (rule.shouldReset(oldPackage, oldActivity, currentPackage, currentActivity)) {
+                            DebugLogger.d(TAG, "规则 '${rule.name}' 需要重置 (resetMatch=${rule.resetMatch})")
+                            state.resetRule(rule)
+
+                            // 如果规则有 key，从 matchedKeys 中移除
+                            if (rule.key != null) {
+                                state.matchedKeys.remove(rule.key)
+                                DebugLogger.d(TAG, "  移除已匹配的 key: ${rule.key}")
+                            }
+                        }
+                    }
+
+                    // 更新当前的应用和 Activity
+                    state.currentPackage = currentPackage
+                    state.currentActivity = currentActivity
+                }
+
                 // 匹配规则
                 for (rule in state.rules) {
                     val ruleState = state.getRuleState(rule)
@@ -541,6 +590,15 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
                     // 检查规则状态
                     if (!ruleState.shouldTrigger()) {
                         continue
+                    }
+
+                    // 检查前置规则 (preRules) - 必须是最后触发的规则
+                    if (rule.preKeys.isNotEmpty()) {
+                        val lastTrigger = state.lastTriggerRule
+                        if (lastTrigger == null || lastTrigger.key !in rule.preKeys) {
+                            DebugLogger.d(TAG, "规则 '${rule.name}' 的前置规则未触发 (preKeys=${rule.preKeys}, lastTriggerKey=${lastTrigger?.key})")
+                            continue
+                        }
                     }
 
                     // 检查应用匹配
@@ -580,13 +638,20 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
                     // 记录匹配
                     ruleState.recordMatch(t)
 
+                    // 如果规则有 key，添加到 matchedKeys
+                    if (rule.key != null) {
+                        state.matchedKeys.add(rule.key)
+                        DebugLogger.d(TAG, "规则 '${rule.name}' 匹配成功，添加 key: ${rule.key}")
+                    }
+
                     // 处理触发延迟
                     if (ruleState.actionDelay > 0) {
                         ruleState.startActionDelay(t)
-                        triggerScope.launch {
+                        val job = triggerScope.launch {
                             delay(ruleState.actionDelay)
                             performTrigger(context, state, rule, ruleState, matchedNode)
                         }
+                        ruleState.actionDelayJob = job
                     } else {
                         performTrigger(context, state, rule, ruleState, matchedNode)
                     }
@@ -696,12 +761,26 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
             return
         }
 
+        // 更新状态
+        ruleState.recordTrigger(System.currentTimeMillis())
+
+        // 更新最后触发的规则（用于 preRules 检查）
+        state.lastTriggerRule = rule
+
         // 创建 VScreenElement
         val element = VScreenElement.fromAccessibilityNode(node, calculateDepth(node))
 
         // 查询所有匹配的节点
         val allNodes = queryAllMatchedNodes(node, rule)
         val allElements = allNodes.map { VScreenElement.fromAccessibilityNode(it, calculateDepth(it)) }
+
+        DebugLogger.d(
+            TAG,
+            "GKD订阅触发: 规则=${rule.name}, " +
+                    "element=${element.asString()}, " +
+                    "key=${rule.key}, " +
+                    "actionCount=${ruleState.actionCount}"
+        )
 
         // 调用 WorkflowExecutor
         WorkflowExecutor.execute(
@@ -714,9 +793,6 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
                 ruleGroup = rule.groupName
             )
         )
-
-        // 更新规则状态
-        ruleState.recordTrigger(System.currentTimeMillis())
     }
 
     /**

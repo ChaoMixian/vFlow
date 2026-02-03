@@ -100,4 +100,10 @@ sealed class TriggerStatus {
 
     /** 达到最大触发次数 */
     data object MaxReached : TriggerStatus()
+
+    /** 匹配延迟中 */
+    data object MatchDelay : TriggerStatus()
+
+    /** 强制等待中 */
+    data object ForcedWaiting : TriggerStatus()
 }
