@@ -51,26 +51,12 @@ class TextProcessingModule : BaseModule() {
     )
 
     /**
-     * 根据选择的操作动态调整输入参数。
-     */
-    override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
-        val operation = step?.parameters?.get("operation") as? String ?: "拼接"
-        val allInputs = getInputs()
-        val dynamicInputs = mutableListOf(allInputs.first { it.id == "operation" })
-
-        when (operation) {
-            "拼接" -> dynamicInputs.addAll(allInputs.filter { it.id.startsWith("join_") })
-            "分割" -> dynamicInputs.addAll(allInputs.filter { it.id == "source_text" || it.id == "split_delimiter" })
-            "替换" -> dynamicInputs.addAll(allInputs.filter { it.id == "source_text" || it.id.startsWith("replace_") })
-            "正则提取" -> dynamicInputs.addAll(allInputs.filter { it.id == "source_text" || it.id.startsWith("regex_") })
-        }
-        return dynamicInputs
-    }
-
-    /**
      * 根据选择的操作动态调整输出参数。
      */
-    override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
+    override fun getDynamicOutputs(
+        step: ActionStep?,
+        allSteps: List<ActionStep>?
+    ): List<OutputDefinition> {
         val operation = step?.parameters?.get("operation") as? String ?: "拼接"
         return when (operation) {
             "拼接", "替换" -> listOf(OutputDefinition("result_text", "结果文本", VTypeRegistry.STRING.id))
@@ -167,9 +153,15 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeSplit(context: ExecutionContext): ExecutionResult {
-        // 统一解析
-        val source = VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
-        val delimiter = VariableResolver.resolve(context.getVariableAsString("split_delimiter", ","), context)
+        // 获取原始变量值
+        val sourceVar = context.getVariable("source_text")
+        val delimiterVar = context.getVariable("split_delimiter")
+
+        // 解析为字符串
+        val source = if (sourceVar is com.chaomixian.vflow.core.types.basic.VString) sourceVar.raw
+                     else VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
+        val delimiter = if (delimiterVar is com.chaomixian.vflow.core.types.basic.VString) delimiterVar.raw
+                        else VariableResolver.resolve(context.getVariableAsString("split_delimiter", ","), context)
 
         if (source.isEmpty()) {
             return ExecutionResult.Failure("输入错误", "源文本不能为空。")
@@ -180,10 +172,18 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeReplace(context: ExecutionContext): ExecutionResult {
-        // 统一解析
-        val source = VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
-        val from = VariableResolver.resolve(context.getVariableAsString("replace_from", ""), context)
-        val to = VariableResolver.resolve(context.getVariableAsString("replace_to", ""), context)
+        // 获取原始变量值
+        val sourceVar = context.getVariable("source_text")
+        val fromVar = context.getVariable("replace_from")
+        val toVar = context.getVariable("replace_to")
+
+        // 解析为字符串
+        val source = if (sourceVar is VString) sourceVar.raw
+                     else VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
+        val from = if (fromVar is VString) fromVar.raw
+                   else VariableResolver.resolve(context.getVariableAsString("replace_from", ""), context)
+        val to = if (toVar is VString) toVar.raw
+                 else VariableResolver.resolve(context.getVariableAsString("replace_to", ""), context)
 
         if (source.isEmpty() || from.isEmpty()) {
             return ExecutionResult.Failure("输入错误", "源文本和查找内容不能为空。")
@@ -194,15 +194,21 @@ class TextProcessingModule : BaseModule() {
     }
 
     private fun executeRegex(context: ExecutionContext): ExecutionResult {
-        // 统一解析
-        val source = VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
-        val patternStr = VariableResolver.resolve(context.getVariableAsString("regex_pattern", ""), context)
+        // 获取原始变量值
+        val sourceVar = context.getVariable("source_text")
+        val patternVar = context.getVariable("regex_pattern")
+        val groupVar = context.getVariable("regex_group")
+
+        // 解析为字符串
+        val source = if (sourceVar is com.chaomixian.vflow.core.types.basic.VString) sourceVar.raw
+                     else VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
+        val patternStr = if (patternVar is com.chaomixian.vflow.core.types.basic.VString) patternVar.raw
+                         else VariableResolver.resolve(context.getVariableAsString("regex_pattern", ""), context)
 
         // 组号通常是数字
-        val groupVar = context.getVariable("regex_group")
         val group = when(groupVar) {
             is VNumber -> groupVar.raw.toInt()
-            is VString -> groupVar.raw.toIntOrNull() ?: 0
+            is com.chaomixian.vflow.core.types.basic.VString -> groupVar.raw.toIntOrNull() ?: 0
             else -> 0
         }
 
