@@ -393,27 +393,43 @@ class ScreenCaptureOverlay(
         private val imageHeight: Int
     ) : View(context) {
 
+        companion object {
+            private const val CORNER_TOUCH_RADIUS = 40f  // 角点触摸检测半径
+            private const val MIN_CROP_SIZE = 50f  // 最小裁剪尺寸
+        }
+
+        private enum class DragMode { NONE, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, MOVE }
+
         private val dimPaint = Paint().apply {
             color = Color.parseColor("#80000000")
             style = Paint.Style.FILL
         }
 
         private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#FFEB3B")  // 黄色边框
+            color = Color.parseColor("#FFEB3B")
             style = Paint.Style.STROKE
             strokeWidth = 4f
         }
 
         private val cornerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#FFEB3B")  // 黄色角点
+            color = Color.parseColor("#FFEB3B")
             style = Paint.Style.FILL
         }
 
-        private var startX = 0f
-        private var startY = 0f
-        private var endX = 0f
-        private var endY = 0f
-        private var isDragging = false
+        private val cornerStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+
+        private var cropLeft = 0f
+        private var cropTop = 0f
+        private var cropRight = 0f
+        private var cropBottom = 0f
+
+        private var dragMode = DragMode.NONE
+        private var lastTouchX = 0f
+        private var lastTouchY = 0f
 
         init {
             // 默认选择中央区域
@@ -421,44 +437,125 @@ class ScreenCaptureOverlay(
                 val centerX = width / 2f
                 val centerY = height / 2f
                 val defaultSize = minOf(width, height) / 3f
-                startX = centerX - defaultSize / 2
-                startY = centerY - defaultSize / 2
-                endX = centerX + defaultSize / 2
-                endY = centerY + defaultSize / 2
+                cropLeft = centerX - defaultSize / 2
+                cropTop = centerY - defaultSize / 2
+                cropRight = centerX + defaultSize / 2
+                cropBottom = centerY + defaultSize / 2
                 invalidate()
             }
         }
 
         fun getSelectedRect(): Rect {
-            val left = minOf(startX, endX).toInt().coerceIn(0, width)
-            val top = minOf(startY, endY).toInt().coerceIn(0, height)
-            val right = maxOf(startX, endX).toInt().coerceIn(0, width)
-            val bottom = maxOf(startY, endY).toInt().coerceIn(0, height)
+            val left = minOf(cropLeft, cropRight).toInt().coerceIn(0, width)
+            val top = minOf(cropTop, cropBottom).toInt().coerceIn(0, height)
+            val right = maxOf(cropLeft, cropRight).toInt().coerceIn(0, width)
+            val bottom = maxOf(cropTop, cropBottom).toInt().coerceIn(0, height)
             return Rect(left, top, right, bottom)
+        }
+
+        private fun getOrderedRect(): RectF {
+            return RectF(
+                minOf(cropLeft, cropRight),
+                minOf(cropTop, cropBottom),
+                maxOf(cropLeft, cropRight),
+                maxOf(cropTop, cropBottom)
+            )
+        }
+
+        private fun hitTestCorner(x: Float, y: Float, cornerX: Float, cornerY: Float): Boolean {
+            val dx = x - cornerX
+            val dy = y - cornerY
+            return dx * dx + dy * dy <= CORNER_TOUCH_RADIUS * CORNER_TOUCH_RADIUS
+        }
+
+        private fun hitTestMove(x: Float, y: Float, rect: RectF): Boolean {
+            return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
         }
 
         @SuppressLint("ClickableViewAccessibility")
         override fun onTouchEvent(event: MotionEvent): Boolean {
+            val x = event.x
+            val y = event.y
+            val rect = getOrderedRect()
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    startX = event.x
-                    startY = event.y
-                    endX = event.x
-                    endY = event.y
-                    isDragging = true
-                    invalidate()
-                    return true
+                    lastTouchX = x
+                    lastTouchY = y
+
+                    // 检测是否点击在角点上
+                    when {
+                        hitTestCorner(x, y, rect.left, rect.top) -> dragMode = DragMode.TOP_LEFT
+                        hitTestCorner(x, y, rect.right, rect.top) -> dragMode = DragMode.TOP_RIGHT
+                        hitTestCorner(x, y, rect.left, rect.bottom) -> dragMode = DragMode.BOTTOM_LEFT
+                        hitTestCorner(x, y, rect.right, rect.bottom) -> dragMode = DragMode.BOTTOM_RIGHT
+                        hitTestMove(x, y, rect) -> dragMode = DragMode.MOVE
+                        else -> dragMode = DragMode.NONE
+                    }
+
+                    if (dragMode != DragMode.NONE) {
+                        invalidate()
+                        return true
+                    }
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    if (isDragging) {
-                        endX = event.x.coerceIn(0f, width.toFloat())
-                        endY = event.y.coerceIn(0f, height.toFloat())
+                    if (dragMode != DragMode.NONE) {
+                        val dx = x - lastTouchX
+                        val dy = y - lastTouchY
+
+                        when (dragMode) {
+                            DragMode.TOP_LEFT -> {
+                                cropLeft = (cropLeft + dx).coerceAtMost(rect.right - MIN_CROP_SIZE)
+                                cropTop = (cropTop + dy).coerceAtMost(rect.bottom - MIN_CROP_SIZE)
+                            }
+                            DragMode.TOP_RIGHT -> {
+                                cropRight = (cropRight + dx).coerceAtLeast(rect.left + MIN_CROP_SIZE)
+                                cropTop = (cropTop + dy).coerceAtMost(rect.bottom - MIN_CROP_SIZE)
+                            }
+                            DragMode.BOTTOM_LEFT -> {
+                                cropLeft = (cropLeft + dx).coerceAtMost(rect.right - MIN_CROP_SIZE)
+                                cropBottom = (cropBottom + dy).coerceAtLeast(rect.top + MIN_CROP_SIZE)
+                            }
+                            DragMode.BOTTOM_RIGHT -> {
+                                cropRight = (cropRight + dx).coerceAtLeast(rect.left + MIN_CROP_SIZE)
+                                cropBottom = (cropBottom + dy).coerceAtLeast(rect.top + MIN_CROP_SIZE)
+                            }
+                            DragMode.MOVE -> {
+                                val newLeft = rect.left + dx
+                                val newTop = rect.top + dy
+                                val newRight = rect.right + dx
+                                val newBottom = rect.bottom + dy
+
+                                // 确保移动后不超出边界
+                                if (newLeft >= 0 && newRight <= width) {
+                                    cropLeft += dx
+                                    cropRight += dx
+                                }
+                                if (newTop >= 0 && newBottom <= height) {
+                                    cropTop += dy
+                                    cropBottom += dy
+                                }
+                            }
+                            DragMode.NONE -> {}
+                        }
+
+                        // 边界约束
+                        getOrderedRect().let { r ->
+                            cropLeft = r.left.coerceIn(0f, width.toFloat())
+                            cropTop = r.top.coerceIn(0f, height.toFloat())
+                            cropRight = r.right.coerceIn(0f, width.toFloat())
+                            cropBottom = r.bottom.coerceIn(0f, height.toFloat())
+                        }
+
+                        lastTouchX = x
+                        lastTouchY = y
                         invalidate()
+                        return true
                     }
-                    return true
                 }
-                MotionEvent.ACTION_UP -> {
-                    isDragging = false
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    dragMode = DragMode.NONE
+                    invalidate()
                     return true
                 }
             }
@@ -468,23 +565,80 @@ class ScreenCaptureOverlay(
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
 
-            val rect = getSelectedRect()
+            val rect = getOrderedRect()
 
             // 绘制半透明遮罩
-            canvas.drawRect(0f, 0f, width.toFloat(), rect.top.toFloat(), dimPaint)
-            canvas.drawRect(0f, rect.bottom.toFloat(), width.toFloat(), height.toFloat(), dimPaint)
-            canvas.drawRect(0f, rect.top.toFloat(), rect.left.toFloat(), rect.bottom.toFloat(), dimPaint)
-            canvas.drawRect(rect.right.toFloat(), rect.top.toFloat(), width.toFloat(), rect.bottom.toFloat(), dimPaint)
+            canvas.drawRect(0f, 0f, width.toFloat(), rect.top, dimPaint)
+            canvas.drawRect(0f, rect.bottom, width.toFloat(), height.toFloat(), dimPaint)
+            canvas.drawRect(0f, rect.top, rect.left, rect.bottom, dimPaint)
+            canvas.drawRect(rect.right, rect.top, width.toFloat(), rect.bottom, dimPaint)
 
-            // 绘制黄色边框
+            // 绘制边框
             canvas.drawRect(rect, borderPaint)
 
-            // 绘制四角黄色圆点
-            val cornerRadius = 12f
-            canvas.drawCircle(rect.left.toFloat(), rect.top.toFloat(), cornerRadius, cornerPaint)
-            canvas.drawCircle(rect.right.toFloat(), rect.top.toFloat(), cornerRadius, cornerPaint)
-            canvas.drawCircle(rect.left.toFloat(), rect.bottom.toFloat(), cornerRadius, cornerPaint)
-            canvas.drawCircle(rect.right.toFloat(), rect.bottom.toFloat(), cornerRadius, cornerPaint)
+            // 绘制角点
+            val cornerSize = 24f
+            val halfSize = cornerSize / 2f
+
+            // 左上角
+            canvas.drawRoundRect(
+                rect.left - halfSize, rect.top - halfSize,
+                rect.left + halfSize, rect.top + halfSize,
+                4f, 4f, cornerPaint
+            )
+            canvas.drawRoundRect(
+                rect.left - halfSize, rect.top - halfSize,
+                rect.left + halfSize, rect.top + halfSize,
+                4f, 4f, cornerStrokePaint
+            )
+
+            // 右上角
+            canvas.drawRoundRect(
+                rect.right - halfSize, rect.top - halfSize,
+                rect.right + halfSize, rect.top + halfSize,
+                4f, 4f, cornerPaint
+            )
+            canvas.drawRoundRect(
+                rect.right - halfSize, rect.top - halfSize,
+                rect.right + halfSize, rect.top + halfSize,
+                4f, 4f, cornerStrokePaint
+            )
+
+            // 左下角
+            canvas.drawRoundRect(
+                rect.left - halfSize, rect.bottom - halfSize,
+                rect.left + halfSize, rect.bottom + halfSize,
+                4f, 4f, cornerPaint
+            )
+            canvas.drawRoundRect(
+                rect.left - halfSize, rect.bottom - halfSize,
+                rect.left + halfSize, rect.bottom + halfSize,
+                4f, 4f, cornerStrokePaint
+            )
+
+            // 右下角
+            canvas.drawRoundRect(
+                rect.right - halfSize, rect.bottom - halfSize,
+                rect.right + halfSize, rect.bottom + halfSize,
+                4f, 4f, cornerPaint
+            )
+            canvas.drawRoundRect(
+                rect.right - halfSize, rect.bottom - halfSize,
+                rect.right + halfSize, rect.bottom + halfSize,
+                4f, 4f, cornerStrokePaint
+            )
+
+            // 绘制中心十字线（辅助线）
+            val centerX = rect.centerX()
+            val centerY = rect.centerY()
+            val gridPaint = Paint().apply {
+                color = Color.parseColor("#40FFFFFF")
+                style = Paint.Style.STROKE
+                strokeWidth = 1f
+                pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
+            }
+            canvas.drawLine(centerX, rect.top, centerX, rect.bottom, gridPaint)
+            canvas.drawLine(rect.left, centerY, rect.right, centerY, gridPaint)
         }
     }
 }
