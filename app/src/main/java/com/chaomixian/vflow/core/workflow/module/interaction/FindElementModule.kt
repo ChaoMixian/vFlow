@@ -82,7 +82,8 @@ class FindElementModule : BaseModule() {
         OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
         OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id),
         OutputDefinition("element", "选中的控件", VTypeRegistry.SCREEN_ELEMENT.id),
-        OutputDefinition("all_elements", "所有控件", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.SCREEN_ELEMENT.id)
+        OutputDefinition("all_elements", "所有控件", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.SCREEN_ELEMENT.id),
+        OutputDefinition("all_text", "所有文本", VTypeRegistry.STRING.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -209,7 +210,8 @@ class FindElementModule : BaseModule() {
                         "found" to VBoolean(false),
                         "count" to VNumber(0.0),
                         "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>()
+                        "all_elements" to emptyList<VScreenElement>(),
+                        "all_text" to VString("")
                     )
                 )
             }
@@ -227,7 +229,8 @@ class FindElementModule : BaseModule() {
                         "found" to VBoolean(false),
                         "count" to VNumber(0.0),
                         "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>()
+                        "all_elements" to emptyList<VScreenElement>(),
+                        "all_text" to VString("")
                     )
                 )
             }
@@ -245,7 +248,8 @@ class FindElementModule : BaseModule() {
                         "found" to VBoolean(false),
                         "count" to VNumber(0.0),
                         "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>()
+                        "all_elements" to emptyList<VScreenElement>(),
+                        "all_text" to VString("")
                     )
                 )
             }
@@ -311,7 +315,8 @@ class FindElementModule : BaseModule() {
                         "found" to VBoolean(false),
                         "count" to VNumber(0.0),
                         "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>()
+                        "all_elements" to emptyList<VScreenElement>(),
+                        "all_text" to VString("")
                     )
                 )
             }
@@ -337,12 +342,18 @@ class FindElementModule : BaseModule() {
 
             onProgress(ProgressUpdate("找到 ${finalElements.size} 个控件"))
 
+            // 提取所有文本并拼接
+            val allText = finalElements.joinToString("") { element ->
+                element.text ?: element.contentDescription ?: ""
+            }
+
             return ExecutionResult.Success(mapOf(
                 "success" to VBoolean(true),
                 "found" to VBoolean(true),
                 "count" to VNumber(finalElements.size.toDouble()),
                 "element" to selectedElement,
-                "all_elements" to finalElements
+                "all_elements" to finalElements,
+                "all_text" to VString(allText)
             ))
 
         } catch (e: Exception) {
