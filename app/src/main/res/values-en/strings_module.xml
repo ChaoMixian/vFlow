@@ -383,6 +383,25 @@
     <string name="summary_vflow_trigger_element_prefix">When</string>
     <string name="summary_vflow_trigger_element_suffix"> appears</string>
 
+    <!-- vflow.trigger.gkd - GKD Subscription Trigger -->
+    <string name="module_vflow_trigger_gkd_name">GKD Subscription Trigger</string>
+    <string name="module_vflow_trigger_gkd_desc">Parse GKD format subscription rules and trigger workflow</string>
+    <string name="summary_vflow_trigger_gkd_prefix">When matching </string>
+    <string name="summary_vflow_trigger_gkd_suffix"> rule</string>
+    <string name="gkd_subscription_url">Subscription URL</string>
+    <string name="gkd_subscription_url_hint">GKD subscription rule URL (e.g. https://raw.githubusercontent.com/...)</string>
+    <string name="gkd_download_button">Download/Update Subscription</string>
+    <string name="gkd_downloading">Downloading...</string>
+    <string name="gkd_download_success">Download successful</string>
+    <string name="gkd_download_empty">Subscription content is empty</string>
+    <string name="gkd_download_failed">Download failed: %d</string>
+    <string name="gkd_download_error">Download error: %s</string>
+    <string name="gkd_subscription_file">Rule file path</string>
+    <string name="gkd_subscription_file_hint">Local rule file path (optional)</string>
+    <string name="gkd_rules_dir_hint">Rules directory: %s</string>
+    <string name="gkd_rules_dir_hint_default">Rules directory: /sdcard/vFlow/temp/gkd_rules</string>
+    <string name="button_edit_gkd_rules">Edit rule file</string>
+
     <!-- vflow.trigger.sms - SMS Trigger -->
     <string name="module_vflow_trigger_sms_name">SMS Trigger</string>
     <string name="module_vflow_trigger_sms_desc">Trigger workflow when SMS meeting specific criteria is received</string>
