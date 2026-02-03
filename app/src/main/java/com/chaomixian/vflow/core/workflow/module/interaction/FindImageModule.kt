@@ -18,6 +18,7 @@ import com.chaomixian.vflow.core.opencv.OpenCVImageMatcher
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VCoordinate
+import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.services.ShellManager
@@ -71,6 +72,16 @@ class FindImageModule : BaseModule() {
             defaultValue = "80% (推荐)",
             options = thresholdOptions,
             acceptsMagicVariable = false
+        ),
+        InputDefinition(
+            id = "screenshot_uri",
+            name = "输入截图 (可选)",
+            staticType = ParameterType.ANY,
+            defaultValue = null,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id),
+            hint = "留空则使用自动截图，或连接图片变量",
+            isFolded = true
         )
     )
 
@@ -96,11 +107,20 @@ class FindImageModule : BaseModule() {
             getInputs().find { it.id == "threshold" },
             isModuleOption = true
         )
+        val screenshotPill = PillUtil.createPillFromParam(
+            step.parameters["screenshot_uri"],
+            getInputs().find { it.id == "screenshot_uri" }
+        )
         // 创建"最相似坐标"的 Pill，使用空 parameterId 表示这是一个输出值样式
         val outputPill = PillUtil.Pill("最相似坐标", "")
 
         return if (templateUri.isNotEmpty()) {
-            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_find_image), thresholdPill, context.getString(R.string.summary_vflow_interaction_and_output), outputPill)
+            val hasExternalScreenshot = step.parameters["screenshot_uri"] != null
+            if (hasExternalScreenshot) {
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_find_image), thresholdPill, context.getString(R.string.summary_vflow_interaction_find_image_using_external_screenshot), screenshotPill, context.getString(R.string.summary_vflow_interaction_and_output), outputPill)
+            } else {
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_find_image), thresholdPill, context.getString(R.string.summary_vflow_interaction_and_output), outputPill)
+            }
         } else {
             context.getString(R.string.summary_vflow_interaction_find_image_no_template)
         }
@@ -132,18 +152,29 @@ class FindImageModule : BaseModule() {
         val templateBitmap = loadBitmap(appContext, templateUri)
             ?: return ExecutionResult.Failure("加载失败", "无法加载模板图片。")
 
-        onProgress(ProgressUpdate("正在截取屏幕..."))
-
-        val screenshotUri = captureScreen(appContext, context.workDir)
-        if (screenshotUri == null) {
-            templateBitmap.recycle()
-            return ExecutionResult.Failure("截图失败", "无法截取屏幕，请检查 Shizuku 或 Root 权限。")
-        }
-
-        val screenBitmap = loadBitmap(appContext, screenshotUri.toString())
-        if (screenBitmap == null) {
-            templateBitmap.recycle()
-            return ExecutionResult.Failure("加载失败", "无法加载截图。")
+        // 检查是否有外部输入的截图
+        val externalScreenshotVar = context.getVariable("screenshot_uri") as? VImage
+        val screenBitmap = if (externalScreenshotVar != null) {
+            onProgress(ProgressUpdate("正在使用外部截图..."))
+            loadBitmap(appContext, externalScreenshotVar.uriString)
+                ?: return ExecutionResult.Failure("加载失败", "无法加载外部截图。")
+        } else {
+            onProgress(ProgressUpdate("正在截取屏幕..."))
+            val screenshotUri = captureScreen(appContext, context.workDir)
+            if (screenshotUri == null) {
+                templateBitmap.recycle()
+                return ExecutionResult.Failure("截图失败", "无法截取屏幕，请检查 Shizuku 或 Root 权限。")
+            }
+            val bitmap = loadBitmap(appContext, screenshotUri.toString())
+            if (bitmap == null) {
+                templateBitmap.recycle()
+                return ExecutionResult.Failure("加载失败", "无法加载截图。")
+            }
+            // 清理临时截图文件
+            try {
+                File(screenshotUri.path ?: "").delete()
+            } catch (e: Exception) { }
+            bitmap
         }
 
         onProgress(ProgressUpdate("正在进行图片匹配 (模板: ${templateBitmap.width}x${templateBitmap.height})..."))
@@ -154,9 +185,6 @@ class FindImageModule : BaseModule() {
 
         templateBitmap.recycle()
         screenBitmap.recycle()
-        try {
-            File(screenshotUri.path ?: "").delete()
-        } catch (e: Exception) { }
 
         val outputs = mutableMapOf<String, Any?>()
         outputs["count"] = VNumber(matches.size.toDouble())

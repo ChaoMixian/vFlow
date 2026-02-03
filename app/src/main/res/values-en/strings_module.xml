@@ -1093,6 +1093,7 @@
     <string name="summary_vflow_interaction_find_element_class_equals">class=</string>
     <string name="summary_vflow_interaction_find_element_separator">, </string>
     <string name="summary_vflow_interaction_find_image">Find image</string>
+    <string name="summary_vflow_interaction_find_image_using_external_screenshot">using screenshot</string>
     <string name="summary_vflow_interaction_and_output">and output coordinates</string>
     <string name="summary_vflow_interaction_find_image_no_template">No template image selected</string>
     <string name="error_vflow_interaction_find_element_service_unavailable">Service Unavailable</string>
