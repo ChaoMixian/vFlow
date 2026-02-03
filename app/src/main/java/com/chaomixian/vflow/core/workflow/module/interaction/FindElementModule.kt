@@ -47,14 +47,14 @@ class FindElementModule : BaseModule() {
 
         // === ID 匹配 ===
         InputDefinition("view_id", "控件ID", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = false, hint = "如：com.android:id/button"),
-        InputDefinition("id_match_mode", "ID匹配模式", ParameterType.ENUM, "包含", options = FindElementModule.matchModeOptions, acceptsMagicVariable = false, isFolded = true),
+        InputDefinition("id_match_mode", "ID匹配模式", ParameterType.ENUM, "包含", options = matchModeOptions, acceptsMagicVariable = false, isFolded = true),
 
         // === 类名匹配 ===
         InputDefinition("class_name", "类名", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = false, hint = "如：android.widget.Button"),
-        InputDefinition("class_match_mode", "类名匹配模式", ParameterType.ENUM, "完全匹配", options = FindElementModule.matchModeOptions, acceptsMagicVariable = false, isFolded = true),
+        InputDefinition("class_match_mode", "类名匹配模式", ParameterType.ENUM, "完全匹配", options = matchModeOptions, acceptsMagicVariable = false, isFolded = true),
 
         // === 区域限制 ===
-        InputDefinition("search_region", "搜索区域", ParameterType.ANY, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id), hint = "留空则搜索全屏", isFolded = true),
+        InputDefinition("search_region", "搜索区域", ParameterType.ANY, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id), hint = "如：100,200,500,600 留空则搜索全屏"),
 
         // === 交互状态过滤 ===
         InputDefinition("clickable", "可点击", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
@@ -67,7 +67,7 @@ class FindElementModule : BaseModule() {
 
         // === 其他选项 ===
         InputDefinition("depth_limit", "最大深度", ParameterType.NUMBER, 50, acceptsMagicVariable = true, hint = "默认 50，范围 1-200", isFolded = true),
-        InputDefinition("result_selection", "结果选择", ParameterType.ENUM, "第一个", options = FindElementModule.resultSelectionOptions, acceptsMagicVariable = false, isFolded = true),
+        InputDefinition("result_selection", "结果选择", ParameterType.ENUM, "第一个", options = resultSelectionOptions, acceptsMagicVariable = false, isFolded = true),
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
@@ -156,7 +156,7 @@ class FindElementModule : BaseModule() {
         val classMatchMode = context.getVariableAsString("class_match_mode", "完全匹配")
 
         // 现在 variables 是 Map<String, VObject>，使用 getVariable 获取并检查类型
-        val searchRegion = context.getVariable("search_region") as? VCoordinateRegion
+        val searchRegion = parseSearchRegion(context.getVariable("search_region"))
 
         val clickable = parseBooleanFilter(context.getVariableAsString("clickable", ""))
         val enabled = parseBooleanFilter(context.getVariableAsString("enabled", ""))
@@ -375,12 +375,9 @@ class FindElementModule : BaseModule() {
             val bounds = Rect()
             node.getBoundsInScreen(bounds)
 
-            // 检查控件的中心点是否在搜索区域内
-            val centerX = bounds.centerX()
-            val centerY = bounds.centerY()
-
-            if (centerX < searchRegion.left || centerX > searchRegion.right ||
-                centerY < searchRegion.top || centerY > searchRegion.bottom) {
+            // 检查控件是否完全在搜索区域内
+            if (bounds.left < searchRegion.left || bounds.right > searchRegion.right ||
+                bounds.top < searchRegion.top || bounds.bottom > searchRegion.bottom) {
                 return false
             }
         }
@@ -428,6 +425,34 @@ class FindElementModule : BaseModule() {
         return when (value.lowercase()) {
             "true", "1", "是" -> true
             "false", "0", "否" -> false
+            else -> null
+        }
+    }
+
+    /**
+     * 解析搜索区域
+     * 支持 VCoordinateRegion 对象或 "left,top,right,bottom" 格式的字符串
+     */
+    private fun parseSearchRegion(value: com.chaomixian.vflow.core.types.VObject): VCoordinateRegion? {
+        return when (value) {
+            is VCoordinateRegion -> value
+            is VString -> {
+                // 尝试解析 "left,top,right,bottom" 格式
+                val parts = value.raw.split(",")
+                if (parts.size == 4) {
+                    try {
+                        val left = parts[0].trim().toInt()
+                        val top = parts[1].trim().toInt()
+                        val right = parts[2].trim().toInt()
+                        val bottom = parts[3].trim().toInt()
+                        VCoordinateRegion(left, top, right, bottom)
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
             else -> null
         }
     }
