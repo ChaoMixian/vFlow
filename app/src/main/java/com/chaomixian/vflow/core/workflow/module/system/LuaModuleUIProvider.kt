@@ -82,8 +82,8 @@ class LuaModuleUIProvider : ModuleUIProvider {
             }
             ?.toMutableList() ?: mutableListOf()
 
-        // 在创建适配器时，传入一个 lambda，它会调用我们从 createEditor 参数中获得的回调
-        val inputsAdapter = DictionaryKVAdapter(currentInputs) { key ->
+        // 在创建适配器时，传入 allSteps 以支持变量引用的显示名称解析
+        val inputsAdapter = DictionaryKVAdapter(currentInputs, allSteps) { key ->
             if (key.isNotBlank()) {
                 onMagicVariableRequested?.invoke("inputs.$key")
             }

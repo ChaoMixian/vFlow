@@ -96,7 +96,7 @@ class InvokeModuleUIProvider : ModuleUIProvider {
             ?.map { it.key.toString() to it.value.toString() }
             ?.toMutableList() ?: mutableListOf()
 
-        holder.extrasAdapter = DictionaryKVAdapter(currentExtras) { key ->
+        holder.extrasAdapter = DictionaryKVAdapter(currentExtras, allSteps) { key ->
             // 支持魔法变量
             if (key.isNotBlank()) onMagicVariableRequested?.invoke("extras.$key")
         }
