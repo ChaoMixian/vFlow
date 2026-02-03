@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -184,6 +185,18 @@ class VariableModuleUIProvider(
                 mapOf("x" to x, "y" to y)
             }
             "布尔" -> (h.valueInputView as? SwitchCompat)?.isChecked ?: false
+            "数字" -> {
+                // 检查是否是变量引用（通过容器 tag）
+                val variableRef = h.valueContainer.tag as? String
+                if (!variableRef.isNullOrBlank()) {
+                    variableRef
+                } else {
+                    // 从输入框读取 - 遍历 input_value_container 的子视图找 TextInputLayout
+                    val valueContainer = h.valueInputView?.findViewById<ViewGroup>(R.id.input_value_container)
+                    val textInputLayout = valueContainer?.children?.find { it is TextInputLayout } as? TextInputLayout
+                    textInputLayout?.editText?.text?.toString() ?: ""
+                }
+            }
             else -> {
                 val textInputLayout = h.valueInputView as? TextInputLayout
                 textInputLayout?.editText?.text?.toString() ?: ""
@@ -387,11 +400,34 @@ class VariableModuleUIProvider(
                 text = "值"
                 isChecked = (currentValue as? Boolean) ?: false
             }
+            "数字" -> {
+                // 数字类型也使用 row_editor_input 布局，支持变量选择
+                val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, holder.valueContainer, false)
+                row.findViewById<TextView>(R.id.input_name).text = "值"
+
+                val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
+                val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
+                magicButton.isVisible = true
+                magicButton.setOnClickListener {
+                    holder.onMagicVariableRequested?.invoke("value")
+                }
+
+                // 清除默认的 EditText，添加数字输入框
+                valueContainer.removeAllViews()
+                val editText = TextInputEditText(context).apply {
+                    setText(currentValue?.toString() ?: "")
+                    inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+                }
+                val inputLayout = TextInputLayout(context).apply {
+                    addView(editText)
+                }
+                valueContainer.addView(inputLayout)
+                row
+            }
             else -> TextInputLayout(context).apply {
                 hint = "值"
                 val editText = TextInputEditText(this.context)
                 editText.setText(currentValue?.toString() ?: "")
-                editText.inputType = if (type == "数字") InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED else InputType.TYPE_CLASS_TEXT
                 addView(editText)
             }
         }
