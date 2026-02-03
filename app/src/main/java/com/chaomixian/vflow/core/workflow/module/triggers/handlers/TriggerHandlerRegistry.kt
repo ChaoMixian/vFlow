@@ -34,6 +34,7 @@ object TriggerHandlerRegistry {
         register(SmsTriggerModule().id) { SmsTriggerHandler() }
         register(NotificationTriggerModule().id) { NotificationTriggerHandler() }
         register(ElementTriggerModule().id) { ElementTriggerHandler() }
+        register(GKDTriggerModule().id) { GKDTriggerHandler() }
 
     }
 

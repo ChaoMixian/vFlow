@@ -93,6 +93,9 @@ object ModuleRegistry {
         // 触发器 - 元素触发
         register(ElementTriggerModule(), context)
 
+        // 触发器 - GKD订阅触发
+        register(GKDTriggerModule(), context)
+
         // 界面交互
         register(FindTextModule(), context)
         register(FindElementModule(), context)

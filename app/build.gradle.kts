@@ -112,6 +112,10 @@ dependencies {
     // JSON 解析库，用于保存和读取工作流
     implementation("com.google.code.gson:gson:2.13.2")
 
+    // JSON5 解析库，用于解析 gkd 订阅规则
+    implementation("li.songe:json5:0.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+
     // Lua 脚本解释器引擎
     implementation("org.luaj:luaj-jse:3.0.1")
 
