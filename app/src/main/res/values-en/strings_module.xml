@@ -447,6 +447,23 @@
     <string name="option_vflow_trigger_wifi_state_on">Turned On</string>
     <string name="option_vflow_trigger_wifi_state_off">Turned Off</string>
 
+    <!-- vflow.trigger.location - Location Trigger -->
+    <string name="module_vflow_trigger_location_name">Location Trigger</string>
+    <string name="module_vflow_trigger_location_desc">Trigger workflow when entering or leaving a specific area</string>
+    <string name="param_vflow_trigger_location_event_name">Event</string>
+    <string name="param_vflow_trigger_location_latitude_name">Latitude</string>
+    <string name="param_vflow_trigger_location_longitude_name">Longitude</string>
+    <string name="param_vflow_trigger_location_radius_name">Radius (meters)</string>
+    <string name="param_vflow_trigger_location_location_name_name">Location Name</string>
+    <string name="output_vflow_trigger_location_latitude_name">Current Latitude</string>
+    <string name="output_vflow_trigger_location_longitude_name">Current Longitude</string>
+    <string name="output_vflow_trigger_location_accuracy_name">Accuracy</string>
+    <string name="summary_vflow_trigger_location_prefix">When</string>
+    <string name="summary_vflow_trigger_location_coordinates">%.6f, %.6f (%dm)</string>
+    <string name="msg_vflow_trigger_location_triggered">Location event triggered</string>
+    <string name="option_vflow_trigger_location_event_enter">Enter</string>
+    <string name="option_vflow_trigger_location_event_exit">Exit</string>
+
     <!-- vflow.variable.create - Create Variable -->
     <string name="module_vflow_variable_create_name">Create Variable</string>
     <string name="module_vflow_variable_create_desc">Create a new variable, optionally name it for later modification or reading</string>

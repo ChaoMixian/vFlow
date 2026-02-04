@@ -593,6 +593,8 @@
     <string name="permission_desc_write_settings">Used for system-level settings like screen brightness adjustment.</string>
     <string name="permission_name_location">Fine Location</string>
     <string name="permission_desc_location">Required on some Android versions to access saved Wi-Fi lists.</string>
+    <string name="permission_name_background_location">Background Location Access</string>
+    <string name="permission_desc_background_location">Required to continuously monitor location changes in the background, such as for location triggers.</string>
     <string name="permission_name_shizuku">Shizuku</string>
     <string name="permission_desc_shizuku">Allows the app to perform elevated operations through Shizuku, such as Shell commands.</string>
     <string name="permission_name_battery">Background Run Permission</string>

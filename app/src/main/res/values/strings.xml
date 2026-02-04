@@ -593,6 +593,8 @@
     <string name="permission_desc_write_settings">用于调整屏幕亮度等系统级别的设置。</string>
     <string name="permission_name_location">精确定位</string>
     <string name="permission_desc_location">在部分安卓版本上，获取已保存的Wi-Fi列表需要此权限。</string>
+    <string name="permission_name_background_location">后台位置访问</string>
+    <string name="permission_desc_background_location">需要在后台持续监听位置变化时使用此权限，例如位置触发器。</string>
     <string name="permission_name_shizuku">Shizuku</string>
     <string name="permission_desc_shizuku">允许应用通过 Shizuku 执行需要更高权限的操作，例如 Shell 命令。</string>
     <string name="permission_name_battery">后台运行权限</string>

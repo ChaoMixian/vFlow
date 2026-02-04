@@ -390,6 +390,24 @@
     <string name="option_vflow_trigger_wifi_connection_disconnected">断开连接</string>
     <string name="option_vflow_trigger_wifi_state_on">开启时</string>
     <string name="option_vflow_trigger_wifi_state_off">关闭时</string>
+
+    <!-- Location Trigger -->
+    <string name="module_vflow_trigger_location_name">位置触发器</string>
+    <string name="module_vflow_trigger_location_desc">当进入或离开指定区域时触发工作流</string>
+    <string name="param_vflow_trigger_location_event_name">事件</string>
+    <string name="param_vflow_trigger_location_latitude_name">纬度</string>
+    <string name="param_vflow_trigger_location_longitude_name">经度</string>
+    <string name="param_vflow_trigger_location_radius_name">半径（米）</string>
+    <string name="param_vflow_trigger_location_location_name_name">位置名称</string>
+    <string name="output_vflow_trigger_location_latitude_name">当前纬度</string>
+    <string name="output_vflow_trigger_location_longitude_name">当前经度</string>
+    <string name="output_vflow_trigger_location_accuracy_name">精度</string>
+    <string name="summary_vflow_trigger_location_prefix">当</string>
+    <string name="summary_vflow_trigger_location_coordinates">%.6f, %.6f (%d米)</string>
+    <string name="msg_vflow_trigger_location_triggered">位置事件已触发</string>
+    <string name="option_vflow_trigger_location_event_enter">进入时</string>
+    <string name="option_vflow_trigger_location_event_exit">离开时</string>
+
     <string name="module_vflow_variable_create_name">创建变量</string>
     <string name="module_vflow_variable_create_desc">创建一个新的变量，可选择为其命名以便后续修改或读取</string>
     <string name="param_vflow_variable_create_variableName_name">变量名称 (可选)</string>

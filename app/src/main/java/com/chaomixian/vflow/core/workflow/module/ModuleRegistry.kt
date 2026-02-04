@@ -89,12 +89,9 @@ object ModuleRegistry {
         register(BluetoothTriggerModule(), context)
         register(SmsTriggerModule(), context)
         register(NotificationTriggerModule(), context)
-
-        // 触发器 - 元素触发
         register(ElementTriggerModule(), context)
-
-        // 触发器 - GKD订阅触发
         register(GKDTriggerModule(), context)
+        register(LocationTriggerModule(), context)
 
         // 界面交互
         register(FindTextModule(), context)
