@@ -213,7 +213,7 @@
     <string name="summary_vflow_logic_loop_suffix">times</string>
     <string name="summary_vflow_logic_stop_and_return_prefix">Return</string>
     <string name="summary_vflow_logic_while_prefix">Loop until</string>
-    <string name="summary_vflow_logic_while_suffix">is met</string>
+    <string name="summary_vflow_logic_while_suffix">is false</string>
     <string name="summary_vflow_logic_loop_between">between</string>
     <string name="summary_vflow_logic_loop_between_suffix">and</string>
     <string name="msg_vflow_logic_continue_loop_continuing">Continuing to next loop iteration...</string>

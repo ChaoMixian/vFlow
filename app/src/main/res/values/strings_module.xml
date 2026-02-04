@@ -187,7 +187,7 @@
     <string name="summary_vflow_logic_loop_suffix">次</string>
     <string name="summary_vflow_logic_stop_and_return_prefix">返回</string>
     <string name="summary_vflow_logic_while_prefix">循环直到</string>
-    <string name="summary_vflow_logic_while_suffix">为止</string>
+    <string name="summary_vflow_logic_while_suffix">不成立</string>
     <string name="summary_vflow_logic_loop_between">之间</string>
     <string name="summary_vflow_logic_loop_between_suffix">次</string>
     <string name="msg_vflow_logic_continue_loop_continuing">正在继续下一次循环...</string>
