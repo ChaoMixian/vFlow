@@ -13,6 +13,7 @@ class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
         // 注册所有 Shell 级别的 ServiceWrappers
         serviceWrappers["clipboard"] = IClipboardWrapper()
         serviceWrappers["input"] = IInputManagerWrapper()
+        serviceWrappers["audio"] = IAudioManagerWrapper()
         serviceWrappers["wifi"] = IWifiManagerWrapper()
         serviceWrappers["bluetooth_manager"] = IBluetoothManagerWrapper()
         serviceWrappers["nfc"] = INfcAdapterWrapper()

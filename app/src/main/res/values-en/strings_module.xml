@@ -1566,6 +1566,31 @@
     <string name="label_vflow_core_screen_operation_target">Target Position</string>
     <string name="label_vflow_core_screen_operation_swipe_end">Swipe End Point</string>
     <string name="label_vflow_core_screen_operation_swipe_start">Swipe Start</string>
+
+    <!-- Core Volume Module -->
+    <string name="module_vflow_core_volume_name">Volume Control</string>
+    <string name="module_vflow_core_volume_desc">Control volume for different audio streams using vFlow Core (music/notification/ring etc).</string>
+    <string name="module_vflow_core_volume_state_name">Read Volume</string>
+    <string name="module_vflow_core_volume_state_desc">Read current volume levels for different audio streams using vFlow Core.</string>
+    <string name="param_vflow_core_volume_stream_type_name">Audio Type</string>
+    <string name="param_vflow_core_volume_action_name">Action</string>
+    <string name="param_vflow_core_volume_value_name">Volume Value</string>
+    <string name="hint_vflow_core_volume_value">0-100, 0 means mute</string>
+    <string name="summary_vflow_core_volume_state">Read Volume</string>
+
+    <!-- Volume Editor -->
+    <string name="stream_type_music">Music</string>
+    <string name="stream_type_notification">Notification</string>
+    <string name="stream_type_ring">Ring</string>
+    <string name="stream_type_system">System</string>
+    <string name="stream_type_alarm">Alarm</string>
+    <string name="stream_type_call">Call</string>
+    <string name="volume_action_keep">Keep Unchanged</string>
+    <string name="volume_action_set">Set Volume</string>
+    <string name="volume_action_mute">Mute</string>
+    <string name="volume_action_unmute">Unmute</string>
+    <string name="refresh_volume_levels">Refresh Current Volumes</string>
+
     <string name="summary_vflow_data_create_anon">Create anonymous </string>
     <string name="summary_vflow_data_create_anon_suffix"> (%s)</string>
     <string name="summary_vflow_data_create_variable">Create variable </string>

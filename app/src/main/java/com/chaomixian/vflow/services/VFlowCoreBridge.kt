@@ -529,6 +529,132 @@ object VFlowCoreBridge {
         return res?.optBoolean("enabled", false) ?: false
     }
 
+    // Audio Management APIs
+    /**
+     * 设置音量
+     * @param streamType 音频流类型 (0=通话, 1=系统, 2=铃声, 3=音乐, 4=闹钟, 5=通知)
+     * @param volume 音量值 (0-100)
+     * @return Triple<是否成功, 当前音量, 最大音量>
+     */
+    fun setVolume(streamType: Int, volume: Int): Triple<Boolean, Int, Int> {
+        val req = JSONObject()
+            .put("target", "audio")
+            .put("method", "setVolume")
+            .put("params", JSONObject()
+                .put("streamType", streamType)
+                .put("volume", volume))
+        val res = sendRaw(req)
+        val success = res?.optBoolean("success", false) ?: false
+        val currentLevel = res?.optInt("currentLevel", 0) ?: 0
+        val maxLevel = res?.optInt("maxLevel", 0) ?: 0
+        return Triple(success, currentLevel, maxLevel)
+    }
+
+    /**
+     * 获取音量
+     * @param streamType 音频流类型
+     * @return Pair<当前音量, 最大音量>
+     */
+    fun getVolume(streamType: Int): Pair<Int, Int> {
+        val req = JSONObject()
+            .put("target", "audio")
+            .put("method", "getVolume")
+            .put("params", JSONObject().put("streamType", streamType))
+        val res = sendRaw(req)
+        val currentLevel = res?.optInt("currentLevel", 0) ?: 0
+        val maxLevel = res?.optInt("maxLevel", 0) ?: 0
+        return Pair(currentLevel, maxLevel)
+    }
+
+    /**
+     * 调整音量
+     * @param streamType 音频流类型
+     * @param direction 调整方向 (1=升高, -1=降低, 0=保持)
+     * @return Triple<是否成功, 当前音量, 最大音量>
+     */
+    fun adjustVolume(streamType: Int, direction: Int): Triple<Boolean, Int, Int> {
+        val req = JSONObject()
+            .put("target", "audio")
+            .put("method", "adjustVolume")
+            .put("params", JSONObject()
+                .put("streamType", streamType)
+                .put("direction", direction))
+        val res = sendRaw(req)
+        val success = res?.optBoolean("success", false) ?: false
+        val currentLevel = res?.optInt("currentLevel", 0) ?: 0
+        val maxLevel = res?.optInt("maxLevel", 0) ?: 0
+        return Triple(success, currentLevel, maxLevel)
+    }
+
+    /**
+     * 静音/取消静音
+     * @param streamType 音频流类型
+     * @param mute true=静音, false=取消静音
+     * @return Triple<是否成功, 当前音量, 最大音量>
+     */
+    fun muteVolume(streamType: Int, mute: Boolean): Triple<Boolean, Int, Int> {
+        val req = JSONObject()
+            .put("target", "audio")
+            .put("method", "mute")
+            .put("params", JSONObject()
+                .put("streamType", streamType)
+                .put("mute", mute))
+        val res = sendRaw(req)
+        val success = res?.optBoolean("success", false) ?: false
+        val currentLevel = res?.optInt("currentLevel", 0) ?: 0
+        val maxLevel = res?.optInt("maxLevel", 0) ?: 0
+        return Triple(success, currentLevel, maxLevel)
+    }
+
+    /**
+     * 音量信息数据类
+     */
+    data class VolumeInfo(
+        val musicCurrent: Int,
+        val musicMax: Int,
+        val notificationCurrent: Int,
+        val notificationMax: Int,
+        val ringCurrent: Int,
+        val ringMax: Int,
+        val systemCurrent: Int,
+        val systemMax: Int,
+        val alarmCurrent: Int,
+        val alarmMax: Int,
+        val callCurrent: Int,
+        val callMax: Int
+    )
+
+    /**
+     * 获取所有音量
+     * @return VolumeInfo 包含所有音频流的音量信息
+     */
+    fun getAllVolumes(): VolumeInfo? {
+        val req = JSONObject()
+            .put("target", "audio")
+            .put("method", "getAllVolumes")
+        val res = sendRaw(req)
+        if (res?.optBoolean("success", false) == true) {
+            val volumes = res.optJSONObject("volumes")
+            if (volumes != null) {
+                return VolumeInfo(
+                    musicCurrent = volumes.optJSONObject("music")?.optInt("current", 0) ?: 0,
+                    musicMax = volumes.optJSONObject("music")?.optInt("max", 0) ?: 0,
+                    notificationCurrent = volumes.optJSONObject("notification")?.optInt("current", 0) ?: 0,
+                    notificationMax = volumes.optJSONObject("notification")?.optInt("max", 0) ?: 0,
+                    ringCurrent = volumes.optJSONObject("ring")?.optInt("current", 0) ?: 0,
+                    ringMax = volumes.optJSONObject("ring")?.optInt("max", 0) ?: 0,
+                    systemCurrent = volumes.optJSONObject("system")?.optInt("current", 0) ?: 0,
+                    systemMax = volumes.optJSONObject("system")?.optInt("max", 0) ?: 0,
+                    alarmCurrent = volumes.optJSONObject("alarm")?.optInt("current", 0) ?: 0,
+                    alarmMax = volumes.optJSONObject("alarm")?.optInt("max", 0) ?: 0,
+                    callCurrent = 0, // 通话音量不常用，默认为0
+                    callMax = 0
+                )
+            }
+        }
+        return null
+    }
+
     /**
      * 截图
      * @return 返回base64编码后的图片

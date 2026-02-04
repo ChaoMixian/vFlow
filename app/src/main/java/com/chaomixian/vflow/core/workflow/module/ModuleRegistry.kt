@@ -196,6 +196,8 @@ object ModuleRegistry {
         register(CoreForceStopAppModule(), context)        // 强制停止应用
         // 系统控制组
         register(CoreShellCommandModule(), context)        // 执行命令
+        register(CoreVolumeModule(), context)              // 音量控制
+        register(CoreVolumeStateModule(), context)         // 读取音量
 
         // Shizuku 模块
         register(ShellCommandModule(), context)

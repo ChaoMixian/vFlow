@@ -1398,6 +1398,30 @@
     <string name="label_vflow_core_screen_operation_swipe_end">滑动终点</string>
     <string name="label_vflow_core_screen_operation_swipe_start">滑动起点</string>
 
+    <!-- Core Volume Module -->
+    <string name="module_vflow_core_volume_name">音量控制</string>
+    <string name="module_vflow_core_volume_desc">使用 vFlow Core 控制不同音频流的音量（音乐/通知/铃声等）。</string>
+    <string name="module_vflow_core_volume_state_name">读取音量</string>
+    <string name="module_vflow_core_volume_state_desc">使用 vFlow Core 读取不同音频流的当前音量。</string>
+    <string name="param_vflow_core_volume_stream_type_name">音频类型</string>
+    <string name="param_vflow_core_volume_action_name">操作</string>
+    <string name="param_vflow_core_volume_value_name">音量值</string>
+    <string name="hint_vflow_core_volume_value">0-100，0表示静音</string>
+    <string name="summary_vflow_core_volume_state">读取音量</string>
+
+    <!-- 音量编辑器 -->
+    <string name="stream_type_music">音乐</string>
+    <string name="stream_type_notification">通知</string>
+    <string name="stream_type_ring">铃声</string>
+    <string name="stream_type_system">系统</string>
+    <string name="stream_type_alarm">闹钟</string>
+    <string name="stream_type_call">通话</string>
+    <string name="volume_action_keep">保持不变</string>
+    <string name="volume_action_set">设置音量</string>
+    <string name="volume_action_mute">静音</string>
+    <string name="volume_action_unmute">取消静音</string>
+    <string name="refresh_volume_levels">刷新当前音量</string>
+
     <!-- Data Module Summaries -->
     <string name="summary_vflow_data_create_anon">创建匿名 %s</string>
     <string name="summary_vflow_data_create_anon_suffix"> (%s)</string>

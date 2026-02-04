@@ -47,6 +47,7 @@ object Config {
         // Shell 权限可处理
         "clipboard" to PORT_WORKER_SHELL,
         "input" to PORT_WORKER_SHELL,
+        "audio" to PORT_WORKER_SHELL,
         "wifi" to PORT_WORKER_SHELL,
         "bluetooth_manager" to PORT_WORKER_SHELL,
         "nfc" to PORT_WORKER_SHELL,
