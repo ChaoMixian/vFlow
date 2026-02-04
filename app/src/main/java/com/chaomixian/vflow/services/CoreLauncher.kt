@@ -2,8 +2,10 @@
 package com.chaomixian.vflow.services
 
 import android.content.Context
+import android.widget.Toast
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.utils.StorageManager
+import com.chaomixian.vflow.permissions.PermissionManager
 import kotlinx.coroutines.delay
 import java.io.File
 
@@ -192,24 +194,45 @@ object CoreLauncher {
      * 部署 vFlowCore.dex 到公共目录。
      */
     private fun deployDex(context: Context): File? {
+        // 检查存储权限
+        if (!PermissionManager.isGranted(context, PermissionManager.STORAGE)) {
+            DebugLogger.w(TAG, "存储权限未授予，无法部署 vFlowCore.dex")
+            Toast.makeText(
+                context,
+                "需要文件访问权限才能启动 vFlowCore",
+                Toast.LENGTH_LONG
+            ).show()
+            return null
+        }
+
         val dexFile = File(StorageManager.tempDir, "vFlowCore.dex")
 
         try {
-            if (!dexFile.parentFile.exists()) {
-                dexFile.parentFile.mkdirs()
-            }
-
-            // 即使文件存在也覆盖，确保版本更新
+            // StorageManager.tempDir 已经会创建目录，不需要额外检查
             context.assets.open("vFlowCore.dex").use { input ->
                 dexFile.outputStream().use { output ->
-                    input.copyTo(output)
+                    val bytesCopied = input.copyTo(output)
+                    DebugLogger.d(TAG, "Dex 已部署到公共目录: ${dexFile.absolutePath} ($bytesCopied bytes)")
+
+                    // 验证文件大小
+                    if (dexFile.length() == 0L) {
+                        DebugLogger.e(TAG, "部署的文件大小为0")
+                        return null
+                    }
                 }
             }
 
-            DebugLogger.d(TAG, "Dex 已部署到公共目录: ${dexFile.absolutePath}")
+            // 设置文件可读
+            dexFile.setReadable(true, false)
+
             return dexFile
         } catch (e: Exception) {
             DebugLogger.e(TAG, "部署 vFlowCore.dex 失败", e)
+            Toast.makeText(
+                context,
+                "部署 vFlowCore.dex 失败: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
             return null
         }
     }
