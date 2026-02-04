@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/ui/app_picker/AppPickerActivity.kt
 // 描述: 应用选择界面的 Activity。
-//      它会显示一个本机安装的非系统应用列表。
+//      默认显示在启动器中显示的应用（非系统应用）。
+//      可通过右上角菜单开关来显示所有应用（包括系统应用）。
 //      用户选择一个应用后，会跳转到 ActivityPickerActivity 来选择该应用的具体 Activity。
 package com.chaomixian.vflow.ui.app_picker
 
@@ -9,6 +10,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.ViewCompat
@@ -19,6 +22,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.chip.Chip
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,6 +42,9 @@ class AppPickerActivity : BaseActivity() {
 
     // 保存完整列表用于本地过滤
     private var allApps: List<AppInfo> = emptyList()
+
+    // 是否显示系统应用的开关状态
+    private var showSystemApps = false
 
     companion object {
         // Intent extra 的键名，用于在 Activity 之间传递所选应用的包名
@@ -82,6 +89,22 @@ class AppPickerActivity : BaseActivity() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         // 为工具栏的导航按钮（返回按钮）设置点击监听
         toolbar.setNavigationOnClickListener { finish() }
+        // 启用工具栏的选项菜单
+        toolbar.inflateMenu(R.menu.app_picker_menu)
+        // 获取菜单中的 Chip 控件
+        val systemAppChip = toolbar.findViewById<Chip>(R.id.system_app_chip)
+        systemAppChip?.apply {
+            // 设置当前状态
+            isChecked = showSystemApps
+            // 设置监听器
+            setOnCheckedChangeListener { _, isChecked ->
+                if (showSystemApps != isChecked) {
+                    showSystemApps = isChecked
+                    // 重新加载应用列表
+                    loadApps()
+                }
+            }
+        }
 
         // 初始化 RecyclerView
         recyclerView = findViewById(R.id.recycler_view_apps)
@@ -106,45 +129,59 @@ class AppPickerActivity : BaseActivity() {
     /**
      * 异步加载设备上的应用列表。
      * 使用协程在IO线程执行耗时的应用查询操作，避免阻塞主线程。
-     * 在 Android 11+ 上，使用 queryIntentActivities() 以绕过包可见性限制。
+     * 根据 showSystemApps 标志决定是否显示系统应用。
      */
     private fun loadApps() {
         // 创建一个在IO线程池中运行的协程
         CoroutineScope(Dispatchers.IO).launch {
             val pm = packageManager
 
-            // 使用 Intent 查询所有可启动的应用
-            // 这种方法在 Android 11+ 上更可靠，因为它使用 <queries> 声明
-            val mainIntent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
+            val appList = if (showSystemApps) {
+                // 显示所有应用（包括系统应用）
+                val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
-            // 使用 MATCH_ALL 标志来获取所有匹配的应用（包括导出的）
-            val resolveInfos = pm.queryIntentActivities(
-                mainIntent,
-                PackageManager.MATCH_ALL or PackageManager.GET_RESOLVED_FILTER
-            )
-
-            // 使用 Set 去重（同一个应用可能有多个 LAUNCHER Activity）
-            val uniquePackages = mutableMapOf<String, ResolveInfo>()
-
-            for (resolveInfo in resolveInfos) {
-                val packageName = resolveInfo.activityInfo.packageName
-
-                // 只保留每个包的第一个 ResolveInfo
-                if (!uniquePackages.containsKey(packageName)) {
-                    uniquePackages[packageName] = resolveInfo
+                installedApps.mapNotNull { appInfo ->
+                    // 过滤掉没有合适标签或图标的应用
+                    val label = appInfo.loadLabel(pm).toString()
+                    if (label.isNotEmpty()) {
+                        AppInfo(
+                            appName = label,
+                            packageName = appInfo.packageName,
+                            icon = appInfo.loadIcon(pm)
+                        )
+                    } else {
+                        null
+                    }
                 }
-            }
+            } else {
+                // 只显示在启动器中显示的应用（非系统应用）
+                val mainIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
 
-            // 转换为 AppInfo 列表
-            val appList = uniquePackages.values.map { resolveInfo ->
-                val appInfo = resolveInfo.activityInfo.applicationInfo
-                AppInfo(
-                    appName = appInfo.loadLabel(pm).toString(),
-                    packageName = appInfo.packageName,
-                    icon = appInfo.loadIcon(pm)
+                val resolveInfos = pm.queryIntentActivities(
+                    mainIntent,
+                    PackageManager.MATCH_ALL or PackageManager.GET_RESOLVED_FILTER
                 )
+
+                // 使用 Set 去重（同一个应用可能有多个 LAUNCHER Activity）
+                val uniquePackages = mutableMapOf<String, ResolveInfo>()
+
+                for (resolveInfo in resolveInfos) {
+                    val packageName = resolveInfo.activityInfo.packageName
+                    if (!uniquePackages.containsKey(packageName)) {
+                        uniquePackages[packageName] = resolveInfo
+                    }
+                }
+
+                uniquePackages.values.map { resolveInfo ->
+                    val appInfo = resolveInfo.activityInfo.applicationInfo
+                    AppInfo(
+                        appName = appInfo.loadLabel(pm).toString(),
+                        packageName = appInfo.packageName,
+                        icon = appInfo.loadIcon(pm)
+                    )
+                }
             }.sortedBy { it.appName.lowercase(Locale.getDefault()) }
 
             // 切换回主线程来更新UI
