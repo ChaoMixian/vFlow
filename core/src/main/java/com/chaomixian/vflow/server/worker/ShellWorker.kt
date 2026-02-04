@@ -15,6 +15,7 @@ class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
         serviceWrappers["input"] = IInputManagerWrapper()
         serviceWrappers["wifi"] = IWifiManagerWrapper()
         serviceWrappers["bluetooth_manager"] = IBluetoothManagerWrapper()
+        serviceWrappers["nfc"] = INfcAdapterWrapper()
         serviceWrappers["power"] = IPowerManagerWrapper()
         serviceWrappers["activity"] = IActivityManagerWrapper()
         serviceWrappers["connectivity"] = IConnectivityManagerWrapper()

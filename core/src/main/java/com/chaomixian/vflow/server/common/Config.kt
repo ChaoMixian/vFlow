@@ -49,6 +49,7 @@ object Config {
         "input" to PORT_WORKER_SHELL,
         "wifi" to PORT_WORKER_SHELL,
         "bluetooth_manager" to PORT_WORKER_SHELL,
+        "nfc" to PORT_WORKER_SHELL,
         "power" to PORT_WORKER_SHELL,
         "activity" to PORT_WORKER_SHELL,
         "connectivity" to PORT_WORKER_SHELL,

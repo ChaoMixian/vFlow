@@ -1663,4 +1663,15 @@
 
     <string name="param_vflow_ui_content">Content</string>
     <string name="param_vflow_ui_content_optional">Content (optional)</string>
-    <string name="summary_prefix_display_text">Display text</string></resources>
+    <string name="summary_prefix_display_text">Display text</string>
+
+    <!-- NFC Module -->
+    <string name="module_vflow_core_nfc_name">NFC Control</string>
+    <string name="module_vflow_core_nfc_desc">Use vFlow Core to control NFC state (Enable/Disable/Toggle).</string>
+    <string name="module_vflow_core_nfc_state_name">Read NFC State</string>
+    <string name="module_vflow_core_nfc_state_desc">Use vFlow Core to read the current NFC state.</string>
+    <string name="param_vflow_core_nfc_action_name">Action</string>
+    <string name="output_vflow_core_nfc_state_enabled_name">NFC State</string>
+    <string name="summary_vflow_core_set_nfc">NFC</string>
+    <string name="summary_vflow_core_nfc_state">Read NFC State</string>
+</resources>

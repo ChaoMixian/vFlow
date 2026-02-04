@@ -497,6 +497,38 @@ object VFlowCoreBridge {
         return res?.optBoolean("enabled", false) ?: false
     }
 
+    // NFC Management APIs
+    fun setNfcEnabled(enabled: Boolean): Boolean {
+        val req = JSONObject()
+            .put("target", "nfc")
+            .put("method", "setNfcEnabled")
+            .put("params", JSONObject().put("enabled", enabled))
+        return sendRaw(req)?.optBoolean("success", false) ?: false
+    }
+
+    /**
+     * 获取NFC当前状态
+     */
+    fun isNfcEnabled(): Boolean {
+        val req = JSONObject()
+            .put("target", "nfc")
+            .put("method", "isEnabled")
+        val res = sendRaw(req)
+        return res?.optBoolean("enabled", false) ?: false
+    }
+
+    /**
+     * 切换NFC状态（开启→关闭，关闭→开启）
+     * @return 返回切换后的状态
+     */
+    fun toggleNfc(): Boolean {
+        val req = JSONObject()
+            .put("target", "nfc")
+            .put("method", "toggle")
+        val res = sendRaw(req)
+        return res?.optBoolean("enabled", false) ?: false
+    }
+
     /**
      * 截图
      * @return 返回base64编码后的图片

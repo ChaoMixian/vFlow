@@ -178,6 +178,8 @@ object ModuleRegistry {
         register(CoreBluetoothStateModule(), context)      // 读取蓝牙状态
         register(CoreWifiModule(), context)                // WiFi控制（开启/关闭/切换）
         register(CoreWifiStateModule(), context)           // 读取WiFi状态
+        register(CoreNfcModule(), context)                 // NFC控制（开启/关闭/切换）
+        register(CoreNfcStateModule(), context)            // 读取NFC状态
         register(CoreSetClipboardModule(), context)        // 设置剪贴板
         register(CoreGetClipboardModule(), context)        // 读取剪贴板
         // 屏幕控制组

@@ -1543,4 +1543,14 @@
     <string name="summary_vflow_data_text_processing_replace_middle2"> 替换为 </string>
     <string name="summary_vflow_data_text_processing_regex_prefix">正则提取: 从 </string>
     <string name="summary_vflow_data_text_processing_regex_suffix"> 提取</string>
+
+    <!-- NFC Module -->
+    <string name="module_vflow_core_nfc_name">NFC控制</string>
+    <string name="module_vflow_core_nfc_desc">使用 vFlow Core 控制NFC开关状态（开启/关闭/切换）。</string>
+    <string name="module_vflow_core_nfc_state_name">读取NFC状态</string>
+    <string name="module_vflow_core_nfc_state_desc">使用 vFlow Core 读取当前NFC开关状态。</string>
+    <string name="param_vflow_core_nfc_action_name">操作</string>
+    <string name="output_vflow_core_nfc_state_enabled_name">NFC状态</string>
+    <string name="summary_vflow_core_set_nfc">NFC</string>
+    <string name="summary_vflow_core_nfc_state">读取NFC状态</string>
 </resources>
