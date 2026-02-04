@@ -62,6 +62,7 @@ class ClickModule : BaseModule() {
                 VTypeRegistry.STRING.id
             ),
             defaultValue = "",
+            hint = "控件ID 或 坐标(x,y)",
             nameStringRes = R.string.param_vflow_device_click_target_name
         )
     )
@@ -140,9 +141,23 @@ class ClickModule : BaseModule() {
                 performGestureClick(service, target.x, target.y, onProgress)
             }
             is VString -> {
-                val viewId = target.raw
-                onProgress(ProgressUpdate("正在点击视图ID: $viewId"))
-                performViewIdClick(service, viewId, onProgress)
+                // 尝试解析为坐标字符串 (格式: "x,y" 或 "x, y")
+                val coordStr = target.raw
+                val parts = coordStr.split(",")
+                if (parts.size == 2) {
+                    val x = parts[0].trim().toIntOrNull()
+                    val y = parts[1].trim().toIntOrNull()
+                    if (x != null && y != null) {
+                        onProgress(ProgressUpdate("正在点击坐标: ($x, $y)"))
+                        performGestureClick(service, x, y, onProgress)
+                    } else {
+                        onProgress(ProgressUpdate("正在点击视图ID: $coordStr"))
+                        performViewIdClick(service, coordStr, onProgress)
+                    }
+                } else {
+                    onProgress(ProgressUpdate("正在点击视图ID: $coordStr"))
+                    performViewIdClick(service, coordStr, onProgress)
+                }
             }
             else -> {
                 // 尝试解析为坐标字符串
