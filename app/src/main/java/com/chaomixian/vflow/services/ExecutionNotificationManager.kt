@@ -3,12 +3,15 @@ package com.chaomixian.vflow.services
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.model.Workflow
 
 /**
@@ -84,6 +87,17 @@ object ExecutionNotificationManager {
      */
     @RequiresApi(36)
     private fun buildStatusChipNotification(workflow: Workflow, state: ExecutionNotificationState) {
+        val stopIntent = Intent(appContext, WorkflowActionReceiver::class.java).apply {
+            action = WorkflowActionReceiver.ACTION_STOP_WORKFLOW
+            putExtra(WorkflowActionReceiver.EXTRA_WORKFLOW_ID, workflow.id)
+        }
+        val stopPendingIntent = PendingIntent.getBroadcast(
+            appContext,
+            workflow.id.hashCode(),
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val builder = NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setContentTitle(workflow.name)
             .setSmallIcon(R.drawable.ic_workflows) // 这个是 Status Chip 收起时显示的图标
@@ -99,6 +113,12 @@ object ExecutionNotificationManager {
                     // [新增API] 设置在 Status Chip 进度条旁边显示的图标
                     // 直接在 Builder 上设置进度，系统会自动渲染为 Status Chip 进度条
                     .setProgress(100, state.progress, false)
+                    // 添加"结束"操作按钮（显示在展开的通知中）
+                    .addAction(
+                        R.drawable.rounded_close_small_24,
+                        "结束",
+                        stopPendingIntent
+                    )
             }
             is ExecutionNotificationState.Completed -> {
                 builder
