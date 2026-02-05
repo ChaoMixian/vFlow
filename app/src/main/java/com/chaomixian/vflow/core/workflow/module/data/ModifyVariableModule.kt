@@ -76,8 +76,10 @@ class ModifyVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 执行逻辑现在需要解析命名变量的引用格式 "[[...]]"
-        val variableRef = context.getVariableAsString("variable", "")
+        // 使用 getParameterRaw 获取原始参数值，保留命名变量格式 [[varName]]
+        val rawVariableRef = context.getParameterRaw("variable") ?: ""
+        val variableRef = rawVariableRef.ifBlank { context.getVariableAsString("variable", "") }
+
         if (variableRef.isNullOrBlank() || !variableRef.isNamedVariable()) {
             val title = appContext.getString(R.string.error_vflow_variable_modify_param_error)
             val message = appContext.getString(R.string.error_vflow_variable_modify_invalid)

@@ -172,6 +172,22 @@ data class ExecutionContext(
     }
 
     /**
+     * 获取参数的原始字符串值，不进行命名变量的自动解引用。
+     *
+     * 用于需要保留变量引用格式 [[varName]] 的场景，
+     * 例如 GetVariableModule 读取指定变量、ModifyVariableModule 指定要修改变量名。
+     *
+     * @param key 参数名
+     * @return 原始字符串值，如果不存在或不是字符串类型则返回 null
+     */
+    fun getParameterRaw(key: String): String? {
+        return when (val vobj = variables[key]) {
+            is VString -> vobj.raw
+            else -> null
+        }
+    }
+
+    /**
      * 获取步骤输出的 VObject
      *
      * @param stepId 步骤ID

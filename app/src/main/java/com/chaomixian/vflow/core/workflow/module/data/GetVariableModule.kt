@@ -57,22 +57,29 @@ class GetVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
+        // 使用 getParameterRaw 获取原始参数值，保留命名变量格式 [[varName]]
+        // 这样用户传入 [[myVar]] 时，我们获取到的是 "myVar"（不带 [[]]）
+        val rawSource = context.getParameterRaw("source") ?: context.getVariableAsString("source", "")
+
         // 解析源变量引用（支持 {{step.output}} 或 [[varName]] 格式）
-        val sourceParam = context.getVariableAsString("source")
-        val variableValue: VObject = if (VariableResolver.hasVariableReference(sourceParam)) {
-            // 处理变量引用
-            val raw = VariableResolver.resolveValue(sourceParam, context)
+        val variableValue: VObject = if (rawSource.isNamedVariable()) {
+            // 处理命名变量引用：[[varName]] -> varName
+            val variableName = rawSource.removeSurrounding("[[", "]]")
+            context.getVariable(variableName)
+        } else if (rawSource.isMagicVariable()) {
+            // 处理魔法变量引用
+            val raw = VariableResolver.resolveValue(rawSource, context)
             VObjectFactory.from(raw)
         } else {
             // 直接从 namedVariables 或 magicVariables 获取
-            context.getVariable(sourceParam)
+            context.getVariable(rawSource)
         }
 
         // 检查变量是否存在（VNull 表示不存在）
         if (variableValue is VNull) {
             return ExecutionResult.Failure(
                 appContext.getString(R.string.error_vflow_variable_get_not_exist),
-                "找不到变量 '$sourceParam' 的值"
+                "找不到变量 '$rawSource' 的值"
             )
         }
 
