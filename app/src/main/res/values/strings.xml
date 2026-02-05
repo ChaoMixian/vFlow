@@ -385,6 +385,8 @@
     <string name="text_region_example">区域: 100,200,500,600</string>
     <string name="text_open_uri">打开链接</string>
     <string name="label_target_app">目标应用/Activity</string>
+    <string name="label_target_apps">目标应用</string>
+    <string name="button_add_app">添加应用</string>
     <string name="text_not_recorded">未录制\n点击下方按钮录制触摸操作</string>
     <string name="text_time_09_00">09:00</string>
     <string name="text_scale_1_0">1.0x</string>
@@ -479,6 +481,10 @@
     <string name="text_when_opened">打开时</string>
     <string name="text_when_closed">关闭时</string>
     <string name="button_select_app_activity">选择应用或Activity</string>
+    <string name="button_add_app_activity">添加应用或Activity</string>
+    <string name="text_not_selected">尚未选择</string>
+    <string name="text_app_selected">已选择: %s</string>
+    <string name="text_activity_selected">已选择: %s / %s</string>
     <string name="label_workflow">工作流</string>
     <string name="text_no_favorite_workflows">暂无收藏的工作流</string>
     <string name="desc_details">详情</string>

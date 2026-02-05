@@ -1,5 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/AppStartTriggerUIProvider.kt
-// 描述: 为 AppStartTriggerModule 提供自定义UI交互逻辑。
+// 描述: 为 AppStartTriggerModule 提供自定义UI交互逻辑。强制使用硬编码字符串以确保逻辑一致性。
 package com.chaomixian.vflow.core.workflow.module.triggers
 
 import android.content.Context
@@ -15,23 +15,32 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.app_picker.AppPickerActivity
+import com.chaomixian.vflow.ui.app_picker.SimpleAppPickerActivity
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+
+data class AppEntry(
+    val packageName: String,
+    val appName: String
+)
 
 class AppStartTriggerViewHolder(
     view: View,
     val summaryTextView: TextView,
     val pickButton: Button,
-    val eventChipGroup: ChipGroup,
-    val openChip: Chip,
-    val closeChip: Chip,
-    val eventSectionViews: List<View>
+    val eventToggleGroup: MaterialButtonToggleGroup,
+    val openButton: MaterialButton,
+    val closeButton: MaterialButton,
+    val eventSectionViews: List<View>,
+    val selectedAppsChipGroup: ChipGroup,
+    var selectedApps: MutableList<AppEntry> = mutableListOf()
 ) : CustomEditorViewHolder(view)
 
 class AppStartTriggerUIProvider : ModuleUIProvider {
 
-    override fun getHandledInputIds(): Set<String> = setOf("event", "packageName", "activityName")
+    override fun getHandledInputIds(): Set<String> = setOf("event", "packageNames")
 
     override fun createEditor(
         context: Context,
@@ -54,7 +63,8 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
                 view.findViewById(R.id.label_event),
                 view.findViewById(R.id.cg_app_event),
                 view.findViewById(R.id.divider_event)
-            )
+            ),
+            view.findViewById(R.id.cg_selected_apps)
         )
 
         // 检查模块是否定义了 "event" 参数
@@ -62,22 +72,59 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
         val hasEventParameter = currentParameters.containsKey("event")
         holder.eventSectionViews.forEach { it.isVisible = hasEventParameter }
 
-
-        // 仅当事件部分可见时，才处理其状态恢复和监听
+        // 设置事件选项的默认选中状态
         if (hasEventParameter) {
-            val currentEvent = currentParameters["event"] as? String ?: "打开时"
-            if (currentEvent == "打开时") holder.openChip.isChecked = true else holder.closeChip.isChecked = true
-            holder.eventChipGroup.setOnCheckedStateChangeListener { _, _ -> onParametersChanged() }
+            val currentEvent = currentParameters["event"] as? String
+
+            if (currentEvent == "关闭时") {
+                holder.eventToggleGroup.check(R.id.chip_app_close)
+            } else {
+                holder.eventToggleGroup.check(R.id.chip_app_open)
+            }
+
+            holder.eventToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (isChecked) onParametersChanged()
+            }
         }
 
-
         // Restore state
-        updateSummaryText(context, holder.summaryTextView, currentParameters)
+        holder.selectedAppsChipGroup.removeAllViews()
+        holder.selectedApps.clear()
+
+        @Suppress("UNCHECKED_CAST")
+        val packageNames = currentParameters["packageNames"] as? List<String> ?: emptyList()
+        val pm = context.packageManager
+
+        for (packageName in packageNames) {
+            try {
+                val appName = pm.getApplicationInfo(packageName, 0).loadLabel(pm).toString()
+                val entry = AppEntry(packageName, appName)
+                holder.selectedApps.add(entry)
+                addAppChip(holder.selectedAppsChipGroup, entry, holder, onParametersChanged)
+            } catch (e: Exception) {
+                // 应用已卸载，跳过
+            }
+        }
 
         // Listeners
         holder.pickButton.setOnClickListener {
-            val intent = Intent(context, AppPickerActivity::class.java)
-            onStartActivityForResult?.invoke(intent) { _, _ ->}
+            val intent = Intent(context, SimpleAppPickerActivity::class.java)
+            onStartActivityForResult?.invoke(intent) { resultCode, data ->
+                if (resultCode == android.app.Activity.RESULT_OK && data != null) {
+                    val packageName = data.getStringExtra(SimpleAppPickerActivity.EXTRA_SELECTED_PACKAGE_NAME)
+                    if (packageName != null && holder.selectedApps.none { it.packageName == packageName }) {
+                        val appName = try {
+                            pm.getApplicationInfo(packageName, 0).loadLabel(pm).toString()
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            packageName
+                        }
+                        val entry = AppEntry(packageName, appName)
+                        holder.selectedApps.add(entry)
+                        addAppChip(holder.selectedAppsChipGroup, entry, holder, onParametersChanged)
+                        onParametersChanged()
+                    }
+                }
+            }
         }
 
         return holder
@@ -85,39 +132,36 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as AppStartTriggerViewHolder
-        // 仅当事件部分可见时，才读取其值
+        val result = mutableMapOf<String, Any?>()
+
         if (h.eventSectionViews.first().isVisible) {
-            val event = if (h.openChip.isChecked) "打开时" else "关闭时"
-            return mapOf("event" to event)
+            val event = when (h.eventToggleGroup.checkedButtonId) {
+                R.id.chip_app_close -> "关闭时"
+                else -> "打开时" // 默认值
+            }
+            result["event"] = event
         }
-        // 对于 LaunchAppModule，此方法返回空Map，因为它的参数是通过 ActivityResult 更新的
-        return emptyMap()
+
+        result["packageNames"] = h.selectedApps.map { it.packageName }
+        return result
     }
 
-    private fun updateSummaryText(context: Context, textView: TextView, parameters: Map<String, Any?>) {
-        val packageName = parameters["packageName"] as? String
-        val activityName = parameters["activityName"] as? String
-
-        if (packageName.isNullOrEmpty()) {
-            textView.text = "尚未选择"
-            return
+    private fun addAppChip(
+        chipGroup: ChipGroup,
+        entry: AppEntry,
+        holder: AppStartTriggerViewHolder,
+        onParametersChanged: () -> Unit
+    ) {
+        val chip = Chip(chipGroup.context).apply {
+            text = entry.appName
+            isCloseIconVisible = true
+            setOnCloseIconClickListener {
+                chipGroup.removeView(this)
+                holder.selectedApps.remove(entry)
+                onParametersChanged()
+            }
         }
-
-        val pm = context.packageManager
-        val appName = try {
-            pm.getApplicationInfo(packageName, 0).loadLabel(pm).toString()
-        } catch (e: PackageManager.NameNotFoundException) {
-            packageName // 如果找不到应用，就显示包名
-        }
-
-        val displayText = if (activityName == "LAUNCH" || activityName.isNullOrEmpty()) {
-            "应用: $appName"
-        } else {
-            // 如果Activity名称过长，只显示类名
-            val simpleActivityName = activityName.substringAfterLast('.')
-            "Activity: $appName / $simpleActivityName"
-        }
-        textView.text = "已选择: $displayText"
+        chipGroup.addView(chip)
     }
 
     override fun createPreview(

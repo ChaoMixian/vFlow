@@ -94,6 +94,9 @@
             android:name=".ui.app_picker.AppPickerActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.app_picker.SimpleAppPickerActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.app_picker.ActivityPickerActivity"
             android:exported="false" />
 

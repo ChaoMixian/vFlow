@@ -385,6 +385,8 @@
     <string name="text_region_example">Region: 100,200,500,600</string>
     <string name="text_open_uri">Open URI</string>
     <string name="label_target_app">Target App/Activity</string>
+    <string name="label_target_apps">Target Apps</string>
+    <string name="button_add_app">Add App</string>
     <string name="text_not_recorded">Not recorded\nClick button below to record touch operations</string>
     <string name="text_time_09_00">09:00</string>
     <string name="text_scale_1_0">1.0x</string>
@@ -479,6 +481,10 @@
     <string name="text_when_opened">When Opened</string>
     <string name="text_when_closed">When Closed</string>
     <string name="button_select_app_activity">Select App/Activity</string>
+    <string name="button_add_app_activity">Add App/Activity</string>
+    <string name="text_not_selected">Not selected</string>
+    <string name="text_app_selected">Selected: %s</string>
+    <string name="text_activity_selected">Selected: %s / %s</string>
     <string name="label_workflow">Workflow</string>
     <string name="text_no_favorite_workflows">No favorite workflows</string>
     <string name="desc_details">Details</string>

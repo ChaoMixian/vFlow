@@ -409,17 +409,12 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
         listeningWorkflows.forEach { workflow ->
             val config = workflow.triggerConfig ?: return@forEach
             val configEvent = config["event"] as? String
-            val targetPackage = config["packageName"] as? String
-            val targetActivity = config["activityName"] as? String
 
-            if (configEvent == eventType && targetPackage == packageName) {
-                val activityMatches = if (eventType == "打开时") {
-                    targetActivity == "LAUNCH" || targetActivity == className
-                } else {
-                    true // 关闭事件不需要匹配具体Activity
-                }
+            if (configEvent == eventType) {
+                @Suppress("UNCHECKED_CAST")
+                val targetPackages = config["packageNames"] as? List<String> ?: emptyList()
 
-                if (activityMatches) {
+                if (targetPackages.contains(packageName)) {
                     triggerScope.launch {
                         DebugLogger.i(TAG, "触发工作流 '${workflow.name}', 事件: $packageName $eventType")
                         WorkflowExecutor.execute(workflow, context)

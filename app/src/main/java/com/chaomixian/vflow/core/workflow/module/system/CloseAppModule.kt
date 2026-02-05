@@ -31,8 +31,8 @@ class CloseAppModule : BaseModule() {
         category = "应用与系统"
     )
 
-    // 复用应用选择器的 UI 逻辑 (AppStartTriggerUIProvider 会自动隐藏不需要的"事件"选项)
-    override val uiProvider: ModuleUIProvider = com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerUIProvider()
+    // 使用专门的 LaunchAppUIProvider（只需要选择单个应用）
+    override val uiProvider: ModuleUIProvider = LaunchAppUIProvider()
 
     // 动态声明权限：需要 Shell 权限
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

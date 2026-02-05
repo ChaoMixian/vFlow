@@ -26,8 +26,8 @@ class LaunchAppModule : BaseModule() {
         category = "应用与系统"
     )
 
-    // 复用AppStartTrigger的UIProvider
-    override val uiProvider: ModuleUIProvider = com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerUIProvider()
+    // 使用专门的 LaunchAppUIProvider
+    override val uiProvider: ModuleUIProvider = LaunchAppUIProvider()
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(

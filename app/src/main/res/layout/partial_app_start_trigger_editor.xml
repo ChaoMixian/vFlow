@@ -14,27 +14,28 @@
         android:text="@string/label_event"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
 
-    <com.google.android.material.chip.ChipGroup
+    <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/cg_app_event"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         app:singleSelection="true">
 
-        <com.google.android.material.chip.Chip
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/chip_app_open"
-            style="@style/Widget.Material3.Chip.Filter"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/text_when_opened" />
+            android:text="@string/text_when_opened"
+            android:checked="true" />
 
-        <com.google.android.material.chip.Chip
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/chip_app_close"
-            style="@style/Widget.Material3.Chip.Filter"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/text_when_closed" />
-    </com.google.android.material.chip.ChipGroup>
+    </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <com.google.android.material.divider.MaterialDivider
         android:id="@+id/divider_event"
@@ -45,8 +46,15 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/label_target_app"
+        android:text="@string/label_target_apps"
         android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/cg_selected_apps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleSelection="false" />
 
     <TextView
         android:id="@+id/text_selected_app_summary"
@@ -55,6 +63,7 @@
         android:layout_marginTop="8dp"
         android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="?attr/colorOnSurfaceVariant"
+        android:visibility="gone"
         tools:text="已选择：微信" />
 
     <Button
@@ -63,6 +72,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/button_select_app_activity" />
+        android:text="@string/button_add_app" />
 
 </LinearLayout>
