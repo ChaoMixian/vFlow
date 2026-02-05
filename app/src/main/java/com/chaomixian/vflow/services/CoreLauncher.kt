@@ -127,20 +127,32 @@ object CoreLauncher {
                 // 给一点时间让进程启动
                 delay(500)
 
-                // 验证启动
-                if (VFlowCoreBridge.ping()) {
-                    DebugLogger.i(TAG, "vFlowCore 启动验证成功！权限: ${VFlowCoreBridge.privilegeMode}")
+                // 验证启动（带重试机制，最多等待5秒）
+                var success = false
+                for (i in 1..10) {
+                    if (VFlowCoreBridge.ping()) {
+                        DebugLogger.i(TAG, "vFlowCore 启动验证成功！(尝试 $i/10) 权限: ${VFlowCoreBridge.privilegeMode}")
+                        success = true
+                        break
+                    }
+                    if (i < 10) {
+                        DebugLogger.d(TAG, "vFlowCore 未响应，继续等待... ($i/10)")
+                        delay(500) // 每次等待500ms，总共最多5秒
+                    }
+                }
+
+                if (success) {
                     LaunchResult(
                         success = true,
                         mode = finalMode,
                         privilegeMode = VFlowCoreBridge.privilegeMode
                     )
                 } else {
-                    DebugLogger.w(TAG, "vFlowCore 启动后未立即响应 Ping，请检查日志: ${logFile.absolutePath}")
+                    DebugLogger.w(TAG, "vFlowCore 启动后未响应 Ping (尝试10次后仍失败)，请检查日志: ${logFile.absolutePath}")
                     LaunchResult(
                         success = false,
                         mode = finalMode,
-                        error = "启动后未响应 Ping"
+                        error = "启动后未响应 Ping (等待5秒后超时)"
                     )
                 }
             }
