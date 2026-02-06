@@ -171,6 +171,7 @@ object ModuleRegistry {
         register(GetAppUsageStatsModule(), context)
         register(InvokeModule(), context)
         register(SystemInfoModule(), context)
+        register(PlayAudioModule(), context)
 
         // Core (Beta) 模块
         // 网络控制组

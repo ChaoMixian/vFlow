@@ -1577,4 +1577,46 @@
     <string name="output_vflow_core_nfc_state_enabled_name">NFC状态</string>
     <string name="summary_vflow_core_set_nfc">NFC</string>
     <string name="summary_vflow_core_nfc_state">读取NFC状态</string>
+
+    <!-- Play Audio Module -->
+    <string name="param_vflow_device_play_audio_await_name">等待播放完成</string>
+    <string name="module_vflow_device_play_audio_name">播放音频</string>
+    <string name="module_vflow_device_play_audio_desc">播放系统自带的音频或本地音频文件，支持设置音量。</string>
+    <string name="param_vflow_device_play_audio_type_name">音频类型</string>
+    <string name="param_vflow_device_play_audio_system_sound_name">系统音频</string>
+    <string name="param_vflow_device_play_audio_local_file_name">本地文件路径</string>
+    <string name="param_vflow_device_play_audio_volume_name">音量 (%)</string>
+    <string name="param_vflow_device_play_audio_loop_name">循环播放</string>
+    <string name="output_vflow_device_play_audio_success_name">是否成功</string>
+
+    <!-- Audio Types -->
+    <string name="audio_type_system">系统音频</string>
+    <string name="audio_type_local">本地文件</string>
+
+    <!-- Sound Names -->
+    <string name="sound_notification">通知音</string>
+    <string name="sound_alarm">闹钟</string>
+    <string name="sound_ringtone">铃声</string>
+    <string name="sound_notification_2">通知音 2</string>
+    <string name="sound_notification_3">通知音 3</string>
+    <string name="sound_notification_4">通知音 4</string>
+    <string name="sound_notification_5">通知音 5</string>
+
+    <!-- Play Audio Messages -->
+    <string name="msg_vflow_device_play_audio_preparing">正在准备音频…</string>
+    <string name="msg_vflow_device_play_audio_playing">正在播放音频</string>
+    <string name="error_vflow_device_play_audio_no_file">未选择音频文件</string>
+    <string name="error_vflow_device_play_audio_file_required">请选择本地音频文件</string>
+    <string name="error_vflow_device_play_audio_file_not_found">音频文件不存在</string>
+    <string name="error_vflow_device_play_audio_file_missing">文件不存在: %s</string>
+    <string name="error_vflow_device_play_audio_invalid_source">无效的音频源</string>
+    <string name="error_vflow_device_play_audio_source_error">加载音频源失败</string>
+    <string name="error_vflow_device_play_audio_failed">播放音频失败</string>
+    <string name="error_vflow_device_play_audio_unknown">发生未知错误</string>
+
+    <!-- Common -->
+    <string name="button_select">选择</string>
+    <string name="text_yes">是</string>
+    <string name="text_no">否</string>
+    <string name="text_loop">循环</string>
 </resources>

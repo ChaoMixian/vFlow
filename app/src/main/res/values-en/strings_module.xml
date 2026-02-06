@@ -1699,4 +1699,47 @@
     <string name="output_vflow_core_nfc_state_enabled_name">NFC State</string>
     <string name="summary_vflow_core_set_nfc">NFC</string>
     <string name="summary_vflow_core_nfc_state">Read NFC State</string>
+
+
+    <!-- Play Audio Module -->
+    <string name="module_vflow_device_play_audio_name">Play Audio</string>
+    <string name="module_vflow_device_play_audio_desc">Play built-in system sounds or local audio files, with volume control support.</string>
+    <string name="param_vflow_device_play_audio_type_name">Audio Type</string>
+    <string name="param_vflow_device_play_audio_system_sound_name">System Sound</string>
+    <string name="param_vflow_device_play_audio_local_file_name">Local File Path</string>
+    <string name="param_vflow_device_play_audio_volume_name">Volume (%)</string>
+    <string name="param_vflow_device_play_audio_await_name">Wait for playback to complete</string>
+    <string name="param_vflow_device_play_audio_loop_name">Loop Playback</string>
+    <string name="output_vflow_device_play_audio_success_name">Success</string>
+
+    <!-- Audio Types -->
+    <string name="audio_type_system">System Sound</string>
+    <string name="audio_type_local">Local File</string>
+
+    <!-- Sound Names -->
+    <string name="sound_notification">Notification</string>
+    <string name="sound_alarm">Alarm</string>
+    <string name="sound_ringtone">Ringtone</string>
+    <string name="sound_notification_2">Notification 2</string>
+    <string name="sound_notification_3">Notification 3</string>
+    <string name="sound_notification_4">Notification 4</string>
+    <string name="sound_notification_5">Notification 5</string>
+
+    <!-- Play Audio Messages -->
+    <string name="msg_vflow_device_play_audio_preparing">Preparing audio…</string>
+    <string name="msg_vflow_device_play_audio_playing">Playing audio</string>
+    <string name="error_vflow_device_play_audio_no_file">No audio file selected</string>
+    <string name="error_vflow_device_play_audio_file_required">Please select a local audio file</string>
+    <string name="error_vflow_device_play_audio_file_not_found">Audio file not found</string>
+    <string name="error_vflow_device_play_audio_file_missing">File not found: %s</string>
+    <string name="error_vflow_device_play_audio_invalid_source">Invalid audio source</string>
+    <string name="error_vflow_device_play_audio_source_error">Failed to load audio source</string>
+    <string name="error_vflow_device_play_audio_failed">Failed to play audio</string>
+    <string name="error_vflow_device_play_audio_unknown">Unknown error occurred</string>
+
+    <!-- Common -->
+    <string name="button_select">Select</string>
+    <string name="text_yes">Yes</string>
+    <string name="text_no">No</string>
+    <string name="text_loop">Loop</string>
 </resources>
