@@ -104,9 +104,25 @@ class TemplateParser(private val input: String) {
     }
 
     private fun findClosingTag(text: String, start: Int, closeChar: Char): Int {
+        // 使用嵌套深度计数，正确处理 {{...{{...}}...}} 或 {{...}}...{{...}} 的情况
+        // 以及 [[...[[...]]...]] 或 [[...]]...[[...]] 的情况
+        var depth = 0
         var j = start
         while (j < text.length - 1) {
+            // 检查是否是打开标记 {{ 或 [[
+            if ((text[j] == '{' || text[j] == '[') && text[j + 1] == text[j]) {
+                depth++
+                j += 2
+                continue
+            }
+            // 检查是否是关闭标记 }} 或 ]]
             if (text[j] == closeChar && text[j + 1] == closeChar) {
+                if (depth > 0) {
+                    depth--
+                    j += 2
+                    continue
+                }
+                // depth == 0，找到真正的闭合标记
                 return j
             }
             j++

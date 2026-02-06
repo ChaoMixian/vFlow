@@ -146,10 +146,11 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
             onSelection?.invoke(item)
             dismiss()
         } else {
-            // 特殊处理：字典和列表类型
+            // 特殊处理：字典、列表和字符串类型
             when (item.typeId) {
                 "vflow.type.dictionary" -> showDictionaryOptionsDialog(item, properties, acceptedTypes)
                 "vflow.type.list" -> showListOptionsDialog(item, properties, acceptedTypes)
+                "vflow.type.string" -> showStringOptionsDialog(item, properties, acceptedTypes)
                 else -> showPropertySelectionDialog(item, properties, acceptedTypes)
             }
         }
@@ -345,6 +346,106 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                     val newItem = item.copy(
                         variableReference = newRef,
                         variableName = "${item.variableName}.$indexText"
+                    )
+                    onSelection?.invoke(newItem)
+                    dismiss()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /**
+     * 显示字符串选项对话框（内置属性 + 索引/切片）
+     * @param acceptedTypes 接受的类型集合，用于判断是否显示"使用变量本身"选项
+     */
+    private fun showStringOptionsDialog(
+        item: MagicVariableItem,
+        properties: List<com.chaomixian.vflow.core.types.VPropertyDef>,
+        acceptedTypes: Set<String>
+    ) {
+        val options = mutableListOf<String>()
+
+        // 检查是否启用了类型限制（默认关闭，快捷指令风格）
+        val enableTypeFilter = arguments?.getBoolean("enableTypeFilter", false) ?: false
+
+        // 只有当类型本身被接受时，才显示"使用变量本身"选项
+        if (!enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
+            options.add("使用 ${item.variableName} 本身")
+        }
+
+        properties.forEach { prop -> options.add("${prop.getLocalizedName(requireContext())} (${prop.name})") }
+        options.add("选择指定索引的值...")  // 添加索引选项
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("文本: ${item.variableName}")
+            .setItems(options.toTypedArray()) { _, which ->
+                val hasUseSelfOption = !enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
+                val offset = if (hasUseSelfOption) 1 else 0
+
+                when {
+                    hasUseSelfOption && which == 0 -> {
+                        onSelection?.invoke(item)
+                        dismiss()
+                    }
+                    which <= properties.size -> {
+                        // 选择内置属性
+                        val prop = properties[which - offset]
+                        val oldRef = item.variableReference
+                        val newRef = when {
+                            oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
+                                oldRef.removeSuffix("}}") + ".${prop.name}}}"
+                            }
+                            oldRef.startsWith("[[") && oldRef.endsWith("]]") -> {
+                                oldRef.removeSuffix("]]") + ".${prop.name}]]"
+                            }
+                            else -> oldRef
+                        }
+                        val newItem = item.copy(
+                            variableReference = newRef,
+                            variableName = "${item.variableName} 的 ${prop.getLocalizedName(requireContext())}"
+                        )
+                        onSelection?.invoke(newItem)
+                        dismiss()
+                    }
+                    else -> {
+                        // 选择指定索引/切片
+                        showStringIndexInput(item)
+                    }
+                }
+            }
+            .show()
+    }
+
+    /**
+     * 显示字符串索引/切片输入对话框
+     */
+    private fun showStringIndexInput(item: MagicVariableItem) {
+        val context = requireContext()
+        val editText = android.widget.EditText(context)
+        // 不设置 inputType，允许输入负号和冒号
+        editText.hint = "例如: 0, -1, 0:5, 1:-1, ::-1"
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle("输入索引或切片")
+            .setView(editText)
+            .setPositiveButton("确定") { _, _ ->
+                val indexText = editText.text.toString().trim()
+                if (indexText.isNotEmpty()) {
+                    val oldRef = item.variableReference
+                    val newRef = when {
+                        oldRef.startsWith("{{") && oldRef.endsWith("}}") -> {
+                            oldRef.removeSuffix("}}") + ".$indexText}}"
+                        }
+                        oldRef.startsWith("[[") && oldRef.endsWith("]]") -> {
+                            oldRef.removeSuffix("]]") + ".$indexText]]"
+                        }
+                        else -> oldRef
+                    }
+
+                    val newItem = item.copy(
+                        variableReference = newRef,
+                        variableName = "${item.variableName}[$indexText]"
                     )
                     onSelection?.invoke(newItem)
                     dismiss()
