@@ -8,6 +8,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.view.*
 import android.widget.CheckBox
@@ -54,6 +56,9 @@ class WorkflowListFragment : Fragment() {
     private var pendingWorkflow: Workflow? = null
     private var pendingExportFolderId: String? = null
     private val gson = Gson()
+
+    // 延迟执行处理器
+    private val delayedExecuteHandler = Handler(Looper.getMainLooper())
 
     // 导入冲突处理相关状态
     private val importQueue: Queue<Workflow> = LinkedList()
@@ -470,6 +475,9 @@ class WorkflowListFragment : Fragment() {
                         executeWorkflow(workflow)
                     }
                 },
+                onExecuteWorkflowDelayed = { workflow, delayMs ->
+                    scheduleDelayedExecution(workflow, delayMs)
+                },
                 onAddShortcut = { workflow ->
                     ShortcutHelper.requestPinnedShortcut(requireContext(), workflow)
                 },
@@ -594,6 +602,27 @@ class WorkflowListFragment : Fragment() {
             }
             permissionLauncher.launch(intent)
         }
+    }
+
+    /**
+     * 安排延迟执行工作流
+     */
+    private fun scheduleDelayedExecution(workflow: Workflow, delayMs: Long) {
+        val delayText = when (delayMs) {
+            5_000L -> getString(R.string.workflow_execute_delay_5s)
+            15_000L -> getString(R.string.workflow_execute_delay_15s)
+            60_000L -> getString(R.string.workflow_execute_delay_1min)
+            else -> "${delayMs / 1000} 秒"
+        }
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.workflow_execute_delayed, delayText, workflow.name),
+            Toast.LENGTH_SHORT
+        ).show()
+
+        delayedExecuteHandler.postDelayed({
+            executeWorkflow(workflow)
+        }, delayMs)
     }
 
     private fun showCreateFolderDialog() {

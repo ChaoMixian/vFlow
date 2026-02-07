@@ -2,6 +2,8 @@ package com.chaomixian.vflow.ui.workflow_list
 
 import android.annotation.SuppressLint
 import android.content.res.ColorStateList
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,6 +41,7 @@ class WorkflowListAdapter(
     private val onDuplicateWorkflow: (Workflow) -> Unit,
     private val onExportWorkflow: (Workflow) -> Unit,
     private val onExecuteWorkflow: (Workflow) -> Unit,
+    private val onExecuteWorkflowDelayed: (Workflow, Long) -> Unit, // 延迟执行回调，delayMs 为延迟毫秒数
     private val onAddShortcut: (Workflow) -> Unit,
     private val onFolderClick: (String) -> Unit, // 文件夹点击事件
     private val onFolderRename: (String) -> Unit, // 文件夹重命名事件
@@ -241,6 +244,12 @@ class WorkflowListAdapter(
                     if (WorkflowExecutor.isRunning(workflow.id)) R.drawable.rounded_pause_24 else R.drawable.ic_play_arrow
                 )
                 executeButton.setOnClickListener { onExecuteWorkflow(workflow) }
+
+                // 长按执行按钮显示延迟执行菜单
+                executeButton.setOnLongClickListener { view ->
+                    showDelayedExecuteMenu(view, workflow)
+                    true
+                }
             } else {
                 enabledSwitch.setOnCheckedChangeListener(null)
                 enabledSwitch.isChecked = workflow.isEnabled
@@ -260,6 +269,26 @@ class WorkflowListAdapter(
                     }
                 }
             }
+        }
+
+        /**
+         * 显示延迟执行菜单
+         */
+        private fun showDelayedExecuteMenu(anchorView: View, workflow: Workflow) {
+            val popup = PopupMenu(anchorView.context, anchorView)
+            popup.menuInflater.inflate(R.menu.workflow_execute_delayed_menu, popup.menu)
+
+            popup.setOnMenuItemClickListener { menuItem ->
+                val delayMs = when (menuItem.itemId) {
+                    R.id.menu_execute_in_5s -> 5_000L      // 5秒
+                    R.id.menu_execute_in_15s -> 15_000L     // 15秒
+                    R.id.menu_execute_in_1min -> 60_000L    // 1分钟
+                    else -> return@setOnMenuItemClickListener false
+                }
+                onExecuteWorkflowDelayed(workflow, delayMs)
+                true
+            }
+            popup.show()
         }
     }
 

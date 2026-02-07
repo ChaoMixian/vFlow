@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_execute_in_5s"
+        android:title="@string/workflow_execute_delay_5s" />
+    <item
+        android:id="@+id/menu_execute_in_15s"
+        android:title="@string/workflow_execute_delay_15s" />
+    <item
+        android:id="@+id/menu_execute_in_1min"
+        android:title="@string/workflow_execute_delay_1min" />
+</menu>

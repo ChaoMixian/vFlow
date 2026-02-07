@@ -112,6 +112,10 @@
     <string name="workflow_item_more_options">More options</string>
     <string name="workflow_item_favorite">Favorite</string>
     <string name="workflow_item_execute">Execute Workflow</string>
+    <string name="workflow_execute_delay_5s">Execute in 5 seconds</string>
+    <string name="workflow_execute_delay_15s">Execute in 15 seconds</string>
+    <string name="workflow_execute_delay_1min">Execute in 1 minute</string>
+    <string name="workflow_execute_delayed">Executing in %1$s: %2$s</string>
 
     <!-- Settings Screen -->
     <string name="settings_update_download">Download Now</string>
@@ -611,4 +615,22 @@
     <string name="permission_desc_root">Allows the app to execute low-level system commands with superuser privileges.</string>
     <string name="permission_name_usage_stats">Usage Access</string>
     <string name="permission_desc_usage_stats">Allows vFlow to read app usage statistics (like usage duration, last used time) for improved Agent accuracy.</string>
+
+    <!-- Folder -->
+    <string name="folder_icon">Folder icon</string>
+    <string name="folder_rename">Rename</string>
+    <string name="folder_delete">Delete</string>
+    <string name="folder_export">Export</string>
+    <string name="folder_create">Create Folder</string>
+    <string name="folder_name_hint">Folder name</string>
+    <string name="dialog_folder_delete_title">Confirm Delete Folder</string>
+    <string name="dialog_folder_delete_message">Are you sure you want to delete folder \"%s\"? Workflows in this folder will be kept and moved to the root directory.</string>
+    <string name="toast_folder_created">Folder created</string>
+    <string name="toast_folder_renamed">Folder renamed</string>
+    <string name="toast_folder_deleted">Folder deleted</string>
+    <string name="toast_folder_export_success">Folder exported successfully</string>
+    <string name="folder_empty_workflows">This folder is empty</string>
+    <string name="workflows_count">%d workflows</string>
+    <string name="one_workflow">1 workflow</string>
+    <string name="zero_workflows">0 workflows</string>
 </resources>

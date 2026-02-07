@@ -113,6 +113,10 @@
     <string name="workflow_item_more_options">更多选项</string>
     <string name="workflow_item_favorite">收藏</string>
     <string name="workflow_item_execute">执行工作流</string>
+    <string name="workflow_execute_delay_5s">5 秒后执行</string>
+    <string name="workflow_execute_delay_15s">15 秒后执行</string>
+    <string name="workflow_execute_delay_1min">1 分钟后执行</string>
+    <string name="workflow_execute_delayed">%s 后执行: %s</string>
 
     <!-- Settings Screen -->
     <string name="settings_update_download">前往下载</string>

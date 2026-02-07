@@ -1,12 +1,14 @@
 package com.chaomixian.vflow.ui.workflow_list
 
 import android.annotation.SuppressLint
-import android.content.res.ColorStateList
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,10 +19,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
-import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.model.WorkflowFolder
 import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -29,7 +29,6 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.color.MaterialColors
 import androidx.core.view.isNotEmpty
 import com.google.gson.Gson
 
@@ -61,6 +60,9 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
     private var onWorkflowChanged: (() -> Unit)? = null
     private var pendingExportWorkflow: Workflow? = null
     private val gson = Gson()
+
+    // 延迟执行处理器
+    private val delayedExecuteHandler = Handler(Looper.getMainLooper())
 
     // 导出单个工作流
     private val exportSingleLauncher = registerForActivityResult(
@@ -147,6 +149,9 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
                     } else {
                         executeWorkflow(workflow)
                     }
+                },
+                onExecuteDelayed = { workflow, delayMs ->
+                    scheduleDelayedExecution(workflow, delayMs)
                 }
             )
             recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -230,6 +235,7 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
     private fun executeWorkflow(workflow: Workflow) {
         val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
         if (missingPermissions.isEmpty()) {
+            Toast.makeText(requireContext(), getString(R.string.toast_starting_workflow, workflow.name), Toast.LENGTH_SHORT).show()
             com.chaomixian.vflow.core.execution.WorkflowExecutor.execute(workflow, requireContext())
         } else {
             com.google.android.material.snackbar.Snackbar.make(
@@ -238,6 +244,27 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
                 com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
             ).show()
         }
+    }
+
+    /**
+     * 安排延迟执行工作流
+     */
+    private fun scheduleDelayedExecution(workflow: Workflow, delayMs: Long) {
+        val delayText = when (delayMs) {
+            5_000L -> getString(R.string.workflow_execute_delay_5s)
+            15_000L -> getString(R.string.workflow_execute_delay_15s)
+            60_000L -> getString(R.string.workflow_execute_delay_1min)
+            else -> "${delayMs / 1000} 秒"
+        }
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.workflow_execute_delayed, delayText, workflow.name),
+            Toast.LENGTH_SHORT
+        ).show()
+
+        delayedExecuteHandler.postDelayed({
+            executeWorkflow(workflow)
+        }, delayMs)
     }
 
     /**
@@ -250,7 +277,8 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
         private val onEdit: (Workflow) -> Unit,
         private val onDelete: (Workflow) -> Unit,
         private val onMoveOutFolder: (Workflow) -> Unit,
-        private val onExecute: (Workflow) -> Unit
+        private val onExecute: (Workflow) -> Unit,
+        private val onExecuteDelayed: (Workflow, Long) -> Unit // 延迟执行回调
     ) : RecyclerView.Adapter<FolderWorkflowAdapter.ViewHolder>() {
 
         private var itemTouchHelper: ItemTouchHelper? = null
@@ -380,7 +408,33 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
                         if (WorkflowExecutor.isRunning(workflow.id)) R.drawable.rounded_pause_24 else R.drawable.ic_play_arrow
                     )
                     executeButton.setOnClickListener { onExecute(workflow) }
+
+                    // 长按执行按钮显示延迟执行菜单
+                    executeButton.setOnLongClickListener { view ->
+                        showDelayedExecuteMenu(view, workflow)
+                        true
+                    }
                 }
+            }
+
+            /**
+             * 显示延迟执行菜单
+             */
+            private fun showDelayedExecuteMenu(anchorView: View, workflow: Workflow) {
+                val popup = PopupMenu(anchorView.context, anchorView)
+                popup.menuInflater.inflate(R.menu.workflow_execute_delayed_menu, popup.menu)
+
+                popup.setOnMenuItemClickListener { menuItem ->
+                    val delayMs = when (menuItem.itemId) {
+                        R.id.menu_execute_in_5s -> 5_000L      // 5秒
+                        R.id.menu_execute_in_15s -> 15_000L     // 15秒
+                        R.id.menu_execute_in_1min -> 60_000L    // 1分钟
+                        else -> return@setOnMenuItemClickListener false
+                    }
+                    onExecuteDelayed(workflow, delayMs)
+                    true
+                }
+                popup.show()
             }
         }
     }
