@@ -1,5 +1,5 @@
 // 文件：WorkflowListFragment.kt
-// 描述：显示工作流列表，并提供创建、编辑、删除、导入/导出和执行工作流的功能。
+// 描述：显示工作流列表，并提供创建、编辑、删除、导入/导出和执行工作流的功能。支持文件夹功能。
 
 package com.chaomixian.vflow.ui.workflow_list
 
@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.*
 import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
@@ -23,8 +24,10 @@ import com.chaomixian.vflow.core.execution.ExecutionState
 import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.workflow.FolderManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.WorkflowFolder
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.ShortcutHelper
@@ -44,11 +47,12 @@ import java.util.*
 
 class WorkflowListFragment : Fragment() {
     private lateinit var workflowManager: WorkflowManager
+    private lateinit var folderManager: FolderManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: WorkflowListAdapter
-    private lateinit var itemTouchHelper: ItemTouchHelper // 拖拽排序
-    private var pendingWorkflow: Workflow? = null // 用于执行前权限请求的待处理工作流
-    private var pendingExportWorkflow: Workflow? = null // 用于导出的待处理工作流
+    private lateinit var itemTouchHelper: ItemTouchHelper
+    private var pendingWorkflow: Workflow? = null
+    private var pendingExportFolderId: String? = null
     private val gson = Gson()
 
     // 导入冲突处理相关状态
@@ -56,17 +60,16 @@ class WorkflowListFragment : Fragment() {
     private enum class ConflictChoice { ASK, REPLACE_ALL, KEEP_ALL }
     private var conflictChoice = ConflictChoice.ASK
 
-    // ActivityResultLauncher 用于处理权限请求回调
+    // ActivityResultLauncher
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            pendingWorkflow?.let { executeWorkflow(it) } // 权限获取成功后执行待处理工作流
+            pendingWorkflow?.let { executeWorkflow(it) }
         }
         pendingWorkflow = null
     }
 
-    // 悬浮窗权限请求 launcher
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -77,66 +80,213 @@ class WorkflowListFragment : Fragment() {
         }
     }
 
-    private val exportSingleLauncher =
-        registerForActivityResult(
-            ActivityResultContracts.CreateDocument("application/json")
-        ) { uri ->
-            uri?.let { fileUri ->
-                pendingExportWorkflow?.let { workflow ->
-                    try {
-                        val jsonString = gson.toJson(workflow)
-                        requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
-                        Toast.makeText(requireContext(), getString(R.string.toast_export_success), Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) { Toast.makeText(requireContext(), getString(R.string.toast_export_failed, e.message ?: ""), Toast.LENGTH_LONG).show() }
+    // 单个工作流导出
+    private val exportSingleLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { fileUri ->
+            pendingExportWorkflow?.let { workflow ->
+                try {
+                    val jsonString = gson.toJson(workflow)
+                    requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
+                    Toast.makeText(requireContext(), getString(R.string.toast_export_success), Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), getString(R.string.toast_export_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
                 }
             }
-            pendingExportWorkflow = null
         }
+        pendingExportWorkflow = null
+    }
+    private var pendingExportWorkflow: Workflow? = null
 
-    private val backupLauncher =
-        registerForActivityResult(
-            ActivityResultContracts.CreateDocument("application/json")
-        ) { uri ->
-            uri?.let { fileUri ->
+    // 文件夹导出
+    private val exportFolderLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { fileUri ->
+            pendingExportFolderId?.let { folderId ->
                 try {
-                    val allWorkflows = workflowManager.getAllWorkflows()
-                    val jsonString = gson.toJson(allWorkflows)
-                    requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
-                    Toast.makeText(requireContext(), getString(R.string.toast_backup_success), Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) { Toast.makeText(requireContext(), getString(R.string.toast_backup_failed, e.message ?: ""), Toast.LENGTH_LONG).show() }
+                    val folder = folderManager.getFolder(folderId)
+                    val workflows = workflowManager.getAllWorkflows().filter { it.folderId == folderId }
+                    if (folder != null) {
+                        // 导出为包含文件夹信息的格式
+                        val exportData = mapOf(
+                            "folder" to folder,
+                            "workflows" to workflows
+                        )
+                        val jsonString = gson.toJson(exportData)
+                        requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
+                        Toast.makeText(requireContext(), getString(R.string.toast_folder_export_success), Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), getString(R.string.toast_export_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+                }
             }
         }
+        pendingExportFolderId = null
+    }
 
-    private val importLauncher =
-        registerForActivityResult(
-            ActivityResultContracts.OpenDocument()
-        ) { uri ->
-            uri?.let { fileUri ->
+    // 备份所有工作流
+    private val backupLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { fileUri ->
+            try {
+                // 导出所有工作流（包括文件夹信息）
+                val allWorkflows = workflowManager.getAllWorkflows()
+                val allFolders = folderManager.getAllFolders()
+                val backupData = mapOf(
+                    "workflows" to allWorkflows,
+                    "folders" to allFolders
+                )
+                val jsonString = gson.toJson(backupData)
+                requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
+                Toast.makeText(requireContext(), getString(R.string.toast_backup_success), Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), getString(R.string.toast_backup_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // 导入
+    private val importLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { fileUri ->
+            try {
+                val jsonString = requireContext().contentResolver.openInputStream(fileUri)?.use {
+                    BufferedReader(InputStreamReader(it)).readText()
+                } ?: throw Exception(getString(R.string.error_cannot_read_file))
+
+                // 检查是否是新的备份格式（包含 folders）或文件夹导出格式
                 try {
-                    val jsonString = requireContext().contentResolver.openInputStream(fileUri)?.use {
-                        BufferedReader(InputStreamReader(it)).readText()
-                    } ?: throw Exception(getString(R.string.error_cannot_read_file))
+                    val backupType = object : TypeToken<Map<String, Any>>() {}.type
+                    val backupData: Map<String, Any> = gson.fromJson(jsonString, backupType)
 
-                    val workflowsToImport = mutableListOf<Workflow>()
-                    try {
-                        val listType = object : TypeToken<List<Workflow>>() {}.type
-                        val list: List<Workflow> = gson.fromJson(jsonString, listType)
-                        if (list.any { it.id == null || it.name == null }) throw JsonSyntaxException(getString(R.string.error_backup_format_invalid))
-                        workflowsToImport.addAll(list)
-                    } catch (e: JsonSyntaxException) {
-                        val singleWorkflow: Workflow = gson.fromJson(jsonString, Workflow::class.java)
-                        if (singleWorkflow.id == null || singleWorkflow.name == null) throw JsonSyntaxException(getString(R.string.error_single_workflow_format_invalid))
-                        workflowsToImport.add(singleWorkflow)
+                    when {
+                        // 完整备份格式：folders + workflows
+                        backupData.containsKey("folders") && backupData.containsKey("workflows") -> {
+                            importBackupWithFolders(backupData)
+                        }
+                        // 文件夹导出格式：folder (单数) + workflows
+                        backupData.containsKey("folder") && backupData.containsKey("workflows") -> {
+                            importFolderExport(backupData)
+                        }
+                        else -> {
+                            // 旧的格式或单个工作流
+                            importWorkflows(jsonString)
+                        }
                     }
+                } catch (e: Exception) {
+                    // 尝试作为工作流列表解析
+                    importWorkflows(jsonString)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
-                    if (workflowsToImport.isNotEmpty()) {
-                        startImportProcess(workflowsToImport)
+    private fun importWorkflows(jsonString: String) {
+        val workflowsToImport = mutableListOf<Workflow>()
+        try {
+            val listType = object : TypeToken<List<Workflow>>() {}.type
+            val list: List<Workflow> = gson.fromJson(jsonString, listType)
+            if (list.any { it.id == null || it.name == null }) throw JsonSyntaxException(getString(R.string.error_backup_format_invalid))
+            workflowsToImport.addAll(list)
+        } catch (e: JsonSyntaxException) {
+            val singleWorkflow: Workflow = gson.fromJson(jsonString, Workflow::class.java)
+            if (singleWorkflow.id == null || singleWorkflow.name == null) throw JsonSyntaxException(getString(R.string.error_single_workflow_format_invalid))
+            workflowsToImport.add(singleWorkflow)
+        }
+
+        if (workflowsToImport.isNotEmpty()) {
+            startImportProcess(workflowsToImport)
+        } else {
+            Toast.makeText(requireContext(), getString(R.string.toast_no_workflow_in_file), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun importBackupWithFolders(backupData: Map<String, Any>) {
+        try {
+            // 导入文件夹
+            val foldersJson = gson.toJson(backupData["folders"])
+            val folderListType = object : TypeToken<List<WorkflowFolder>>() {}.type
+            val folders: List<WorkflowFolder> = gson.fromJson(foldersJson, folderListType)
+
+            folders.forEach { folder ->
+                // 检查是否已存在同名文件夹
+                val existingFolder = folderManager.getAllFolders().find { it.name == folder.name }
+                if (existingFolder != null) {
+                    // 重命名导入的文件夹
+                    folderManager.saveFolder(folder.copy(name = "${folder.name} (导入)"))
+                } else {
+                    folderManager.saveFolder(folder)
+                }
+            }
+
+            // 导入工作流
+            val workflowsJson = gson.toJson(backupData["workflows"])
+            val workflowListType = object : TypeToken<List<Workflow>>() {}.type
+            val workflows: List<Workflow> = gson.fromJson(workflowsJson, workflowListType)
+
+            // 重置 folderId 为新文件夹的 ID
+            val updatedWorkflows = workflows.map { workflow ->
+                val originalFolderName = folders.find { it.id == workflow.folderId }?.name
+                if (originalFolderName != null) {
+                    val newFolder = folderManager.getAllFolders().find { it.name == "${originalFolderName} (导入)" || it.name == originalFolderName }
+                    if (newFolder != null) {
+                        workflow.copy(folderId = newFolder.id)
                     } else {
-                        Toast.makeText(requireContext(), getString(R.string.toast_no_workflow_in_file), Toast.LENGTH_SHORT).show()
+                        workflow.copy(folderId = null)
                     }
-                } catch (e: Exception) { Toast.makeText(requireContext(), getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show() }
+                } else {
+                    workflow.copy(folderId = null)
+                }
             }
+
+            startImportProcess(updatedWorkflows)
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
         }
+    }
+
+    /**
+     * 导入文件夹导出格式：{"folder": {...}, "workflows": [...]}
+     */
+    private fun importFolderExport(backupData: Map<String, Any>) {
+        try {
+            // 导入文件夹
+            val folderJson = gson.toJson(backupData["folder"])
+            val folder: WorkflowFolder = gson.fromJson(folderJson, WorkflowFolder::class.java)
+
+            // 检查是否已存在同名文件夹
+            val existingFolder = folderManager.getAllFolders().find { it.name == folder.name }
+            if (existingFolder != null) {
+                folderManager.saveFolder(folder.copy(name = "${folder.name} (导入)"))
+            } else {
+                folderManager.saveFolder(folder)
+            }
+
+            // 获取新文件夹的 ID（可能是原名或重命名后的）
+            val newFolder = folderManager.getAllFolders().find { it.name == folder.name || it.name == "${folder.name} (导入)" }
+            val newFolderId = newFolder?.id
+
+            // 导入工作流
+            val workflowsJson = gson.toJson(backupData["workflows"])
+            val workflowListType = object : TypeToken<List<Workflow>>() {}.type
+            val workflows: List<Workflow> = gson.fromJson(workflowsJson, workflowListType)
+
+            // 更新工作流的 folderId
+            val updatedWorkflows = workflows.map { workflow ->
+                workflow.copy(folderId = newFolderId)
+            }
+
+            startImportProcess(updatedWorkflows)
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
+        }
+    }
 
     /** Fragment 创建时调用，启用选项菜单。 */
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -150,9 +300,10 @@ class WorkflowListFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_workflows, container, false)
         workflowManager = WorkflowManager(requireContext())
+        folderManager = FolderManager(requireContext())
         recyclerView = view.findViewById(R.id.recycler_view_workflows)
         setupRecyclerView()
-        setupDragAndDrop() // 设置拖拽排序
+        setupDragAndDrop()
         view.findViewById<FloatingActionButton>(R.id.fab_add_workflow).setOnClickListener {
             startActivity(Intent(requireContext(), WorkflowEditorActivity::class.java))
         }
@@ -160,17 +311,21 @@ class WorkflowListFragment : Fragment() {
         // 订阅执行状态的 Flow
         lifecycleScope.launch {
             ExecutionStateBus.stateFlow.collectLatest { state ->
-                // 当状态改变时，通知适配器刷新对应的项
-                val workflows = (recyclerView.adapter as? WorkflowListAdapter)?.getWorkflows()
-                val index = workflows?.indexOfFirst {
-                    when(state) {
-                        is ExecutionState.Running -> it.id == state.workflowId
-                        is ExecutionState.Finished -> it.id == state.workflowId
-                        is ExecutionState.Cancelled -> it.id == state.workflowId
-                        is ExecutionState.Failure -> it.id == state.workflowId
+                val items = adapter.getItems()
+                val index = items.indexOfFirst { item ->
+                    when (item) {
+                        is WorkflowListItem.WorkflowItem -> {
+                            when (state) {
+                                is ExecutionState.Running -> item.workflow.id == state.workflowId
+                                is ExecutionState.Finished -> item.workflow.id == state.workflowId
+                                is ExecutionState.Cancelled -> item.workflow.id == state.workflowId
+                                is ExecutionState.Failure -> item.workflow.id == state.workflowId
+                            }
+                        }
+                        else -> false
                     }
                 }
-                if (index != null && index != -1) {
+                if (index != -1) {
                     adapter.notifyItemChanged(index)
                 }
             }
@@ -179,45 +334,41 @@ class WorkflowListFragment : Fragment() {
         return view
     }
 
-    /**
-     * Fragment 恢复时，检查是否可以自动重新启用工作流，然后刷新列表。
-     */
     override fun onResume() {
         super.onResume()
         checkAndReEnableWorkflows()
-        loadWorkflows()
+        loadData()
     }
 
     // 选项菜单处理
-    /** 创建选项菜单。 */
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.workflow_list_menu, menu)
         super.onCreateOptionsMenu(menu, inflater)
     }
 
-    /** 处理选项菜单项点击事件。 */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.menu_create_folder -> {
+                showCreateFolderDialog()
+                true
+            }
             R.id.menu_favorite_float -> {
                 handleFavoriteFloatClick()
                 true
             }
             R.id.menu_backup_workflows -> {
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-                backupLauncher.launch("vflow_backup_${timestamp}.json") // 启动备份文件创建流程
+                backupLauncher.launch("vflow_backup_${timestamp}.json")
                 true
             }
             R.id.menu_import_workflows -> {
-                importLauncher.launch(arrayOf("application/json")) // 启动导入文件选择流程
+                importLauncher.launch(arrayOf("application/json"))
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    /**
-     * 处理收藏工作流悬浮窗按钮点击
-     */
     private fun handleFavoriteFloatClick() {
         if (checkOverlayPermission()) {
             showFavoriteWorkflowsFloat()
@@ -226,9 +377,6 @@ class WorkflowListFragment : Fragment() {
         }
     }
 
-    /**
-     * 检查是否有悬浮窗权限
-     */
     private fun checkOverlayPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(requireContext())
@@ -237,9 +385,6 @@ class WorkflowListFragment : Fragment() {
         }
     }
 
-    /**
-     * 请求悬浮窗权限
-     */
     private fun requestOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             MaterialAlertDialogBuilder(requireContext())
@@ -257,9 +402,6 @@ class WorkflowListFragment : Fragment() {
         }
     }
 
-    /**
-     * 显示工作流悬浮面板
-     */
     private fun showFavoriteWorkflowsFloat() {
         val intent = Intent(requireContext(), WorkflowsFloatPanelService::class.java).apply {
             action = WorkflowsFloatPanelService.ACTION_SHOW
@@ -267,19 +409,13 @@ class WorkflowListFragment : Fragment() {
         requireContext().startService(intent)
     }
 
-    /**
-     * 检查并自动重新启用那些因权限问题被禁用的工作流。
-     */
     private fun checkAndReEnableWorkflows() {
         val allWorkflows = workflowManager.getAllWorkflows()
         allWorkflows.forEach { workflow ->
-            // 如果工作流之前因权限丢失而被禁用，并且现在是禁用状态...
             if (workflow.wasEnabledBeforePermissionsLost && !workflow.isEnabled) {
-                // 检查现在权限是否已授予。
                 val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
                 if (missingPermissions.isEmpty()) {
                     DebugLogger.i("WorkflowListFragment", "工作流 '${workflow.name}' 的权限已授予，正在自动重新启用。")
-                    // 重新启用工作流并重置标志位
                     val updatedWorkflow = workflow.copy(isEnabled = true, wasEnabledBeforePermissionsLost = false)
                     workflowManager.saveWorkflow(updatedWorkflow)
                 }
@@ -287,61 +423,92 @@ class WorkflowListFragment : Fragment() {
         }
     }
 
-
-    /** 加载工作流并设置到 RecyclerView 的 Adapter。 */
-    private fun loadWorkflows() {
+    private fun loadData() {
         val workflows = workflowManager.getAllWorkflows()
-        // 检查 adapter 是否已初始化
+        val folders = folderManager.getAllFolders()
+
+        // 构建混合列表：文件夹在前，工作流在后（不在文件夹中的）
+        val items = mutableListOf<WorkflowListItem>()
+
+        // 添加文件夹（带有工作流数量）
+        folders.forEach { folder ->
+            val count = workflows.count { it.folderId == folder.id }
+            items.add(WorkflowListItem.FolderItem(folder, count))
+        }
+
+        // 添加不在文件夹中的工作流
+        workflows.filter { it.folderId == null }.forEach { workflow ->
+            items.add(WorkflowListItem.WorkflowItem(workflow))
+        }
+
         if (::adapter.isInitialized) {
-            adapter.updateData(workflows)
+            adapter.updateData(items)
         } else {
             adapter = WorkflowListAdapter(
-                workflows.toMutableList(), // 传递可变列表
+                items.toMutableList(),
                 workflowManager,
-                onEdit = { workflow ->
+                onEditWorkflow = { workflow ->
                     val intent = Intent(requireContext(), WorkflowEditorActivity::class.java).apply {
                         putExtra(WorkflowEditorActivity.EXTRA_WORKFLOW_ID, workflow.id)
                     }
                     startActivity(intent)
                 },
-                onDelete = { workflow -> showDeleteConfirmationDialog(workflow) },
-                onDuplicate = { workflow ->
+                onDeleteWorkflow = { workflow -> showDeleteWorkflowConfirmationDialog(workflow) },
+                onDuplicateWorkflow = { workflow ->
                     workflowManager.duplicateWorkflow(workflow.id)
                     Toast.makeText(requireContext(), getString(R.string.toast_copied_as, workflow.name), Toast.LENGTH_SHORT).show()
-                    loadWorkflows()
+                    loadData()
                 },
-                onExport = { workflow ->
+                onExportWorkflow = { workflow ->
                     pendingExportWorkflow = workflow
                     exportSingleLauncher.launch("${workflow.name}.json")
                 },
-                onExecute = { workflow ->
+                onExecuteWorkflow = { workflow ->
                     if (WorkflowExecutor.isRunning(workflow.id)) {
                         WorkflowExecutor.stopExecution(workflow.id)
                     } else {
                         executeWorkflow(workflow)
                     }
-                },onAddShortcut = { workflow ->
-                    // 处理添加快捷方式请求
+                },
+                onAddShortcut = { workflow ->
                     ShortcutHelper.requestPinnedShortcut(requireContext(), workflow)
                 },
-                itemTouchHelper
+                onFolderClick = { folderId ->
+                    val folder = folderManager.getFolder(folderId)
+                    folder?.let {
+                        // 打开文件夹内容弹窗
+                        val dialog = FolderContentDialogFragment.newInstance(folderId, folder.name)
+                        dialog.setOnWorkflowChangedListener {
+                            loadData()
+                        }
+                        dialog.show(childFragmentManager, FolderContentDialogFragment.TAG)
+                    }
+                },
+                onFolderRename = { folderId -> showRenameFolderDialog(folderId) },
+                onFolderDelete = { folderId -> showDeleteFolderConfirmationDialog(folderId) },
+                onFolderExport = { folderId ->
+                    pendingExportFolderId = folderId
+                    val folder = folderManager.getFolder(folderId)
+                    exportFolderLauncher.launch("${folder?.name ?: "folder"}.json")
+                },
+                itemTouchHelper = itemTouchHelper,
+                onMoveToFolder = null // 暂不实现拖拽移动
             )
             recyclerView.adapter = adapter
         }
-        // 每次加载/刷新工作流后，都更新快捷方式
         ShortcutHelper.updateShortcuts(requireContext())
     }
 
     private fun setupRecyclerView() {
-        // 更新为 LinearLayoutManager 以实现单列列表
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
     }
 
-    // 设置拖拽排序功能
     private fun setupDragAndDrop() {
         val callback = object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, 0
         ) {
+            private var pendingDropFolderId: String? = null
+
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
@@ -349,6 +516,22 @@ class WorkflowListFragment : Fragment() {
             ): Boolean {
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
+                val items = adapter.getItems()
+
+                // 如果拖动的是文件夹，禁止移动
+                if (fromPosition < items.size && items[fromPosition] is WorkflowListItem.FolderItem) {
+                    return false
+                }
+
+                // 如果目标是文件夹，记录下来（不实际移动列表项）
+                if (toPosition < items.size && items[toPosition] is WorkflowListItem.FolderItem) {
+                    pendingDropFolderId = (items[toPosition] as WorkflowListItem.FolderItem).folder.id
+                    // 返回 false 取消移动，但允许在 clearView 时处理放置
+                    return false
+                }
+
+                // 普通工作流之间的移动
+                pendingDropFolderId = null
                 adapter.moveItem(fromPosition, toPosition)
                 return true
             }
@@ -359,7 +542,19 @@ class WorkflowListFragment : Fragment() {
 
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
-                // 拖动结束后保存顺序并更新快捷方式
+
+                // 检查是否放置到了文件夹上
+                pendingDropFolderId?.let { folderId ->
+                    val fromPosition = viewHolder.adapterPosition
+                    if (fromPosition >= 0 && fromPosition < adapter.getItems().size) {
+                        val item = adapter.getItems()[fromPosition]
+                        if (item is WorkflowListItem.WorkflowItem) {
+                            handleDropToFolder(item.workflow, folderId)
+                        }
+                    }
+                }
+
+                pendingDropFolderId = null
                 adapter.saveOrder()
                 ShortcutHelper.updateShortcuts(requireContext())
             }
@@ -367,7 +562,24 @@ class WorkflowListFragment : Fragment() {
         itemTouchHelper = ItemTouchHelper(callback)
         itemTouchHelper.attachToRecyclerView(recyclerView)
     }
+    /**
+     * 处理将工作流放置到文件夹（松手时执行）
+     */
+    private fun handleDropToFolder(workflow: Workflow, folderId: String) {
+        val folder = folderManager.getFolder(folderId) ?: return
 
+        // 更新工作流的 folderId
+        val updatedWorkflow = workflow.copy(folderId = folderId)
+        workflowManager.saveWorkflow(updatedWorkflow)
+
+        Toast.makeText(
+            requireContext(),
+            "已将 \"${workflow.name}\" 移动到 \"${folder.name}\"",
+            Toast.LENGTH_SHORT
+        ).show()
+
+        loadData()
+    }
 
     private fun executeWorkflow(workflow: Workflow) {
         val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
@@ -384,37 +596,115 @@ class WorkflowListFragment : Fragment() {
         }
     }
 
+    private fun showCreateFolderDialog() {
+        val editText = EditText(requireContext()).apply {
+            hint = getString(R.string.folder_name_hint)
+            setPadding(48, 32, 48, 32)
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.folder_create)
+            .setView(editText)
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
+                val name = editText.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    val folder = WorkflowFolder(name = name)
+                    folderManager.saveFolder(folder)
+                    Toast.makeText(requireContext(), getString(R.string.toast_folder_created), Toast.LENGTH_SHORT).show()
+                    loadData()
+                } else {
+                    Toast.makeText(requireContext(), "文件夹名称不能为空", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
+    }
+
+    private fun showRenameFolderDialog(folderId: String) {
+        val folder = folderManager.getFolder(folderId) ?: return
+        val editText = EditText(requireContext()).apply {
+            setText(folder.name)
+            hint = getString(R.string.folder_name_hint)
+            setPadding(48, 32, 48, 32)
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.folder_rename)
+            .setView(editText)
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
+                val name = editText.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    folderManager.saveFolder(folder.copy(name = name))
+                    Toast.makeText(requireContext(), getString(R.string.toast_folder_renamed), Toast.LENGTH_SHORT).show()
+                    loadData()
+                }
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
+    }
+
+    private fun showDeleteFolderConfirmationDialog(folderId: String) {
+        val folder = folderManager.getFolder(folderId) ?: return
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.dialog_folder_delete_title)
+            .setMessage(getString(R.string.dialog_folder_delete_message, folder.name))
+            .setPositiveButton(R.string.common_delete) { _, _ ->
+                // 将文件夹内的工作流移出
+                val workflows = workflowManager.getAllWorkflows()
+                workflows.filter { it.folderId == folderId }.forEach { workflow ->
+                    workflowManager.saveWorkflow(workflow.copy(folderId = null))
+                }
+                // 删除文件夹
+                folderManager.deleteFolder(folderId)
+                Toast.makeText(requireContext(), getString(R.string.toast_folder_deleted), Toast.LENGTH_SHORT).show()
+                loadData()
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
+    }
+
+    private fun showDeleteWorkflowConfirmationDialog(workflow: Workflow) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.dialog_delete_title)
+            .setMessage(getString(R.string.dialog_delete_message, workflow.name))
+            .setNegativeButton(R.string.common_cancel, null)
+            .setPositiveButton(R.string.common_delete) { _, _ ->
+                workflowManager.deleteWorkflow(workflow.id)
+                loadData()
+            }
+            .show()
+    }
+
     private fun startImportProcess(workflows: List<Workflow>) {
         importQueue.clear()
         importQueue.addAll(workflows)
-        conflictChoice = ConflictChoice.ASK // 重置冲突处理选择
+        conflictChoice = ConflictChoice.ASK
         processNextInImportQueue()
     }
 
-    /** 处理导入队列中的下一个工作流。 */
     private fun processNextInImportQueue() {
-        if (importQueue.isEmpty()) { // 队列为空，导入完成
+        if (importQueue.isEmpty()) {
             Toast.makeText(requireContext(), getString(R.string.toast_import_completed), Toast.LENGTH_SHORT).show()
-            loadWorkflows()
+            loadData()
             return
         }
 
         val workflowToImport = importQueue.poll() ?: return
         val existingWorkflow = workflowManager.getWorkflow(workflowToImport.id)
 
-        if (existingWorkflow == null) { // 无冲突，直接保存
+        if (existingWorkflow == null) {
             workflowManager.saveWorkflow(workflowToImport)
             processNextInImportQueue()
-        } else { // 存在冲突
+        } else {
             when (conflictChoice) {
                 ConflictChoice.REPLACE_ALL -> { handleReplace(workflowToImport); processNextInImportQueue() }
                 ConflictChoice.KEEP_ALL -> { handleKeepBoth(workflowToImport); processNextInImportQueue() }
-                ConflictChoice.ASK -> showConflictDialog(workflowToImport, existingWorkflow) // 询问用户
+                ConflictChoice.ASK -> showConflictDialog(workflowToImport, existingWorkflow)
             }
         }
     }
 
-    /** 显示导入冲突对话框。 */
     private fun showConflictDialog(toImport: Workflow, existing: Workflow) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_import_conflict, null)
         val rememberChoiceCheckbox = dialogView.findViewById<CheckBox>(R.id.checkbox_remember_choice)
@@ -423,47 +713,32 @@ class WorkflowListFragment : Fragment() {
             .setTitle(getString(R.string.dialog_import_conflict_title))
             .setMessage(getString(R.string.dialog_import_conflict_message, existing.name, existing.id.substring(0, 8), toImport.name))
             .setView(dialogView)
-            .setPositiveButton(getString(R.string.dialog_button_keep_both)) { _, _ -> // 保留两者，导入的重命名
+            .setPositiveButton(getString(R.string.dialog_button_keep_both)) { _, _ ->
                 if (rememberChoiceCheckbox.isChecked) conflictChoice = ConflictChoice.KEEP_ALL
                 handleKeepBoth(toImport)
                 processNextInImportQueue()
             }
-            .setNegativeButton(getString(R.string.dialog_button_replace)) { _, _ -> // 替换现有
+            .setNegativeButton(getString(R.string.dialog_button_replace)) { _, _ ->
                 if (rememberChoiceCheckbox.isChecked) conflictChoice = ConflictChoice.REPLACE_ALL
                 handleReplace(toImport)
                 processNextInImportQueue()
             }
-            .setNeutralButton(getString(R.string.dialog_button_skip)) { _,_ -> processNextInImportQueue() } // 跳过此条
+            .setNeutralButton(getString(R.string.dialog_button_skip)) { _, _ -> processNextInImportQueue() }
             .setCancelable(false)
             .show()
     }
 
-    /** 处理替换操作。 */
     private fun handleReplace(workflow: Workflow) {
         workflowManager.saveWorkflow(workflow)
         Toast.makeText(requireContext(), getString(R.string.toast_workflow_replaced, workflow.name), Toast.LENGTH_SHORT).show()
     }
 
-    /** 处理保留两者操作 (重命名导入的工作流)。 */
     private fun handleKeepBoth(workflow: Workflow) {
         val newWorkflow = workflow.copy(
-            id = UUID.randomUUID().toString(), // 生成新ID
-            name = getString(R.string.toast_workflow_imported_name, workflow.name) // 修改名称
+            id = UUID.randomUUID().toString(),
+            name = getString(R.string.toast_workflow_imported_name, workflow.name)
         )
         workflowManager.saveWorkflow(newWorkflow)
         Toast.makeText(requireContext(), getString(R.string.toast_workflow_imported_as_copy, workflow.name), Toast.LENGTH_SHORT).show()
-    }
-
-    /** 显示删除确认对话框。 */
-    private fun showDeleteConfirmationDialog(workflow: Workflow) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.dialog_delete_title)
-            .setMessage(getString(R.string.dialog_delete_message, workflow.name))
-            .setNegativeButton(R.string.common_cancel, null)
-            .setPositiveButton(R.string.common_delete) { _, _ ->
-                workflowManager.deleteWorkflow(workflow.id)
-                loadWorkflows() // 重新加载列表
-            }
-            .show()
     }
 }

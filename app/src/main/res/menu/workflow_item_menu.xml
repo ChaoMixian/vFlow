@@ -7,6 +7,9 @@
         android:id="@+id/menu_duplicate"
         android:title="@string/workflow_item_menu_duplicate" />
     <item
+        android:id="@+id/menu_move_out_folder"
+        android:title="@string/workflow_item_menu_move_out_folder" />
+    <item
         android:id="@+id/menu_export_single"
         android:title="@string/workflow_item_menu_export_single" />
     <item

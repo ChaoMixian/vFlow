@@ -42,6 +42,7 @@
 
     <string name="workflow_item_menu_add_shortcut">添加到主屏幕</string>
     <string name="workflow_item_menu_duplicate">复制</string>
+    <string name="workflow_item_menu_move_out_folder">移出文件夹</string>
     <string name="workflow_item_menu_export_single">导出此工作流</string>
     <string name="workflow_item_menu_delete">删除</string>
     <string name="dialog_delete_title">确认删除</string>
@@ -611,4 +612,22 @@
     <string name="permission_desc_root">允许应用通过超级用户权限执行底层系统命令。</string>
     <string name="permission_name_usage_stats">使用情况访问</string>
     <string name="permission_desc_usage_stats">允许 vFlow 读取应用的使用统计信息（如使用时长、最后使用时间），提高 Agent 行为准确度。</string>
+
+    <!-- Folder -->
+    <string name="folder_icon">文件夹图标</string>
+    <string name="folder_rename">重命名</string>
+    <string name="folder_delete">删除</string>
+    <string name="folder_export">导出</string>
+    <string name="folder_create">创建文件夹</string>
+    <string name="folder_name_hint">文件夹名称</string>
+    <string name="dialog_folder_delete_title">确认删除文件夹</string>
+    <string name="dialog_folder_delete_message">确定要删除文件夹 \"%s\" 吗？文件夹内的工作流将被保留并移至根目录。</string>
+    <string name="toast_folder_created">文件夹已创建</string>
+    <string name="toast_folder_renamed">文件夹已重命名</string>
+    <string name="toast_folder_deleted">文件夹已删除</string>
+    <string name="toast_folder_export_success">文件夹导出成功</string>
+    <string name="folder_empty_workflows">此文件夹为空</string>
+    <string name="workflows_count">%d 个工作流</string>
+    <string name="one_workflow">1 个工作流</string>
+    <string name="zero_workflows">0 个工作流</string>
 </resources>
