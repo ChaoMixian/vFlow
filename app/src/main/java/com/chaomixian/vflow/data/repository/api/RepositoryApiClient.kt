@@ -100,10 +100,10 @@ object RepositoryApiClient {
     /**
      * 下载工作流JSON
      * @param downloadUrl 工作流的下载URL
-     * @return Workflow 工作流对象
-     * @throws IOException 网络错误或解析错误
+     * @return String 工作流JSON字符串（可能是单个工作流或文件夹导出格式）
+     * @throws IOException 网络错误或下载失败
      */
-    suspend fun downloadWorkflow(downloadUrl: String): Result<Workflow> = withContext(Dispatchers.IO) {
+    suspend fun downloadWorkflowRaw(downloadUrl: String): Result<String> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
                 .url(downloadUrl)
@@ -122,14 +122,12 @@ object RepositoryApiClient {
                     IOException("响应体为空")
                 )
 
-            // 解析工作流，忽略 _meta 字段
-            val workflow = parseWorkflowIgnoringMeta(json)
-            Result.success(workflow)
+            Result.success(json)
 
         } catch (e: IOException) {
             Result.failure(e)
         } catch (e: Exception) {
-            Result.failure(IOException("解析工作流失败: ${e.message}", e))
+            Result.failure(IOException("下载工作流失败: ${e.message}", e))
         }
     }
 
@@ -173,35 +171,5 @@ object RepositoryApiClient {
      */
     private fun parseWorkflowIgnoringMeta(json: String): Workflow {
         return gson.fromJson(json, Workflow::class.java)
-    }
-
-    /**
-     * 获取原始工作流JSON字符串（包含_meta）
-     * 用于调试或完整保存
-     */
-    suspend fun downloadWorkflowRaw(downloadUrl: String): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url(downloadUrl)
-                .build()
-
-            val response = client.newCall(request).execute()
-
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(
-                    IOException("下载工作流失败: ${response.code}")
-                )
-            }
-
-            val json = response.body?.string()
-                ?: return@withContext Result.failure(
-                    IOException("响应体为空")
-                )
-
-            Result.success(json)
-
-        } catch (e: IOException) {
-            Result.failure(e)
-        }
     }
 }

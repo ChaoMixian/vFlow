@@ -10,13 +10,13 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.workflow.FolderManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
-import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.data.repository.api.RepositoryApiClient
 import com.chaomixian.vflow.databinding.FragmentWorkflowRepoBinding
+import com.chaomixian.vflow.ui.workflow_list.WorkflowImportHelper
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /**
  * 工作流仓库Fragment
@@ -29,6 +29,8 @@ class WorkflowRepoFragment : Fragment() {
 
     private lateinit var adapter: WorkflowRepoAdapter
     private lateinit var workflowManager: WorkflowManager
+    private lateinit var folderManager: FolderManager
+    private lateinit var importHelper: WorkflowImportHelper
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,6 +45,14 @@ class WorkflowRepoFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         workflowManager = WorkflowManager(requireContext())
+        folderManager = FolderManager(requireContext())
+        importHelper = WorkflowImportHelper(
+            requireContext(),
+            workflowManager,
+            folderManager
+        ) {
+            // 导入完成后刷新列表（如果需要）
+        }
 
         setupRecyclerView()
         setupSwipeRefresh()
@@ -108,51 +118,15 @@ class WorkflowRepoFragment : Fragment() {
         lifecycleScope.launch {
             Toast.makeText(requireContext(), getString(R.string.toast_downloading, repoWorkflow.name), Toast.LENGTH_SHORT).show()
 
-            val result = RepositoryApiClient.downloadWorkflow(repoWorkflow.download_url)
+            val result = RepositoryApiClient.downloadWorkflowRaw(repoWorkflow.download_url)
 
-            result.onSuccess { workflow ->
-                handleDownloadedWorkflow(workflow)
+            result.onSuccess { jsonString ->
+                // 使用 WorkflowImportHelper 处理 JSON 字符串
+                importHelper.importFromJson(jsonString)
             }.onFailure { error ->
                 Toast.makeText(requireContext(), getString(R.string.toast_download_failed, error.message ?: ""), Toast.LENGTH_LONG).show()
             }
         }
-    }
-
-    private fun handleDownloadedWorkflow(workflow: Workflow) {
-        // 检查是否已存在相同ID的工作流
-        val existingWorkflow = workflowManager.getWorkflow(workflow.id)
-
-        if (existingWorkflow == null) {
-            // 无冲突，直接保存
-            workflowManager.saveWorkflow(workflow)
-            Toast.makeText(requireContext(), getString(R.string.toast_download_workflow_success, workflow.name), Toast.LENGTH_SHORT).show()
-        } else {
-            // 存在冲突，显示对话框
-            showConflictDialog(workflow, existingWorkflow)
-        }
-    }
-
-    private fun showConflictDialog(toImport: Workflow, existing: Workflow) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(getString(R.string.dialog_workflow_conflict_title))
-            .setMessage(getString(R.string.dialog_workflow_conflict_message, existing.name, existing.id.substring(0, 8), toImport.name))
-            .setPositiveButton(getString(R.string.dialog_button_keep_both)) { _, _ ->
-                // 保留两者，导入的重命名
-                val newWorkflow = toImport.copy(
-                    id = UUID.randomUUID().toString(),
-                    name = "${toImport.name} ${getString(R.string.label_workflow_from_repo)}"
-                )
-                workflowManager.saveWorkflow(newWorkflow)
-                Toast.makeText(requireContext(), getString(R.string.toast_workflow_downloaded_as_copy, toImport.name), Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton(getString(R.string.dialog_button_replace)) { _, _ ->
-                // 替换现有
-                workflowManager.saveWorkflow(toImport)
-                Toast.makeText(requireContext(), getString(R.string.toast_workflow_replaced, toImport.name), Toast.LENGTH_SHORT).show()
-            }
-            .setNeutralButton(getString(R.string.dialog_button_skip), null)
-            .setCancelable(false)
-            .show()
     }
 
     override fun onDestroyView() {
