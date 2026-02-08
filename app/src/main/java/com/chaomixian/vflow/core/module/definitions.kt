@@ -126,6 +126,243 @@ enum class ParameterType {
 }
 
 /**
+ * 输入控件的风格类型。
+ * 用于声明式地指定输入参数在编辑器中的显示方式。
+ */
+enum class InputStyle {
+    /** 默认风格 - 根据类型自动选择（Spinner/Switch/TextInput） */
+    DEFAULT,
+    /** 芯片按钮组 - 适合少量选项的选择（如过滤器条件） */
+    CHIP_GROUP,
+    /** 下拉选择器 - 适合中等数量的选项 */
+    DROPDOWN,
+    /** 开关 - 适合布尔值 */
+    SWITCH,
+    /** 滑块 - 适合数值范围 */
+    SLIDER
+}
+
+/**
+ * 选择器类型。
+ * 用于需要弹出对话框选择的场景（如文件、应用、Activity 等）。
+ * 与 inputStyle 配合使用，pickerType 决定点击输入框时的行为。
+ */
+enum class PickerType {
+    /** 无选择器，使用标准输入（默认） */
+    NONE,
+    /** 文件选择器 */
+    FILE,
+    /** 应用选择器 */
+    APP,
+    /** Activity 选择器（用于分享等场景） */
+    ACTIVITY,
+    /** 图片/媒体选择器 */
+    MEDIA,
+    /** 日期选择器 */
+    DATE,
+    /** 时间选择器 */
+    TIME,
+    /** 日期时间选择器 */
+    DATETIME
+}
+
+/**
+ * 模块输入参数的可见性条件。
+ * 用于声明式地定义输入参数何时应该在UI中显示。
+ *
+ * 使用示例:
+ * ```
+ * InputDefinition(
+ *     id = "count",
+ *     name = "字符数量",
+ *     visibility = InputVisibility.whenEquals("mode", "提取字符")
+ * )
+ * ```
+ */
+sealed class InputVisibility {
+    companion object {
+        /**
+         * 该输入始终可见。
+         */
+        fun always(): InputVisibility = Always
+
+        /**
+         * 当指定参数等于给定值时显示。
+         */
+        fun whenEquals(dependsOn: String, value: Any): InputVisibility = WhenEquals(dependsOn, value)
+
+        /**
+         * 当指定参数不等于给定值时显示。
+         */
+        fun whenNotEquals(dependsOn: String, value: Any): InputVisibility = WhenNotEquals(dependsOn, value)
+
+        /**
+         * 当指定参数不等于给定值时显示（whenNotEquals 的别名）。
+         */
+        fun notEquals(dependsOn: String, value: Any): InputVisibility = WhenNotEquals(dependsOn, value)
+
+        /**
+         * 当指定参数在给定值列表中时显示。
+         */
+        fun whenIn(dependsOn: String, values: List<Any>): InputVisibility = WhenIn(dependsOn, values)
+
+        /**
+         * 当指定参数在给定值列表中时显示（whenIn 的别名）。
+         */
+        fun `in`(dependsOn: String, values: List<Any>): InputVisibility = WhenIn(dependsOn, values)
+
+        /**
+         * 当指定参数不在给定值列表中时显示。
+         */
+        fun whenNotIn(dependsOn: String, values: List<Any>): InputVisibility = WhenNotIn(dependsOn, values)
+
+        /**
+         * 当指定参数不在给定值列表中时显示（whenNotIn 的别名）。
+         */
+        fun notIn(dependsOn: String, values: List<Any>): InputVisibility = WhenNotIn(dependsOn, values)
+
+        /**
+         * 当指定参数为 true 时显示（适用于布尔类型）。
+         */
+        fun whenTrue(dependsOn: String): InputVisibility = WhenTrue(dependsOn)
+
+        /**
+         * 当指定参数为 false 时显示（适用于布尔类型）。
+         */
+        fun whenFalse(dependsOn: String): InputVisibility = WhenFalse(dependsOn)
+
+        /**
+         * 所有条件都必须满足时才显示。
+         */
+        fun and(vararg conditions: InputVisibility): InputVisibility = And(conditions.toList())
+
+        /**
+         * 任意一个条件满足就显示。
+         */
+        fun or(vararg conditions: InputVisibility): InputVisibility = Or(conditions.toList())
+
+        /**
+         * 取反条件。
+         */
+        fun not(condition: InputVisibility): InputVisibility = Not(condition)
+
+        /**
+         * 使用自定义函数判断可见性。
+         * @param predicate 接收当前所有参数，返回是否显示该输入
+         */
+        fun whenPredicate(predicate: (Map<String, Any?>) -> Boolean): InputVisibility = Predicate(predicate)
+    }
+
+    /**
+     * 评估此可见性条件是否满足。
+     * @param currentParameters 当前步骤的参数值
+     * @return 是否应该显示该输入
+     */
+    abstract fun isVisible(currentParameters: Map<String, Any?>): Boolean
+
+    /**
+     * 始终可见。
+     */
+    data object Always : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean = true
+    }
+
+    /**
+     * 当指定参数等于给定值时显示。
+     */
+    data class WhenEquals(val dependsOn: String, val value: Any) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            val currentValue = currentParameters[dependsOn]
+            return currentValue == value
+        }
+    }
+
+    /**
+     * 当指定参数不等于给定值时显示。
+     */
+    data class WhenNotEquals(val dependsOn: String, val value: Any) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            val currentValue = currentParameters[dependsOn]
+            return currentValue != value
+        }
+    }
+
+    /**
+     * 当指定参数在给定值列表中时显示。
+     */
+    data class WhenIn(val dependsOn: String, val values: List<Any>) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            val currentValue = currentParameters[dependsOn]
+            return currentValue in values
+        }
+    }
+
+    /**
+     * 当指定参数不在给定值列表中时显示。
+     */
+    data class WhenNotIn(val dependsOn: String, val values: List<Any>) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            val currentValue = currentParameters[dependsOn]
+            return currentValue !in values
+        }
+    }
+
+    /**
+     * 当指定参数为 true 时显示。
+     */
+    data class WhenTrue(val dependsOn: String) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            return currentParameters[dependsOn] == true
+        }
+    }
+
+    /**
+     * 当指定参数为 false 时显示。
+     */
+    data class WhenFalse(val dependsOn: String) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            return currentParameters[dependsOn] == false
+        }
+    }
+
+    /**
+     * 所有条件都必须满足时才显示。
+     */
+    data class And(val conditions: List<InputVisibility>) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            return conditions.all { it.isVisible(currentParameters) }
+        }
+    }
+
+    /**
+     * 任意一个条件满足就显示。
+     */
+    data class Or(val conditions: List<InputVisibility>) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            return conditions.any { it.isVisible(currentParameters) }
+        }
+    }
+
+    /**
+     * 取反条件。
+     */
+    data class Not(val condition: InputVisibility) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            return !condition.isVisible(currentParameters)
+        }
+    }
+
+    /**
+     * 使用自定义函数判断可见性。
+     */
+    data class Predicate(val predicate: (Map<String, Any?>) -> Boolean) : InputVisibility() {
+        override fun isVisible(currentParameters: Map<String, Any?>): Boolean {
+            return predicate(currentParameters)
+        }
+    }
+}
+
+/**
  * 模块输入参数的定义。
  * @param id 参数的唯一标识符。
  * @param name 参数在UI中显示的名称。
@@ -136,8 +373,9 @@ enum class ParameterType {
  * @param acceptsNamedVariable 此参数是否接受命名变量作为输入。
  * @param acceptedMagicVariableTypes 如果接受魔法变量，这里定义了可接受的魔法变量的类型名称集合。
  * @param supportsRichText 此文本输入是否支持富文本编辑（内嵌变量药丸）。
- * @param isHidden 此参数是否在UI中隐藏 (例如，内部使用的参数)。
+ * @param isHidden 此参数是否在UI中隐藏 (例如，内部使用的参数)。已废弃，请使用 visibility。
  * @param isFolded 此参数是否归类到"更多设置"折叠区域中。
+ * @param visibility 参数的可见性条件，用于声明式控制输入何时显示。
  * @param hint 输入框的提示文本（如 placeholder）。
  * @param nameStringRes 参数显示名称的字符串资源ID（用于国际化，可选）
  * @param optionsStringRes 如果 staticType 是 ENUM，这些是可选项的字符串资源ID列表（用于国际化，可选）
@@ -155,6 +393,12 @@ data class InputDefinition(
     val supportsRichText: Boolean = false,
     val isHidden: Boolean = false,
     val isFolded: Boolean = false,
+    val inputStyle: InputStyle = InputStyle.DEFAULT,
+    /** 滑块配置：(最小值, 最大值, 步长)，仅在 inputStyle 为 SLIDER 时有效 */
+    val sliderConfig: Triple<Float, Float, Float>? = null,
+    /** 选择器类型，点击输入框时触发对应的选择对话框 */
+    val pickerType: PickerType = PickerType.NONE,
+    val visibility: InputVisibility? = null,
     val hint: String? = null,
     val nameStringRes: Int? = null,
     val optionsStringRes: List<Int> = emptyList(),
@@ -189,6 +433,18 @@ data class InputDefinition(
      */
     fun getLocalizedHint(context: Context): String? {
         return if (hintStringRes != null) context.getString(hintStringRes) else hint
+    }
+
+    companion object {
+        /**
+         * 创建一个滑块配置
+         * @param min 最小值
+         * @param max 最大值
+         * @param step 步长
+         */
+        fun slider(min: Float, max: Float, step: Float): Triple<Float, Float, Float> {
+            return Triple(min, max, step)
+        }
     }
 }
 

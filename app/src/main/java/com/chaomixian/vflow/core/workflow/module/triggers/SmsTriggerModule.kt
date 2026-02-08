@@ -25,10 +25,9 @@ class SmsTriggerModule : BaseModule() {
     )
 
     override val requiredPermissions = listOf(PermissionManager.SMS)
-    override val uiProvider: ModuleUIProvider? = SmsTriggerUIProvider()
 
     // 定义所有过滤选项
-    val senderFilterOptions by lazy {
+    private val senderFilterOptions by lazy {
         listOf(
             appContext.getString(R.string.option_vflow_trigger_sms_sender_any),
             appContext.getString(R.string.option_vflow_trigger_sms_sender_contains),
@@ -37,7 +36,7 @@ class SmsTriggerModule : BaseModule() {
         )
     }
     // 添加"识别验证码"预设
-    val contentFilterOptions by lazy {
+    private val contentFilterOptions by lazy {
         listOf(
             appContext.getString(R.string.option_vflow_trigger_sms_content_any),
             appContext.getString(R.string.option_vflow_trigger_sms_content_code),
@@ -47,15 +46,39 @@ class SmsTriggerModule : BaseModule() {
         )
     }
 
+    private val anySenderOption get() = senderFilterOptions[0]
+    private val anyContentOption get() = contentFilterOptions[0]
+    private val codeContentOption get() = contentFilterOptions[1]
+
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("sender_filter_type", "发件人条件", ParameterType.ENUM, defaultValue = senderFilterOptions.first(), options = senderFilterOptions, nameStringRes = R.string.param_vflow_trigger_sms_sender_filter_type_name),
-        InputDefinition("sender_filter_value", "发件人值", ParameterType.STRING, defaultValue = "", nameStringRes = R.string.param_vflow_trigger_sms_sender_filter_value_name),
-        InputDefinition("content_filter_type", "内容条件", ParameterType.ENUM, defaultValue = contentFilterOptions.first(), options = contentFilterOptions, nameStringRes = R.string.param_vflow_trigger_sms_content_filter_type_name),
-        InputDefinition("content_filter_value", "内容值", ParameterType.STRING, defaultValue = "", nameStringRes = R.string.param_vflow_trigger_sms_content_filter_value_name)
+        InputDefinition("sender_filter_type", "发件人条件", ParameterType.ENUM,
+            defaultValue = anySenderOption,
+            options = senderFilterOptions,
+            nameStringRes = R.string.param_vflow_trigger_sms_sender_filter_type_name,
+            inputStyle = InputStyle.CHIP_GROUP
+        ),
+        // 发件人值 - 当 sender_filter_type 不等于 "任意" 时显示
+        InputDefinition("sender_filter_value", "发件人值", ParameterType.STRING,
+            defaultValue = "",
+            nameStringRes = R.string.param_vflow_trigger_sms_sender_filter_value_name,
+            visibility = InputVisibility.notEquals("sender_filter_type", anySenderOption)
+        ),
+        InputDefinition("content_filter_type", "内容条件", ParameterType.ENUM,
+            defaultValue = anyContentOption,
+            options = contentFilterOptions,
+            nameStringRes = R.string.param_vflow_trigger_sms_content_filter_type_name,
+            inputStyle = InputStyle.CHIP_GROUP
+        ),
+        // 内容值 - 当 content_filter_type 既不等于 "任意" 也不等于 "识别验证码" 时显示
+        InputDefinition("content_filter_value", "内容值", ParameterType.STRING,
+            defaultValue = "",
+            nameStringRes = R.string.param_vflow_trigger_sms_content_filter_value_name,
+            visibility = InputVisibility.notIn("content_filter_type", listOf(anyContentOption, codeContentOption))
+        )
     )
 
     /**
-     * 当选择"识别验证码"时，不再需要自动填充正则表达式。
+     * 当切换到不需要值的选项时，清空对应的值。
      */
     override fun onParameterUpdated(
         step: ActionStep,
@@ -65,39 +88,14 @@ class SmsTriggerModule : BaseModule() {
         val newParameters = step.parameters.toMutableMap()
         newParameters[updatedParameterId] = updatedValue
 
-        // 识别验证码不再需要特殊处理 value，因为 UI 和 Handler 会直接处理这个选项
+        // 当切换内容条件时，清空不需要的值
         if (updatedParameterId == "content_filter_type") {
-            // 如果从一个需要 value 的选项切换到不需要的选项（如"识别验证码"），可以考虑清空 value
-            if (updatedValue == contentFilterOptions[1] || updatedValue == contentFilterOptions[0]) {
+            if (updatedValue == codeContentOption || updatedValue == anyContentOption) {
                 newParameters["content_filter_value"] = ""
             }
         }
         return newParameters
     }
-
-    /**
-     * 动态隐藏/显示输入框。
-     */
-    override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
-        val all = getInputs()
-        val params = step?.parameters ?: emptyMap()
-        val senderType = params["sender_filter_type"] as? String ?: senderFilterOptions.first()
-        val contentType = params["content_filter_type"] as? String ?: contentFilterOptions.first()
-        val dynamicInputs = mutableListOf<InputDefinition>()
-
-        dynamicInputs.add(all.first { it.id == "sender_filter_type" })
-        if (senderType != senderFilterOptions[0]) {
-            dynamicInputs.add(all.first { it.id == "sender_filter_value" })
-        }
-
-        dynamicInputs.add(all.first { it.id == "content_filter_type" })
-        if (contentType != contentFilterOptions[0] && contentType != contentFilterOptions[1]) {
-            dynamicInputs.add(all.first { it.id == "content_filter_value" })
-        }
-
-        return dynamicInputs
-    }
-
 
     /**
      * 当选择"识别验证码"时，增加一个新的输出。
@@ -108,24 +106,24 @@ class SmsTriggerModule : BaseModule() {
             OutputDefinition("message_content", "短信内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_sms_message_content_name)
         )
         val contentType = step?.parameters?.get("content_filter_type") as? String
-        if (contentType == contentFilterOptions[1]) { // 识别验证码
+        if (contentType == codeContentOption) { // 识别验证码
             outputs.add(OutputDefinition("verification_code", "验证码", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_sms_verification_code_name))
         }
         return outputs
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val senderCondition = step.parameters["sender_filter_type"] as? String ?: senderFilterOptions.first()
+        val senderCondition = step.parameters["sender_filter_type"] as? String ?: anySenderOption
         val senderValue = step.parameters["sender_filter_value"] as? String ?: ""
-        val contentCondition = step.parameters["content_filter_type"] as? String ?: contentFilterOptions.first()
+        val contentCondition = step.parameters["content_filter_type"] as? String ?: anyContentOption
         val contentValue = step.parameters["content_filter_value"] as? String ?: ""
 
         val isCodeText = context.getString(R.string.summary_vflow_trigger_sms_is_code)
 
-        val senderPillText = if (senderCondition == senderFilterOptions[0] || senderValue.isBlank()) senderCondition else "$senderCondition \"$senderValue\""
+        val senderPillText = if (senderCondition == anySenderOption || senderValue.isBlank()) senderCondition else "$senderCondition \"$senderValue\""
         val contentPillText = when {
-            contentCondition == contentFilterOptions[1] -> isCodeText // 识别验证码
-            contentCondition == contentFilterOptions[0] || contentValue.isBlank() -> contentCondition // 任意内容
+            contentCondition == codeContentOption -> isCodeText // 识别验证码
+            contentCondition == anyContentOption || contentValue.isBlank() -> contentCondition // 任意内容
             else -> "$contentCondition \"$contentValue\""
         }
 

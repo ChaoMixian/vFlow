@@ -58,6 +58,20 @@
     <string name="workflow_editor_add_action">添加动作</string>
     <string name="picker_select_trigger">选择一个触发器</string>
     <string name="picker_select_action">选择一个动作</string>
+    <string name="picker_select_date">选择日期</string>
+    <string name="picker_select_time">选择时间</string>
+    <string name="picker_select_datetime">选择日期和时间</string>
+
+    <string name="module_vflow_data_file_operation_name">文件操作</string>
+    <string name="module_vflow_data_file_operation_desc">对文件进行读取、写入等操作</string>
+
+    <string name="param_vflow_data_file_operation_file_path_name">文件路径</string>
+    <string name="param_vflow_data_file_operation_operation_name">操作</string>
+    <string name="param_vflow_data_file_operation_content_name">写入内容</string>
+    <string name="param_vflow_data_file_operation_encoding_name">编码格式</string>
+    <string name="param_vflow_data_file_operation_overwrite_name">覆盖写入</string>
+    <string name="param_vflow_data_file_operation_buffer_size_name">缓冲区大小</string>
+
     <string name="workflow_editor_execute">执行</string>
     <string name="workflow_editor_save">保存</string>
     <string name="share_to_vflow">分享到 vFlow</string>

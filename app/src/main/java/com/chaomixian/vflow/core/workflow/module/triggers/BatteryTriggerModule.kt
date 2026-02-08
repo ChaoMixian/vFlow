@@ -19,24 +19,38 @@ class BatteryTriggerModule : BaseModule() {
         category = "触发器"
     )
 
-    override val uiProvider: ModuleUIProvider? = BatteryTriggerUIProvider()
+    override val uiProvider: ModuleUIProvider? = null
+
+    // 序列化值使用与语言无关的标识符
+    companion object {
+        const val VALUE_BELOW = "below"
+        const val VALUE_ABOVE = "above"
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
+        InputDefinition(
+            id = "above_or_below",
+            name = "触发条件",
+            nameStringRes = R.string.param_vflow_trigger_battery_above_or_below_name,
+            staticType = ParameterType.ENUM,
+            defaultValue = VALUE_BELOW,
+            options = listOf(VALUE_BELOW, VALUE_ABOVE),
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_battery_below,
+                R.string.option_vflow_trigger_battery_above
+            ),
+            inputStyle = InputStyle.CHIP_GROUP
+        ),
         InputDefinition(
             id = "level",
             name = "电量阈值",
             nameStringRes = R.string.param_vflow_trigger_battery_level_name,
             staticType = ParameterType.NUMBER,
             defaultValue = 50,
-            acceptsMagicVariable = false
-        ),
-        InputDefinition(
-            id = "above_or_below",
-            name = "触发条件",
-            nameStringRes = R.string.param_vflow_trigger_battery_above_or_below_name,
-            staticType = ParameterType.STRING, // "above" or "below"
-            defaultValue = "below",
-            acceptsMagicVariable = false
+            inputStyle = InputStyle.SLIDER,
+            sliderConfig = InputDefinition.slider(0f, 100f, 1f),
+            acceptsMagicVariable = false,
+            acceptsNamedVariable = false
         )
     )
 
@@ -44,16 +58,16 @@ class BatteryTriggerModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val level = (step.parameters["level"] as? Number)?.toInt() ?: 50
-        val aboveOrBelow = step.parameters["above_or_below"] as? String ?: "below"
-        val conditionText = if (aboveOrBelow == "below") {
-            context.getString(R.string.option_vflow_trigger_battery_below)
-        } else {
-            context.getString(R.string.option_vflow_trigger_battery_above)
+        val aboveOrBelow = step.parameters["above_or_below"] as? String ?: VALUE_BELOW
+
+        // 序列化值转换为本地化显示文本
+        val displayText = when (aboveOrBelow) {
+            VALUE_ABOVE -> context.getString(R.string.option_vflow_trigger_battery_above)
+            else -> context.getString(R.string.option_vflow_trigger_battery_below)
         }
 
-        // 更新 Pill 的构造以匹配新的签名
         val levelPill = PillUtil.Pill("$level%", "level")
-        val conditionPill = PillUtil.Pill(conditionText, "above_or_below", isModuleOption = true)
+        val conditionPill = PillUtil.Pill(displayText, "above_or_below", isModuleOption = true)
 
         val prefix = context.getString(R.string.summary_vflow_trigger_battery_prefix)
         val suffix = context.getString(R.string.summary_vflow_trigger_battery_suffix)

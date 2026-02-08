@@ -29,6 +29,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     private lateinit var module: ActionModule
     private var existingStep: ActionStep? = null
     private var focusedInputId: String? = null
+
+    /**
+     * 获取当前编辑的模块
+     */
+    fun getModule(): ActionModule? = if (::module.isInitialized) module else null
     private var allSteps: ArrayList<ActionStep>? = null
     private var availableNamedVariables: List<String>? = null
     var onSave: ((ActionStep) -> Unit)? = null
@@ -301,12 +306,25 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             customUiCard?.isVisible = false
         }
 
+        /**
+         * 检查输入参数是否应该显示。
+         * 优先使用新的 visibility 条件系统，同时保持对 isHidden 的向后兼容。
+         */
+        fun isInputVisible(inputDef: InputDefinition, params: Map<String, Any?>): Boolean {
+            // 如果设置了 visibility 条件，使用新系统
+            inputDef.visibility?.let { visibility ->
+                return visibility.isVisible(params)
+            }
+            // 否则使用传统的 isHidden 标志
+            return !inputDef.isHidden
+        }
+
         // 构建通用参数列表 (分离普通参数和折叠参数)
         val normalInputs = mutableListOf<InputDefinition>()
         val foldedInputs = mutableListOf<InputDefinition>()
 
         inputsToShow.forEach { inputDef ->
-            if (!handledInputIds.contains(inputDef.id) && !inputDef.isHidden) {
+            if (!handledInputIds.contains(inputDef.id) && isInputVisible(inputDef, currentParameters)) {
                 if (inputDef.isFolded) {
                     foldedInputs.add(inputDef)
                 } else {
@@ -454,9 +472,69 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
     /**
-     * 为输入参数创建视图。现在会加载不带工具栏的富文本编辑器。
+     * 为输入参数创建视图。
+     * 对于 CHIP_GROUP 风格，使用简化的布局（不带标签和魔法变量按钮）。
+     * 对于 PICKER 类型，使用带选择器图标的输入框。
+     * 对于其他风格，使用完整的参数输入行布局。
      */
     private fun createViewForInputDefinition(inputDef: InputDefinition, parent: ViewGroup): View {
+        // CHIP_GROUP 风格不需要魔法变量按钮，使用简化布局
+        if (inputDef.inputStyle == InputStyle.CHIP_GROUP) {
+            val row = LayoutInflater.from(requireContext()).inflate(R.layout.row_editor_input, null, false)
+            row.findViewById<TextView>(R.id.input_name).text = inputDef.getLocalizedName(requireContext())
+            row.findViewById<ImageButton>(R.id.button_magic_variable).visibility = View.GONE
+
+            val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
+            valueContainer.removeAllViews()
+
+            val chipGroupView = StandardControlFactory.createChipGroup(
+                context = requireContext(),
+                options = inputDef.options,
+                currentValue = currentParameters[inputDef.id] as? String,
+                onSelectionChanged = { selectedItem ->
+                    if (currentParameters[inputDef.id] != selectedItem) {
+                        readParametersFromUi()
+                        currentParameters[inputDef.id] = selectedItem
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            try {
+                                buildUi()
+                            } catch (e: Exception) {
+                                // 忽略视图已销毁的情况
+                            }
+                        }
+                    }
+                },
+                optionsStringRes = if (inputDef.optionsStringRes.isNotEmpty()) inputDef.optionsStringRes else null
+            )
+            valueContainer.addView(chipGroupView)
+            row.tag = inputDef.id
+            return row
+        }
+
+        // PICKER 类型使用带选择器图标的输入框
+        if (inputDef.pickerType != PickerType.NONE) {
+            val row = LayoutInflater.from(requireContext()).inflate(R.layout.row_editor_input, null, false)
+            row.findViewById<TextView>(R.id.input_name).text = inputDef.getLocalizedName(requireContext())
+            row.findViewById<ImageButton>(R.id.button_magic_variable).visibility = View.GONE
+
+            val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
+            valueContainer.removeAllViews()
+
+            val pickerInputView = StandardControlFactory.createPickerInput(
+                context = requireContext(),
+                currentValue = currentParameters[inputDef.id],
+                pickerType = inputDef.pickerType,
+                hint = inputDef.hint,
+                onPickerClicked = {
+                    onPickerRequested?.invoke(inputDef)
+                }
+            )
+            valueContainer.addView(pickerInputView)
+            row.tag = inputDef.id
+            return row
+        }
+
+        // 其他风格使用标准布局
         return StandardControlFactory.createParameterInputRow(
             context = requireContext(),
             inputDef = inputDef,
@@ -483,6 +561,31 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 }
             }
         )
+    }
+
+    /**
+     * picker 被点击时的回调，由外部设置（Activity/Fragment）。
+     * 格式：inputDef 为被点击的输入定义，result 为选择的结果
+     */
+    var onPickerResult: ((inputDef: InputDefinition, result: Any?) -> Unit)? = null
+
+    /**
+     * 获取当前参数值，供 PickerHandler 使用
+     */
+    fun getCurrentParameter(inputDef: InputDefinition): Any? {
+        return currentParameters[inputDef.id]
+    }
+
+    /**
+     * 内部触发 picker 请求的回调。
+     */
+    private var onPickerRequested: ((inputDef: InputDefinition) -> Unit)? = { inputDef ->
+        // 默认实现：交给外部处理
+        // 子类可以重写此方法来实际显示选择器
+    }
+
+    fun setOnPickerRequestedListener(listener: (InputDefinition) -> Unit) {
+        onPickerRequested = listener
     }
 
     fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {

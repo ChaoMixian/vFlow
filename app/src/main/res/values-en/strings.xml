@@ -57,6 +57,20 @@
     <string name="workflow_editor_add_action">Add Action</string>
     <string name="picker_select_trigger">Select a trigger</string>
     <string name="picker_select_action">Select an action</string>
+    <string name="picker_select_date">Select Date</string>
+    <string name="picker_select_time">Select Time</string>
+    <string name="picker_select_datetime">Select Date and Time</string>
+
+    <string name="module_vflow_data_file_operation_name">File Operation</string>
+    <string name="module_vflow_data_file_operation_desc">Read, write, and manage files</string>
+
+    <string name="param_vflow_data_file_operation_file_path_name">File Path</string>
+    <string name="param_vflow_data_file_operation_operation_name">Operation</string>
+    <string name="param_vflow_data_file_operation_content_name">Content</string>
+    <string name="param_vflow_data_file_operation_encoding_name">Encoding</string>
+    <string name="param_vflow_data_file_operation_overwrite_name">Overwrite</string>
+    <string name="param_vflow_data_file_operation_buffer_size_name">Buffer Size</string>
+
     <string name="workflow_editor_execute">Execute</string>
     <string name="workflow_editor_save">Save</string>
     <string name="share_to_vflow">Share to vFlow</string>

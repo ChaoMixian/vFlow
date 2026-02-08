@@ -30,19 +30,6 @@ class TextExtractModule : BaseModule() {
 
     override val uiProvider: ModuleUIProvider? = null
 
-    override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
-        val staticInputs = getInputs()
-        val currentParameters = step?.parameters ?: emptyMap()
-        val mode = currentParameters["mode"] as? String ?: "提取中间"
-
-        return when (mode) {
-            "提取中间" -> staticInputs.filter { it.id in listOf("text", "mode", "start", "end") }
-            "提取前缀", "提取后缀" -> staticInputs.filter { it.id in listOf("text", "mode", "count") }
-            "提取字符" -> staticInputs.filter { it.id in listOf("text", "mode", "index", "count") }
-            else -> staticInputs.filter { it.id in listOf("text", "mode") }
-        }
-    }
-
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "text",
@@ -62,14 +49,15 @@ class TextExtractModule : BaseModule() {
             options = modeOptions,
             acceptsMagicVariable = false
         ),
-        // 提取中间
+        // 提取中间 - 当 mode 等于 "提取中间" 时显示
         InputDefinition(
             id = "start",
             nameStringRes = R.string.param_vflow_data_text_extract_start_name,
             name = "起始位置",
             staticType = ParameterType.NUMBER,
             defaultValue = 0.0,
-            acceptsMagicVariable = true
+            acceptsMagicVariable = true,
+            visibility = InputVisibility.whenEquals("mode", "提取中间")
         ),
         InputDefinition(
             id = "end",
@@ -77,24 +65,28 @@ class TextExtractModule : BaseModule() {
             name = "结束位置",
             staticType = ParameterType.NUMBER,
             defaultValue = 0.0,
-            acceptsMagicVariable = true
+            acceptsMagicVariable = true,
+            visibility = InputVisibility.whenEquals("mode", "提取中间")
         ),
-        // 提取字符
+        // 提取字符 - 当 mode 等于 "提取字符" 时显示
         InputDefinition(
             id = "index",
             nameStringRes = R.string.param_vflow_data_text_extract_index_name,
             name = "字符位置",
             staticType = ParameterType.NUMBER,
             defaultValue = 0.0,
-            acceptsMagicVariable = true
+            acceptsMagicVariable = true,
+            visibility = InputVisibility.whenEquals("mode", "提取字符")
         ),
+        // 提取字符/前缀/后缀 - 当 mode 不等于 "提取中间" 时显示
         InputDefinition(
             id = "count",
             nameStringRes = R.string.param_vflow_data_text_extract_count_name,
             name = "字符数量",
             staticType = ParameterType.NUMBER,
             defaultValue = 1.0,
-            acceptsMagicVariable = true
+            acceptsMagicVariable = true,
+            visibility = InputVisibility.notEquals("mode", "提取中间")
         )
     )
 

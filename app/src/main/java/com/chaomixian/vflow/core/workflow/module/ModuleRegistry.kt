@@ -138,6 +138,7 @@ object ModuleRegistry {
         register(TextExtractModule(), context)
         register(Base64EncodeOrDecodeModule(), context)
         register(CommentModule(), context)
+        register(FileOperationModule(), context)
 
         // 文件
         register(ImportImageModule(), context)

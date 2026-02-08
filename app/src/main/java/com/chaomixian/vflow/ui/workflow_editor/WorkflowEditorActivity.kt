@@ -87,6 +87,9 @@ class WorkflowEditorActivity : BaseActivity() {
     private var appPickerCallback: ((resultCode: Int, data: Intent?) -> Unit)? = null
     private var editingPositionForAppPicker: Int = -1
 
+    // PickerHandler 用于处理各种选择器类型
+    private var pickerHandler: PickerHandler? = null
+
     // 存储动画 Animator 实例
     private var dragGlowAnimator: Animator? = null
     private var dragBreathAnimator: Animator? = null
@@ -118,9 +121,47 @@ class WorkflowEditorActivity : BaseActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         handleAppPickerResult(result.resultCode, result.data, editingPositionForAppPicker)
+
+        // 交给 PickerHandler 处理结果
+        pickerHandler?.handleAppPickerResult(result.resultCode, result.data)
+
         appPickerCallback?.invoke(result.resultCode, result.data)
         appPickerCallback = null
         editingPositionForAppPicker = -1
+    }
+
+    // 文件选择器 launcher - 使用 OpenDocument 获取持久权限
+    private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        // 尝试获取持久权限
+        uri?.let {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // 无法获取持久权限，继续使用临时 URI
+            }
+        }
+        pickerHandler?.handleFilePickerResult(uri)
+    }
+
+    // 媒体选择器 launcher - 使用 OpenDocument 获取持久权限
+    private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        // 尝试获取持久权限
+        uri?.let {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // 无法获取持久权限，继续使用临时 URI
+            }
+        }
+        pickerHandler?.handleMediaPickerResult(uri)
     }
 
     companion object {
@@ -160,6 +201,17 @@ class WorkflowEditorActivity : BaseActivity() {
         })
 
         setupRecyclerView()
+
+        // 初始化 PickerHandler
+        pickerHandler = PickerHandler(
+            activity = this,
+            appPickerLauncher = appPickerLauncher,
+            filePickerLauncher = filePickerLauncher,
+            mediaPickerLauncher = mediaPickerLauncher,
+            onUpdateParameters = { params ->
+                currentEditorSheet?.updateParametersAndRebuildUi(params)
+            }
+        )
 
         // 检查是否有已保存的状态，如果有则恢复，否则才从数据库加载
         if (savedInstanceState != null) {
@@ -534,6 +586,11 @@ class WorkflowEditorActivity : BaseActivity() {
             this.appPickerCallback = callback
             this.editingPositionForAppPicker = position
             appPickerLauncher.launch(intent)
+        }
+
+        // 设置 Picker 监听器
+        editor.setOnPickerRequestedListener { inputDef ->
+            pickerHandler?.handle(inputDef)
         }
 
         editor.show(supportFragmentManager, "ActionEditor")

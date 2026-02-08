@@ -12,10 +12,13 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.InputDefinition
+import com.chaomixian.vflow.core.module.InputStyle
+import com.chaomixian.vflow.core.module.PickerType
 import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -71,7 +74,7 @@ object StandardControlFactory {
                 allSteps,
                 onMagicVariableRequested?.let { { inputDef.id } }
             )
-            else -> createBaseViewForInputType(context, inputDef, currentValue, onEnumItemSelected)
+            else -> createViewForInput(context, inputDef, currentValue, onEnumItemSelected)
         }
 
         valueContainer.addView(valueView)
@@ -85,6 +88,40 @@ object StandardControlFactory {
     fun isVariableReference(value: Any?): Boolean {
         if (value !is String) return false
         return value.isMagicVariable() || value.isNamedVariable()
+    }
+
+    /**
+     * 根据参数类型和风格创建输入控件。
+     * @param context 上下文
+     * @param inputDef 参数定义
+     * @param currentValue 当前值
+     * @return 对应类型的控件
+     */
+    fun createViewForInput(
+        context: Context,
+        inputDef: InputDefinition,
+        currentValue: Any?,
+        onItemSelectedCallback: ((String) -> Unit)? = null
+    ): View {
+        return when (inputDef.inputStyle) {
+            InputStyle.CHIP_GROUP -> createChipGroup(
+                context,
+                inputDef.options,
+                currentValue as? String,
+                onItemSelectedCallback
+            )
+            InputStyle.SWITCH -> createSwitch(context, currentValue as? Boolean ?: false)
+            InputStyle.SLIDER -> createSliderWithLabel(
+                context = context,
+                label = inputDef.name,
+                valueFrom = inputDef.sliderConfig?.first ?: 0f,
+                valueTo = inputDef.sliderConfig?.second ?: 100f,
+                stepSize = inputDef.sliderConfig?.third ?: 1f,
+                currentValue = (currentValue as? Number)?.toFloat() ?: 0f,
+                valueFormatter = { it.toString() }
+            )
+            else -> createBaseViewForInputType(context, inputDef, currentValue, onItemSelectedCallback)
+        }
     }
 
     /**
@@ -122,6 +159,150 @@ object StandardControlFactory {
      */
     fun createSwitch(context: Context, isChecked: Boolean): SwitchCompat {
         return SwitchCompat(context).apply { this.isChecked = isChecked }
+    }
+
+    /**
+     * 创建芯片按钮组。
+     * @param context 上下文
+     * @param options 选项值列表（序列化值）
+     * @param currentValue 当前选中的值（序列化值）
+     * @param onSelectionChanged 选项变化时的回调，返回选中的值（序列化值）
+     * @param optionsStringRes 可选的本地化文本资源ID列表，与 options 一一对应
+     * @return 包含标签和 ChipGroup 的视图
+     */
+    fun createChipGroup(
+        context: Context,
+        options: List<String>,
+        currentValue: String?,
+        onSelectionChanged: ((String) -> Unit)? = null,
+        optionsStringRes: List<Int>? = null
+    ): View {
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val chipGroup = com.google.android.material.chip.ChipGroup(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            isSingleSelection = true
+            setChipSpacingHorizontal((8 * context.resources.displayMetrics.density).toInt())
+        }
+
+        val selectedValue = currentValue ?: options.firstOrNull()
+        val selectedIndex = options.indexOf(selectedValue).takeIf { it >= 0 } ?: 0
+        val inflater = LayoutInflater.from(context)
+
+        options.forEachIndexed { index, optionValue ->
+            val displayText = if (optionsStringRes != null && index < optionsStringRes.size) {
+                context.getString(optionsStringRes[index])
+            } else {
+                optionValue
+            }
+
+            val chip = inflater.inflate(R.layout.chip_filter, chipGroup, false) as com.google.android.material.chip.Chip
+            chip.text = displayText
+            chip.tag = optionValue  // 使用 tag 存储序列化值
+            chip.isChecked = (index == selectedIndex)
+            chipGroup.addView(chip)
+        }
+
+        // 设置监听器，返回选中的值（序列化值）
+        chipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val checkedChip = group.findViewById<com.google.android.material.chip.Chip>(checkedIds.first())
+                checkedChip?.let {
+                    val selectedValueFromTag = it.tag as? String
+                    if (selectedValueFromTag != null) {
+                        onSelectionChanged?.invoke(selectedValueFromTag)
+                    }
+                }
+            }
+        }
+
+        container.addView(chipGroup)
+        return container
+    }
+
+    /**
+     * 创建带选择器功能的输入框。
+     * 点击输入框时会触发对应的选择器回调。
+     * @param context 上下文
+     * @param currentValue 当前值
+     * @param pickerType 选择器类型
+     * @param hint 提示文本
+     * @param onPickerClicked 点击输入框时的回调，返回选择的结果
+     * @return 包含 EditText 和选择图标的容器视图
+     */
+    fun createPickerInput(
+        context: Context,
+        currentValue: Any?,
+        pickerType: PickerType,
+        hint: String?,
+        onPickerClicked: (() -> Unit)? = null
+    ): View {
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+
+        val textInputLayout = TextInputLayout(context).apply {
+            this.hint = hint
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+        }
+
+        val editText = TextInputEditText(context).apply {
+            val valueText = when (currentValue) {
+                is Number -> if (currentValue.toDouble() == currentValue.toLong().toDouble()) {
+                    currentValue.toLong().toString()
+                } else {
+                    currentValue.toString()
+                }
+                else -> currentValue?.toString() ?: ""
+            }
+            setText(valueText)
+            isFocusable = false
+            isClickable = true
+            setOnClickListener {
+                onPickerClicked?.invoke()
+            }
+        }
+
+        textInputLayout.addView(editText)
+        container.addView(textInputLayout)
+
+        // 添加选择器图标
+        val pickerIcon = ImageButton(context).apply {
+            setImageResource(R.drawable.ic_picker)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginStart = (8 * context.resources.displayMetrics.density).toInt()
+            }
+            background = null
+            contentDescription = "选择"
+            setOnClickListener {
+                onPickerClicked?.invoke()
+            }
+        }
+        container.addView(pickerIcon)
+
+        return container
     }
 
     /**
@@ -288,6 +469,7 @@ object StandardControlFactory {
 
         // 滑块
         val slider = Slider(context).apply {
+            tag = "slider"
             this.valueFrom = valueFrom
             this.valueTo = valueTo
             this.stepSize = stepSize
@@ -314,25 +496,53 @@ object StandardControlFactory {
 
     /**
      * 从输入行视图中读取参数值。
+     * 通过遍历视图树查找可识别的控件，不依赖具体的视图类型。
      * @param view 输入行视图
      * @param inputDef 参数定义
      * @return 读取到的值
      */
     fun readValueFromInputRow(view: View, inputDef: InputDefinition): Any? {
-        val valueContainer = view.findViewById<ViewGroup>(R.id.input_value_container)
-        if (valueContainer.childCount == 0) return null
+        val valueContainer = view.findViewById<ViewGroup>(R.id.input_value_container) ?: return null
+        return findValueInViewTree(valueContainer, inputDef)
+    }
 
-        val staticView = valueContainer.getChildAt(0)
-
-        return if (inputDef.supportsRichText && staticView is ViewGroup) {
-            staticView.findViewById<RichTextView>(R.id.rich_text_view)?.getRawText()
-        } else {
-            when (staticView) {
-                is TextInputLayout -> staticView.editText?.text?.toString()
-                is SwitchCompat -> staticView.isChecked
-                is Spinner -> staticView.selectedItem?.toString()
-                else -> null
+    /**
+     * 在视图树中递归查找可读取值的控件
+     */
+    private fun findValueInViewTree(view: View, inputDef: InputDefinition): Any? {
+        return when (view) {
+            is TextInputLayout -> view.editText?.text?.toString()
+            is SwitchCompat -> view.isChecked
+            is Spinner -> view.selectedItem?.toString()
+            is Slider -> {
+                when (inputDef.staticType) {
+                    ParameterType.NUMBER -> view.value.toInt()
+                    else -> view.value
+                }
             }
+            is ChipGroup -> {
+                val checkedId = view.checkedChipId
+                if (checkedId != View.NO_ID) {
+                    view.findViewById<com.google.android.material.chip.Chip>(checkedId)?.text?.toString()
+                } else {
+                    null
+                }
+            }
+            is ViewGroup -> {
+                // 优先查找 RichTextView
+                if (inputDef.supportsRichText) {
+                    view.findViewById<RichTextView>(R.id.rich_text_view)?.getRawText()
+                } else {
+                    // 递归查找子视图
+                    for (i in 0 until view.childCount) {
+                        val child = view.getChildAt(i)
+                        val value = findValueInViewTree(child, inputDef)
+                        if (value != null) return value
+                    }
+                    null
+                }
+            }
+            else -> null
         }
     }
 }
