@@ -6,8 +6,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.LoopState
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VList
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
@@ -40,8 +42,7 @@ class ForEachModule : BaseBlockModule() {
             name = "输入列表",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptsNamedVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.LIST.id)
+            acceptsNamedVariable = true
         )
     )
 
@@ -65,7 +66,9 @@ class ForEachModule : BaseBlockModule() {
 
     /**
      * 推断列表元素的类型
-     * 从输入参数中解析变量引用，找到对应的输出，如果该输出是 LIST 类型且有 listElementType，则返回它
+     * 从输入参数中解析变量引用，找到对应的输出
+     * - 如果是 LIST 类型，返回列表元素类型
+     * - 其他类型都返回 STRING（逐字符遍历）
      */
     private fun inferListElementType(step: ActionStep?, allSteps: List<ActionStep>?): String? {
         if (step == null || allSteps == null) return null
@@ -73,33 +76,33 @@ class ForEachModule : BaseBlockModule() {
         val inputListValue = step.parameters["input_list"] as? String ?: return null
 
         // 检查是否是魔法变量引用 (格式: {{stepId.outputId}})
-        if (!inputListValue.startsWith("{{") || !inputListValue.endsWith("}}")) {
-            return null
+        if (inputListValue.startsWith("{{") && inputListValue.endsWith("}}")) {
+            val content = inputListValue.removeSurrounding("{{", "}}")
+            val parts = content.split('.')
+            if (parts.size < 2) return null
+
+            val sourceStepId = parts[0]
+            val sourceOutputId = parts[1]
+
+            // 查找源步骤
+            val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
+            val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
+
+            // 获取源模块的输出定义
+            val sourceOutputs = sourceModule.getDynamicOutputs(sourceStep, allSteps)
+            val sourceOutput = sourceOutputs.find { it.id == sourceOutputId } ?: return null
+
+            // 如果源输出是 LIST 类型，返回列表元素类型
+            if (sourceOutput.typeName == VTypeRegistry.LIST.id) {
+                return sourceOutput.listElementType
+            }
+
+            // 其他所有类型都返回 STRING（逐字符遍历）
+            return VTypeRegistry.STRING.id
         }
 
-        val content = inputListValue.removeSurrounding("{{", "}}")
-        val parts = content.split('.')
-        if (parts.size < 2) return null
-
-        val sourceStepId = parts[0]
-        val sourceOutputId = parts[1]
-
-        // 查找源步骤
-        val sourceStep = allSteps.find { it.id == sourceStepId } ?: return null
-        val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
-
-        // 获取源模块的输出定义
-        val sourceOutputs = sourceModule.getDynamicOutputs(sourceStep, allSteps)
-        val sourceOutput = sourceOutputs.find { it.id == sourceOutputId } ?: return null
-
-        // 如果源输出是 LIST 类型且有 listElementType，则返回它
-        return if (sourceOutput.typeName == VTypeRegistry.LIST.id) {
-            sourceOutput.listElementType
-        } else {
-            // 如果源输出不是 LIST 类型，但用户使用了它作为列表输入
-            // 则返回该输出本身的类型作为列表元素类型
-            sourceOutput.typeName
-        }
+        // 非魔法变量引用时，默认为 STRING
+        return VTypeRegistry.STRING.id
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -114,15 +117,21 @@ class ForEachModule : BaseBlockModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val listVar = context.getVariable("input_list") as? VList
-        val items = listVar?.raw
-
-        if (items == null) {
-            return ExecutionResult.Failure("参数错误", "输入必须是一个列表变量。")
+        // 支持列表和字符串遍历
+        // VList: 遍历列表元素
+        // 其他类型（包括 VString）: 转换为字符串后逐字符遍历
+        val inputVar = context.getVariable("input_list")
+        val items: List<VObject> = when (inputVar) {
+            is VList -> inputVar.raw
+            else -> {
+                // 其他所有类型都转换为字符串后逐字符遍历
+                val strValue = inputVar.asString()
+                strValue.map { VString(it.toString()) }
+            }
         }
 
         if (items.isEmpty()) {
-            onProgress(ProgressUpdate("列表为空，跳过循环。"))
+            onProgress(ProgressUpdate("输入为空，跳过循环。"))
             // 使用 BlockNavigator
             val endPc = BlockNavigator.findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(FOREACH_END_ID))
             return if (endPc != -1) {
@@ -132,7 +141,13 @@ class ForEachModule : BaseBlockModule() {
             }
         }
 
-        onProgress(ProgressUpdate("开始遍历列表，共 ${items.size} 项。"))
+        // 只有列表类型才保持元素类型，其他都是字符串
+        val itemType = if (inputVar is VList) VTypeRegistry.ANY.id else VTypeRegistry.STRING.id
+        onProgress(ProgressUpdate("开始遍历，共 ${items.size} 项。"))
+
+        // 存储当前输入类型，用于推断 item 类型
+        context.magicVariables["__foreach_input_type"] = VString(itemType)
+
         context.loopStack.push(LoopState.ForEachLoopState(items))
         return ExecutionResult.Success() // 继续进入循环体
     }
@@ -178,7 +193,8 @@ class EndForEachModule : BaseModule() {
         } else {
             // 循环结束，弹出状态并继续
             context.loopStack.pop()
-            onProgress(ProgressUpdate("列表遍历完成。"))
+            context.magicVariables.remove("__foreach_input_type")
+            onProgress(ProgressUpdate("遍历完成。"))
             ExecutionResult.Success()
         }
     }
