@@ -123,11 +123,6 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 R.mipmap.ic_launcher_round
             ),
             OnboardingPageData(
-                "核心概念",
-                "了解 vFlow 的核心构建概念。",
-                R.drawable.ic_workflows
-            ),
-            OnboardingPageData(
                 "Shell 增强",
                 "配置 Shizuku 或 Root 权限，解锁模拟物理按键、后台截图等高级功能。", // 占位描述，实际由 ShellConfigPage 渲染
                 R.drawable.rounded_terminal_24
@@ -150,19 +145,6 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 顶部跳过按钮
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            if (pagerState.currentPage < 4) {
-                TextButton(onClick = onFinish) {
-                    Text("跳过", color = MaterialTheme.colorScheme.secondary)
-                }
-            }
-        }
 
         // 中间内容区域
         HorizontalPager(
@@ -174,16 +156,13 @@ fun OnboardingScreen(onFinish: () -> Unit) {
         ) { pageIndex ->
             when (pageIndex) {
                 0 -> OnboardingPageContent(page = pages[pageIndex], onRequestPermissions = {})
-                1 -> ConceptsPage(
+                1 -> ShellConfigPage(
                     onNext = { scope.launch { pagerState.animateScrollToPage(2) } }
                 )
-                2 -> ShellConfigPage(
+                2 -> PermissionsPage(
                     onNext = { scope.launch { pagerState.animateScrollToPage(3) } }
                 )
-                3 -> PermissionsPage(
-                    onNext = { scope.launch { pagerState.animateScrollToPage(4) } }
-                )
-                4 -> CompletionPage(onFinish = onFinish)
+                3 -> CompletionPage(onFinish = onFinish)
             }
         }
 
@@ -253,89 +232,6 @@ fun OnboardingPageContent(
 }
 
 @Composable
-fun ConceptsPage(onNext: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "工作流与模块",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-
-        ConceptItem(
-            icon = Icons.Rounded.Polymer,
-            title = "模块 (Module)",
-            desc = "一个个独立的功能积木，如“点击”、“打开应用”或“判断”。"
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        ConceptItem(
-            icon = Icons.Rounded.Schema,
-            title = "工作流 (Workflow)",
-            desc = "将模块拼接在一起，形成完整的自动化任务脚本。"
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Button(
-            onClick = onNext,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("继续")
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(Icons.Default.ChevronRight, null)
-        }
-    }
-}
-
-@Composable
-fun ConceptItem(
-    icon: ImageVector,
-    title: String,
-    desc: String
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = desc,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun ShellConfigPage(onNext: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE) }
@@ -353,7 +249,7 @@ fun ShellConfigPage(onNext: () -> Unit) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(64.dp))
         Icon(
             imageVector = Icons.Rounded.Terminal,
             contentDescription = null,
@@ -527,10 +423,8 @@ fun PermissionsPage(onNext: () -> Unit) {
     val context = LocalContext.current
     var permissionsGranted by remember { mutableStateOf(false) }
 
-    // 定义需要检查和申请的权限列表
-    val permissions = listOf(
-        PermissionManager.ACCESSIBILITY,
-        PermissionManager.OVERLAY,
+    // 定义需要检查和申请的权限列表（不允许跳过）
+    val requiredPermissions = listOf(
         PermissionManager.NOTIFICATIONS,
         PermissionManager.IGNORE_BATTERY_OPTIMIZATIONS,
         PermissionManager.STORAGE
@@ -538,7 +432,7 @@ fun PermissionsPage(onNext: () -> Unit) {
 
     // 检查是否全部授权的函数
     fun checkAllPermissions() {
-        permissionsGranted = permissions.all { PermissionManager.isGranted(context, it) }
+        permissionsGranted = requiredPermissions.all { PermissionManager.isGranted(context, it) }
     }
 
     // 页面恢复时检查权限
@@ -554,20 +448,22 @@ fun PermissionsPage(onNext: () -> Unit) {
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(64.dp))
         Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(16.dp))
         Text("必要的权限", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("为了让自动化流畅运行，vFlow 需要以下权限。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("为了让自动化流畅运行，vFlow 需要以下核心权限（不可跳过）。", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        permissions.forEach { permission ->
+        requiredPermissions.forEach { permission ->
             PermissionItemView(permission) { checkAllPermissions() }
             Spacer(modifier = Modifier.height(12.dp))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        Spacer(modifier = Modifier.weight(1f))
 
         Button(
             onClick = onNext,
@@ -580,12 +476,6 @@ fun PermissionsPage(onNext: () -> Unit) {
                 Icon(Icons.Default.Check, null)
             } else {
                 Text("请先授予所有权限")
-            }
-        }
-
-        if (!permissionsGranted) {
-            TextButton(onClick = onNext, modifier = Modifier.padding(top = 8.dp)) {
-                Text("暂时跳过 (可能影响功能)", color = MaterialTheme.colorScheme.secondary)
             }
         }
     }
