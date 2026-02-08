@@ -1283,6 +1283,39 @@
     <string name="option_vflow_trigger_share_type_file">File</string>
 
     <!-- Other Modules (其他模块) -->
+    <!-- TextSplitModule -->
+    <string name="module_vflow_data_text_split_name">Text Split</string>
+    <string name="module_vflow_data_text_split_desc">Split text into a list using a delimiter. If delimiter is empty, split by character.</string>
+    <string name="param_vflow_data_text_split_text_name">Source Text</string>
+    <string name="param_vflow_data_text_split_delimiter_name">Delimiter</string>
+    <string name="output_vflow_data_text_split_result_name">Result List</string>
+    <string name="summary_vflow_data_text_split">Split: </string>
+
+    <!-- TextReplaceModule -->
+    <string name="module_vflow_data_text_replace_name">Text Replace</string>
+    <string name="module_vflow_data_text_replace_desc">Replace specified content in text with new content</string>
+    <string name="param_vflow_data_text_replace_text_name">Source Text</string>
+    <string name="param_vflow_data_text_replace_find_name">Find</string>
+    <string name="param_vflow_data_text_replace_replace_name">Replace With</string>
+    <string name="output_vflow_data_text_replace_result_name">Result Text</string>
+    <string name="summary_vflow_data_text_replace">Replace: </string>
+
+    <!-- TextExtractModule -->
+    <string name="module_vflow_data_text_extract_name">Extract Text</string>
+    <string name="module_vflow_data_text_extract_desc">Extract specified portion from text</string>
+    <string name="param_vflow_data_text_extract_text_name">Source Text</string>
+    <string name="param_vflow_data_text_extract_mode_name">Extract Mode</string>
+    <string name="param_vflow_data_text_extract_start_name">Start Position</string>
+    <string name="param_vflow_data_text_extract_end_name">End Position</string>
+    <string name="param_vflow_data_text_extract_index_name">Character Position</string>
+    <string name="param_vflow_data_text_extract_count_name">Character Count</string>
+    <string name="output_vflow_data_text_extract_result_name">Result Text</string>
+    <string name="option_vflow_data_text_extract_mode_substring">Extract Middle</string>
+    <string name="option_vflow_data_text_extract_mode_prefix">Extract Prefix</string>
+    <string name="option_vflow_data_text_extract_mode_suffix">Extract Suffix</string>
+    <string name="option_vflow_data_text_extract_mode_char">Extract Character</string>
+    <string name="summary_vflow_data_text_extract">Extract: </string>
+
     <!-- vflow.scripted - Dynamic Script Module -->
     <string name="module_vflow_scripted_name">Dynamic Script</string>
     <string name="module_vflow_scripted_desc">Dynamic module defined based on manifest.json</string>

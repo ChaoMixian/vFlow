@@ -493,6 +493,40 @@
     <string name="option_vflow_data_text_processing_operation_split">分割</string>
     <string name="option_vflow_data_text_processing_operation_replace">替换</string>
     <string name="option_vflow_data_text_processing_operation_regex">正则提取</string>
+
+    <!-- TextSplitModule -->
+    <string name="module_vflow_data_text_split_name">文本分割</string>
+    <string name="module_vflow_data_text_split_desc">将文本按分隔符分割成列表。如果分隔符为空，则逐字符分割。</string>
+    <string name="param_vflow_data_text_split_text_name">源文本</string>
+    <string name="param_vflow_data_text_split_delimiter_name">分隔符</string>
+    <string name="output_vflow_data_text_split_result_name">结果列表</string>
+    <string name="summary_vflow_data_text_split">分割: </string>
+
+    <!-- TextReplaceModule -->
+    <string name="module_vflow_data_text_replace_name">文本替换</string>
+    <string name="module_vflow_data_text_replace_desc">将文本中的指定内容替换为新内容</string>
+    <string name="param_vflow_data_text_replace_text_name">源文本</string>
+    <string name="param_vflow_data_text_replace_find_name">查找</string>
+    <string name="param_vflow_data_text_replace_replace_name">替换为</string>
+    <string name="output_vflow_data_text_replace_result_name">结果文本</string>
+    <string name="summary_vflow_data_text_replace">替换: </string>
+
+    <!-- TextExtractModule -->
+    <string name="module_vflow_data_text_extract_name">提取文本</string>
+    <string name="module_vflow_data_text_extract_desc">从文本中提取指定部分</string>
+    <string name="param_vflow_data_text_extract_text_name">源文本</string>
+    <string name="param_vflow_data_text_extract_mode_name">提取方式</string>
+    <string name="param_vflow_data_text_extract_start_name">起始位置</string>
+    <string name="param_vflow_data_text_extract_end_name">结束位置</string>
+    <string name="param_vflow_data_text_extract_index_name">字符位置</string>
+    <string name="param_vflow_data_text_extract_count_name">字符数量</string>
+    <string name="output_vflow_data_text_extract_result_name">结果文本</string>
+    <string name="option_vflow_data_text_extract_mode_substring">提取中间</string>
+    <string name="option_vflow_data_text_extract_mode_prefix">提取前缀</string>
+    <string name="option_vflow_data_text_extract_mode_suffix">提取后缀</string>
+    <string name="option_vflow_data_text_extract_mode_char">提取字符</string>
+    <string name="summary_vflow_data_text_extract">提取: </string>
+
     <string name="error_vflow_file_save_image_invalid">输入的不是一个有效的图片变量</string>
     <string name="error_vflow_file_save_image_param_error">参数错误</string>
     <string name="error_vflow_file_save_image_file_error">文件错误</string>

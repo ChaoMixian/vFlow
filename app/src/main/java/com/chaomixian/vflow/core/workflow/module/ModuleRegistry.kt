@@ -133,6 +133,9 @@ object ModuleRegistry {
         register(GetVariableModule(), context)
         register(CalculationModule(), context)
         register(TextProcessingModule(), context)
+        register(TextSplitModule(), context)
+        register(TextReplaceModule(), context)
+        register(TextExtractModule(), context)
         register(Base64EncodeOrDecodeModule(), context)
         register(CommentModule(), context)
 
