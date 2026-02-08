@@ -153,6 +153,91 @@ class VObjectPropertyTest {
     }
 
     @Test
+    fun `test VString trim property`() {
+        // 测试 trim 去除首尾空格
+        val str1 = VString("  hello  ")
+        val trimmed1 = str1.getProperty("trim")
+        assertNotNull(trimmed1)
+        assertEquals("hello", (trimmed1 as VString).raw)
+
+        // 测试 trim 去除全角空格
+        val str2 = VString("　hello　")
+        val trimmed2 = str2.getProperty("trim")
+        assertNotNull(trimmed2)
+        assertEquals("hello", (trimmed2 as VString).raw)
+
+        // 测试 trim 中文别名
+        val str3 = VString("  world  ")
+        val trimmed3 = str3.getProperty("去除首尾空格")
+        assertNotNull(trimmed3)
+        assertEquals("world", (trimmed3 as VString).raw)
+    }
+
+    @Test
+    fun `test VString trim property with spaces only`() {
+        // 测试只有空格的字符串
+        val str = VString("     ")
+        val trimmed = str.getProperty("trim")
+        assertNotNull(trimmed)
+        assertEquals("", (trimmed as VString).raw)
+    }
+
+    @Test
+    fun `test VString trim property preserves middle spaces`() {
+        // 测试 trim 只去除首尾，不去除中间的空格
+        val str = VString("  hello world  ")
+        val trimmed = str.getProperty("trim")
+        assertNotNull(trimmed)
+        assertEquals("hello world", (trimmed as VString).raw)
+    }
+
+    @Test
+    fun `test TemplateParser parses trim correctly`() {
+        // 测试模板解析器正确解析 {{xxx.trim}} 形式
+        val parser = com.chaomixian.vflow.core.types.parser.TemplateParser("{{result.trim}}")
+        val segments = parser.parse()
+
+        assertEquals(1, segments.size)
+        val variable = segments[0] as com.chaomixian.vflow.core.types.parser.TemplateSegment.Variable
+        assertEquals(listOf("result", "trim"), variable.path)
+    }
+
+    @Test
+    fun `test TemplateParser with Chinese alias`() {
+        // 测试中文别名 {{result.去除首尾空格}}
+        val parser = com.chaomixian.vflow.core.types.parser.TemplateParser("{{result.去除首尾空格}}")
+        val segments = parser.parse()
+
+        assertEquals(1, segments.size)
+        val variable = segments[0] as com.chaomixian.vflow.core.types.parser.TemplateSegment.Variable
+        assertEquals(listOf("result", "去除首尾空格"), variable.path)
+    }
+
+    @Test
+    fun `test VString removeSpaces property`() {
+        // 测试去除所有空格
+        val str = VString("  hello world  ")
+        val result = str.getProperty("removeSpaces")
+        assertNotNull(result)
+        assertEquals("helloworld", (result as VString).raw)
+
+        // 测试保留中间的多个空格
+        val str2 = VString("a   b")
+        val result2 = str2.getProperty("removeSpaces")
+        assertNotNull(result2)
+        assertEquals("ab", (result2 as VString).raw)
+    }
+
+    @Test
+    fun `test VString removeSpaces English alias`() {
+        // 测试英文别名
+        val str = VString("hello world")
+        val result = str.getProperty("remove_space")
+        assertNotNull(result)
+        assertEquals("helloworld", (result as VString).raw)
+    }
+
+    @Test
     fun `test VNumber abs with negative value`() {
         val num = VNumber(-10.0)
         val absVal = num.getProperty("abs")

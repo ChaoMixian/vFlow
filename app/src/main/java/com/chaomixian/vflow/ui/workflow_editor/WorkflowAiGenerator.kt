@@ -64,7 +64,7 @@ object WorkflowAiGenerator {
                  * **List (列表)**: `.count` (数量), `.first` (第一项), `.last` (最后一项), `.random` (随机一项)
                  * **Dictionary (字典)**: `.count` (数量), `.keys` (所有键), `.values` (所有值)
                  * **Number (数字)**: `.int` (整数部分), `.round` (四舍五入), `.abs` (绝对值)
-                 * **String (文本)**: `.length` (长度), `.uppercase` (大写), `.lowercase` (小写), `.trim` (去空格)
+                 * **String (文本)**: `.length` (长度), `.uppercase` (大写), `.lowercase` (小写), `.trim` (去除首尾空格), `.removeSpaces` (去除所有空格)
                  * **Screen Element (界面元素)**: `.text` (文本内容), `.center_x` (中心X), `.center_y` (中心Y), `.width` (宽度), `.height` (高度)
                  * **Coordinate (坐标)**: `.x` (X坐标), `.y` (Y坐标)
                - **Example**:

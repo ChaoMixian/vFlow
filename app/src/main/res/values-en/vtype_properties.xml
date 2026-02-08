@@ -10,7 +10,8 @@
     <string name="vtype_string_length">Length</string>
     <string name="vtype_string_uppercase">Uppercase</string>
     <string name="vtype_string_lowercase">Lowercase</string>
-    <string name="vtype_string_trim">Trim spaces</string>
+    <string name="vtype_string_trim">Trim (ends)</string>
+    <string name="vtype_string_remove_spaces">Remove all spaces</string>
     <string name="vtype_string_isempty">Is empty</string>
 
     <!-- Collection Type Properties -->

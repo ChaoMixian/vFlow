@@ -18,7 +18,8 @@ object VTypeRegistry {
         VPropertyDef("length", "长度", ANY, R.string.vtype_string_length),
         VPropertyDef("uppercase", "大写", ANY, R.string.vtype_string_uppercase),
         VPropertyDef("lowercase", "小写", ANY, R.string.vtype_string_lowercase),
-        VPropertyDef("trim", "去空格", ANY, R.string.vtype_string_trim),
+        VPropertyDef("trim", "去除首尾空格", ANY, R.string.vtype_string_trim),
+        VPropertyDef("removeSpaces", "去除所有空格", ANY, R.string.vtype_string_remove_spaces),
         VPropertyDef("isempty", "是否为空", ANY, R.string.vtype_string_isempty)
     ))
 
@@ -165,7 +166,8 @@ object VTypeRegistry {
             STRING.id -> {
                 when (propertyName) {
                     "length", "len", "长度", "count" -> NUMBER
-                    "uppercase", "大写", "lowercase", "小写", "trim", "去空格", "trimmed" -> STRING
+                    "uppercase", "大写", "lowercase", "小写", "trim", "trimmed", "去除首尾空格",
+                    "removeSpaces", "remove_space", "去除所有空格" -> STRING
                     "isempty", "为空", "empty" -> BOOLEAN
                     else -> null
                 }

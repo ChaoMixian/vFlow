@@ -10,7 +10,8 @@
     <string name="vtype_string_length">长度</string>
     <string name="vtype_string_uppercase">大写</string>
     <string name="vtype_string_lowercase">小写</string>
-    <string name="vtype_string_trim">去空格</string>
+    <string name="vtype_string_trim">去除首尾空格</string>
+    <string name="vtype_string_remove_spaces">去除所有空格</string>
     <string name="vtype_string_isempty">是否为空</string>
 
     <!-- 集合类型属性 -->

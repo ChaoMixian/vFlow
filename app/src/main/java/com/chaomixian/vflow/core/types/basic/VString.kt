@@ -142,8 +142,11 @@ object VStringCompanion {
         register("lowercase", "小写", "lower", getter = { host ->
             VString((host as VString).raw.lowercase())
         })
-        register("trim", "去空格", "trimmed", getter = { host ->
+        register("trim", "trimmed", "去除首尾空格", getter = { host ->
             VString((host as VString).raw.trim())
+        })
+        register("removeSpaces", "remove_space", "去除空格", getter = { host ->
+            VString((host as VString).raw.replace(" ", ""))
         })
         register("isempty", "为空", "empty", getter = { host ->
             VBoolean((host as VString).raw.isEmpty())

@@ -161,7 +161,8 @@ data class VString(override val raw: String) : EnhancedBaseVObject()
 | `length` / `len` / `长度` | NUMBER | 字符串长度 |
 | `uppercase` / `大写` | STRING | 转为大写 |
 | `lowercase` / `小写` | STRING | 转为小写 |
-| `trim` / `去空格` | STRING | 去除首尾空格 |
+| `trim` / `trimmed` / `去除首尾空格` | STRING | 去除首尾空格 |
+| `removeSpaces` / `remove_space` / `去除空格` | STRING | 去除所有空格 |
 | `isempty` / `为空` | BOOLEAN | 是否为空字符串 |
 
 ---
