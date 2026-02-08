@@ -28,7 +28,20 @@ class TextExtractModule : BaseModule() {
         category = "数据"
     )
 
-    override val uiProvider: ModuleUIProvider? = TextExtractModuleUIProvider()
+    override val uiProvider: ModuleUIProvider? = null
+
+    override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
+        val staticInputs = getInputs()
+        val currentParameters = step?.parameters ?: emptyMap()
+        val mode = currentParameters["mode"] as? String ?: "提取中间"
+
+        return when (mode) {
+            "提取中间" -> staticInputs.filter { it.id in listOf("text", "mode", "start", "end") }
+            "提取前缀", "提取后缀" -> staticInputs.filter { it.id in listOf("text", "mode", "count") }
+            "提取字符" -> staticInputs.filter { it.id in listOf("text", "mode", "index", "count") }
+            else -> staticInputs.filter { it.id in listOf("text", "mode") }
+        }
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
