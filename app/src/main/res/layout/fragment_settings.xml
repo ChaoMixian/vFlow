@@ -119,12 +119,13 @@
                     android:orientation="vertical"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
-                    android:focusable="true">
+                    android:focusable="true"
+                    android:paddingVertical="6dp">
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/settings_language_desc"
-                        android:textAppearance="?attr/textAppearanceBodyLarge" />
+                        android:textAppearance="?attr/textAppearanceBodyMedium" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
