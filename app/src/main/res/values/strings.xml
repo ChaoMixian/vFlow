@@ -65,6 +65,8 @@
 
     <string name="module_vflow_data_file_operation_name">文件操作</string>
     <string name="module_vflow_data_file_operation_desc">对文件进行读取、写入等操作</string>
+    <string name="module_vflow_data_get_current_time_name">获取当前时间</string>
+    <string name="module_vflow_data_get_current_time_desc">获取当前时间，支持多种格式输出（时间戳、ISO 8601、自定义格式等）</string>
 
     <string name="param_vflow_data_file_operation_file_path_name">文件路径</string>
     <string name="param_vflow_data_file_operation_operation_name">操作</string>

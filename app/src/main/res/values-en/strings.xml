@@ -65,6 +65,8 @@
 
     <string name="module_vflow_data_file_operation_name">File Operation</string>
     <string name="module_vflow_data_file_operation_desc">Read, write, and manage files</string>
+    <string name="module_vflow_data_get_current_time_name">Get Current Time</string>
+    <string name="module_vflow_data_get_current_time_desc">Get current time with multiple format outputs (timestamp, ISO 8601, custom format, etc.)</string>
 
     <string name="param_vflow_data_file_operation_file_path_name">File Path</string>
     <string name="param_vflow_data_file_operation_operation_name">Operation</string>

@@ -128,6 +128,7 @@ object ModuleRegistry {
 
         // 数据
         register(CreateVariableModule(), context)
+        register(GetCurrentTimeModule(), context)
         register(RandomVariableModule(), context)
         register(ModifyVariableModule(), context)
         register(GetVariableModule(), context)
