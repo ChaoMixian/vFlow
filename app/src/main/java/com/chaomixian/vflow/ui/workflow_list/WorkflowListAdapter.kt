@@ -1,6 +1,9 @@
 package com.chaomixian.vflow.ui.workflow_list
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.res.ColorStateList
 import android.os.Handler
 import android.os.Looper
@@ -238,6 +241,14 @@ class WorkflowListAdapter(
                                 )
                             }
                             view.context.startActivity(intent)
+                            true
+                        }
+                        R.id.menu_copy_id -> {
+                            // 复制工作流ID到剪贴板
+                            val clipboard = view.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("Workflow ID", workflow.id)
+                            clipboard.setPrimaryClip(clip)
+                            android.widget.Toast.makeText(view.context, "工作流ID已复制", android.widget.Toast.LENGTH_SHORT).show()
                             true
                         }
                         R.id.menu_delete -> { onDeleteWorkflow(workflow); true }

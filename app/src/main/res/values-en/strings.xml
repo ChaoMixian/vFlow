@@ -42,6 +42,8 @@
 
     <string name="workflow_item_menu_add_shortcut">Add to Home Screen</string>
     <string name="workflow_item_menu_duplicate">Duplicate</string>
+    <string name="workflow_item_menu_copy_id">Copy Workflow ID</string>
+    <string name="workflow_item_menu_move_out_folder">Move Out of Folder</string>
     <string name="workflow_item_menu_export_single">Export This Workflow</string>
     <string name="workflow_item_menu_delete">Delete</string>
     <string name="dialog_delete_title">Confirm Delete</string>
