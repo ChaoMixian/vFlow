@@ -259,6 +259,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.shortcut.ShortcutConfigActivity"
+            android:exported="false"
+            android:label="@string/title_shortcut_config"
+            android:theme="@style/Theme.vFlow" />
+
         <receiver
             android:name=".ui.widget.WorkflowWidgetProvider"
             android:exported="true"

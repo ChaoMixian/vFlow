@@ -226,7 +226,20 @@ class WorkflowListAdapter(
 
                 popup.setOnMenuItemClickListener { menuItem ->
                     when (menuItem.itemId) {
-                        R.id.menu_add_shortcut -> { onAddShortcut(workflow); true }
+                        R.id.menu_add_shortcut -> {
+                            // 启动快捷方式配置 Activity
+                            val intent = android.content.Intent(
+                                view.context,
+                                com.chaomixian.vflow.ui.shortcut.ShortcutConfigActivity::class.java
+                            ).apply {
+                                putExtra(
+                                    com.chaomixian.vflow.ui.shortcut.ShortcutConfigActivity.EXTRA_WORKFLOW_ID,
+                                    workflow.id
+                                )
+                            }
+                            view.context.startActivity(intent)
+                            true
+                        }
                         R.id.menu_delete -> { onDeleteWorkflow(workflow); true }
                         R.id.menu_duplicate -> { onDuplicateWorkflow(workflow); true }
                         R.id.menu_export_single -> { onExportWorkflow(workflow); true }

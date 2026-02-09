@@ -86,11 +86,131 @@ object ShortcutHelper {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
+        // 获取自定义名称，如果没有则使用工作流名称
+        val shortLabel = (workflow.shortcutName?.takeIf { it.isNotEmpty() } ?: workflow.name).take(10)
+        val longLabel = workflow.shortcutName?.takeIf { it.isNotEmpty() } ?: workflow.name
+
+        // 获取自定义图标，如果没有则使用默认图标
+        val iconCompat = workflow.shortcutIconRes?.let { iconRes ->
+            // 检查是否是自定义图片文件路径
+            if (iconRes.startsWith("/") || iconRes.startsWith("file://")) {
+                try {
+                    val path = if (iconRes.startsWith("file://")) {
+                        iconRes.substring(7)
+                    } else {
+                        iconRes
+                    }
+                    val file = java.io.File(path)
+                    if (file.exists()) {
+                        android.util.Log.d("ShortcutHelper", "Using custom image from file: $path")
+                        loadCenterCroppedBitmap(file.path)?.let { bitmap ->
+                            IconCompat.createWithAdaptiveBitmap(bitmap)
+                        }
+                    } else {
+                        android.util.Log.w("ShortcutHelper", "Custom image file not found: $path")
+                        null
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("ShortcutHelper", "Failed to load custom image", e)
+                    null
+                }
+            } else {
+                // 从资源加载
+                val resId = context.resources.getIdentifier(
+                    iconRes,
+                    "drawable",
+                    context.packageName
+                )
+                android.util.Log.d("ShortcutHelper", "Icon resource name: $iconRes, resolved ID: $resId")
+                if (resId != 0) {
+                    IconCompat.createWithResource(context, resId)
+                } else {
+                    null
+                }
+            }
+        } ?: IconCompat.createWithResource(context, R.drawable.ic_shortcut_play)
+
+        android.util.Log.d("ShortcutHelper", "Creating shortcut for workflow: ${workflow.name}")
+        android.util.Log.d("ShortcutHelper", "Custom name: ${workflow.shortcutName}, shortLabel: $shortLabel, longLabel: $longLabel")
+        android.util.Log.d("ShortcutHelper", "Custom icon: ${workflow.shortcutIconRes}")
+
         return ShortcutInfoCompat.Builder(context, workflow.id) // 使用工作流ID作为快捷方式的唯一ID
-            .setShortLabel(workflow.name) // 设置短标签
-            .setLongLabel(workflow.name) // 设置长标签
-            .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_play)) // 设置图标，这里复用现有的资源
+            .setShortLabel(shortLabel) // 设置短标签
+            .setLongLabel(longLabel) // 设置长标签
+            .setIcon(iconCompat) // 设置图标
             .setIntent(intent) // 设置意图
             .build()
+    }
+
+    /**
+     * 加载并裁剪图片为正方形（中心裁剪），然后缩放到目标尺寸
+     */
+    private fun loadCenterCroppedBitmap(filePath: String): android.graphics.Bitmap? {
+        // 先获取图片尺寸
+        val options = android.graphics.BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        android.graphics.BitmapFactory.decodeFile(filePath, options)
+
+        if (options.outWidth <= 0 || options.outHeight <= 0) {
+            return null
+        }
+
+        // 计算正方形边长（取宽高的较小值）
+        val squareSize = minOf(options.outWidth, options.outHeight)
+
+        // 计算采样率，使加载后的图片不超过目标尺寸的2倍（为了更好的质量）
+        val targetSize = 192
+        var inSampleSize = 1
+        if (squareSize > targetSize * 2) {
+            inSampleSize = squareSize / (targetSize * 2)
+            // 确保是2的幂次方
+            inSampleSize = Integer.highestOneBit(inSampleSize)
+        }
+
+        // 加载缩放后的图片
+        val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+            inSampleSize = inSampleSize
+        }
+        val fullBitmap = android.graphics.BitmapFactory.decodeFile(filePath, decodeOptions) ?: return null
+
+        try {
+            // 计算裁剪区域（中心正方形）
+            val scaledWidth = fullBitmap.width
+            val scaledHeight = fullBitmap.height
+            val cropSize = minOf(scaledWidth, scaledHeight)
+            val x = (scaledWidth - cropSize) / 2
+            val y = (scaledHeight - cropSize) / 2
+
+            // 裁剪出中心正方形
+            val croppedBitmap = android.graphics.Bitmap.createBitmap(
+                fullBitmap,
+                x, y, cropSize, cropSize
+            )
+
+            // 如果裁剪后的图片不等于原图，回收原图
+            if (croppedBitmap != fullBitmap) {
+                fullBitmap.recycle()
+            }
+
+            // 缩放到目标尺寸
+            val finalBitmap = android.graphics.Bitmap.createScaledBitmap(
+                croppedBitmap,
+                targetSize,
+                targetSize,
+                true
+            )
+
+            // 如果缩放后的图片不等于裁剪图片，回收裁剪图片
+            if (finalBitmap != croppedBitmap) {
+                croppedBitmap.recycle()
+            }
+
+            return finalBitmap
+        } catch (e: Exception) {
+            fullBitmap.recycle()
+            android.util.Log.e("ShortcutHelper", "Failed to crop bitmap", e)
+            return null
+        }
     }
 }

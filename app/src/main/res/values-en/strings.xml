@@ -647,4 +647,12 @@
     <string name="workflows_count">%d workflows</string>
     <string name="one_workflow">1 workflow</string>
     <string name="zero_workflows">0 workflows</string>
+
+    <!-- Shortcut Config -->
+    <string name="title_shortcut_config">Shortcut Configuration</string>
+    <string name="hint_shortcut_name">Shortcut name</string>
+    <string name="label_select_icon">Select icon</string>
+    <string name="button_save_shortcut">Save shortcut</string>
+    <string name="button_reset_default">Reset to default</string>
+    <string name="shortcut_name_default">Use workflow name</string>
 </resources>

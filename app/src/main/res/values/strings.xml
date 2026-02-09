@@ -648,4 +648,12 @@
     <string name="workflows_count">%d 个工作流</string>
     <string name="one_workflow">1 个工作流</string>
     <string name="zero_workflows">0 个工作流</string>
+
+    <!-- Shortcut Config -->
+    <string name="title_shortcut_config">快捷方式配置</string>
+    <string name="hint_shortcut_name">快捷方式名称</string>
+    <string name="label_select_icon">选择图标</string>
+    <string name="button_save_shortcut">保存快捷方式</string>
+    <string name="button_reset_default">恢复默认</string>
+    <string name="shortcut_name_default">使用工作流名称</string>
 </resources>

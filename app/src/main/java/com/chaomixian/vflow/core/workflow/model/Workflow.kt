@@ -22,5 +22,9 @@ data class Workflow(
     // 所属文件夹 ID - 使用 @RawValue 确保 Parcelize 正确处理
     var folderId: @RawValue String? = null,
     // 用于列表排序
-    var order: Int = 0
+    var order: Int = 0,
+    // 快捷方式自定义名称（为空时使用工作流名称）
+    var shortcutName: String? = null,
+    // 快捷方式自定义图标资源名称（为空时使用默认图标）
+    var shortcutIconRes: String? = null
 ) : Parcelable
