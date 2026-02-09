@@ -43,6 +43,15 @@ object CodeExtractor {
     private val ignoredPhrasesRegex: Pattern =
         Pattern.compile("\\b(${ignoredPhrases.joinToString("|")})\\b", Pattern.CASE_INSENSITIVE)
 
+    // 特殊适配简中环境验证码
+    // 1. 闲鱼格式：纯数字验证码直接接全角括号，如 "114514（验证码仅用于您本人登录验证）"
+    // 2. 谷歌格式：字母前缀验证码，如 "G-114514 是您的 Google 验证码"
+    private val vFlowSmsMatcher: Pattern =
+        Pattern.compile(
+            "(?:([A-Za-z]{1,2}-)?(\\d{4,8}))(?:（|\\(|\\s+是您的)[^\\d\\w]{0,10}(?:验证码|Google 验证码)",
+            Pattern.MULTILINE
+        )
+
     /**
      * 从给定的字符串中提取验证码。
      *
@@ -73,7 +82,18 @@ object CodeExtractor {
             }
         }
 
-        // 4. 如果都未找到，返回 null
+        // 4. 尝试简中特调(闲鱼、谷歌等特定格式)
+        matcher = vFlowSmsMatcher.matcher(text)
+        if (matcher.find()) {
+            // 提取验证码：group(1)是前缀(如G-)，group(2)是数字部分
+            val prefix = matcher.group(1) ?: ""
+            val code = matcher.group(2)
+            if (!code.isNullOrEmpty()) {
+                return prefix + code
+            }
+        }
+
+        // 5. 如果都未找到，返回 null
         return null
     }
 }
