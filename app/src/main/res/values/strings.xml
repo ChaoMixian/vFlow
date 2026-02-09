@@ -578,6 +578,8 @@
     <string name="title_core_logs">vFlow Core 日志</string>
     <string name="text_tap_to_expand">点击展开查看</string>
     <string name="action_reload">重新加载</string>
+    <string name="action_copy">复制</string>
+    <string name="toast_logs_copied">日志已复制到剪贴板</string>
     <string name="title_core_settings">vFlow Core 设置</string>
     <string name="text_auto_start_core">自动启动 vFlow Core</string>
     <string name="desc_auto_start_core">应用启动或设备重启时自动使用上次的方式启动 Core</string>

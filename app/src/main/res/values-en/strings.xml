@@ -577,6 +577,8 @@
     <string name="title_core_logs">vFlow Core Logs</string>
     <string name="text_tap_to_expand">Tap to expand</string>
     <string name="action_reload">Reload</string>
+    <string name="action_copy">Copy</string>
+    <string name="toast_logs_copied">Logs copied to clipboard</string>
     <string name="title_core_settings">vFlow Core Settings</string>
     <string name="text_auto_start_core">Auto-start vFlow Core</string>
     <string name="desc_auto_start_core">Automatically start Core using the last used method when app starts or device reboots</string>

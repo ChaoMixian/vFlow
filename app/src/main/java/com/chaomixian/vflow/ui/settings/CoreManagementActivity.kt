@@ -581,6 +581,12 @@ private fun CoreManagementScreen(
                     coroutineScope.launch {
                         logs = onLoadLogs()
                     }
+                },
+                onCopyClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clip = ClipData.newPlainText("vFlow Core Logs", logs)
+                    clipboard.setPrimaryClip(clip)
+                    showToast(context.getString(R.string.toast_logs_copied))
                 }
             )
 
@@ -1077,8 +1083,12 @@ private fun LogsCard(
     logs: String,
     expanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
-    onReloadClick: () -> Unit
+    onReloadClick: () -> Unit,
+    onCopyClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    var logsCopied by remember { mutableStateOf(false) }
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1106,6 +1116,26 @@ private fun LogsCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+
+                // 复制按钮
+                IconButton(
+                    onClick = {
+                        onCopyClick()
+                        logsCopied = true
+                        // 2秒后重置复制状态
+                        kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch {
+                            delay(2000)
+                            logsCopied = false
+                        }
+                    },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = stringResource(R.string.action_copy),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
                 IconButton(
