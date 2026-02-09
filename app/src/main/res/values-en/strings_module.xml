@@ -165,9 +165,9 @@
     <string name="error_vflow_interaction_input_text_empty">Input text cannot be empty</string>
     <string name="error_vflow_interaction_input_text_param_error">Parameter error</string>
     <string name="error_vflow_interaction_input_text_failed">Input failed</string>
-    <string name="summary_vflow_interaction_input_text">Input text </string>
-    <string name="summary_vflow_interaction_input_text_with_mode">Use </string>
-    <string name="summary_vflow_interaction_input_text_with_mode_suffix">Input text</string>
+    <string name="summary_vflow_interaction_input_text">Input text</string>
+    <string name="summary_vflow_interaction_input_text_with_mode_prefix">Use</string>
+    <string name="summary_vflow_interaction_input_text_with_mode_middle">to input text</string>
 
     <string name="msg_vflow_interaction_input_text_preparing">Preparing to input text...</string>
     <string name="msg_vflow_interaction_input_text_a11y_success">Input via accessibility service</string>
@@ -181,6 +181,12 @@
     <string name="option_vflow_interaction_input_text_mode_auto">Auto</string>
     <string name="option_vflow_interaction_input_text_mode_a11y">Accessibility</string>
     <string name="option_vflow_interaction_input_text_mode_shell">Shell</string>
+    <string name="param_vflow_interaction_input_text_action_after_name">Key Action After Input</string>
+    <string name="option_vflow_interaction_input_text_action_none">None</string>
+    <string name="option_vflow_interaction_input_text_action_enter">Enter</string>
+    <string name="option_vflow_interaction_input_text_action_tab">Tab</string>
+    <string name="option_vflow_interaction_input_text_action_next">Next (Move Focus)</string>
+    <string name="msg_vflow_interaction_input_text_sending_key">Sending key...</string>
 
     <!-- vflow.logic.stop_workflow - Stop Workflow Module -->
     <string name="module_vflow_logic_stop_workflow_name">Stop Workflow</string>

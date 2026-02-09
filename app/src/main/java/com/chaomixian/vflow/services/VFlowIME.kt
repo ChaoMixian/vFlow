@@ -29,6 +29,13 @@ class VFlowIME : InputMethodService() {
         const val EXTRA_TEXT = "text"
         const val EXTRA_TEXT_BASE64 = "text_base64"
         const val EXTRA_COMMIT_ACTION = "commit_action"
+        const val EXTRA_KEY_ACTION = "key_action"
+
+        // 按键操作常量
+        const val KEY_ACTION_NONE = "none"
+        const val KEY_ACTION_ENTER = "enter"
+        const val KEY_ACTION_TAB = "tab"
+        const val KEY_ACTION_NEXT = "next"
     }
 
     private val inputReceiver = object : BroadcastReceiver() {
@@ -36,6 +43,7 @@ class VFlowIME : InputMethodService() {
             if (intent?.action == ACTION_INPUT_TEXT) {
                 var text = intent.getStringExtra(EXTRA_TEXT)
                 val commitAction = intent.getBooleanExtra(EXTRA_COMMIT_ACTION, false)
+                val keyAction = intent.getStringExtra(EXTRA_KEY_ACTION) ?: KEY_ACTION_NONE
 
                 val base64Text = intent.getStringExtra(EXTRA_TEXT_BASE64)
                 if (!base64Text.isNullOrEmpty()) {
@@ -48,7 +56,7 @@ class VFlowIME : InputMethodService() {
                 }
 
                 if (text != null) {
-                    inputText(text, commitAction)
+                    inputText(text, commitAction, keyAction)
                 }
             }
         }
@@ -73,10 +81,10 @@ class VFlowIME : InputMethodService() {
         return layoutInflater.inflate(R.layout.layout_vflow_ime, null)
     }
 
-    private fun inputText(text: String, performEditorAction: Boolean) {
+    private fun inputText(text: String, performEditorAction: Boolean, keyAction: String) {
         val inputConnection = currentInputConnection ?: return
 
-        DebugLogger.d(TAG, "IME Committing text: $text")
+        DebugLogger.d(TAG, "IME Committing text: $text, keyAction: $keyAction")
 
         // 1. 提交文本
         // newCursorPosition = 1 表示光标移动到插入文本的后面
@@ -88,6 +96,36 @@ class VFlowIME : InputMethodService() {
             if (editorInfo != null) {
                 inputConnection.performEditorAction(editorInfo.actionId)
             }
+        }
+
+        // 3. 执行按键操作
+        when (keyAction) {
+            KEY_ACTION_ENTER -> sendKeyEvent(inputConnection, android.view.KeyEvent.KEYCODE_ENTER)
+            KEY_ACTION_TAB -> sendKeyEvent(inputConnection, android.view.KeyEvent.KEYCODE_TAB)
+            KEY_ACTION_NEXT -> {
+                // 移动焦点到下一个，尝试 ACTION_DOWN + ACTION_UP
+                sendKeyEvent(inputConnection, android.view.KeyEvent.KEYCODE_TAB)
+            }
+            KEY_ACTION_NONE -> {
+                // 不做任何操作
+            }
+        }
+    }
+
+    /**
+     * 发送按键事件
+     */
+    private fun sendKeyEvent(inputConnection: InputConnection, keyCode: Int) {
+        try {
+            val downEvent = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, keyCode)
+            val upEvent = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, keyCode)
+
+            inputConnection.sendKeyEvent(downEvent)
+            inputConnection.sendKeyEvent(upEvent)
+
+            DebugLogger.d(TAG, "Sent key event: $keyCode")
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "Failed to send key event: $keyCode", e)
         }
     }
 }

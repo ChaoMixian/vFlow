@@ -80,6 +80,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/param_vflow_interaction_input_text_action_after_name"
+                android:textAppearance="?attr/textAppearanceLabelMedium" />
+
+            <Spinner
+                android:id="@+id/spinner_action_after"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

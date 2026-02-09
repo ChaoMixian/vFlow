@@ -21,6 +21,7 @@ import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.services.ShellManager
+import com.chaomixian.vflow.services.VFlowIME
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.delay
 
@@ -41,6 +42,15 @@ class InputTextModule : BaseModule() {
             appContext.getString(R.string.option_vflow_interaction_input_text_mode_auto),
             appContext.getString(R.string.option_vflow_interaction_input_text_mode_a11y),
             appContext.getString(R.string.option_vflow_interaction_input_text_mode_shell)
+        )
+    }
+
+    private val actionAfterOptions by lazy {
+        listOf(
+            appContext.getString(R.string.option_vflow_interaction_input_text_action_none),
+            appContext.getString(R.string.option_vflow_interaction_input_text_action_enter),
+            appContext.getString(R.string.option_vflow_interaction_input_text_action_tab),
+            appContext.getString(R.string.option_vflow_interaction_input_text_action_next)
         )
     }
 
@@ -82,6 +92,16 @@ class InputTextModule : BaseModule() {
             nameStringRes = R.string.param_vflow_interaction_input_text_mode_name
         ),
         InputDefinition(
+            id = "action_after",
+            name = "操作后按键",  // Fallback
+            staticType = ParameterType.ENUM,
+            defaultValue = appContext.getString(R.string.option_vflow_interaction_input_text_action_none),
+            options = actionAfterOptions,
+            acceptsMagicVariable = false,
+            isHidden = true,
+            nameStringRes = R.string.param_vflow_interaction_input_text_action_after_name
+        ),
+        InputDefinition(
             id = "show_advanced",
             name = "显示高级选项",  // Fallback
             staticType = ParameterType.BOOLEAN,
@@ -108,18 +128,30 @@ class InputTextModule : BaseModule() {
         val autoMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_auto)
         val mode = step.parameters["mode"] as? String ?: autoMode
 
-        // 如果内容复杂（包含变量或长文本），只返回简单标题，
-        // 详细内容将由 RichTextUIProvider 创建的预览视图在下方显示。
+        // 如果内容复杂（包含变量或长文本），只返回简单文本标题
         if (VariableResolver.isComplex(rawText)) {
-            return if (mode == autoMode) context.getString(R.string.summary_vflow_interaction_input_text) else context.getString(R.string.summary_vflow_interaction_input_text_with_mode, mode)
+            return if (mode == autoMode) {
+                context.getString(R.string.summary_vflow_interaction_input_text)
+            } else {
+                context.getString(R.string.summary_vflow_interaction_input_text_with_mode_prefix) +
+                    mode +
+                    context.getString(R.string.summary_vflow_interaction_input_text_with_mode_middle)
+            }
         }
 
         // 内容简单时，在摘要中直接显示药丸
         val textPill = PillUtil.createPillFromParam(step.parameters["text"], getInputs().find { it.id == "text" })
+
+        // 使用 PillUtil.buildSpannable 构建摘要
         return if (mode == autoMode) {
+            // "输入文本 [pill]"
             PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_input_text), textPill)
         } else {
-            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_input_text_with_mode, mode), textPill)
+            // "使用 [mode] 输入文本 [pill]"
+            val modePill = PillUtil.createPillFromParam(step.parameters["mode"], getInputs().find { it.id == "mode" })
+            val prefix = context.getString(R.string.summary_vflow_interaction_input_text_with_mode_prefix)
+            val middle = context.getString(R.string.summary_vflow_interaction_input_text_with_mode_middle)
+            PillUtil.buildSpannable(context, prefix, modePill, " ", middle, textPill)
         }
     }
 
@@ -133,6 +165,12 @@ class InputTextModule : BaseModule() {
         val a11yMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_a11y)
         val shellMode = appContext.getString(R.string.option_vflow_interaction_input_text_mode_shell)
         val mode = context.getVariableAsString("mode", autoMode)
+
+        val actionNone = appContext.getString(R.string.option_vflow_interaction_input_text_action_none)
+        val actionEnter = appContext.getString(R.string.option_vflow_interaction_input_text_action_enter)
+        val actionTab = appContext.getString(R.string.option_vflow_interaction_input_text_action_tab)
+        val actionNext = appContext.getString(R.string.option_vflow_interaction_input_text_action_next)
+        val actionAfter = context.getVariableAsString("action_after", actionNone)
 
         if (text.isEmpty()) {
             return ExecutionResult.Failure(
@@ -150,6 +188,11 @@ class InputTextModule : BaseModule() {
             success = performAccessibilityInput(text)
             if (success) {
                 onProgress(ProgressUpdate("已通过无障碍输入"))
+                // 执行操作后按键
+                if (actionAfter != actionNone) {
+                    performAccessibilityKeyAction(actionAfter, actionEnter, actionTab, actionNext)
+                    onProgress(ProgressUpdate("已发送按键"))
+                }
             } else if (mode == "无障碍") {
                 return ExecutionResult.Failure("输入失败", "无法找到聚焦的输入框，或输入框不支持编辑。")
             }
@@ -160,8 +203,16 @@ class InputTextModule : BaseModule() {
         if (!success && (mode == "自动" || mode == "Shell")) {
             onProgress(ProgressUpdate("尝试使用 vFlow 输入法输入..."))
 
+            // 映射按键操作到 IME 支持的格式
+            val imeKeyAction = when (actionAfter) {
+                actionEnter -> VFlowIME.KEY_ACTION_ENTER
+                actionTab -> VFlowIME.KEY_ACTION_TAB
+                actionNext -> VFlowIME.KEY_ACTION_NEXT
+                else -> VFlowIME.KEY_ACTION_NONE
+            }
+
             // 尝试使用 IME 输入
-            success = VFlowImeManager.inputText(context.applicationContext, text)
+            success = VFlowImeManager.inputText(context.applicationContext, text, imeKeyAction)
 
             if (success) {
                 onProgress(ProgressUpdate("已通过 vFlow IME 输入"))
@@ -169,6 +220,12 @@ class InputTextModule : BaseModule() {
                 // 如果 IME 失败 (例如没权限切换)，回退到 剪贴板+粘贴 方案
                 onProgress(ProgressUpdate("IME 模式失败，回落到 剪贴板+粘贴 模式..."))
                 success = performClipboardPasteInput(context.applicationContext, text)
+
+                // 如果剪贴板模式成功，仍然需要发送按键
+                if (success && actionAfter != actionNone) {
+                    performShellKeyAction(context.applicationContext, actionAfter, actionEnter, actionTab, actionNext)
+                    onProgress(ProgressUpdate("已发送按键"))
+                }
             }
 
             if (success) {
@@ -242,5 +299,86 @@ class InputTextModule : BaseModule() {
                 false
             }
         }
+    }
+
+    /**
+     * 通过无障碍服务发送按键操作
+     */
+    private suspend fun performAccessibilityKeyAction(
+        actionAfter: String,
+        actionEnter: String,
+        actionTab: String,
+        actionNext: String
+    ): Boolean {
+        val service = ServiceStateBus.getAccessibilityService() ?: return false
+
+        return when (actionAfter) {
+            actionEnter -> {
+                // 发送 Enter 键 (KEYCODE_ENTER = 66)
+                val focusNode = service.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                if (focusNode != null) {
+                    val result = focusNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    focusNode.recycle()
+                    result
+                } else {
+                    // 如果找不到聚焦的输入框，尝试全局发送 Enter
+                    val result = ShellManager.execShellCommand(
+                        service,
+                        "input keyevent 66",
+                        ShellManager.ShellMode.AUTO
+                    )
+                    !result.startsWith("Error")
+                }
+            }
+            actionTab -> {
+                // 发送 Tab 键 (KEYCODE_TAB = 61)
+                val result = ShellManager.execShellCommand(
+                    service,
+                    "input keyevent 61",
+                    ShellManager.ShellMode.AUTO
+                )
+                !result.startsWith("Error")
+            }
+            actionNext -> {
+                // 移动焦点到下一个 (ACTION_FOCUS_FORWARD = 2)
+                // 或者使用 TAB
+                val result = ShellManager.execShellCommand(
+                    service,
+                    "input keyevent 61",
+                    ShellManager.ShellMode.AUTO
+                )
+                !result.startsWith("Error")
+            }
+            else -> false
+        }
+    }
+
+    /**
+     * 通过 Shell 发送按键操作
+     */
+    private suspend fun performShellKeyAction(
+        context: Context,
+        actionAfter: String,
+        actionEnter: String,
+        actionTab: String,
+        actionNext: String
+    ): Boolean {
+        if (!ShellManager.isShizukuActive(context) && !ShellManager.isRootAvailable()) {
+            return false
+        }
+
+        val keycode = when (actionAfter) {
+            actionEnter -> 66  // KEYCODE_ENTER
+            actionTab -> 61    // KEYCODE_TAB
+            actionNext -> 61   // 使用 TAB 移动焦点
+            else -> return false
+        }
+
+        val result = ShellManager.execShellCommand(
+            context,
+            "input keyevent $keycode",
+            ShellManager.ShellMode.AUTO
+        )
+        return !result.startsWith("Error")
     }
 }

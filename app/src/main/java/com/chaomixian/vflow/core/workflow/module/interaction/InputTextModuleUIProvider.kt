@@ -33,12 +33,13 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         val advancedContainer: LinearLayout = view.findViewById(R.id.container_advanced)
         val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
         val modeSpinner: Spinner = view.findViewById(R.id.spinner_mode)
+        val actionAfterSpinner: Spinner = view.findViewById(R.id.spinner_action_after)
 
         var richTextView: RichTextView? = null
         var allSteps: List<ActionStep>? = null
     }
 
-    override fun getHandledInputIds(): Set<String> = setOf("text", "mode", "show_advanced")
+    override fun getHandledInputIds(): Set<String> = setOf("text", "mode", "action_after", "show_advanced")
 
     override fun createPreview(
         context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>,
@@ -72,6 +73,15 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         val currentMode = currentParameters["mode"] as? String ?: "自动"
         holder.modeSpinner.setSelection(modes.indexOf(currentMode).coerceAtLeast(0))
 
+        // 设置操作后按键 Spinner
+        val actions = listOf("无操作", "Enter（回车）", "Tab（制表符）", "下一个（移动焦点）")
+        val actionAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, actions)
+        actionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        holder.actionAfterSpinner.adapter = actionAdapter
+
+        val currentAction = currentParameters["action_after"] as? String ?: "无操作"
+        holder.actionAfterSpinner.setSelection(actions.indexOf(currentAction).coerceAtLeast(0))
+
         // 恢复展开状态
         val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
         holder.advancedContainer.isVisible = showAdvanced
@@ -95,6 +105,17 @@ class InputTextModuleUIProvider : ModuleUIProvider {
             override fun onNothingSelected(p0: AdapterView<*>?) {}
         }
         holder.modeSpinner.tag = holder.modeSpinner.selectedItemPosition
+
+        holder.actionAfterSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
+                if (holder.actionAfterSpinner.tag != position) {
+                    holder.actionAfterSpinner.tag = position
+                    onParametersChanged()
+                }
+            }
+            override fun onNothingSelected(p0: AdapterView<*>?) {}
+        }
+        holder.actionAfterSpinner.tag = holder.actionAfterSpinner.selectedItemPosition
 
         return holder
     }
@@ -128,6 +149,7 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         return mapOf(
             "text" to (h.richTextView?.getRawText() ?: ""),
             "mode" to h.modeSpinner.selectedItem.toString(),
+            "action_after" to h.actionAfterSpinner.selectedItem.toString(),
             "show_advanced" to h.advancedContainer.isVisible
         )
     }

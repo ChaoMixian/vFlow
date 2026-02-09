@@ -145,9 +145,9 @@
     <string name="error_vflow_interaction_input_text_a11y_failed">无法找到聚焦的输入框，或输入框不支持编辑。</string>
     <string name="error_vflow_interaction_input_text_shell_failed">Shell 命令执行失败，请检查 Root/Shizuku 权限及输入法设置。</string>
     <string name="error_vflow_interaction_input_text_no_focus">无法输入文本，请确保有输入框处于聚焦状态。</string>
-    <string name="summary_vflow_interaction_input_text">输入文本 </string>
-    <string name="summary_vflow_interaction_input_text_with_mode">使用 </string>
-    <string name="summary_vflow_interaction_input_text_with_mode_suffix">输入文本</string>
+    <string name="summary_vflow_interaction_input_text">输入文本</string>
+    <string name="summary_vflow_interaction_input_text_with_mode_prefix">使用</string>
+    <string name="summary_vflow_interaction_input_text_with_mode_middle">输入文本</string>
 
     <string name="msg_vflow_interaction_input_text_preparing">准备输入文本...</string>
     <string name="msg_vflow_interaction_input_text_a11y_success">已通过无障碍输入</string>
@@ -161,6 +161,12 @@
     <string name="option_vflow_interaction_input_text_mode_auto">自动</string>
     <string name="option_vflow_interaction_input_text_mode_a11y">无障碍</string>
     <string name="option_vflow_interaction_input_text_mode_shell">Shell</string>
+    <string name="param_vflow_interaction_input_text_action_after_name">操作后按键</string>
+    <string name="option_vflow_interaction_input_text_action_none">无操作</string>
+    <string name="option_vflow_interaction_input_text_action_enter">Enter（回车）</string>
+    <string name="option_vflow_interaction_input_text_action_tab">Tab（制表符）</string>
+    <string name="option_vflow_interaction_input_text_action_next">下一个（移动焦点）</string>
+    <string name="msg_vflow_interaction_input_text_sending_key">正在发送按键...</string>
     <string name="module_vflow_logic_stop_workflow_name">停止工作流</string>
     <string name="module_vflow_logic_stop_workflow_desc">正常地、无条件地终止当前工作流的执行</string>
     <string name="summary_vflow_logic_stop_workflow">停止工作流</string>

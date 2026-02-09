@@ -21,8 +21,12 @@ object VFlowImeManager {
     /**
      * 使用 vFlow IME 输入文本。
      * 自动处理：备份当前IME -> 切换vFlow IME -> 发送文本 -> 恢复IME。
+     *
+     * @param context 上下文
+     * @param text 要输入的文本
+     * @param keyAction 输入后的按键操作 ("none", "enter", "tab", "next")
      */
-    suspend fun inputText(context: Context, text: String): Boolean {
+    suspend fun inputText(context: Context, text: String, keyAction: String = "none"): Boolean {
         if (!ShellManager.isShizukuActive(context) && !ShellManager.isRootAvailable()) {
             DebugLogger.e(TAG, "IME 输入需要 Shizuku 或 Root 权限。")
             return false
@@ -54,10 +58,10 @@ object VFlowImeManager {
         // 将中文转为 Base64 字符串 (NO_WRAP 避免换行)
         val base64Text = Base64.encodeToString(text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
 
-        // 使用 --es 指定新的 EXTRA_TEXT_BASE64 参数
-        val cmd = "am broadcast -a ${VFlowIME.ACTION_INPUT_TEXT} --es ${VFlowIME.EXTRA_TEXT_BASE64} \"$base64Text\""
+        // 使用 --es 指定新的 EXTRA_TEXT_BASE64 和 EXTRA_KEY_ACTION 参数
+        val cmd = "am broadcast -a ${VFlowIME.ACTION_INPUT_TEXT} --es ${VFlowIME.EXTRA_TEXT_BASE64} \"$base64Text\" --es ${VFlowIME.EXTRA_KEY_ACTION} \"$keyAction\""
 
-        DebugLogger.d(TAG, "发送输入广播(Base64): $base64Text (原文本: $text)")
+        DebugLogger.d(TAG, "发送输入广播(Base64): $base64Text (原文本: $text, keyAction: $keyAction)")
 
         val result = ShellManager.execShellCommand(context, cmd, ShellManager.ShellMode.AUTO)
 
