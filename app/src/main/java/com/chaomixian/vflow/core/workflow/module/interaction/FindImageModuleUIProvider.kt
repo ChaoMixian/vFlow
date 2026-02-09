@@ -177,6 +177,11 @@ class FindImageModuleUIProvider : ModuleUIProvider {
             return
         }
 
+        // 在启动相册前暂时清除 template_uri，避免保存过大的状态
+        val oldUri = holder.templateUri
+        holder.templateUri = ""
+        holder.onParametersChangedCallback?.invoke()
+
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
         onStartActivityForResult(intent) { resultCode, data ->
             if (resultCode == Activity.RESULT_OK && data?.data != null) {
@@ -184,9 +189,27 @@ class FindImageModuleUIProvider : ModuleUIProvider {
                 // 编码图片为 Base64
                 holder.scope?.launch {
                     val base64String = encodeImageToBase64(context, uri)
-                    if (base64String != null) {
-                        holder.templateUri = base64String
-                        updateImagePreview(context, holder, base64String)
+                    // 确保在主线程更新 UI
+                    withContext(Dispatchers.Main) {
+                        if (base64String != null) {
+                            holder.templateUri = base64String
+                            updateImagePreview(context, holder, base64String)
+                            holder.onParametersChangedCallback?.invoke()
+                        } else {
+                            // 如果编码失败，恢复旧值
+                            holder.templateUri = oldUri
+                            updateImagePreview(context, holder, oldUri)
+                            holder.onParametersChangedCallback?.invoke()
+                            Toast.makeText(context, "图片编码失败", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else {
+                // 用户取消选择，恢复旧值
+                holder.scope?.launch {
+                    withContext(Dispatchers.Main) {
+                        holder.templateUri = oldUri
+                        updateImagePreview(context, holder, oldUri)
                         holder.onParametersChangedCallback?.invoke()
                     }
                 }
@@ -268,12 +291,16 @@ class FindImageModuleUIProvider : ModuleUIProvider {
                 val bitmap = BitmapFactory.decodeFile(uri.path)
                 if (bitmap == null) return@withContext null
 
+                // 压缩图片：限制最大尺寸为 800px，质量为 80
+                val compressedBitmap = compressBitmap(bitmap, 800, 80)
                 val outputStream = ByteArrayOutputStream()
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                compressedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, outputStream)
                 val byteArray = outputStream.toByteArray()
                 val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
                 bitmap.recycle()
+                if (compressedBitmap != bitmap) compressedBitmap.recycle()
 
+                DebugLogger.i("FindImageModuleUIProvider", "图片压缩后 Base64 大小: ${byteArray.size} 字节")
                 base64String
             } catch (e: Exception) {
                 DebugLogger.e("FindImageModuleUIProvider", "URI 转 Base64 失败", e)
@@ -291,19 +318,59 @@ class FindImageModuleUIProvider : ModuleUIProvider {
 
                 if (bitmap == null) return@withContext null
 
-                // 将 Bitmap 编码为 Base64
+                // 压缩图片：限制最大尺寸为 800px，质量为 80
+                val compressedBitmap = compressBitmap(bitmap, 800, 80)
                 val outputStream = ByteArrayOutputStream()
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                compressedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, outputStream)
                 val byteArray = outputStream.toByteArray()
                 val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
                 bitmap.recycle()
+                if (compressedBitmap != bitmap) compressedBitmap.recycle()
 
+                DebugLogger.i("FindImageModuleUIProvider", "图片压缩后 Base64 大小: ${byteArray.size} 字节")
                 base64String
             } catch (e: Exception) {
                 DebugLogger.e("FindImageModuleUIProvider", "编码图片失败", e)
                 null
             }
         }
+    }
+
+    /**
+     * 压缩图片到指定最大尺寸和质量
+     * @param originalBitmap 原始图片
+     * @param maxSize 最大边长（宽或高）
+     * @param quality JPEG 质量（0-100）
+     * @return 压缩后的图片（可能是原图如果不需要压缩）
+     */
+    private fun compressBitmap(originalBitmap: android.graphics.Bitmap, maxSize: Int, quality: Int): android.graphics.Bitmap {
+        val width = originalBitmap.width
+        val height = originalBitmap.height
+
+        // 如果图片已经足够小，直接返回
+        if (width <= maxSize && height <= maxSize) {
+            return originalBitmap
+        }
+
+        // 计算缩放比例
+        val scale = if (width > height) {
+            maxSize.toFloat() / width
+        } else {
+            maxSize.toFloat() / height
+        }
+
+        val newWidth = (width * scale).toInt()
+        val newHeight = (height * scale).toInt()
+
+        val compressedBitmap = android.graphics.Bitmap.createScaledBitmap(
+            originalBitmap,
+            newWidth,
+            newHeight,
+            true // 使用双线性过滤
+        )
+
+        DebugLogger.i("FindImageModuleUIProvider", "图片压缩: ${width}x${height} -> ${newWidth}x${newHeight}")
+        return compressedBitmap
     }
 
     private fun updateImagePreview(context: Context, holder: ViewHolder, dataString: String) {
