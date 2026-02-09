@@ -568,6 +568,16 @@
     <string name="error_vflow_data_base64_invalid_format">输入的文本不是有效的 Base64 编码格式</string>
     <string name="error_vflow_data_base64_execution_error">执行出错</string>
     <string name="error_vflow_data_base64_unknown">未知错误</string>
+    <string name="module_vflow_data_parse_json_name">解析 JSON</string>
+    <string name="module_vflow_data_parse_json_desc">从 JSON 文本中提取数据，支持路径语法（如 user.name、users.0.name）</string>
+    <string name="param_vflow_data_parse_json_json_name">JSON 文本</string>
+    <string name="param_vflow_data_parse_json_path_name">路径</string>
+    <string name="output_vflow_data_parse_json_first_value_name">第一个匹配值</string>
+    <string name="output_vflow_data_parse_json_all_values_name">所有匹配值</string>
+    <string name="error_vflow_data_parse_json_empty">JSON 文本不能为空</string>
+    <string name="error_vflow_data_parse_json_path_empty">路径不能为空</string>
+    <string name="error_vflow_data_parse_json_invalid_format">JSON 格式错误</string>
+    <string name="error_vflow_data_parse_json_parse_error">JSON 解析错误</string>
     <string name="module_vflow_data_comment_name">注释</string>
     <string name="module_vflow_data_comment_desc">添加注释说明，用于记录工作流的设计思路和目的。执行时会被跳过。</string>
     <string name="param_vflow_data_comment_content_name">注释内容</string>

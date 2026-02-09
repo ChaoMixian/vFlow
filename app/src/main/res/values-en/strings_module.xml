@@ -607,6 +607,19 @@
     <string name="error_vflow_data_base64_invalid_format">Input text is not a valid Base64 encoded format</string>
     <string name="error_vflow_data_base64_execution_error">Execution Error</string>
     <string name="error_vflow_data_base64_unknown">Unknown error</string>
+
+    <!-- ParseJsonModule -->
+    <string name="module_vflow_data_parse_json_name">Parse JSON</string>
+    <string name="module_vflow_data_parse_json_desc">Extract data from JSON text, supports path syntax (e.g. user.name, users.0.name)</string>
+    <string name="param_vflow_data_parse_json_json_name">JSON Text</string>
+    <string name="param_vflow_data_parse_json_path_name">Path</string>
+    <string name="output_vflow_data_parse_json_first_value_name">First Matched Value</string>
+    <string name="output_vflow_data_parse_json_all_values_name">All Matched Values</string>
+    <string name="error_vflow_data_parse_json_empty">JSON text cannot be empty</string>
+    <string name="error_vflow_data_parse_json_path_empty">Path cannot be empty</string>
+    <string name="error_vflow_data_parse_json_invalid_format">Invalid JSON format</string>
+    <string name="error_vflow_data_parse_json_parse_error">JSON parsing error</string>
+
     <string name="module_vflow_data_comment_name">Comment</string>
     <string name="module_vflow_data_comment_desc">Add comments to document your workflow design. Will be skipped during execution.</string>
     <string name="param_vflow_data_comment_content_name">Comment Content</string>

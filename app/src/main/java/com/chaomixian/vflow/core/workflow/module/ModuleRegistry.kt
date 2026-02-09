@@ -137,6 +137,7 @@ object ModuleRegistry {
         register(TextReplaceModule(), context)
         register(TextExtractModule(), context)
         register(Base64EncodeOrDecodeModule(), context)
+        register(ParseJsonModule(), context)
         register(CommentModule(), context)
         register(FileOperationModule(), context)
 
