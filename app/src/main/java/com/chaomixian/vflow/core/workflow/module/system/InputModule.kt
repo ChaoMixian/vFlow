@@ -49,7 +49,7 @@ class InputModule : BaseModule() {
             nameStringRes = R.string.param_vflow_data_input_inputType_name,
             name = "输入类型",
             staticType = ParameterType.ENUM,
-            defaultValue = R.string.option_vflow_data_input_type_text,
+            defaultValue = appContext.getString(R.string.option_vflow_data_input_type_text),
             options = typeOptions,
             acceptsMagicVariable = false
         ),
@@ -58,7 +58,7 @@ class InputModule : BaseModule() {
             nameStringRes = R.string.param_vflow_data_input_prompt_name,
             name = "提示信息",
             staticType = ParameterType.STRING,
-            defaultValue = R.string.param_vflow_data_input_prompt_default,
+            defaultValue = appContext.getString(R.string.param_vflow_data_input_prompt_default),
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id)
         )
@@ -78,7 +78,7 @@ class InputModule : BaseModule() {
             else -> VTypeRegistry.STRING.id
         }
 
-        val outputNameBase = R.string.output_vflow_data_input_userInput_name
+        val outputNameBase = appContext.getString(R.string.output_vflow_data_input_userInput_name)
         return listOf(OutputDefinition("userInput", "$outputNameBase ($inputType)", outputTypeName))
     }
 
