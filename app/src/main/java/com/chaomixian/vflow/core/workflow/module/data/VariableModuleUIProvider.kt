@@ -197,6 +197,18 @@ class VariableModuleUIProvider(
                     textInputLayout?.editText?.text?.toString() ?: ""
                 }
             }
+            "图像" -> {
+                // 检查是否是变量引用（通过容器 tag）
+                val variableRef = h.valueContainer.tag as? String
+                if (!variableRef.isNullOrBlank()) {
+                    variableRef
+                } else {
+                    // 从输入框读取
+                    val valueContainer = h.valueInputView?.findViewById<ViewGroup>(R.id.input_value_container)
+                    val textInputLayout = valueContainer?.children?.find { it is TextInputLayout } as? TextInputLayout
+                    textInputLayout?.editText?.text?.toString() ?: ""
+                }
+            }
             else -> {
                 val textInputLayout = h.valueInputView as? TextInputLayout
                 textInputLayout?.editText?.text?.toString() ?: ""
@@ -417,6 +429,29 @@ class VariableModuleUIProvider(
                 val editText = TextInputEditText(context).apply {
                     setText(currentValue?.toString() ?: "")
                     inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
+                }
+                val inputLayout = TextInputLayout(context).apply {
+                    addView(editText)
+                }
+                valueContainer.addView(inputLayout)
+                row
+            }
+            "图像" -> {
+                // 图像类型使用 row_editor_input 布局，支持变量选择
+                val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, holder.valueContainer, false)
+                row.findViewById<TextView>(R.id.input_name).text = "值"
+
+                val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
+                val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
+                magicButton.isVisible = true
+                magicButton.setOnClickListener {
+                    holder.onMagicVariableRequested?.invoke("value")
+                }
+
+                // 清除默认的 EditText，添加文本输入框
+                valueContainer.removeAllViews()
+                val editText = TextInputEditText(context).apply {
+                    setText(currentValue?.toString() ?: "")
                 }
                 val inputLayout = TextInputLayout(context).apply {
                     addView(editText)
