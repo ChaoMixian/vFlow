@@ -152,6 +152,7 @@
     <string name="settings_button_run_diagnostic">Run Key Diagnostic</string>
     <string name="settings_button_key_tester">Key Tester</string>
     <string name="settings_button_core_management">vFlow Core Management</string>
+    <string name="settings_button_ui_inspector">UI Inspector</string>
     <string name="settings_switch_keep_alive_unavailable">%1$s (Shizuku not active)</string>
     <string name="settings_switch_auto_accessibility_unavailable">Auto Enable Accessibility Service (Shizuku/Root not authorized)</string>
     <string name="settings_toast_shizuku_watcher_started">Shizuku watcher started</string>

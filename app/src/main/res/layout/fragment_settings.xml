@@ -389,6 +389,14 @@
                     android:layout_marginTop="8dp"
                     android:text="@string/settings_button_core_management" />
 
+                <Button
+                    android:id="@+id/button_ui_inspector"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/settings_button_ui_inspector" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

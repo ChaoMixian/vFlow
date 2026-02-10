@@ -152,6 +152,7 @@
     <string name="settings_button_run_diagnostic">运行按键诊断</string>
     <string name="settings_button_key_tester">按键测试器</string>
     <string name="settings_button_core_management">vFlow Core 管理</string>
+    <string name="settings_button_ui_inspector">UI 检查器</string>
     <string name="settings_switch_keep_alive_unavailable">%1$s (Shizuku未激活)</string>
     <string name="settings_switch_auto_accessibility_unavailable">自动开启无障碍服务 (Shizuku/Root 未授权)</string>
     <string name="settings_toast_shizuku_watcher_started">Shizuku 守护已开启</string>

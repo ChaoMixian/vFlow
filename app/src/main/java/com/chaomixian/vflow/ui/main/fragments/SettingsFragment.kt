@@ -22,6 +22,7 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.ShellDiagnostic
 import com.chaomixian.vflow.services.TriggerService
+import com.chaomixian.vflow.services.UiInspectorService
 import com.chaomixian.vflow.ui.changelog.ChangelogActivity
 import com.chaomixian.vflow.ui.settings.KeyTesterActivity
 import com.chaomixian.vflow.core.locale.LocaleManager
@@ -260,6 +261,13 @@ class SettingsFragment : Fragment() {
         CoreManagementButton.setOnClickListener {
             val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.CoreManagementActivity::class.java)
             startActivity(intent)
+        }
+
+        // 启动UI检查器
+        val uiInspectorButton = view.findViewById<Button>(R.id.button_ui_inspector)
+        uiInspectorButton.setOnClickListener {
+            val intent = Intent(requireContext(), UiInspectorService::class.java)
+            requireContext().startService(intent)
         }
 
         view.findViewById<MaterialCardView>(R.id.card_about).setOnClickListener {
