@@ -583,6 +583,8 @@
     <string name="param_vflow_data_comment_content_name">注释内容</string>
     <string name="module_vflow_network_http_request_name">HTTP 请求</string>
     <string name="module_vflow_network_http_request_desc">发送 HTTP 请求并获取响应</string>
+    <string name="module_vflow_network_feishu_upload_name">飞书上传素材</string>
+    <string name="module_vflow_network_feishu_upload_desc">上传文件到飞书云文档</string>
     <string name="param_vflow_network_http_request_url_name">URL</string>
     <string name="param_vflow_network_http_request_method_name">方法</string>
     <string name="param_vflow_network_http_request_headers_name">请求头</string>

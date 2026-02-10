@@ -153,6 +153,7 @@ object ModuleRegistry {
         register(GetIpAddressModule(), context)
         register(HttpRequestModule(), context)
         register(AIModule(), context)
+        register(FeishuMediaUploadModule(), context)
 
         // 应用与系统
         register(DelayModule(), context)

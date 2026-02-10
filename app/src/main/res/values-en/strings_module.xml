@@ -627,6 +627,8 @@
     <!-- HttpRequestModule -->
     <string name="module_vflow_network_http_request_name">HTTP Request</string>
     <string name="module_vflow_network_http_request_desc">Send HTTP request and get response</string>
+    <string name="module_vflow_network_feishu_upload_name">Feishu Upload Media</string>
+    <string name="module_vflow_network_feishu_upload_desc">Upload files to Feishu cloud documents</string>
     <string name="param_vflow_network_http_request_url_name">URL</string>
     <string name="param_vflow_network_http_request_method_name">Method</string>
     <string name="param_vflow_network_http_request_headers_name">Headers</string>
