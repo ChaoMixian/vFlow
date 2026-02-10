@@ -3,6 +3,7 @@ package com.chaomixian.vflow.core.types.complex
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Parcelable
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
@@ -10,21 +11,28 @@ import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
+import kotlinx.parcelize.IgnoredOnParcel
+import kotlinx.parcelize.Parcelize
 import java.io.File
+import androidx.core.net.toUri
 
 /**
  * 图像对象。
  * 包装一个图片 URI，并提供 width, height, path, size 等属性访问。
  * 使用属性注册表管理属性，消除了重复的 when 语句
  */
-class VImage(val uriString: String) : EnhancedBaseVObject() {
-    override val type = VTypeRegistry.IMAGE
-    override val raw: Any = uriString
-    override val propertyRegistry = Companion.registry
+@Parcelize
+data class VImage(val uriString: String) : EnhancedBaseVObject(), Parcelable {
+    override val type get() = VTypeRegistry.IMAGE
+    override val raw get() = uriString
+    override val propertyRegistry get() = Companion.registry
 
-    // 缓存尺寸信息，避免重复IO
+    // 缓存尺寸信息，避免重复IO（不序列化，因为可以重新计算）
+    @IgnoredOnParcel
     private var _width: Int? = null
+    @IgnoredOnParcel
     private var _height: Int? = null
+    @IgnoredOnParcel
     private var _size: Long? = null
 
     override fun asString(): String = uriString
@@ -93,7 +101,7 @@ class VImage(val uriString: String) : EnhancedBaseVObject() {
             })
             register("name", "文件名", "filename", getter = { host ->
                 val img = host as VImage
-                val name = Uri.parse(img.uriString).lastPathSegment ?: "unknown.jpg"
+                val name = img.uriString.toUri().lastPathSegment ?: "unknown.jpg"
                 VString(name)
             })
         }
