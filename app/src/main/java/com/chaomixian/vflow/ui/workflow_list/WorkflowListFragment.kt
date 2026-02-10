@@ -57,6 +57,9 @@ class WorkflowListFragment : Fragment() {
     private var pendingExportFolderId: String? = null
     private val gson = Gson()
 
+    // 排序状态：false = 默认排序，true = 按名称排序
+    private var isSortedByName = false
+
     // 延迟执行处理器
     private val delayedExecuteHandler = Handler(Looper.getMainLooper())
 
@@ -353,6 +356,11 @@ class WorkflowListFragment : Fragment() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.menu_sort_by_name -> {
+                isSortedByName = !isSortedByName
+                loadData()
+                true
+            }
             R.id.menu_create_folder -> {
                 showCreateFolderDialog()
                 true
@@ -435,14 +443,30 @@ class WorkflowListFragment : Fragment() {
         // 构建混合列表：文件夹在前，工作流在后（不在文件夹中的）
         val items = mutableListOf<WorkflowListItem>()
 
+        // 根据排序状态决定排序方式
+        val sortedFolders = if (isSortedByName) {
+            folders.sortedBy { it.name }
+        } else {
+            folders
+        }
+
         // 添加文件夹（带有工作流数量）
-        folders.forEach { folder ->
+        sortedFolders.forEach { folder ->
             val count = workflows.count { it.folderId == folder.id }
             items.add(WorkflowListItem.FolderItem(folder, count))
         }
 
-        // 添加不在文件夹中的工作流
-        workflows.filter { it.folderId == null }.forEach { workflow ->
+        // 过滤出不在文件夹中的工作流
+        val rootWorkflows = workflows.filter { it.folderId == null }
+
+        // 根据排序状态决定排序方式
+        val sortedWorkflows = if (isSortedByName) {
+            rootWorkflows.sortedBy { it.name }
+        } else {
+            rootWorkflows
+        }
+
+        sortedWorkflows.forEach { workflow ->
             items.add(WorkflowListItem.WorkflowItem(workflow))
         }
 

@@ -8,9 +8,16 @@
         app:iconTint="?attr/colorControlNormal"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/menu_sort_by_name"
+        android:icon="@drawable/rounded_auto_awesome_motion_24"
+        android:title="按名称排序"
+        app:iconTint="?attr/colorControlNormal"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/menu_more_options"
         android:icon="@drawable/ic_more_vert"
         android:title="更多选项"
+        app:iconTint="?attr/colorControlNormal"
         app:showAsAction="ifRoom">
         <menu>
             <item
