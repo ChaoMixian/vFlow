@@ -114,3 +114,13 @@ The most common way to contribute to vFlow is by adding new modules. Steps:
 ## 📄 License
 
 This project is licensed under the [GPL License](LICENSE).
+
+## 💰 Sponsorship
+
+vFlow is still developing and lags significantly in functionality compared to mature software. Currently, we are operating on a voluntary basis and **do not accept sponsorships**. Thank you.
+
+Sponsor List (not through the vFlow project, in chronological order):
+```
+鲨鱼辣椒    RMB 18.88   2026/01/29
+罗密欧的沉默  RMB 26.66   2026/02/10
+```
