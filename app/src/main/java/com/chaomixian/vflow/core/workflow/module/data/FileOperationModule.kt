@@ -117,6 +117,8 @@ class FileOperationModule : BaseModule() {
         return when (operation) {
             "读取" -> listOf(
                 OutputDefinition("content", "文件内容", VTypeRegistry.STRING.id),
+                OutputDefinition("file_name", "文件名", VTypeRegistry.STRING.id),
+                OutputDefinition("mime_type", "MIME类型", VTypeRegistry.STRING.id),
                 OutputDefinition("size", "文件大小", VTypeRegistry.NUMBER.id)
             )
             else -> listOf(
@@ -215,6 +217,10 @@ class FileOperationModule : BaseModule() {
         val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure("执行错误", "无效的文件路径")
 
         return try {
+            // 提取文件名和MIME类型
+            val fileName = getFileName(context, uri) ?: "unknown"
+            val mimeType = getMimeType(context, uri) ?: "application/octet-stream"
+
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream, encoding)).use { reader ->
                     val content = StringBuilder()
@@ -230,6 +236,8 @@ class FileOperationModule : BaseModule() {
 
                     ExecutionResult.Success(mapOf(
                         "content" to content.toString(),
+                        "file_name" to fileName,
+                        "mime_type" to mimeType,
                         "size" to size
                     ))
                 }
@@ -378,6 +386,43 @@ class FileOperationModule : BaseModule() {
             }
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * 从 URI 获取文件名
+     */
+    private fun getFileName(context: Context, uri: Uri): String? {
+        return try {
+            // 尝试使用 ContentResolver.query 获取显示名称
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        cursor.getString(nameIndex)
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            null
+        } ?: run {
+            // 备选：从 URI 路径提取
+            uri.lastPathSegment ?: uri.path?.substringAfterLast('/')
+        }
+    }
+
+    /**
+     * 获取文件的 MIME 类型
+     */
+    private fun getMimeType(context: Context, uri: Uri): String? {
+        return try {
+            context.contentResolver.getType(uri)
+        } catch (e: Exception) {
+            null
         }
     }
 }
