@@ -24,16 +24,16 @@
             android:orientation="horizontal"
             android:padding="8dp">
             <ImageView
+                android:id="@+id/slot_icon_1"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_play_arrow"
-                android:tint="#6200EE" />
+                android:src="@drawable/ic_play_arrow" />
             <TextView
                 android:id="@+id/slot_name_1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textColor="#000000"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:maxLines="1"
@@ -51,16 +51,16 @@
             android:orientation="horizontal"
             android:padding="8dp">
             <ImageView
+                android:id="@+id/slot_icon_2"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_play_arrow"
-                android:tint="#6200EE" />
+                android:src="@drawable/ic_play_arrow" />
             <TextView
                 android:id="@+id/slot_name_2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textColor="#000000"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:maxLines="1"
@@ -86,16 +86,16 @@
             android:orientation="horizontal"
             android:padding="8dp">
             <ImageView
+                android:id="@+id/slot_icon_3"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_play_arrow"
-                android:tint="#6200EE" />
+                android:src="@drawable/ic_play_arrow" />
             <TextView
                 android:id="@+id/slot_name_3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textColor="#000000"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:maxLines="1"
@@ -113,16 +113,16 @@
             android:orientation="horizontal"
             android:padding="8dp">
             <ImageView
+                android:id="@+id/slot_icon_4"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_play_arrow"
-                android:tint="#6200EE" />
+                android:src="@drawable/ic_play_arrow" />
             <TextView
                 android:id="@+id/slot_name_4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textColor="#000000"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:maxLines="1"

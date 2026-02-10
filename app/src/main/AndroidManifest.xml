@@ -265,16 +265,30 @@
             android:label="@string/title_shortcut_config"
             android:theme="@style/Theme.vFlow" />
 
+        <!-- Widget 4x2 (默认) -->
         <receiver
             android:name=".ui.widget.WorkflowWidgetProvider"
             android:exported="true"
-            android:label="vFlow 列表 (4x2)">
+            android:label="vFlow 小组件 (4x2)">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info_4x2" />
+        </receiver>
+
+        <!-- Widget 2x2 -->
+        <receiver
+            android:name=".ui.widget.WorkflowWidgetProvider2x2"
+            android:exported="true"
+            android:label="vFlow 小组件 (2x2)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_2x2" />
         </receiver>
 
         <activity
