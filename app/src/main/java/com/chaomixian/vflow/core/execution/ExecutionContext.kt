@@ -51,7 +51,7 @@ data class ExecutionContext(
     val services: ExecutionServices,
     val allSteps: List<ActionStep>,
     val currentStepIndex: Int,
-    val stepOutputs: Map<String, Map<String, VObject>>,
+    val stepOutputs: MutableMap<String, Map<String, VObject>>,
     val loopStack: Stack<LoopState>,
     val triggerData: Parcelable? = null,
     val namedVariables: MutableMap<String, VObject>,

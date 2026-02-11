@@ -504,6 +504,7 @@ object WorkflowExecutor {
                     when (val signal = result.signal) {
                         is ExecutionSignal.Jump -> {
                             pc = signal.pc
+                            continue
                         }
                         is ExecutionSignal.Loop -> {
                             when (signal.action) {

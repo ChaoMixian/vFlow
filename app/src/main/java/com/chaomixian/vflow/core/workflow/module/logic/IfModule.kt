@@ -175,16 +175,17 @@ class IfModule : BaseBlockModule() {
         val result = ConditionEvaluator.evaluateCondition(input1, operator, value1, value2)
         onProgress(ProgressUpdate("条件判断: $result (操作: $operator)"))
 
+        // 无论条件结果如何，都需要更新 stepOutputs，以便 ElseModule 能正确读取
+        context.stepOutputs[context.allSteps[context.currentStepIndex].id] = mapOf("result" to VBoolean(result))
+
         if (!result) {
             val jumpTo = BlockNavigator.findNextBlockPosition(context.allSteps, context.currentStepIndex, setOf(ELSE_ID, IF_END_ID))
             if (jumpTo != -1) {
                 return ExecutionResult.Signal(ExecutionSignal.Jump(jumpTo))
             }
         }
-        return ExecutionResult.Success(mapOf("result" to VBoolean(result)))
+        return ExecutionResult.Success()
     }
-
-    // --- [内聚] 以下为移入模块内部的私有辅助方法 ---
 
     private fun getOperatorsForVariableType(variableTypeName: String?): List<String> {
         return when (variableTypeName) {
