@@ -473,6 +473,13 @@
     <!-- vflow.variable.create - Create Variable -->
     <string name="module_vflow_variable_create_name">Create Variable</string>
     <string name="module_vflow_variable_create_desc">Create a new variable, optionally name it for later modification or reading</string>
+    <string name="module_vflow_variable_load_name">Load Variables</string>
+    <string name="module_vflow_variable_load_desc">Obtain usage rights for named variables from another workflow</string>
+    <string name="param_vflow_variable_load_workflow_id_name">Workflow</string>
+    <string name="param_vflow_variable_load_variable_names_name">Variables</string>
+    <string name="param_vflow_variable_load_mode_name">Mode</string>
+    <string name="param_vflow_variable_load_mode_share">Share</string>
+    <string name="param_vflow_variable_load_mode_copy">Copy</string>
     <string name="param_vflow_variable_create_variableName_name">Variable Name (Optional)</string>
     <string name="param_vflow_variable_create_type_name">Variable Type</string>
     <string name="param_vflow_variable_create_value_name">Value</string>

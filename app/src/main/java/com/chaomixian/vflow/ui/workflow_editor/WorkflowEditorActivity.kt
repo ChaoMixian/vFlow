@@ -510,6 +510,8 @@ class WorkflowEditorActivity : BaseActivity() {
     private fun getAvailableNamedVariables(upToPosition: Int): Map<String, List<MagicVariableItem>> {
         // 使用 LinkedHashMap 确保变量按定义顺序排列
         val availableNamedVariables = linkedMapOf<String, MagicVariableItem>()
+
+        // 收集 CreateVariableModule 创建的变量
         actionSteps.subList(0, upToPosition)
             .filter { it.moduleId == CreateVariableModule().id }
             .forEach { step ->
@@ -528,6 +530,49 @@ class WorkflowEditorActivity : BaseActivity() {
                     )
                 }
             }
+
+        // 收集 LoadVariablesModule 声明的变量
+        val workflowManager = WorkflowManager(this)
+        actionSteps.subList(0, upToPosition)
+            .filter { it.moduleId == "vflow.variable.load" }
+            .forEach { step ->
+                val workflowId = step.parameters["workflow_id"] as? String
+                val variableNamesStr = step.parameters["variable_names"] as? String ?: ""
+                val variableNames = variableNamesStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
+
+                if (!workflowId.isNullOrBlank() && variableNames.isNotEmpty()) {
+                    // 获取源工作流
+                    val sourceWorkflow = workflowManager.getWorkflow(workflowId)
+                    if (sourceWorkflow != null) {
+                        // 从源工作流的 CreateVariableModule 获取变量类型
+                        val sourceVariables = sourceWorkflow.steps
+                            .filter { it.moduleId == CreateVariableModule().id }
+                            .associate { step ->
+                                val name = step.parameters["variableName"] as? String ?: ""
+                                val type = step.parameters["type"] as? String ?: getString(R.string.variable_type_text)
+                                name to type
+                            }
+
+                        // 添加 LoadVariablesModule 声明的变量
+                        variableNames.forEach { varName ->
+                            // 避免重复添加（如果已经存在则跳过）
+                            if (!availableNamedVariables.containsKey(varName)) {
+                                val varType = sourceVariables[varName] ?: getString(R.string.variable_type_text)
+                                val typeEnum = com.chaomixian.vflow.core.execution.VariableType.fromDisplayName(varType)
+                                val typeId = typeEnum?.typeId ?: "vflow.type.any"
+
+                                availableNamedVariables[varName] = MagicVariableItem(
+                                    variableReference = "[[$varName]]",
+                                    variableName = varName,
+                                    originDescription = getString(R.string.error_named_variable, varType),
+                                    typeId = typeId
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
         // 将所有命名变量归入一个固定的组
         return if (availableNamedVariables.isNotEmpty()) {
             mapOf(getString(R.string.editor_group_named_variables) to availableNamedVariables.values.toList())

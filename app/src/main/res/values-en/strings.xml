@@ -462,6 +462,14 @@
     <string name="label_battery_threshold">Battery Threshold</string>
     <string name="label_workflow_not_selected">Not Selected</string>
     <string name="button_select_workflow">Select Workflow</string>
+    <string name="label_load_variables_select_workflow">Select Source Workflow</string>
+    <string name="label_load_variables_select_variables">Select Variables to Use</string>
+    <string name="label_load_variables_mode">Mode</string>
+    <string name="label_mode_share">Share</string>
+    <string name="label_mode_copy">Copy</string>
+    <string name="help_load_variables_share">Share mode: Variables are shared in the workflow call chain</string>
+    <string name="help_load_variables_copy">Copy mode: Copy initial values from source workflow</string>
+    <string name="help_no_variables">No named variables in this workflow</string>
     <string name="button_set_region">Set Region</string>
     <string name="button_select_region">Select Region</string>
     <string name="button_clear">Clear</string>

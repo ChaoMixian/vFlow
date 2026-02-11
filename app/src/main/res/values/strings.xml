@@ -462,6 +462,14 @@
     <string name="label_battery_threshold">电量阈值</string>
     <string name="label_workflow_not_selected">未选择</string>
     <string name="button_select_workflow">选择工作流</string>
+    <string name="label_load_variables_select_workflow">选择源工作流</string>
+    <string name="label_load_variables_select_variables">选择要使用的变量</string>
+    <string name="label_load_variables_mode">获取模式</string>
+    <string name="label_mode_share">共享</string>
+    <string name="label_mode_copy">复制</string>
+    <string name="help_load_variables_share">共享模式：变量在工作流调用链中共享</string>
+    <string name="help_load_variables_copy">复制模式：从源工作流复制初始值</string>
+    <string name="help_no_variables">该工作流中没有命名变量</string>
     <string name="button_set_region">点击设置区域</string>
     <string name="button_select_region">选择区域</string>
     <string name="button_clear">清除</string>

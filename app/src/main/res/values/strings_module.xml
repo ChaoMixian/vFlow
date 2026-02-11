@@ -416,6 +416,13 @@
 
     <string name="module_vflow_variable_create_name">创建变量</string>
     <string name="module_vflow_variable_create_desc">创建一个新的变量，可选择为其命名以便后续修改或读取</string>
+    <string name="module_vflow_variable_load_name">载入变量</string>
+    <string name="module_vflow_variable_load_desc">从另一个工作流获取命名变量的使用权</string>
+    <string name="param_vflow_variable_load_workflow_id_name">工作流</string>
+    <string name="param_vflow_variable_load_variable_names_name">变量</string>
+    <string name="param_vflow_variable_load_mode_name">模式</string>
+    <string name="param_vflow_variable_load_mode_share">共享</string>
+    <string name="param_vflow_variable_load_mode_copy">复制</string>
     <string name="param_vflow_variable_create_variableName_name">变量名称 (可选)</string>
     <string name="param_vflow_variable_create_type_name">变量类型</string>
     <string name="param_vflow_variable_create_value_name">值</string>
