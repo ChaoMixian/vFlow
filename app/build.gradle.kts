@@ -17,7 +17,7 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = 32
-        versionName = "1.4.3"
+        versionName = "1.4.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -118,6 +118,9 @@ dependencies {
 
     // Lua 脚本解释器引擎
     implementation("org.luaj:luaj-jse:3.0.1")
+
+    // Rhino JavaScript 引擎
+    implementation("org.mozilla:rhino:1.9.0")
 
     // Shizuku API
     implementation("dev.rikka.shizuku:api:13.1.5")

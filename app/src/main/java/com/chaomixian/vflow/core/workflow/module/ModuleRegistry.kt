@@ -162,6 +162,7 @@ object ModuleRegistry {
         register(QuickViewModule(), context)
         register(ToastModule(), context)
         register(LuaModule(), context)
+        register(JsModule(), context)
         register(LaunchAppModule(), context)
         register(CloseAppModule(), context)
         register(GetClipboardModule(), context)

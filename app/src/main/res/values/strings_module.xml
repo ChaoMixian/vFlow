@@ -1348,6 +1348,20 @@
     <string name="msg_vflow_system_lua_executing">正在执行Lua脚本...</string>
     <string name="msg_vflow_system_lua_completed">脚本执行完成</string>
 
+    <!-- vflow.system.js - JavaScript Script Module -->
+    <string name="module_vflow_system_js_name">JavaScript脚本</string>
+    <string name="module_vflow_system_js_desc">执行一段JavaScript脚本，可调用其他模块功能。</string>
+    <string name="param_vflow_system_js_script_name">JavaScript 脚本</string>
+    <string name="param_vflow_system_js_inputs_name">脚本输入</string>
+    <string name="output_vflow_system_js_outputs_name">脚本返回值</string>
+    <string name="summary_vflow_system_js_prefix">执行JS脚本: </string>
+    <string name="error_vflow_system_js_script_empty">脚本错误</string>
+    <string name="error_vflow_system_js_script_empty_desc">JavaScript脚本内容不能为空。</string>
+    <string name="error_vflow_system_js_execution_failed">JavaScript脚本执行失败</string>
+    <string name="msg_vflow_system_js_preparing">正在准备JavaScript环境...</string>
+    <string name="msg_vflow_system_js_executing">正在执行JavaScript脚本...</string>
+    <string name="msg_vflow_system_js_completed">脚本执行完成</string>
+
     <string name="error_vflow_core_force_stop_app_not_found">应用未运行</string>
     <string name="module_vflow_core_front_app_desc">获取当前前台应用的包名。</string>
     <string name="module_vflow_core_front_app_name">获取前台应用</string>

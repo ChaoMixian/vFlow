@@ -1385,6 +1385,21 @@
     <string name="msg_vflow_system_lua_preparing">Preparing Lua environment...</string>
     <string name="msg_vflow_system_lua_executing">Executing Lua script...</string>
     <string name="msg_vflow_system_lua_completed">Script execution completed</string>
+
+    <!-- vflow.system.js - JavaScript Script Module -->
+    <string name="module_vflow_system_js_name">JavaScript Script</string>
+    <string name="module_vflow_system_js_desc">Execute JavaScript script, can call other module functions.</string>
+    <string name="param_vflow_system_js_script_name">JavaScript Script</string>
+    <string name="param_vflow_system_js_inputs_name">Script Inputs</string>
+    <string name="output_vflow_system_js_outputs_name">Script Return Value</string>
+    <string name="summary_vflow_system_js_prefix">Execute JS script: </string>
+    <string name="error_vflow_system_js_script_empty">Script Error</string>
+    <string name="error_vflow_system_js_script_empty_desc">JavaScript script content cannot be empty.</string>
+    <string name="error_vflow_system_js_execution_failed">JavaScript Script Execution Failed</string>
+    <string name="msg_vflow_system_js_preparing">Preparing JavaScript environment...</string>
+    <string name="msg_vflow_system_js_executing">Executing JavaScript script...</string>
+    <string name="msg_vflow_system_js_completed">Script execution completed</string>
+
     <string name="error_vflow_core_capture_screen_failed">Screenshot failed</string>
     <string name="error_vflow_core_input_text_empty">Text content cannot be empty</string>
     <string name="error_vflow_core_not_connected">Core not connected</string>
