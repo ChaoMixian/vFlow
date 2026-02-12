@@ -87,7 +87,7 @@ object ShortcutHelper {
         }
 
         // 获取自定义名称，如果没有则使用工作流名称
-        val shortLabel = (workflow.shortcutName?.takeIf { it.isNotEmpty() } ?: workflow.name).take(10)
+        val shortLabel = workflow.shortcutName?.takeIf { it.isNotEmpty() } ?: workflow.name
         val longLabel = workflow.shortcutName?.takeIf { it.isNotEmpty() } ?: workflow.name
 
         // 获取自定义图标，如果没有则使用默认图标

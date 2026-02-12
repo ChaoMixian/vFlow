@@ -32,15 +32,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/hint_shortcut_name"
-                app:counterEnabled="true"
-                app:counterMaxLength="20">
+                app:counterEnabled="true">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_text_shortcut_name"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLength="20" />
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textview.MaterialTextView
