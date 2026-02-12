@@ -26,6 +26,7 @@ class PickerHandler(
     private val appPickerLauncher: ActivityResultLauncher<Intent>,
     private val filePickerLauncher: ActivityResultLauncher<Array<String>>,
     private val mediaPickerLauncher: ActivityResultLauncher<Array<String>>,
+    private val directoryPickerLauncher: ActivityResultLauncher<Uri?>,
     private val onUpdateParameters: (Map<String, Any?>) -> Unit
 ) {
     // 当前正在处理的输入定义，用于结果回调
@@ -46,6 +47,7 @@ class PickerHandler(
             PickerType.TIME -> handleTimePicker(inputDef)
             PickerType.DATETIME -> handleDateTimePicker(inputDef)
             PickerType.FILE -> handleFilePicker(inputDef)
+            PickerType.DIRECTORY -> handleDirectoryPicker(inputDef)
             PickerType.MEDIA -> handleMediaPicker(inputDef)
             PickerType.NONE -> { currentInputDef = null }
         }
@@ -90,6 +92,34 @@ class PickerHandler(
             android.util.Log.d("PickerHandler", "文件选择已取消或失败")
         } else if (inputDef == null) {
             android.util.Log.e("PickerHandler", "无法找到输入定义来处理文件选择结果")
+        }
+        // 清理状态
+        currentInputDef = null
+        pendingFileInputDef = null
+    }
+
+    /**
+     * 处理目录选择结果
+     */
+    fun handleDirectoryPickerResult(uri: Uri?) {
+        val inputDef = currentInputDef ?: pendingFileInputDef
+        if (uri != null && inputDef != null) {
+            // 持久化 URI 权限
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            try {
+                activity.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            } catch (e: SecurityException) {
+                // 无法获取持久权限，继续使用临时 URI
+            }
+
+            val value = uri.toString()
+            onUpdateParameters(mapOf(inputDef.id to value))
+            android.util.Log.d("PickerHandler", "目录选择成功: $value")
+        } else if (uri == null) {
+            android.util.Log.d("PickerHandler", "目录选择已取消")
+        } else if (inputDef == null) {
+            android.util.Log.e("PickerHandler", "无法找到输入定义来处理目录选择结果")
         }
         // 清理状态
         currentInputDef = null
@@ -200,6 +230,13 @@ class PickerHandler(
         // 保存 pending 输入定义，防止在文件选择过程中被其他操作清空
         pendingFileInputDef = inputDef
         filePickerLauncher.launch(arrayOf("*/*"))
+    }
+
+    private fun handleDirectoryPicker(inputDef: InputDefinition) {
+        // 保存 pending 输入定义，防止在目录选择过程中被其他操作清空
+        pendingFileInputDef = inputDef
+        // 使用 OpenDocumentTree 选择目录
+        directoryPickerLauncher.launch(null)
     }
 
     private fun handleMediaPicker(inputDef: InputDefinition) {

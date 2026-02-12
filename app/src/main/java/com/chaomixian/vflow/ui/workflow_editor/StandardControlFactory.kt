@@ -231,12 +231,12 @@ object StandardControlFactory {
 
     /**
      * 创建带选择器功能的输入框。
-     * 点击输入框时会触发对应的选择器回调。
+     * 点击图标触发选择器，允许用户手动输入。
      * @param context 上下文
      * @param currentValue 当前值
      * @param pickerType 选择器类型
      * @param hint 提示文本
-     * @param onPickerClicked 点击输入框时的回调，返回选择的结果
+     * @param onPickerClicked 点击图标时的回调
      * @return 包含 EditText 和选择图标的容器视图
      */
     fun createPickerInput(
@@ -275,11 +275,10 @@ object StandardControlFactory {
                 else -> currentValue?.toString() ?: ""
             }
             setText(valueText)
-            isFocusable = false
-            isClickable = true
-            setOnClickListener {
-                onPickerClicked?.invoke()
-            }
+            isFocusable = true
+            isFocusableInTouchMode = true
+            // 点击输入框不触发选择器（只能通过图标触发）
+            isClickable = false
         }
 
         textInputLayout.addView(editText)

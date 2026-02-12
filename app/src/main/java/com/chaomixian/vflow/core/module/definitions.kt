@@ -152,6 +152,8 @@ enum class PickerType {
     NONE,
     /** 文件选择器 */
     FILE,
+    /** 目录选择器 */
+    DIRECTORY,
     /** 应用选择器 */
     APP,
     /** Activity 选择器（用于分享等场景） */

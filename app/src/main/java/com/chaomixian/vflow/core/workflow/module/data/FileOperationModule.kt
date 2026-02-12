@@ -4,6 +4,7 @@ package com.chaomixian.vflow.core.workflow.module.data
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.documentfile.provider.DocumentFile
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.BaseModule
@@ -46,9 +47,10 @@ class FileOperationModule : BaseModule() {
             name = "文件路径",
             staticType = ParameterType.STRING,
             defaultValue = "",
-            hint = "点击选择文件",
+            hint = "输入文件路径 或 点击右侧按钮选择",
             pickerType = PickerType.FILE,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            visibility = InputVisibility.notIn("operation", listOf("创建"))
         ),
 
         // 2. 操作类型（使用 CHIP_GROUP）
@@ -58,11 +60,50 @@ class FileOperationModule : BaseModule() {
             name = "操作",
             staticType = ParameterType.ENUM,
             defaultValue = "读取",
-            options = listOf("读取", "写入", "删除", "追加"),
+            options = listOf("读取", "写入", "删除", "追加", "创建"),
             inputStyle = InputStyle.CHIP_GROUP
         ),
 
-        // 3. 写入内容 - 当操作是"写入"或"追加"时显示
+        // 3. 创建操作 - 目录路径（使用目录选择器）
+        InputDefinition(
+            id = "directory_path",
+            nameStringRes = R.string.param_vflow_data_file_operation_directory_path_name,
+            name = "目录路径",
+            staticType = ParameterType.STRING,
+            defaultValue = "",
+            hint = "点击选择目录",
+            pickerType = PickerType.DIRECTORY,
+            acceptsMagicVariable = false,
+            visibility = InputVisibility.whenEquals("operation", "创建")
+        ),
+
+        // 4. 创建操作 - 文件名（支持富文本、魔法变量、命名变量）
+        InputDefinition(
+            id = "file_name",
+            nameStringRes = R.string.param_vflow_data_file_operation_file_name_name,
+            name = "文件名",
+            staticType = ParameterType.STRING,
+            defaultValue = "",
+            hint = "输入文件名（含扩展名）",
+            supportsRichText = true,
+            acceptsMagicVariable = true,
+            acceptsNamedVariable = true,
+            visibility = InputVisibility.whenEquals("operation", "创建")
+        ),
+
+        // 5. 创建操作 - 编码格式
+        InputDefinition(
+            id = "encoding",
+            nameStringRes = R.string.param_vflow_data_file_operation_encoding_name,
+            name = "编码格式",
+            staticType = ParameterType.ENUM,
+            defaultValue = "UTF-8",
+            options = listOf("UTF-8", "GBK", "GB2312", "ISO-8859-1"),
+            inputStyle = InputStyle.CHIP_GROUP,
+            visibility = InputVisibility.whenEquals("operation", "创建")
+        ),
+
+        // 6. 写入内容 - 当操作是"写入"或"追加"时显示
         InputDefinition(
             id = "content",
             nameStringRes = R.string.param_vflow_data_file_operation_content_name,
@@ -74,9 +115,21 @@ class FileOperationModule : BaseModule() {
             visibility = InputVisibility.`in`("operation", listOf("写入", "追加"))
         ),
 
-        // 4. 编码格式 - 当操作是"读取"时显示
+        // 7. 创建操作 - 文件内容（可选）
         InputDefinition(
-            id = "encoding",
+            id = "create_content",
+            nameStringRes = R.string.param_vflow_data_file_operation_create_content_name,
+            name = "文件内容",
+            staticType = ParameterType.STRING,
+            defaultValue = "",
+            hint = "输入文件内容（可选）",
+            supportsRichText = true,
+            visibility = InputVisibility.whenEquals("operation", "创建")
+        ),
+
+        // 8. 编码格式 - 当操作是"读取"时显示
+        InputDefinition(
+            id = "encoding_read",
             nameStringRes = R.string.param_vflow_data_file_operation_encoding_name,
             name = "编码格式",
             staticType = ParameterType.ENUM,
@@ -86,7 +139,7 @@ class FileOperationModule : BaseModule() {
             visibility = InputVisibility.whenEquals("operation", "读取")
         ),
 
-        // 5. 高级设置（折叠区域）
+        // 9. 高级设置（折叠区域）
         InputDefinition(
             id = "overwrite",
             nameStringRes = R.string.param_vflow_data_file_operation_overwrite_name,
@@ -121,6 +174,12 @@ class FileOperationModule : BaseModule() {
                 OutputDefinition("mime_type", "MIME类型", VTypeRegistry.STRING.id),
                 OutputDefinition("size", "文件大小", VTypeRegistry.NUMBER.id)
             )
+            "创建" -> listOf(
+                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
+                OutputDefinition("message", "操作信息", VTypeRegistry.STRING.id),
+                OutputDefinition("file_path", "文件路径", VTypeRegistry.STRING.id),
+                OutputDefinition("file_name", "文件名", VTypeRegistry.STRING.id)
+            )
             else -> listOf(
                 OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
                 OutputDefinition("message", "操作信息", VTypeRegistry.STRING.id)
@@ -129,19 +188,26 @@ class FileOperationModule : BaseModule() {
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val filePath = step.parameters["file_path"] as? String ?: "未选择文件"
         val operation = step.parameters["operation"] as? String ?: "读取"
 
-        // 提取文件名
-        val fileName = try {
-            val uri = android.net.Uri.parse(filePath)
-            uri.lastPathSegment ?: filePath
-        } catch (e: Exception) {
-            // 如果不是有效的 URI，尝试从路径中提取文件名
-            java.io.File(filePath).name.takeIf { it.isNotEmpty() } ?: filePath
+        return when (operation) {
+            "创建" -> {
+                val fileName = step.parameters["file_name"] as? String ?: "未指定文件名"
+                "创建: $fileName"
+            }
+            else -> {
+                val filePath = step.parameters["file_path"] as? String ?: "未选择文件"
+                // 提取文件名
+                val fileName = try {
+                    val uri = filePath.toUri()
+                    uri.lastPathSegment ?: filePath
+                } catch (e: Exception) {
+                    // 如果不是有效的 URI，尝试从路径中提取文件名
+                    java.io.File(filePath).name.takeIf { it.isNotEmpty() } ?: filePath
+                }
+                "$operation: $fileName"
+            }
         }
-
-        return "$operation: $fileName"
     }
 
     /**
@@ -160,13 +226,28 @@ class FileOperationModule : BaseModule() {
                 "读取" -> {
                     newParameters["content"] = ""
                     newParameters.remove("overwrite")
+                    newParameters.remove("directory_path")
+                    newParameters.remove("file_name")
+                    newParameters.remove("create_content")
                 }
                 "删除" -> {
                     newParameters["content"] = ""
                     newParameters.remove("overwrite")
                     newParameters.remove("encoding")
+                    newParameters.remove("directory_path")
+                    newParameters.remove("file_name")
+                    newParameters.remove("create_content")
                 }
                 "写入", "追加" -> {
+                    newParameters.remove("encoding")
+                    newParameters.remove("directory_path")
+                    newParameters.remove("file_name")
+                    newParameters.remove("create_content")
+                }
+                "创建" -> {
+                    newParameters["file_path"] = ""
+                    newParameters["content"] = ""
+                    newParameters.remove("overwrite")
                     newParameters.remove("encoding")
                 }
             }
@@ -178,27 +259,58 @@ class FileOperationModule : BaseModule() {
         val currentStep = context.allSteps.getOrNull(context.currentStepIndex)
             ?: return ExecutionResult.Failure("执行错误", "无法获取当前步骤")
 
-        val filePath = currentStep.parameters["file_path"] as? String
-            ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
-
         val operation = currentStep.parameters["operation"] as? String ?: "读取"
-        val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
-        val content = currentStep.parameters["content"] as? String ?: ""
-        val overwrite = currentStep.parameters["overwrite"] as? Boolean ?: true
-        val bufferSize = (currentStep.parameters["buffer_size"] as? Number)?.toInt() ?: 8192
 
-        return try {
-            when (operation) {
-                "读取" -> executeRead(context.applicationContext, filePath, encoding, bufferSize, onProgress)
-                "写入" -> executeWrite(context.applicationContext, filePath, content, encoding, overwrite, onProgress)
-                "追加" -> executeAppend(context.applicationContext, filePath, content, encoding, onProgress)
-                "删除" -> executeDelete(context.applicationContext, filePath, onProgress)
-                else -> ExecutionResult.Failure("执行错误", "未知的操作类型: $operation")
+        return when (operation) {
+            "创建" -> {
+                val directoryPath = currentStep.parameters["directory_path"] as? String
+                    ?: return ExecutionResult.Failure("执行错误", "未指定目录路径")
+                val fileName = currentStep.parameters["file_name"] as? String
+                    ?: return ExecutionResult.Failure("执行错误", "未指定文件名")
+                val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
+                val content = currentStep.parameters["create_content"] as? String ?: ""
+
+                executeCreate(
+                    context = context.applicationContext,
+                    directoryUri = directoryPath.toUri(),
+                    fileName = fileName,
+                    encoding = encoding,
+                    content = content,
+                    onProgress = onProgress
+                )
             }
-        } catch (e: SecurityException) {
-            ExecutionResult.Failure("权限错误", "没有访问该文件的权限: ${e.message}")
-        } catch (e: Exception) {
-            ExecutionResult.Failure("执行错误", "文件操作失败: ${e.message}")
+            "读取" -> {
+                val filePath = currentStep.parameters["file_path"] as? String
+                    ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
+                val encoding = currentStep.parameters["encoding_read"] as? String ?: "UTF-8"
+                val bufferSize = (currentStep.parameters["buffer_size"] as? Number)?.toInt() ?: 8192
+
+                executeRead(context.applicationContext, filePath, encoding, bufferSize, onProgress)
+            }
+            "写入" -> {
+                val filePath = currentStep.parameters["file_path"] as? String
+                    ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
+                val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
+                val content = currentStep.parameters["content"] as? String ?: ""
+                val overwrite = currentStep.parameters["overwrite"] as? Boolean ?: true
+
+                executeWrite(context.applicationContext, filePath, content, encoding, overwrite, onProgress)
+            }
+            "追加" -> {
+                val filePath = currentStep.parameters["file_path"] as? String
+                    ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
+                val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
+                val content = currentStep.parameters["content"] as? String ?: ""
+
+                executeAppend(context.applicationContext, filePath, content, encoding, onProgress)
+            }
+            "删除" -> {
+                val filePath = currentStep.parameters["file_path"] as? String
+                    ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
+
+                executeDelete(context.applicationContext, filePath, onProgress)
+            }
+            else -> ExecutionResult.Failure("执行错误", "未知的操作类型: $operation")
         }
     }
 
@@ -347,6 +459,51 @@ class FileOperationModule : BaseModule() {
             }
 
             ExecutionResult.Failure("删除失败", "无法删除文件: $filePath")
+        }
+    }
+
+    /**
+     * 执行创建新文件操作
+     */
+    private suspend fun executeCreate(
+        context: Context,
+        directoryUri: Uri,
+        fileName: String,
+        encoding: String,
+        content: String,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ExecutionResult {
+        onProgress(ProgressUpdate("正在创建文件: $fileName..."))
+
+        return try {
+            // 使用 DocumentFile 来创建文件
+            val directoryDoc = DocumentFile.fromTreeUri(context, directoryUri)
+                ?: return ExecutionResult.Failure("创建失败", "无法访问目录")
+
+            val newFile = directoryDoc.createFile("*/*", fileName)
+                ?: return ExecutionResult.Failure("创建失败", "无法创建文件，可能已存在或名称无效")
+
+            // 写入内容
+            if (content.isNotEmpty()) {
+                context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
+                    OutputStreamWriter(outputStream, encoding).use { writer ->
+                        writer.write(content)
+                    }
+                } ?: return ExecutionResult.Failure("创建失败", "无法打开文件进行写入")
+            }
+
+            onProgress(ProgressUpdate("文件创建成功: $fileName", 100))
+
+            ExecutionResult.Success(mapOf(
+                "success" to true,
+                "message" to "文件创建成功: $fileName",
+                "file_path" to newFile.uri.toString(),
+                "file_name" to fileName
+            ))
+        } catch (e: java.io.UnsupportedEncodingException) {
+            ExecutionResult.Failure("编码错误", "不支持的编码格式: $encoding")
+        } catch (e: Exception) {
+            ExecutionResult.Failure("创建失败", "创建文件失败: ${e.message}")
         }
     }
 

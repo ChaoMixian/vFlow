@@ -147,6 +147,23 @@ class WorkflowEditorActivity : BaseActivity() {
         pickerHandler?.handleFilePickerResult(uri)
     }
 
+    // 目录选择器 launcher - 使用 OpenDocumentTree 获取持久权限
+    private val directoryPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let {
+            try {
+                // 持久化 URI 权限
+                contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // 无法获取持久权限，继续使用临时 URI
+            }
+        }
+        pickerHandler?.handleDirectoryPickerResult(uri)
+    }
+
     // 媒体选择器 launcher - 使用 OpenDocument 获取持久权限
     private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         // 尝试获取持久权限
@@ -208,6 +225,7 @@ class WorkflowEditorActivity : BaseActivity() {
             appPickerLauncher = appPickerLauncher,
             filePickerLauncher = filePickerLauncher,
             mediaPickerLauncher = mediaPickerLauncher,
+            directoryPickerLauncher = directoryPickerLauncher,
             onUpdateParameters = { params ->
                 currentEditorSheet?.updateParametersAndRebuildUi(params)
             }

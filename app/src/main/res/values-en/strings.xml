@@ -74,6 +74,9 @@
     <string name="param_vflow_data_file_operation_encoding_name">Encoding</string>
     <string name="param_vflow_data_file_operation_overwrite_name">Overwrite</string>
     <string name="param_vflow_data_file_operation_buffer_size_name">Buffer Size</string>
+    <string name="param_vflow_data_file_operation_directory_path_name">Directory Path</string>
+    <string name="param_vflow_data_file_operation_file_name_name">File Name</string>
+    <string name="param_vflow_data_file_operation_create_content_name">File Content</string>
 
     <string name="workflow_editor_execute">Execute</string>
     <string name="workflow_editor_save">Save</string>
