@@ -37,7 +37,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     private var allSteps: ArrayList<ActionStep>? = null
     private var availableNamedVariables: List<String>? = null
     var onSave: ((ActionStep) -> Unit)? = null
-    var onMagicVariableRequested: ((inputId: String) -> Unit)? = null
+    var onMagicVariableRequested: ((inputId: String, currentParameters: Map<String, Any?>) -> Unit)? = null
     var onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
     private val inputViews = mutableMapOf<String, View>()
     private var customEditorHolder: CustomEditorViewHolder? = null
@@ -295,7 +295,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 onParametersChanged = { readParametersFromUi() },
                 onMagicVariableRequested = { inputId ->
                     readParametersFromUi()
-                    this.onMagicVariableRequested?.invoke(inputId)
+                    this.onMagicVariableRequested?.invoke(inputId, currentParameters)
                 },
                 allSteps = allSteps,
                 onStartActivityForResult = onStartActivityForResult
@@ -542,7 +542,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             allSteps = allSteps,
             onMagicVariableRequested = { inputId ->
                 readParametersFromUi()
-                this.onMagicVariableRequested?.invoke(inputId)
+                this.onMagicVariableRequested?.invoke(inputId, currentParameters)
             },
             onEnumItemSelected = { selectedItem ->
                 // 防止重复触发：只在值真正改变时才处理

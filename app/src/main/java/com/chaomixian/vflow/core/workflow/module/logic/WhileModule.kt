@@ -155,8 +155,7 @@ class WhileModule : BaseBlockModule() {
             context.getString(R.string.summary_vflow_logic_while_prefix),
             input1Pill,
             " ",
-            operatorPill,
-            context.getString(R.string.summary_vflow_logic_while_suffix)
+            operatorPill
         )
 
         if (inputsForStep.any { it.id == "value1" }) {
@@ -176,6 +175,8 @@ class WhileModule : BaseBlockModule() {
             parts.add(value2Pill)
             parts.add(context.getString(R.string.summary_vflow_logic_loop_between_suffix))
         }
+
+        parts.add(context.getString(R.string.summary_vflow_logic_while_suffix))
 
         return PillUtil.buildSpannable(context, *parts.toTypedArray())
     }
