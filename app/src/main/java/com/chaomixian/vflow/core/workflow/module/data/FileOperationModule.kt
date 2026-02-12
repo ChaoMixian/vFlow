@@ -71,7 +71,7 @@ class FileOperationModule : BaseModule() {
             name = "目录路径",
             staticType = ParameterType.STRING,
             defaultValue = "",
-            hint = "点击选择目录",
+            hint = "输入目录路径 或 点击选择",
             pickerType = PickerType.DIRECTORY,
             acceptsMagicVariable = false,
             visibility = InputVisibility.whenEquals("operation", "创建")
@@ -272,7 +272,7 @@ class FileOperationModule : BaseModule() {
 
                 executeCreate(
                     context = context.applicationContext,
-                    directoryUri = directoryPath.toUri(),
+                    directoryPath = directoryPath,
                     fileName = fileName,
                     encoding = encoding,
                     content = content,
@@ -467,7 +467,7 @@ class FileOperationModule : BaseModule() {
      */
     private suspend fun executeCreate(
         context: Context,
-        directoryUri: Uri,
+        directoryPath: String,
         fileName: String,
         encoding: String,
         content: String,
@@ -476,35 +476,127 @@ class FileOperationModule : BaseModule() {
         onProgress(ProgressUpdate("正在创建文件: $fileName..."))
 
         return try {
-            // 使用 DocumentFile 来创建文件
-            val directoryDoc = DocumentFile.fromTreeUri(context, directoryUri)
-                ?: return ExecutionResult.Failure("创建失败", "无法访问目录")
+            if (isFileUri(directoryPath)) {
+                // 使用传统 File API 处理 file:// 路径
+                executeCreateWithFileApi(context, directoryPath, fileName, encoding, content, onProgress)
+            } else {
+                // 使用 DocumentFile API 处理 content:// 路径
+                val directoryUri = parseDirectoryUri(context, directoryPath)
+                    ?: return ExecutionResult.Failure("执行错误", "无效的目录路径: $directoryPath")
 
-            val newFile = directoryDoc.createFile("*/*", fileName)
-                ?: return ExecutionResult.Failure("创建失败", "无法创建文件，可能已存在或名称无效")
-
-            // 写入内容
-            if (content.isNotEmpty()) {
-                context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
-                    OutputStreamWriter(outputStream, encoding).use { writer ->
-                        writer.write(content)
-                    }
-                } ?: return ExecutionResult.Failure("创建失败", "无法打开文件进行写入")
+                executeCreateWithDocumentFile(context, directoryUri, fileName, encoding, content, onProgress)
             }
-
-            onProgress(ProgressUpdate("文件创建成功: $fileName", 100))
-
-            ExecutionResult.Success(mapOf(
-                "success" to true,
-                "message" to "文件创建成功: $fileName",
-                "file_path" to newFile.uri.toString(),
-                "file_name" to fileName
-            ))
         } catch (e: java.io.UnsupportedEncodingException) {
             ExecutionResult.Failure("编码错误", "不支持的编码格式: $encoding")
         } catch (e: Exception) {
             ExecutionResult.Failure("创建失败", "创建文件失败: ${e.message}")
         }
+    }
+
+    /**
+     * 使用 DocumentFile API 创建文件（处理 content:// URI）
+     */
+    private suspend fun executeCreateWithDocumentFile(
+        context: Context,
+        directoryUri: Uri,
+        fileName: String,
+        encoding: String,
+        content: String,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ExecutionResult {
+        val directoryDoc = DocumentFile.fromTreeUri(context, directoryUri)
+            ?: return ExecutionResult.Failure("创建失败", "无法访问目录")
+
+        val newFile = directoryDoc.createFile("*/*", fileName)
+            ?: return ExecutionResult.Failure("创建失败", "无法创建文件，可能已存在或名称无效")
+
+        // 写入内容
+        if (content.isNotEmpty()) {
+            context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
+                OutputStreamWriter(outputStream, encoding).use { writer ->
+                    writer.write(content)
+                }
+            } ?: return ExecutionResult.Failure("创建失败", "无法打开文件进行写入")
+        }
+
+        onProgress(ProgressUpdate("文件创建成功: $fileName", 100))
+
+        return ExecutionResult.Success(mapOf(
+            "success" to true,
+            "message" to "文件创建成功: $fileName",
+            "file_path" to newFile.uri.toString(),
+            "file_name" to fileName
+        ))
+    }
+
+    /**
+     * 使用传统 File API 创建文件（处理 file:// 路径）
+     */
+    private suspend fun executeCreateWithFileApi(
+        context: Context,
+        directoryPath: String,
+        fileName: String,
+        encoding: String,
+        content: String,
+        onProgress: suspend (ProgressUpdate) -> Unit
+    ): ExecutionResult {
+        // 解析 file:// 路径
+        val dirPath = directoryPath.removePrefix("file://")
+        val directory = java.io.File(dirPath)
+
+        if (!directory.exists()) {
+            return ExecutionResult.Failure("创建失败", "目录不存在: $dirPath")
+        }
+
+        if (!directory.isDirectory) {
+            return ExecutionResult.Failure("创建失败", "路径不是目录: $dirPath")
+        }
+
+        val newFile = java.io.File(directory, fileName)
+
+        // 检查文件是否已存在
+        if (newFile.exists()) {
+            return ExecutionResult.Failure("创建失败", "文件已存在: $fileName")
+        }
+
+        // 创建文件并写入内容
+        if (content.isNotEmpty()) {
+            newFile.writeText(content, java.nio.charset.Charset.forName(encoding))
+        } else {
+            newFile.createNewFile()
+        }
+
+        onProgress(ProgressUpdate("文件创建成功: $fileName", 100))
+
+        return ExecutionResult.Success(mapOf(
+            "success" to true,
+            "message" to "文件创建成功: $fileName",
+            "file_path" to newFile.toURI().toString(),
+            "file_name" to fileName
+        ))
+    }
+
+    /**
+     * 解析目录路径为 URI
+     * 对于 file:// 路径，返回 null 并在调用处使用 File API
+     */
+    private fun parseDirectoryUri(context: Context, path: String): Uri? {
+        return try {
+            when {
+                path.startsWith("content://") -> path.toUri()
+                path.startsWith("file://") -> null // 需要使用 File API
+                else -> Uri.fromFile(java.io.File(path))
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 判断是否为 file:// URI（需要使用传统 File API）
+     */
+    private fun isFileUri(path: String): Boolean {
+        return path.startsWith("file://")
     }
 
     /**
