@@ -154,20 +154,31 @@ class GKDTriggerModule : BaseModule() {
         val subscriptionUrl = step.parameters["subscriptionUrl"]?.toString() ?: ""
         val subscriptionFile = step.parameters["subscriptionFile"]?.toString() ?: ""
 
-        val displayText = when {
-            subscriptionUrl.isNotEmpty() -> subscriptionUrl
-            subscriptionFile.isNotEmpty() -> subscriptionFile
-            else -> "GKD订阅触发"
+        // 确定要显示的文本和参数ID
+        val (displayText, paramId, paramValue) = when {
+            subscriptionUrl.isNotEmpty() -> Triple(
+                subscriptionUrl,
+                "subscriptionUrl",
+                subscriptionUrl
+            )
+            subscriptionFile.isNotEmpty() -> Triple(
+                // 对于文件路径，只显示文件名
+                subscriptionFile.substringAfterLast("/"),
+                "subscriptionFile",
+                subscriptionFile
+            )
+            else -> Triple("GKD订阅触发", "", null)
         }
 
-        val pill = PillUtil.createPillFromParam(
-            step.parameters["subscriptionUrl"] ?: step.parameters["subscriptionFile"],
-            getInputs().find { it.id == "subscriptionUrl" }
-        )
+        // 创建pill
+        val pill = if (paramValue != null) {
+            val inputDef = getInputs().find { it.id == paramId }
+            PillUtil.createPillFromParam(displayText, inputDef)
+        } else null
 
         val prefix = context.getString(R.string.summary_vflow_trigger_gkd_prefix)
         val suffix = context.getString(R.string.summary_vflow_trigger_gkd_suffix)
 
-        return PillUtil.buildSpannable(context, prefix, pill, " ", suffix)
+        return PillUtil.buildSpannable(context, prefix, pill ?: "", " ", suffix)
     }
 }
