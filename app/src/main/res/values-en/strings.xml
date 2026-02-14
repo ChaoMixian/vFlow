@@ -629,6 +629,8 @@
     <string name="permission_desc_storage">Allows the app to read and write scripts and resource files in /sdcard/vFlow directory.</string>
     <string name="permission_name_sms">SMS Permission</string>
     <string name="permission_desc_sms">Used to receive and read SMS messages to trigger workflows. Includes receive and read SMS permissions.</string>
+    <string name="permission_name_read_phone_state">Phone State</string>
+    <string name="permission_desc_read_phone_state">Used to listen for phone state changes to implement the call trigger feature.</string>
     <string name="permission_name_bluetooth">Bluetooth Permission</string>
     <string name="permission_desc_bluetooth">Used to control device Bluetooth on/off state.</string>
     <string name="permission_name_write_settings">Modify System Settings</string>

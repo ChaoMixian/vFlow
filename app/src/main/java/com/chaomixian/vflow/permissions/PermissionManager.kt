@@ -201,11 +201,21 @@ object PermissionManager {
         descriptionStringRes = R.string.permission_desc_usage_stats
     )
 
+    // 电话状态权限
+    val READ_PHONE_STATE = Permission(
+        id = Manifest.permission.READ_PHONE_STATE,
+        name = "电话状态",
+        description = "用于监听电话状态变化，以实现电话触发器功能。",
+        type = PermissionType.RUNTIME,
+        nameStringRes = R.string.permission_name_read_phone_state,
+        descriptionStringRes = R.string.permission_desc_read_phone_state
+    )
+
     // 所有已知特殊权限的列表，用于 UI 展示和快速查找
     val allKnownPermissions = listOf(
         CORE, CORE_ROOT,
         ACCESSIBILITY, NOTIFICATIONS, OVERLAY, NOTIFICATION_LISTENER_SERVICE,
-        STORAGE, SMS, BLUETOOTH, WRITE_SETTINGS, LOCATION, SHIZUKU,
+        STORAGE, SMS, READ_PHONE_STATE, BLUETOOTH, WRITE_SETTINGS, LOCATION, SHIZUKU,
         IGNORE_BATTERY_OPTIMIZATIONS, EXACT_ALARM, ROOT, USAGE_STATS
     )
 

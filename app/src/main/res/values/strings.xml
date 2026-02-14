@@ -647,6 +647,8 @@
     <string name="permission_desc_root">允许应用通过超级用户权限执行底层系统命令。</string>
     <string name="permission_name_usage_stats">使用情况访问</string>
     <string name="permission_desc_usage_stats">允许 vFlow 读取应用的使用统计信息（如使用时长、最后使用时间），提高 Agent 行为准确度。</string>
+    <string name="permission_name_read_phone_state">电话状态</string>
+    <string name="permission_desc_read_phone_state">用于监听电话状态变化，以实现电话触发器功能。</string>
 
     <!-- Folder -->
     <string name="folder_icon">文件夹图标</string>

@@ -88,6 +88,7 @@ object ModuleRegistry {
         register(WifiTriggerModule(), context)
         register(BluetoothTriggerModule(), context)
         register(SmsTriggerModule(), context)
+        register(CallTriggerModule(), context)
         register(NotificationTriggerModule(), context)
         register(ElementTriggerModule(), context)
         register(GKDTriggerModule(), context)

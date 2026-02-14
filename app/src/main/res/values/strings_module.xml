@@ -378,6 +378,17 @@
     <string name="option_vflow_trigger_sms_content_contains">内容包含</string>
     <string name="option_vflow_trigger_sms_content_not_contains">内容不包含</string>
     <string name="option_vflow_trigger_sms_content_regex">正则匹配</string>
+    <string name="module_vflow_trigger_call_name">电话触发</string>
+    <string name="module_vflow_trigger_call_desc">当有来电、通话接通或挂断时触发工作流</string>
+    <string name="option_vflow_trigger_call_type_any">任意</string>
+    <string name="option_vflow_trigger_call_type_incoming">来电</string>
+    <string name="option_vflow_trigger_call_type_answered">接通</string>
+    <string name="option_vflow_trigger_call_type_ended">挂断</string>
+    <string name="param_vflow_trigger_call_type_name">触发类型</string>
+    <string name="output_vflow_trigger_call_state_name">通话状态</string>
+    <string name="summary_vflow_trigger_call_prefix">当</string>
+    <string name="summary_vflow_trigger_call_suffix">时触发</string>
+    <string name="msg_vflow_trigger_call_received">收到电话事件</string>
     <string name="module_vflow_trigger_wifi_name">Wi-Fi触发器</string>
     <string name="module_vflow_trigger_wifi_desc">当Wi-Fi状态或网络连接变化时触发工作流</string>
     <string name="param_vflow_trigger_wifi_trigger_type_name">触发类型</string>

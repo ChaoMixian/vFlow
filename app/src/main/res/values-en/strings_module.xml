@@ -433,6 +433,19 @@
     <string name="option_vflow_trigger_sms_content_not_contains">Content Not Contains</string>
     <string name="option_vflow_trigger_sms_content_regex">Regex Match</string>
 
+    <!-- vflow.trigger.call - Call Trigger -->
+    <string name="module_vflow_trigger_call_name">Call Trigger</string>
+    <string name="module_vflow_trigger_call_desc">Trigger workflow when there is an incoming call, call answered, or call ended</string>
+    <string name="option_vflow_trigger_call_type_any">Any</string>
+    <string name="option_vflow_trigger_call_type_incoming">Incoming</string>
+    <string name="option_vflow_trigger_call_type_answered">Answered</string>
+    <string name="option_vflow_trigger_call_type_ended">Ended</string>
+    <string name="param_vflow_trigger_call_type_name">Trigger Type</string>
+    <string name="output_vflow_trigger_call_state_name">Call State</string>
+    <string name="summary_vflow_trigger_call_prefix">When</string>
+    <string name="summary_vflow_trigger_call_suffix">trigger</string>
+    <string name="msg_vflow_trigger_call_received">Call event received</string>
+
     <!-- vflow.trigger.wifi - Wi-Fi Trigger -->
     <string name="module_vflow_trigger_wifi_name">Wi-Fi Trigger</string>
     <string name="module_vflow_trigger_wifi_desc">Trigger workflow when Wi-Fi state or network connection changes</string>
