@@ -1818,4 +1818,13 @@
     <string name="text_yes">Yes</string>
     <string name="text_no">No</string>
     <string name="text_loop">Loop</string>
+
+    <!-- Mobile Data Module -->
+    <string name="module_vflow_system_mobile_data_name">Mobile Data</string>
+    <string name="module_vflow_system_mobile_data_desc">Control mobile data switch (enable/disable/toggle) via shell commands.</string>
+    <string name="param_vflow_system_mobile_data_action_name">Action</string>
+    <string name="output_vflow_system_mobile_data_success_name">Success</string>
+    <string name="output_vflow_system_mobile_data_enabled_name">Enabled State</string>
+    <string name="output_vflow_system_mobile_data_result_name">Command Output</string>
+    <string name="summary_vflow_system_mobile_data">Mobile Data:</string>
 </resources>

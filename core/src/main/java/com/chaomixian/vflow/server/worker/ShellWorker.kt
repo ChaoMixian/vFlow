@@ -23,8 +23,6 @@ class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
         serviceWrappers["location"] = ILocationManagerWrapper()
         serviceWrappers["alarm"] = IAlarmManagerWrapper()
         serviceWrappers["activity_task"] = IActivityTaskManagerWrapper()
-
-        // 注册所有 Shell 级别的 SimpleWrappers (不需要连接系统服务的)
         simpleWrappers["screenshot"] = IScreenshotWrapper()
 
         // 注意：system target 由 Master 动态路由，不在 wrappers 中注册

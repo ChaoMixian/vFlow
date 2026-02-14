@@ -172,6 +172,7 @@ object ModuleRegistry {
         register(WifiModule(), context)
         register(BluetoothModule(), context)
         register(BrightnessModule(), context)
+        register(MobileDataModule(), context)
         register(WakeScreenModule(), context)
         register(SleepScreenModule(), context)
         register(ReadSmsModule(), context)

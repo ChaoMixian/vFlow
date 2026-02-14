@@ -1692,4 +1692,13 @@
     <string name="text_yes">是</string>
     <string name="text_no">否</string>
     <string name="text_loop">循环</string>
+
+    <!-- 移动数据模块 -->
+    <string name="module_vflow_system_mobile_data_name">移动数据</string>
+    <string name="module_vflow_system_mobile_data_desc">通过 shell 命令控制移动数据开关（开启/关闭/切换）。</string>
+    <string name="param_vflow_system_mobile_data_action_name">操作</string>
+    <string name="output_vflow_system_mobile_data_success_name">是否成功</string>
+    <string name="output_vflow_system_mobile_data_enabled_name">切换后的状态</string>
+    <string name="output_vflow_system_mobile_data_result_name">命令输出</string>
+    <string name="summary_vflow_system_mobile_data">移动数据:</string>
 </resources>
