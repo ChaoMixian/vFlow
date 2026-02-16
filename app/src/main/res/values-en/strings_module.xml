@@ -1840,4 +1840,17 @@
     <string name="output_vflow_system_mobile_data_enabled_name">Enabled State</string>
     <string name="output_vflow_system_mobile_data_result_name">Command Output</string>
     <string name="summary_vflow_system_mobile_data">Mobile Data:</string>
+
+    <!-- Get Current Activity Module -->
+    <string name="module_vflow_interaction_get_current_activity_name">Get Current Activity</string>
+    <string name="module_vflow_interaction_get_current_activity_desc">Get information about the current foreground Activity, including Activity name, package name, app name, etc.</string>
+    <string name="output_vflow_interaction_get_current_activity_activity_info_name">Activity Info</string>
+    <string name="output_vflow_interaction_get_current_activity_package_name_name">Package Name</string>
+    <string name="output_vflow_interaction_get_current_activity_class_name_name">Class Name</string>
+    <string name="output_vflow_interaction_get_current_activity_app_name_name">App Name</string>
+    <string name="output_vflow_interaction_get_current_activity_is_foreground_name">Is Foreground</string>
+    <string name="summary_vflow_interaction_get_current_activity">Get current activity info</string>
+    <string name="error_vflow_interaction_get_current_activity_service_not_running">Accessibility service not running</string>
+    <string name="error_vflow_interaction_get_current_activity_not_available">Unable to get current activity</string>
+    <string name="msg_vflow_interaction_get_current_activity_current" formatted="false">Current activity: %s (%s)</string>
 </resources>

@@ -6,9 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.ViewTreeObserver
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.doOnPreDraw
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -109,7 +109,7 @@ class MainActivity : BaseActivity() {
             val navView: BottomNavigationView = findViewById(R.id.bottom_nav_view)
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
             applyWindowInsets(appBarLayout, navView, navHostFragment.requireView())
-            insetsApplied = true
+            // insetsApplied 会在 applyWindowInsets 的回调中设置
         }
         // 每次返回主界面时，检查并应用 Shizuku 相关设置
         checkAndApplyStartupSettings()
@@ -192,11 +192,28 @@ class MainActivity : BaseActivity() {
         }
 
         // 为 Fragment 容器底部添加 BottomNavigationView 高度的 padding
-        // 使用 doOnPreDraw 可以确保我们在 bottomNav 视图被测量并准备好绘制之前执行代码，
-        // 这样就能获取到它正确的高度，解决了时序问题。
-        bottomNav.doOnPreDraw {
-            // 在这里，it 指的是 bottomNav 视图，it.height 是它测量后的实际高度。
-            fragmentContainer.updatePadding(bottom = it.height)
+        // 使用 ViewTreeObserver 监听布局变化，直到获取到准确的高度值
+        val globalLayoutListener = object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                // 移除监听器，避免重复调用
+                bottomNav.viewTreeObserver.removeOnGlobalLayoutListener(this)
+
+                // 获取底部导航栏的准确高度（包含 padding）
+                val bottomNavHeight = bottomNav.height
+
+                // 只有高度有效时才应用 padding
+                if (bottomNavHeight > 0) {
+                    fragmentContainer.updatePadding(bottom = bottomNavHeight)
+                    insetsApplied = true
+                } else {
+                    // 如果高度仍为 0，延迟重试
+                    bottomNav.post {
+                        fragmentContainer.updatePadding(bottom = bottomNav.height)
+                        insetsApplied = true
+                    }
+                }
+            }
         }
+        bottomNav.viewTreeObserver.addOnGlobalLayoutListener(globalLayoutListener)
     }
 }

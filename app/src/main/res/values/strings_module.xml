@@ -1712,4 +1712,17 @@
     <string name="output_vflow_system_mobile_data_enabled_name">切换后的状态</string>
     <string name="output_vflow_system_mobile_data_result_name">命令输出</string>
     <string name="summary_vflow_system_mobile_data">移动数据:</string>
+
+    <!-- 获取当前活动模块 -->
+    <string name="module_vflow_interaction_get_current_activity_name">获取当前活动</string>
+    <string name="module_vflow_interaction_get_current_activity_desc">获取当前前台 Activity 的信息，包括 Activity 名称、包名、应用名称等。</string>
+    <string name="output_vflow_interaction_get_current_activity_activity_info_name">活动信息</string>
+    <string name="output_vflow_interaction_get_current_activity_package_name_name">包名</string>
+    <string name="output_vflow_interaction_get_current_activity_class_name_name">类名</string>
+    <string name="output_vflow_interaction_get_current_activity_app_name_name">应用名称</string>
+    <string name="output_vflow_interaction_get_current_activity_is_foreground_name">是否前台</string>
+    <string name="summary_vflow_interaction_get_current_activity">获取当前活动信息</string>
+    <string name="error_vflow_interaction_get_current_activity_service_not_running">无障碍服务未运行</string>
+    <string name="error_vflow_interaction_get_current_activity_not_available">无法获取当前活动</string>
+    <string name="msg_vflow_interaction_get_current_activity_current">当前活动: %s (%s)</string>
 </resources>

@@ -109,6 +109,7 @@ object ModuleRegistry {
         register(FindTextUntilModule(), context)
         register(FindImageModule(), context)
         register(OperitModule(), context)
+        register(GetCurrentActivityModule(), context)
 
         // 逻辑控制
         register(IfModule(), context)

@@ -28,6 +28,10 @@ object ServiceStateBus {
     var lastWindowClassName: String? = null
         private set
 
+    // 缓存最后一个包名，供模块使用
+    var lastWindowPackageName: String? = null
+        private set
+
     // 定义广播动作
     const val ACTION_ACCESSIBILITY_SERVICE_STATE_CHANGED = "vflow.action.ACCESSIBILITY_SERVICE_STATE_CHANGED"
     const val EXTRA_IS_CONNECTED = "is_connected"
@@ -51,6 +55,7 @@ object ServiceStateBus {
      */
     suspend fun postWindowChangeEvent(packageName: String, className: String) {
         lastWindowClassName = className
+        lastWindowPackageName = packageName
         _windowChangeEventFlow.emit(packageName to className)
     }
 
@@ -59,6 +64,7 @@ object ServiceStateBus {
      */
     suspend fun postWindowContentChanged(packageName: String, className: String) {
         lastWindowClassName = className
+        lastWindowPackageName = packageName
         _windowContentChangedFlow.emit(packageName to className)
     }
 
