@@ -69,6 +69,7 @@ class WorkflowsFloatPanelService : Service() {
     private val idleTimer = Handler(Looper.getMainLooper())
     private var isUserInteracting = false
     private var screenWidth = 0
+    private var screenHeight = 0
     private var params: WindowManager.LayoutParams? = null
     private var collapsedParams: WindowManager.LayoutParams? = null
     private var isFirstPositionUpdate = true
@@ -76,8 +77,7 @@ class WorkflowsFloatPanelService : Service() {
     companion object {
         const val ACTION_SHOW = "com.chaomixian.vflow.ACTION_SHOW_FLOAT_PANEL"
         const val ACTION_HIDE = "com.chaomixian.vflow.ACTION_HIDE_FLOAT_PANEL"
-        private const val COLLAPSED_WIDTH = 8 // dp
-        private const val COLLAPSED_HEIGHT = 80 // dp
+        private const val COLLAPSED_SIZE = 36 // dp (圆形图标)
     }
 
     override fun onCreate() {
@@ -105,6 +105,7 @@ class WorkflowsFloatPanelService : Service() {
         // 获取屏幕宽度
         val displayMetrics = resources.displayMetrics
         screenWidth = displayMetrics.widthPixels
+        screenHeight = displayMetrics.heightPixels
 
         // 创建带主题的 Context（根据用户设置选择动态取色或默认主题）
         val themedContext = ThemeUtils.createThemedContext(this)
@@ -194,7 +195,93 @@ class WorkflowsFloatPanelService : Service() {
             }
         }
 
+        // 设置拖动行为
+        setupCollapsedDragBehavior(collapsedView)
+
         return collapsedView
+    }
+
+    /**
+     * 设置收缩视图的拖动行为
+     */
+    private fun setupCollapsedDragBehavior(view: View) {
+        val collapsedParams = collapsedParams ?: return
+        var isDragging = false
+        val displayMetrics = resources.displayMetrics
+        val viewSize = (COLLAPSED_SIZE * displayMetrics.density).toInt()
+        val margin = (0 * displayMetrics.density).toInt() // 允许超出屏幕 0dp
+
+        view.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialX = collapsedParams.x
+                    initialY = collapsedParams.y
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    isDragging = false
+                    isUserInteracting = true
+                    idleTimer.removeCallbacksAndMessages(null)
+                    false // 不消耗事件，让 click 事件也能触发
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val deltaX = Math.abs(event.rawX - initialTouchX)
+                    val deltaY = Math.abs(event.rawY - initialTouchY)
+                    // 移动超过阈值才视为拖动
+                    if (deltaX > 10 || deltaY > 10) {
+                        isDragging = true
+                        var newX = initialX + (event.rawX - initialTouchX).toInt()
+                        var newY = initialY + (event.rawY - initialTouchY).toInt()
+
+                        // 限制在屏幕范围内，允许超出 10dp
+                        newX = newX.coerceIn(-margin, screenWidth - viewSize + margin)
+                        newY = newY.coerceIn(0, screenHeight - viewSize) // Y 轴不超出屏幕
+
+                        collapsedParams.x = newX
+                        collapsedParams.y = newY
+                        windowManager.updateViewLayout(view, collapsedParams)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    isUserInteracting = false
+                    if (isDragging) {
+                        // 拖动释放后吸附边缘
+                        snapCollapsedToEdge(collapsedParams, margin)
+                    } else {
+                        // 点击展开面板
+                        expandFromCollapsed()
+                    }
+                    // 重新启动计时器
+                    startAutoCollapseTimer()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        // 移除原来的点击监听器
+        view.setOnClickListener(null)
+        view.setOnHoverListener(null)
+    }
+
+    /**
+     * 收缩视图边缘吸附
+     */
+    private fun snapCollapsedToEdge(params: WindowManager.LayoutParams, margin: Int = 0) {
+        val displayMetrics = resources.displayMetrics
+        val halfScreen = screenWidth / 2
+        val viewSize = (COLLAPSED_SIZE * displayMetrics.density).toInt()
+
+        val targetX = if (params.x < halfScreen) {
+            0
+        } else {
+            screenWidth - viewSize
+        }
+
+        if (Math.abs(params.x - targetX) < 50 * displayMetrics.density) {
+            params.x = targetX
+            windowManager.updateViewLayout(collapsedView, params)
+        }
     }
 
     /**
@@ -211,16 +298,15 @@ class WorkflowsFloatPanelService : Service() {
 
         // 计算贴边位置（左边贴边或右边贴边）
         val displayMetrics = resources.displayMetrics
-        val collapsedWidthPx = (COLLAPSED_WIDTH * displayMetrics.density).toInt()
-        val collapsedHeightPx = (COLLAPSED_HEIGHT * displayMetrics.density).toInt()
+        val collapsedSizePx = (COLLAPSED_SIZE * displayMetrics.density).toInt()
 
         // 判断应该贴哪边
         val attachToRight = currentParams.x > screenWidth / 2
 
         // 创建侧边栏窗口参数
         collapsedParams = WindowManager.LayoutParams(
-            collapsedWidthPx,
-            collapsedHeightPx,
+            collapsedSizePx,
+            collapsedSizePx,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -230,8 +316,9 @@ class WorkflowsFloatPanelService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or if (attachToRight) Gravity.END else Gravity.START
-            x = 0
+            gravity = Gravity.TOP or Gravity.START
+            // 右侧停靠时，x = screenWidth - viewSize
+            x = if (attachToRight) screenWidth - collapsedSizePx else 0
             y = currentY
         }
 

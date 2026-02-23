@@ -612,6 +612,7 @@
     <string name="text_not_available">当前不可用</string>
     <string name="title_core_status">vFlow Core 状态</string>
     <string name="content_desc_close">关闭</string>
+    <string name="content_desc_expand_panel">展开面板</string>
 
     <!-- Permissions -->
     <string name="permission_name_core">vFlow Core 服务</string>

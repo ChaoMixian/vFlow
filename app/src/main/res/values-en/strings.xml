@@ -612,6 +612,7 @@
     <string name="text_not_available">Currently unavailable</string>
     <string name="title_core_status">vFlow Core Status</string>
     <string name="content_desc_close">Close</string>
+    <string name="content_desc_expand_panel">Expand panel</string>
 
     <!-- Permissions -->
     <string name="permission_name_core">vFlow Core Service</string>
