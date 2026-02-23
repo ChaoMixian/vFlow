@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.types.complex
 
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
+import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNull
@@ -72,9 +73,10 @@ class VUiComponent(
             // 值相关（需要特殊处理currentValue）
             register("value", "text", "值", "内容", getter = { host ->
                 val component = host as VUiComponent
-                when (component.currentValue) {
+                when (val value = component.currentValue) {
                     null -> VString(component.element.defaultValue)
-                    else -> VString(component.currentValue.toString())
+                    is VObject -> VString(value.asString())
+                    else -> VString(value.toString())
                 }
             })
             register("defaultvalue", "default", "默认值", getter = { host ->
