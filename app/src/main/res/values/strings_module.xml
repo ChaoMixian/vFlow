@@ -1725,4 +1725,18 @@
     <string name="error_vflow_interaction_get_current_activity_service_not_running">无障碍服务未运行</string>
     <string name="error_vflow_interaction_get_current_activity_not_available">无法获取当前活动</string>
     <string name="msg_vflow_interaction_get_current_activity_current">当前活动: %s (%s)</string>
+
+    <!-- 拨打电话模块 -->
+    <string name="module_vflow_device_call_phone_name">拨打电话</string>
+    <string name="module_vflow_device_call_phone_desc">直接拨打指定的电话号码。</string>
+    <string name="param_vflow_device_call_phone_number_name">电话号码</string>
+    <string name="output_vflow_device_call_phone_success_name">是否成功</string>
+    <string name="output_vflow_device_call_phone_number_name">拨打的电话号码</string>
+    <string name="error_vflow_device_call_phone_empty">电话号码不能为空</string>
+    <string name="error_vflow_device_call_phone_missing">需要拨打的电话号码为空，无法执行</string>
+    <string name="error_vflow_device_call_phone_failed">拨打电话失败</string>
+    <string name="error_vflow_device_call_phone_failed_desc">无法拨打电话，请检查是否有拨打电话权限</string>
+    <string name="error_vflow_device_call_phone_exception">拨打电话异常</string>
+    <string name="error_vflow_device_call_phone_exception_desc">拨打电话时发生异常</string>
+    <string name="msg_vflow_device_call_phone_preparing">准备拨打电话: %s</string>
 </resources>

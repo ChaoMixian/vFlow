@@ -651,6 +651,8 @@
     <string name="permission_desc_usage_stats">允许 vFlow 读取应用的使用统计信息（如使用时长、最后使用时间），提高 Agent 行为准确度。</string>
     <string name="permission_name_read_phone_state">电话状态</string>
     <string name="permission_desc_read_phone_state">用于监听电话状态变化，以实现电话触发器功能。</string>
+    <string name="permission_name_call_phone">拨打电话</string>
+    <string name="permission_desc_call_phone">允许应用直接拨打电话号码。</string>
 
     <!-- Folder -->
     <string name="folder_icon">文件夹图标</string>

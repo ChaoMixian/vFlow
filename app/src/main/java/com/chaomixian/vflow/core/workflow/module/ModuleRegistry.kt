@@ -184,6 +184,7 @@ object ModuleRegistry {
         register(InvokeModule(), context)
         register(SystemInfoModule(), context)
         register(PlayAudioModule(), context)
+        register(CallPhoneModule(), context)
 
         // Core (Beta) 模块
         // 网络控制组

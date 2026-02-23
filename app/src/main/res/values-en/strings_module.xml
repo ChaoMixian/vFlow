@@ -1853,4 +1853,18 @@
     <string name="error_vflow_interaction_get_current_activity_service_not_running">Accessibility service not running</string>
     <string name="error_vflow_interaction_get_current_activity_not_available">Unable to get current activity</string>
     <string name="msg_vflow_interaction_get_current_activity_current" formatted="false">Current activity: %s (%s)</string>
+
+    <!-- Call Phone Module -->
+    <string name="module_vflow_device_call_phone_name">Make Phone Call</string>
+    <string name="module_vflow_device_call_phone_desc">Directly dial the specified phone number.</string>
+    <string name="param_vflow_device_call_phone_number_name">Phone Number</string>
+    <string name="output_vflow_device_call_phone_success_name">Success</string>
+    <string name="output_vflow_device_call_phone_number_name">Dialed Phone Number</string>
+    <string name="error_vflow_device_call_phone_empty">Phone number cannot be empty</string>
+    <string name="error_vflow_device_call_phone_missing">Phone number is empty, cannot execute</string>
+    <string name="error_vflow_device_call_phone_failed">Failed to make phone call</string>
+    <string name="error_vflow_device_call_phone_failed_desc">Unable to make phone call, please check if you have call permission</string>
+    <string name="error_vflow_device_call_phone_exception">Phone call exception</string>
+    <string name="error_vflow_device_call_phone_exception_desc">An exception occurred while making phone call</string>
+    <string name="msg_vflow_device_call_phone_preparing">Preparing to call: %s</string>
 </resources>
