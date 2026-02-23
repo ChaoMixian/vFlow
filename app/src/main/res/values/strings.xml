@@ -528,6 +528,7 @@
     <string name="desc_delete_item">删除此项目</string>
     <string name="desc_error_icon">错误图标</string>
     <string name="desc_delete_action">删除动作</string>
+    <string name="insert_below">在下方插入</string>
     <string name="desc_select_device">选择设备</string>
     <string name="label_trigger_condition">触发条件</string>
     <string name="hint_package_name">应用包名包含 (可选)</string>

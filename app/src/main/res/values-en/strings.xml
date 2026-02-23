@@ -528,6 +528,7 @@
     <string name="desc_delete_item">Delete This Item</string>
     <string name="desc_error_icon">Error Icon</string>
     <string name="desc_delete_action">Delete Action</string>
+    <string name="insert_below">Insert Below</string>
     <string name="desc_select_device">Select Device</string>
     <string name="label_trigger_condition">Trigger Condition</string>
     <string name="hint_package_name">App Package Contains (Optional)</string>

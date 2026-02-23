@@ -20,6 +20,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.Space
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -38,7 +39,8 @@ class ActionStepAdapter(
     private val actionSteps: MutableList<ActionStep>,
     private val onEditClick: (position: Int, inputId: String?) -> Unit,
     private val onDeleteClick: (position: Int) -> Unit,
-    private val onDuplicateClick: (position: Int) -> Unit, // 新增：双击复制回调
+    private val onDuplicateClick: (position: Int) -> Unit, // 双击复制回调
+    private val onInsertBelowClick: (position: Int) -> Unit, // 在下方插入回调
     private val onParameterPillClick: (position: Int, parameterId: String) -> Unit,
     private val onStartActivityForResult: (position: Int, Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit
 ) : RecyclerView.Adapter<ActionStepAdapter.ActionStepViewHolder>() {
@@ -68,6 +70,7 @@ class ActionStepAdapter(
         private val deleteButton: ImageButton = itemView.findViewById(R.id.button_delete_action)
         private val indentSpace: Space = itemView.findViewById(R.id.indent_space)
         private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container)
+        private val categoryColorBarContainer: View = itemView.findViewById(R.id.category_color_bar_container)
         private val categoryColorBar: View = itemView.findViewById(R.id.category_color_bar)
 
         // 用于处理点击事件的 Handler
@@ -86,6 +89,16 @@ class ActionStepAdapter(
                 setColor(categoryColor)
             }
             categoryColorBar.background = drawable
+
+            // 为颜色条容器添加长按弹出菜单
+            categoryColorBarContainer.setOnLongClickListener { view ->
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    showPopupMenu(view, adapterPosition)
+                    true
+                } else {
+                    false
+                }
+            }
 
             contentContainer.removeAllViews()
 
@@ -201,6 +214,21 @@ class ActionStepAdapter(
                 }
             }
             return textView
+        }
+
+        private fun showPopupMenu(anchor: View, position: Int) {
+            val popup = PopupMenu(context, anchor)
+            popup.menu.add(0, 1, 0, R.string.insert_below)
+            popup.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    1 -> {
+                        onInsertBelowClick(position)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            popup.show()
         }
     }
 }

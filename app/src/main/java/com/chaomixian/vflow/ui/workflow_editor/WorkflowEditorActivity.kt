@@ -896,6 +896,10 @@ class WorkflowEditorActivity : BaseActivity() {
             onDuplicateClick = { position ->
                 duplicateStepOrBlock(position)
             },
+            // 在下方插入的回调实现
+            onInsertBelowClick = { position ->
+                showActionPickerAtPosition(position + 1)
+            },
             onParameterPillClick = { position, parameterId ->
                 handleParameterPillClick(position, parameterId)
             },
@@ -1337,6 +1341,66 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun showTriggerPicker() {
         showActionPicker(isTriggerPicker = true)
+    }
+
+    /**
+     * 在指定位置显示模块选择器，选择模块后插入到该位置
+     */
+    private fun showActionPickerAtPosition(insertPosition: Int) {
+        val picker = ActionPickerSheet()
+        picker.arguments = Bundle().apply {
+            putBoolean("is_trigger_picker", false)
+        }
+
+        picker.onActionSelected = { module ->
+            if (module.metadata.category == getString(R.string.category_template)) {
+                val newSteps = module.createSteps()
+                actionSteps.addAll(insertPosition, newSteps)
+                recalculateAndNotify()
+            } else {
+                // 显示参数编辑器，传入插入位置
+                showActionEditorAtPosition(module, insertPosition)
+            }
+        }
+        picker.show(supportFragmentManager, "ActionPicker")
+    }
+
+    /**
+     * 在指定位置显示参数编辑器，插入新模块
+     */
+    private fun showActionEditorAtPosition(module: ActionModule, insertPosition: Int) {
+        // 传递一个扁平的列表供 ActionEditorSheet 内部使用
+        val namedVariableNames = getAvailableNamedVariables(insertPosition)
+            .values.flatten().map { it.variableName }
+
+        val editor = ActionEditorSheet.newInstance(module, null, null, actionSteps.toList(), namedVariableNames)
+        currentEditorSheet = editor
+
+        editor.onSave = { newStepData ->
+            val stepsToAdd = module.createSteps()
+            val configuredFirstStep = stepsToAdd.first().copy(parameters = newStepData.parameters)
+            actionSteps.add(insertPosition, configuredFirstStep)
+            if (stepsToAdd.size > 1) {
+                actionSteps.addAll(insertPosition + 1, stepsToAdd.subList(1, stepsToAdd.size))
+            }
+            recalculateAndNotify()
+        }
+
+        editor.onMagicVariableRequested = { inputId, currentParams ->
+            showMagicVariablePicker(insertPosition, inputId, module, currentParams)
+        }
+
+        editor.onStartActivityForResult = { intent, callback ->
+            this.appPickerCallback = callback
+            this.editingPositionForAppPicker = insertPosition
+            appPickerLauncher.launch(intent)
+        }
+
+        editor.setOnPickerRequestedListener { inputDef ->
+            pickerHandler?.handle(inputDef)
+        }
+
+        editor.show(supportFragmentManager, "ActionEditor")
     }
 
 
