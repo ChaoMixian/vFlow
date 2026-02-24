@@ -4,34 +4,39 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:paddingVertical="12dp"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
 
     <TextView
         android:id="@+id/activity_name"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAppearance="?attr/textAppearanceBodyLarge"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
         tools:text="com.chaomixian.vflow.MainActivity"/>
 
     <TextView
         android:id="@+id/activity_label"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="?attr/colorOnSurfaceVariant"
-        tools:text="vFlow"/>
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="主界面"/>
 
     <TextView
         android:id="@+id/activity_warning"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
         android:text="@string/text_activity_not_exported"
         android:textAppearance="?attr/textAppearanceCaption"
         android:textColor="?attr/colorError"
         android:visibility="gone"
         tools:visibility="visible"/>
+
 </LinearLayout>

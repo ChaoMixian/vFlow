@@ -448,6 +448,12 @@
     <string name="text_80_recommended">80% Recommended</string>
     <string name="text_90_precise">90% Precise</string>
     <string name="text_select_app_activity">Select App/Activity</string>
+    <string name="text_select_app">Select App</string>
+    <string name="text_select_activity">Select Activity</string>
+    <string name="text_show_system_apps">Show system apps</string>
+    <string name="text_search_app">Search by app name or package</string>
+    <string name="text_launch_app">Launch app</string>
+    <string name="text_close">Close</string>
     <string name="text_ai_assisted_generation">AI Assisted Generation</string>
     <string name="text_describe_requirements">Describe your requirements, AI will automatically build the workflow for you.</string>
     <string name="text_deepseek">DeepSeek</string>

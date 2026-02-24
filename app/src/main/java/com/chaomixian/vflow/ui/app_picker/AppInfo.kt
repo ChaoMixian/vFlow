@@ -1,6 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/ui/app_picker/AppInfo.kt
 // 描述: 用于在应用选择器中显示的应用信息数据类。
-//      这个文件的缺失导致了 AppListAdapter 和 AppPickerActivity 中的大量 "Unresolved reference" 错误。
 package com.chaomixian.vflow.ui.app_picker
 
 import android.graphics.drawable.Drawable

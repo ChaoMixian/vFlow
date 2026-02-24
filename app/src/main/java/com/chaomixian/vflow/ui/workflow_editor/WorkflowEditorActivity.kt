@@ -47,7 +47,8 @@ import com.chaomixian.vflow.core.workflow.module.logic.LoopModule
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.UiInspectorService
-import com.chaomixian.vflow.ui.app_picker.AppPickerActivity
+import com.chaomixian.vflow.ui.app_picker.AppPickerMode
+import com.chaomixian.vflow.ui.app_picker.UnifiedAppPickerSheet
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
@@ -129,6 +130,35 @@ class WorkflowEditorActivity : BaseActivity() {
         appPickerCallback?.invoke(result.resultCode, result.data)
         appPickerCallback = null
         editingPositionForAppPicker = -1
+    }
+
+    /**
+     * 启动应用选择器
+     */
+    private fun launchAppPicker(
+        intent: Intent,
+        position: Int,
+        callback: (Int, Intent?) -> Unit
+    ) {
+        // 从 Intent 中获取选择模式
+        val mode = try {
+            AppPickerMode.valueOf(intent.getStringExtra(UnifiedAppPickerSheet.EXTRA_MODE) ?: "SELECT_ACTIVITY")
+        } catch (e: Exception) {
+            AppPickerMode.SELECT_ACTIVITY
+        }
+
+        appPickerCallback = callback
+        editingPositionForAppPicker = position
+
+        val pickerSheet = UnifiedAppPickerSheet.newInstance(mode)
+        pickerSheet.setOnResultCallback { result ->
+            handleAppPickerResult(Activity.RESULT_OK, result, position)
+            pickerHandler?.handleAppPickerResult(Activity.RESULT_OK, result)
+            callback.invoke(Activity.RESULT_OK, result)
+            appPickerCallback = null
+            editingPositionForAppPicker = -1
+        }
+        pickerSheet.show(supportFragmentManager, "UnifiedAppPicker")
     }
 
     // 文件选择器 launcher - 使用 OpenDocument 获取持久权限
@@ -637,9 +667,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         editor.onStartActivityForResult = { intent, callback ->
-            this.appPickerCallback = callback
-            this.editingPositionForAppPicker = position
-            appPickerLauncher.launch(intent)
+            launchAppPicker(intent, position, callback)
         }
 
         // 设置 Picker 监听器
@@ -895,11 +923,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 handleParameterPillClick(position, parameterId)
             },
             onStartActivityForResult = { position, intent, callback ->
-                appPickerCallback = { resultCode, data ->
-                    callback.invoke(resultCode, data)
-                }
-                editingPositionForAppPicker = position
-                appPickerLauncher.launch(intent)
+                launchAppPicker(intent, position, callback)
             }
         )
         findViewById<RecyclerView>(R.id.recycler_view_action_steps).apply {
@@ -946,8 +970,8 @@ class WorkflowEditorActivity : BaseActivity() {
      */
     private fun handleAppPickerResult(resultCode: Int, data: Intent?, position: Int) {
         if (resultCode == Activity.RESULT_OK && data != null) {
-            val packageName = data.getStringExtra(AppPickerActivity.EXTRA_SELECTED_PACKAGE_NAME)
-            val activityName = data.getStringExtra(AppPickerActivity.EXTRA_SELECTED_ACTIVITY_NAME)
+            val packageName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_PACKAGE_NAME)
+            val activityName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_ACTIVITY_NAME)
 
             if (packageName != null && activityName != null) {
                 val updatedParams = mapOf(
@@ -1382,9 +1406,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         editor.onStartActivityForResult = { intent, callback ->
-            this.appPickerCallback = callback
-            this.editingPositionForAppPicker = insertPosition
-            appPickerLauncher.launch(intent)
+            launchAppPicker(intent, insertPosition, callback)
         }
 
         editor.setOnPickerRequestedListener { inputDef ->

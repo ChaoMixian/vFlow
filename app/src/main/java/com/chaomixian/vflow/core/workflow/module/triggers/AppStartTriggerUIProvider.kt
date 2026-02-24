@@ -15,7 +15,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.app_picker.SimpleAppPickerActivity
+import com.chaomixian.vflow.ui.app_picker.AppPickerMode
+import com.chaomixian.vflow.ui.app_picker.UnifiedAppPickerSheet
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
@@ -108,10 +109,12 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
 
         // Listeners
         holder.pickButton.setOnClickListener {
-            val intent = Intent(context, SimpleAppPickerActivity::class.java)
+            val intent = Intent().apply {
+                putExtra(UnifiedAppPickerSheet.EXTRA_MODE, AppPickerMode.SELECT_APP.name)
+            }
             onStartActivityForResult?.invoke(intent) { resultCode, data ->
                 if (resultCode == android.app.Activity.RESULT_OK && data != null) {
-                    val packageName = data.getStringExtra(SimpleAppPickerActivity.EXTRA_SELECTED_PACKAGE_NAME)
+                    val packageName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_PACKAGE_NAME)
                     if (packageName != null && holder.selectedApps.none { it.packageName == packageName }) {
                         val appName = try {
                             pm.getApplicationInfo(packageName, 0).loadLabel(pm).toString()

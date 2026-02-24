@@ -1,6 +1,6 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/system/LaunchAppUIProvider.kt
 // 描述: 为 LaunchAppModule 提供自定义UI交互逻辑。
-//      使用 AppPickerActivity 选择单个应用及其 Activity。
+//      使用 UnifiedAppPickerSheet 选择单个应用及其 Activity。
 package com.chaomixian.vflow.core.workflow.module.system
 
 import android.content.Context
@@ -15,7 +15,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.app_picker.AppPickerActivity
+import com.chaomixian.vflow.ui.app_picker.AppPickerMode
+import com.chaomixian.vflow.ui.app_picker.UnifiedAppPickerSheet
 
 class LaunchAppViewHolder(
     view: View,
@@ -48,7 +49,9 @@ class LaunchAppUIProvider : ModuleUIProvider {
 
         // 点击按钮启动应用选择器
         holder.pickButton.setOnClickListener {
-            val intent = Intent(context, AppPickerActivity::class.java)
+            val intent = Intent().apply {
+                putExtra(UnifiedAppPickerSheet.EXTRA_MODE, AppPickerMode.SELECT_ACTIVITY.name)
+            }
             onStartActivityForResult?.invoke(intent) { _, _ ->
                 // 结果由 WorkflowEditorActivity.handleAppPickerResult 处理
             }

@@ -448,6 +448,12 @@
     <string name="text_80_recommended">80% 推荐</string>
     <string name="text_90_precise">90% 精确</string>
     <string name="text_select_app_activity">选择应用或Activity</string>
+    <string name="text_select_app">选择应用</string>
+    <string name="text_select_activity">选择Activity</string>
+    <string name="text_show_system_apps">显示系统应用</string>
+    <string name="text_search_app">搜索应用名称或包名</string>
+    <string name="text_launch_app">启动应用</string>
+    <string name="text_close">关闭</string>
     <string name="text_ai_assisted_generation">AI 辅助生成</string>
     <string name="text_describe_requirements">描述您的需求，AI 将自动为您构建工作流。</string>
     <string name="text_deepseek">DeepSeek</string>

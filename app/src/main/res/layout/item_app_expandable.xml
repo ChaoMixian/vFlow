@@ -43,4 +43,12 @@
             tools:text="com.chaomixian.vflow"/>
     </LinearLayout>
 
+    <ImageView
+        android:id="@+id/expand_icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_expand_more"
+        android:visibility="gone"
+        tools:visibility="visible"/>
+
 </LinearLayout>

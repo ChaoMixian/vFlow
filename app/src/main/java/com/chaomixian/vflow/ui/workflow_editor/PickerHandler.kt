@@ -10,7 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.PickerType
-import com.chaomixian.vflow.ui.app_picker.AppPickerActivity
+import com.chaomixian.vflow.ui.app_picker.AppPickerMode
+import com.chaomixian.vflow.ui.app_picker.UnifiedAppPickerSheet
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.timepicker.MaterialTimePicker
 import java.time.LocalDate
@@ -58,8 +59,9 @@ class PickerHandler(
      */
     fun handleAppPickerResult(resultCode: Int, data: Intent?) {
         if (resultCode == Activity.RESULT_OK && data != null) {
-            val packageName = data.getStringExtra(AppPickerActivity.EXTRA_SELECTED_PACKAGE_NAME)
-            val activityName = data.getStringExtra(AppPickerActivity.EXTRA_SELECTED_ACTIVITY_NAME)
+            // 兼容新旧选择器的 Extra Key
+            val packageName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_PACKAGE_NAME)
+            val activityName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_ACTIVITY_NAME)
 
             when (currentInputDef?.pickerType) {
                 PickerType.ACTIVITY -> {
@@ -146,13 +148,21 @@ class PickerHandler(
     }
 
     private fun handleAppPicker() {
-        val intent = Intent(activity, AppPickerActivity::class.java)
-        appPickerLauncher.launch(intent)
+        // 使用新的统一选择器 BottomSheet
+        val pickerSheet = UnifiedAppPickerSheet.newInstance(AppPickerMode.SELECT_APP)
+        pickerSheet.setOnResultCallback { result ->
+            handleAppPickerResult(Activity.RESULT_OK, result)
+        }
+        pickerSheet.show(activity.supportFragmentManager, "UnifiedAppPicker")
     }
 
     private fun handleActivityPicker() {
-        val intent = Intent(activity, AppPickerActivity::class.java)
-        appPickerLauncher.launch(intent)
+        // 使用新的统一选择器 BottomSheet
+        val pickerSheet = UnifiedAppPickerSheet.newInstance(AppPickerMode.SELECT_ACTIVITY)
+        pickerSheet.setOnResultCallback { result ->
+            handleAppPickerResult(Activity.RESULT_OK, result)
+        }
+        pickerSheet.show(activity.supportFragmentManager, "UnifiedAppPicker")
     }
 
     private fun handleDatePicker(inputDef: InputDefinition) {
