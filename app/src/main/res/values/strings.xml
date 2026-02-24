@@ -14,6 +14,15 @@
     <string name="settings_switch_progress_notification_desc">当工作流在后台执行时，在状态栏显示一个进度通知。</string>
     <string name="settings_switch_force_keep_alive">强制保活 (Shizuku)</string>
     <string name="settings_switch_force_keep_alive_desc">实验性功能。通过 Shizuku 守护进程，在服务被系统意外终止时自动重启。可能会增加耗电。</string>
+    <string name="settings_module_config">模块配置</string>
+    <string name="settings_module_config_desc">配置各个模块的运行参数，如轻敲背面触发器的灵敏度。</string>
+
+    <string name="module_config_title">模块配置</string>
+    <string name="module_config_section_backtap">轻敲背面触发器</string>
+    <string name="module_config_backtap_sensitivity">灵敏度</string>
+    <string name="module_config_backtap_title">模块配置</string>
+    <string name="module_config_backtap_desc">点击下方按钮可配置轻敲背面灵敏度和检测参数</string>
+    <string name="module_config_backtap_button">打开模块配置</string>
 
     <string name="settings_section_debugging">调试</string>
     <string name="settings_switch_enable_logging">记录调试日志</string>

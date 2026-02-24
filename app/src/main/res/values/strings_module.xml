@@ -317,6 +317,9 @@
     <string name="option_vflow_trigger_key_event_action_short_press">短按 (立即触发)</string>
     <string name="option_vflow_trigger_key_event_action_swipe_down">向下滑动</string>
     <string name="option_vflow_trigger_key_event_action_swipe_up">向上滑动</string>
+    <string name="module_vflow_trigger_backtap_name">轻敲背面触发</string>
+    <string name="module_vflow_trigger_backtap_desc">通过敲击手机背面触发工作流（双击/三击）</string>
+    <string name="param_vflow_trigger_backtap_mode_name">模式</string>
     <string name="module_vflow_trigger_notification_name">通知触发</string>
     <string name="module_vflow_trigger_notification_desc">当收到符合条件的通知时触发工作流</string>
     <string name="param_vflow_trigger_notification_app_filter_name">应用包名</string>

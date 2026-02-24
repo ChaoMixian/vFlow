@@ -256,6 +256,12 @@ class SettingsFragment : Fragment() {
             showLanguageDialog()
         }
 
+        // 模块配置入口
+        view.findViewById<View>(R.id.btn_module_config).setOnClickListener {
+            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.ModuleConfigActivity::class.java)
+            startActivity(intent)
+        }
+
         // 启动Core管理
         val CoreManagementButton = view.findViewById<Button>(R.id.button_core_management)
         CoreManagementButton.setOnClickListener {

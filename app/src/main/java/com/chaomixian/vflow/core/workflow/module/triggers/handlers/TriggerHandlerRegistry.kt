@@ -26,6 +26,7 @@ object TriggerHandlerRegistry {
 
         // 在这里注册所有可用的触发器处理器
         register(KeyEventTriggerModule().id) { KeyEventTriggerHandler() }
+        register(BackTapTriggerModule().id) { BackTapTriggerHandler() }
         register(AppStartTriggerModule().id) { AppStartTriggerHandler() }
         register(TimeTriggerModule().id) { TimeTriggerHandler() }
         register(BatteryTriggerModule().id) { BatteryTriggerHandler() }

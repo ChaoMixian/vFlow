@@ -364,6 +364,11 @@
     <string name="option_vflow_trigger_key_event_action_swipe_down">Swipe Down</string>
     <string name="option_vflow_trigger_key_event_action_swipe_up">Swipe Up</string>
 
+    <!-- vflow.trigger.backtap - Back Tap Trigger -->
+    <string name="module_vflow_trigger_backtap_name">Back Tap Trigger</string>
+    <string name="module_vflow_trigger_backtap_desc">Trigger workflow by tapping the back of your phone (double/triple tap)</string>
+    <string name="param_vflow_trigger_backtap_mode_name">Mode</string>
+
     <!-- vflow.trigger.notification - Notification Trigger -->
     <string name="module_vflow_trigger_notification_name">Notification Trigger</string>
     <string name="module_vflow_trigger_notification_desc">Trigger workflow when notification matching criteria is received</string>

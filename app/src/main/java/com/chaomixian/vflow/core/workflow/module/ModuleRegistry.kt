@@ -83,6 +83,7 @@ object ModuleRegistry {
         register(ReceiveShareTriggerModule(), context)
         register(AppStartTriggerModule(), context)
         register(KeyEventTriggerModule(), context)
+        register(BackTapTriggerModule(), context)
         register(TimeTriggerModule(), context)
         register(BatteryTriggerModule(), context)
         register(WifiTriggerModule(), context)

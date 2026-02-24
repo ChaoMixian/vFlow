@@ -24,6 +24,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
         tools:ignore="ProtectedPermissions" />
@@ -90,16 +91,6 @@
 
         <activity
             android:name=".permissions.PermissionActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.app_picker.AppPickerActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.app_picker.SimpleAppPickerActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.app_picker.ActivityPickerActivity"
             android:exported="false" />
 
         <activity
@@ -297,6 +288,12 @@
             android:name=".ui.settings.KeyTesterActivity"
             android:exported="false"
             android:label="按键测试器"
+            android:theme="@style/Theme.vFlow" />
+
+        <activity
+            android:name=".ui.settings.ModuleConfigActivity"
+            android:exported="false"
+            android:label="模块配置"
             android:theme="@style/Theme.vFlow" />
 
         <activity
