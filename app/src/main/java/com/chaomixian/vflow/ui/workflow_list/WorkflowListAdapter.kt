@@ -224,6 +224,10 @@ class WorkflowListAdapter(
                 val addShortcutItem = popup.menu.findItem(R.id.menu_add_shortcut)
                 addShortcutItem.isVisible = isManualTrigger
 
+                // 添加到控制中心也只显示给手动触发器的工作流
+                val addToTileItem = popup.menu.findItem(R.id.menu_add_to_tile)
+                addToTileItem.isVisible = isManualTrigger
+
                 // 在主列表中，工作流不在文件夹里，不需要显示"移出文件夹"
                 popup.menu.findItem(R.id.menu_move_out_folder).isVisible = false
 
@@ -254,6 +258,12 @@ class WorkflowListAdapter(
                         R.id.menu_delete -> { onDeleteWorkflow(workflow); true }
                         R.id.menu_duplicate -> { onDuplicateWorkflow(workflow); true }
                         R.id.menu_export_single -> { onExportWorkflow(workflow); true }
+                        R.id.menu_add_to_tile -> {
+                            // 显示Tile选择对话框
+                            val dialog = TileSelectionDialog.newInstance(workflow.id, workflow.name)
+                            dialog.show((view.context as androidx.fragment.app.FragmentActivity).supportFragmentManager, TileSelectionDialog.TAG)
+                            true
+                        }
                         else -> false
                     }
                 }

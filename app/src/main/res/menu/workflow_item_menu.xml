@@ -4,6 +4,9 @@
         android:id="@+id/menu_add_shortcut"
         android:title="@string/workflow_item_menu_add_shortcut" />
     <item
+        android:id="@+id/menu_add_to_tile"
+        android:title="@string/workflow_item_menu_add_to_tile" />
+    <item
         android:id="@+id/menu_duplicate"
         android:title="@string/workflow_item_menu_duplicate" />
     <item

@@ -46,6 +46,11 @@
     <string name="workflow_item_menu_move_out_folder">Move Out of Folder</string>
     <string name="workflow_item_menu_export_single">Export This Workflow</string>
     <string name="workflow_item_menu_delete">Delete</string>
+    <string name="workflow_item_menu_add_to_tile">Add to Control Center</string>
+    <string name="tile_selection_title">Select Tile</string>
+    <string name="tile_empty">Unassigned</string>
+    <string name="tile_added">Added to Tile %1$d</string>
+    <string name="tile_removed">Removed from Tile %1$d</string>
     <string name="dialog_delete_title">Confirm Delete</string>
     <string name="dialog_delete_message">Are you sure you want to delete workflow \"%s\"? This action cannot be undone.</string>
     <string name="dialog_unsaved_title">Unsaved Changes</string>

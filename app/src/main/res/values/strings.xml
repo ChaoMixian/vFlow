@@ -46,6 +46,11 @@
     <string name="workflow_item_menu_move_out_folder">移出文件夹</string>
     <string name="workflow_item_menu_export_single">导出此工作流</string>
     <string name="workflow_item_menu_delete">删除</string>
+    <string name="workflow_item_menu_add_to_tile">添加到控制中心</string>
+    <string name="tile_selection_title">选择Tile位置</string>
+    <string name="tile_empty">未分配</string>
+    <string name="tile_added">已添加到Tile %1$d</string>
+    <string name="tile_removed">已从Tile %1$d移除</string>
     <string name="dialog_delete_title">确认删除</string>
     <string name="dialog_delete_message">您确定要删除工作流“%s”吗？此操作无法撤销。</string>
     <string name="dialog_unsaved_title">有未保存的更改</string>

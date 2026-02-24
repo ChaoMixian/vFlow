@@ -311,6 +311,228 @@
             android:label="版本历史"
             android:theme="@style/Theme.vFlow" />
 
+        <!-- 20个TileService声明 -->
+        <service
+            android:name=".ui.tile.WorkflowTileService0"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 1"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService1"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 2"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService2"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 3"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService3"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 4"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService4"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 5"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService5"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 6"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService6"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 7"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService7"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 8"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService8"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 9"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService9"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 10"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService10"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 11"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService11"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 12"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService12"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 13"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService13"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 14"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService14"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 15"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService15"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 16"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService16"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 17"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService17"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 18"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService18"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 19"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+        <service
+            android:name=".ui.tile.WorkflowTileService19"
+            android:exported="true"
+            android:icon="@drawable/ic_workflows"
+            android:label="vFlow Tile 20"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+
     </application>
 
 </manifest>
