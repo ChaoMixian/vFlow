@@ -14,10 +14,12 @@ import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.serialization.VObjectGsonAdapter
 import okhttp3.MultipartBody
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
@@ -156,7 +158,10 @@ class HttpRequestModule : BaseModule() {
                         }
                     }
                     "JSON" -> {
-                        // JSON：支持字符串输入（来自 RichTextView）或 Map 输入（来自变量引用）
+                        // JSON：支持三种输入：
+                        // 1. Map 输入（来自变量引用）- 递归解析保留类型
+                        // 2. VObject 输入（直接插入的魔法变量）- 提取raw值并递归解析
+                        // 3. 字符串输入（来自 RichTextView）- 解析变量后尝试解析JSON
                         val mapData = (bodyDataRaw as? VDictionary)?.raw
                             ?: (bodyDataRaw as? Map<*, *>)
 
@@ -164,6 +169,9 @@ class HttpRequestModule : BaseModule() {
                             // Map 输入：递归解析 Map 中的值
                             @Suppress("UNCHECKED_CAST")
                             resolveMapForJson(mapData as Map<String, Any?>, context)
+                        } else if (bodyDataRaw is VObject) {
+                            // VObject 输入（直接插入的魔法变量，如 VBoolean、VString 等）
+                            resolveValuePreservingType(bodyDataRaw, context)
                         } else {
                             // 字符串输入：解析变量引用，然后尝试解析 JSON
                             val jsonString = VariableResolver.resolve(bodyDataRaw?.toString() ?: "", context)
