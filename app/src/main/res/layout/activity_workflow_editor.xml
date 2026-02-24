@@ -37,12 +37,12 @@
                     android:textStyle="bold" />
 
                 <ImageButton
-                    android:id="@+id/btn_ai_magic"
+                    android:id="@+id/btn_editor_more"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_marginEnd="16dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/ai_generate"
+                    android:contentDescription="@string/editor_more_options"
                     android:src="@drawable/rounded_hexagon_nodes_24"
                     app:tint="?attr/colorPrimary" />
 

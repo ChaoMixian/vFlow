@@ -26,5 +26,19 @@ data class Workflow(
     // 快捷方式自定义名称（为空时使用工作流名称）
     var shortcutName: String? = null,
     // 快捷方式自定义图标资源名称（为空时使用默认图标）
-    var shortcutIconRes: String? = null
+    var shortcutIconRes: String? = null,
+    // 最后修改时间（时间戳）
+    var modifiedAt: Long = System.currentTimeMillis(),
+    // 元数据 - 版本号
+    var version: String = "1.0.0",
+    // 元数据 - vFlow级别
+    var vFlowLevel: Int = 1,
+    // 元数据 - 描述
+    var description: String = "",
+    // 元数据 - 作者
+    var author: String = "",
+    // 元数据 - 主页
+    var homepage: String = "",
+    // 元数据 - 标签
+    var tags: List<String> = emptyList()
 ) : Parcelable

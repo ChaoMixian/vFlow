@@ -55,6 +55,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -73,7 +74,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private lateinit var itemTouchHelper: ItemTouchHelper
     private var currentEditorSheet: ActionEditorSheet? = null
     private lateinit var executeButton: MaterialButton
-    private lateinit var aiMagicButton: ImageButton
+    private lateinit var editorMoreButton: ImageButton
     private lateinit var recyclerView: RecyclerView
     private val gson = Gson()
 
@@ -204,7 +205,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         workflowManager = WorkflowManager(this)
         nameEditText = findViewById(R.id.edit_text_workflow_name)
-        aiMagicButton = findViewById(R.id.btn_ai_magic)
+        editorMoreButton = findViewById(R.id.btn_editor_more)
         executeButton = findViewById(R.id.button_execute_workflow)
         recyclerView = findViewById(R.id.recycler_view_action_steps)
 
@@ -285,19 +286,9 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
 
-        // AI 按钮点击事件
-        aiMagicButton.setOnClickListener {
-            showAiCreationSheet()
-        }
-
-        // 长按触发 UI 检查器
-        aiMagicButton.setOnLongClickListener {
-            // 启动检查服务
-            val intent = Intent(this, UiInspectorService::class.java)
-            startService(intent)
-            // moveTaskToBack(true)
-            toast(R.string.editor_toast_ui_inspector_started)
-            true
+        // 更多选项按钮点击事件
+        editorMoreButton.setOnClickListener {
+            showEditorMoreOptionsSheet()
         }
 
         lifecycleScope.launch {
@@ -1483,6 +1474,36 @@ class WorkflowEditorActivity : BaseActivity() {
                 finish()
             } else {
                 initialWorkflowJson = gson.toJson(workflowToSave)
+            }
+        }
+    }
+
+    private fun showEditorMoreOptionsSheet() {
+        val sheet = EditorMoreOptionsSheet()
+        sheet.workflow = currentWorkflow
+        sheet.onAiGenerateClicked = {
+            dismissAllSheets()
+            showAiCreationSheet()
+        }
+        sheet.onUiInspectorClicked = {
+            dismissAllSheets()
+            // 启动 UI 检查器服务
+            val intent = Intent(this, UiInspectorService::class.java)
+            startService(intent)
+            toast(R.string.editor_toast_ui_inspector_started)
+        }
+        sheet.onMetadataSaved = { updatedWorkflow ->
+            currentWorkflow = updatedWorkflow
+            // 保存工作流
+            workflowManager.saveWorkflow(updatedWorkflow)
+        }
+        sheet.show(supportFragmentManager, "EditorMoreOptionsSheet")
+    }
+
+    private fun dismissAllSheets() {
+        supportFragmentManager.fragments.forEach { fragment ->
+            if (fragment is BottomSheetDialogFragment) {
+                fragment.dismiss()
             }
         }
     }

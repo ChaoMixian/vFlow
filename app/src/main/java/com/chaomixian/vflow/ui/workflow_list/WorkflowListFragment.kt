@@ -38,8 +38,6 @@ import com.chaomixian.vflow.ui.workflow_editor.WorkflowEditorActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
@@ -50,6 +48,7 @@ import java.util.*
 class WorkflowListFragment : Fragment() {
     private lateinit var workflowManager: WorkflowManager
     private lateinit var folderManager: FolderManager
+    private lateinit var importHelper: WorkflowImportHelper
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: WorkflowListAdapter
     private lateinit var itemTouchHelper: ItemTouchHelper
@@ -95,7 +94,8 @@ class WorkflowListFragment : Fragment() {
         uri?.let { fileUri ->
             pendingExportWorkflow?.let { workflow ->
                 try {
-                    val jsonString = gson.toJson(workflow)
+                    val exportData = createWorkflowExportData(workflow)
+                    val jsonString = gson.toJson(exportData)
                     requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
                     Toast.makeText(requireContext(), getString(R.string.toast_export_success), Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
@@ -104,6 +104,50 @@ class WorkflowListFragment : Fragment() {
             }
         }
         pendingExportWorkflow = null
+    }
+
+    /**
+     * 创建带元数据的工作流导出数据
+     */
+    private fun createWorkflowExportData(workflow: Workflow): Map<String, Any?> {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val updatedAt = dateFormat.format(Date(workflow.modifiedAt))
+
+        val meta = mapOf(
+            "id" to workflow.id,
+            "name" to workflow.name,
+            "version" to workflow.version,
+            "vFlowLevel" to workflow.vFlowLevel,
+            "description" to workflow.description,
+            "author" to workflow.author,
+            "homepage" to workflow.homepage,
+            "tags" to workflow.tags,
+            "updated_at" to updatedAt,
+            "modified_at" to workflow.modifiedAt
+        )
+
+        val workflowMap = mapOf(
+            "id" to workflow.id,
+            "name" to workflow.name,
+            "steps" to workflow.steps,
+            "isEnabled" to workflow.isEnabled,
+            "triggerConfig" to workflow.triggerConfig,
+            "isFavorite" to workflow.isFavorite,
+            "wasEnabledBeforePermissionsLost" to workflow.wasEnabledBeforePermissionsLost,
+            "folderId" to workflow.folderId,
+            "order" to workflow.order,
+            "shortcutName" to workflow.shortcutName,
+            "shortcutIconRes" to workflow.shortcutIconRes,
+            "modifiedAt" to workflow.modifiedAt,
+            "version" to workflow.version,
+            "vFlowLevel" to workflow.vFlowLevel,
+            "description" to workflow.description,
+            "author" to workflow.author,
+            "homepage" to workflow.homepage,
+            "tags" to workflow.tags
+        )
+
+        return mapOf("_meta" to meta) + workflowMap
     }
     private var pendingExportWorkflow: Workflow? = null
 
@@ -117,10 +161,11 @@ class WorkflowListFragment : Fragment() {
                     val folder = folderManager.getFolder(folderId)
                     val workflows = workflowManager.getAllWorkflows().filter { it.folderId == folderId }
                     if (folder != null) {
-                        // 导出为包含文件夹信息的格式
+                        // 导出为包含文件夹信息的格式，每个工作流带 _meta
+                        val workflowsWithMeta = workflows.map { createWorkflowExportData(it) }
                         val exportData = mapOf(
                             "folder" to folder,
-                            "workflows" to workflows
+                            "workflows" to workflowsWithMeta
                         )
                         val jsonString = gson.toJson(exportData)
                         requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
@@ -140,11 +185,12 @@ class WorkflowListFragment : Fragment() {
     ) { uri ->
         uri?.let { fileUri ->
             try {
-                // 导出所有工作流（包括文件夹信息）
+                // 导出所有工作流（包括文件夹信息），每个工作流带 _meta
                 val allWorkflows = workflowManager.getAllWorkflows()
                 val allFolders = folderManager.getAllFolders()
+                val workflowsWithMeta = allWorkflows.map { createWorkflowExportData(it) }
                 val backupData = mapOf(
-                    "workflows" to allWorkflows,
+                    "workflows" to workflowsWithMeta,
                     "folders" to allFolders
                 )
                 val jsonString = gson.toJson(backupData)
@@ -166,133 +212,11 @@ class WorkflowListFragment : Fragment() {
                     BufferedReader(InputStreamReader(it)).readText()
                 } ?: throw Exception(getString(R.string.error_cannot_read_file))
 
-                // 检查是否是新的备份格式（包含 folders）或文件夹导出格式
-                try {
-                    val backupType = object : TypeToken<Map<String, Any>>() {}.type
-                    val backupData: Map<String, Any> = gson.fromJson(jsonString, backupType)
-
-                    when {
-                        // 完整备份格式：folders + workflows
-                        backupData.containsKey("folders") && backupData.containsKey("workflows") -> {
-                            importBackupWithFolders(backupData)
-                        }
-                        // 文件夹导出格式：folder (单数) + workflows
-                        backupData.containsKey("folder") && backupData.containsKey("workflows") -> {
-                            importFolderExport(backupData)
-                        }
-                        else -> {
-                            // 旧的格式或单个工作流
-                            importWorkflows(jsonString)
-                        }
-                    }
-                } catch (e: Exception) {
-                    // 尝试作为工作流列表解析
-                    importWorkflows(jsonString)
-                }
+                // 使用统一的导入工具类
+                importHelper.importFromJson(jsonString)
             } catch (e: Exception) {
                 Toast.makeText(requireContext(), getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
             }
-        }
-    }
-
-    private fun importWorkflows(jsonString: String) {
-        val workflowsToImport = mutableListOf<Workflow>()
-        try {
-            val listType = object : TypeToken<List<Workflow>>() {}.type
-            val list: List<Workflow> = gson.fromJson(jsonString, listType)
-            if (list.any { it.id == null || it.name == null }) throw JsonSyntaxException(getString(R.string.error_backup_format_invalid))
-            workflowsToImport.addAll(list)
-        } catch (e: JsonSyntaxException) {
-            val singleWorkflow: Workflow = gson.fromJson(jsonString, Workflow::class.java)
-            if (singleWorkflow.id == null || singleWorkflow.name == null) throw JsonSyntaxException(getString(R.string.error_single_workflow_format_invalid))
-            workflowsToImport.add(singleWorkflow)
-        }
-
-        if (workflowsToImport.isNotEmpty()) {
-            startImportProcess(workflowsToImport)
-        } else {
-            Toast.makeText(requireContext(), getString(R.string.toast_no_workflow_in_file), Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun importBackupWithFolders(backupData: Map<String, Any>) {
-        try {
-            // 导入文件夹
-            val foldersJson = gson.toJson(backupData["folders"])
-            val folderListType = object : TypeToken<List<WorkflowFolder>>() {}.type
-            val folders: List<WorkflowFolder> = gson.fromJson(foldersJson, folderListType)
-
-            folders.forEach { folder ->
-                // 检查是否已存在同名文件夹
-                val existingFolder = folderManager.getAllFolders().find { it.name == folder.name }
-                if (existingFolder != null) {
-                    // 重命名导入的文件夹
-                    folderManager.saveFolder(folder.copy(name = "${folder.name} (导入)"))
-                } else {
-                    folderManager.saveFolder(folder)
-                }
-            }
-
-            // 导入工作流
-            val workflowsJson = gson.toJson(backupData["workflows"])
-            val workflowListType = object : TypeToken<List<Workflow>>() {}.type
-            val workflows: List<Workflow> = gson.fromJson(workflowsJson, workflowListType)
-
-            // 重置 folderId 为新文件夹的 ID
-            val updatedWorkflows = workflows.map { workflow ->
-                val originalFolderName = folders.find { it.id == workflow.folderId }?.name
-                if (originalFolderName != null) {
-                    val newFolder = folderManager.getAllFolders().find { it.name == "${originalFolderName} (导入)" || it.name == originalFolderName }
-                    if (newFolder != null) {
-                        workflow.copy(folderId = newFolder.id)
-                    } else {
-                        workflow.copy(folderId = null)
-                    }
-                } else {
-                    workflow.copy(folderId = null)
-                }
-            }
-
-            startImportProcess(updatedWorkflows)
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
-        }
-    }
-
-    /**
-     * 导入文件夹导出格式：{"folder": {...}, "workflows": [...]}
-     */
-    private fun importFolderExport(backupData: Map<String, Any>) {
-        try {
-            // 导入文件夹
-            val folderJson = gson.toJson(backupData["folder"])
-            val folder: WorkflowFolder = gson.fromJson(folderJson, WorkflowFolder::class.java)
-
-            // 检查是否已存在同名文件夹
-            val existingFolder = folderManager.getAllFolders().find { it.name == folder.name }
-            if (existingFolder != null) {
-                folderManager.saveFolder(folder.copy(name = "${folder.name} (导入)"))
-            } else {
-                folderManager.saveFolder(folder)
-            }
-
-            // 获取新文件夹的 ID（可能是原名或重命名后的）
-            val newFolder = folderManager.getAllFolders().find { it.name == folder.name || it.name == "${folder.name} (导入)" }
-            val newFolderId = newFolder?.id
-
-            // 导入工作流
-            val workflowsJson = gson.toJson(backupData["workflows"])
-            val workflowListType = object : TypeToken<List<Workflow>>() {}.type
-            val workflows: List<Workflow> = gson.fromJson(workflowsJson, workflowListType)
-
-            // 更新工作流的 folderId
-            val updatedWorkflows = workflows.map { workflow ->
-                workflow.copy(folderId = newFolderId)
-            }
-
-            startImportProcess(updatedWorkflows)
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -309,6 +233,11 @@ class WorkflowListFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_workflows, container, false)
         workflowManager = WorkflowManager(requireContext())
         folderManager = FolderManager(requireContext())
+        importHelper = WorkflowImportHelper(
+            requireContext(),
+            workflowManager,
+            folderManager
+        ) { loadData() }
         recyclerView = view.findViewById(R.id.recycler_view_workflows)
         setupRecyclerView()
         setupDragAndDrop()
@@ -787,7 +716,17 @@ class WorkflowListFragment : Fragment() {
     }
 
     private fun handleKeepBoth(workflow: Workflow) {
-        val newWorkflow = workflow.copy(
+        // 确保元数据字段有默认值，避免 copy 时 NPE
+        val workflowWithDefaults = workflow.copy(
+            version = workflow.version ?: "1.0.0",
+            vFlowLevel = if (workflow.vFlowLevel == 0) 1 else workflow.vFlowLevel,
+            description = workflow.description ?: "",
+            author = workflow.author ?: "",
+            homepage = workflow.homepage ?: "",
+            tags = workflow.tags ?: emptyList(),
+            modifiedAt = if (workflow.modifiedAt == 0L) System.currentTimeMillis() else workflow.modifiedAt
+        )
+        val newWorkflow = workflowWithDefaults.copy(
             id = UUID.randomUUID().toString(),
             name = getString(R.string.toast_workflow_imported_name, workflow.name)
         )

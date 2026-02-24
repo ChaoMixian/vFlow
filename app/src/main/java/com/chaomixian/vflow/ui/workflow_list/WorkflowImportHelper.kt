@@ -4,6 +4,7 @@ package com.chaomixian.vflow.ui.workflow_list
 import android.content.Context
 import android.widget.Toast
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.FolderManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -27,8 +28,8 @@ class WorkflowImportHelper(
     /**
      * 从 JSON 字符串导入工作流
      * 支持格式：
-     * 1. 单个工作流对象
-     * 2. 工作流数组
+     * 1. 单个工作流对象（带或不带 _meta）
+     * 2. 工作流数组（带或不带 _meta）
      * 3. 文件夹导出格式：{"folder": {...}, "workflows": [...]}
      * 4. 完整备份格式：{"folders": [...], "workflows": [...]}
      */
@@ -46,24 +47,59 @@ class WorkflowImportHelper(
                 backupData.containsKey("folder") && backupData.containsKey("workflows") -> {
                     importFolderExport(backupData)
                 }
+                // 带 _meta 的单个工作流
+                backupData.containsKey("_meta") -> {
+                    val workflow = parseWorkflowWithMeta(backupData)
+                    startImportProcess(listOf(workflow))
+                }
+                // 带有 workflows 键的数组格式（可能有 _meta）
+                backupData.containsKey("workflows") -> {
+                    val workflows = parseWorkflowsWithMeta(backupData)
+                    startImportProcess(workflows)
+                }
                 else -> {
-                    // 旧的格式或单个工作流
-                    importWorkflows(jsonString)
+                    // 旧的格式或工作流列表
+                    importLegacyWorkflows(jsonString)
                 }
             }
         } catch (e: Exception) {
-            // 尝试作为工作流列表解析
-            importWorkflows(jsonString)
+            // 尝试作为旧格式工作流列表解析
+            importLegacyWorkflows(jsonString)
         }
     }
 
-    private fun importWorkflows(jsonString: String) {
+    /**
+     * 解析带 _meta 的单个工作流
+     */
+    private fun parseWorkflowWithMeta(data: Map<String, Any>): Workflow {
+        // Gson 会自动忽略 _meta 字段，因为它不在 Workflow 类中
+        return gson.fromJson(gson.toJson(data), Workflow::class.java)
+    }
+
+    /**
+     * 解析带 _meta 的工作流数组
+     */
+    private fun parseWorkflowsWithMeta(backupData: Map<String, Any>): List<Workflow> {
+        val workflowsJson = gson.toJson(backupData["workflows"])
+        val listType = object : TypeToken<List<Map<String, Any>>>() {}.type
+        val workflowMaps: List<Map<String, Any>> = gson.fromJson(workflowsJson, listType)
+        return workflowMaps.map { workflowMap ->
+            gson.fromJson(gson.toJson(workflowMap), Workflow::class.java)
+        }
+    }
+
+    /**
+     * 解析旧格式的工作流列表
+     */
+    private fun importLegacyWorkflows(jsonString: String) {
         val workflowsToImport = mutableListOf<Workflow>()
         try {
+            // 尝试作为工作流列表解析
             val listType = object : TypeToken<List<Workflow>>() {}.type
             val list: List<Workflow> = gson.fromJson(jsonString, listType)
             workflowsToImport.addAll(list)
-        } catch (e: JsonSyntaxException) {
+        } catch (e: Exception) {
+            // 尝试作为单个工作流解析
             val singleWorkflow: Workflow = gson.fromJson(jsonString, Workflow::class.java)
             workflowsToImport.add(singleWorkflow)
         }
@@ -98,8 +134,13 @@ class WorkflowImportHelper(
             val workflowListType = object : TypeToken<List<Workflow>>() {}.type
             val workflows: List<Workflow> = gson.fromJson(workflowsJson, workflowListType)
 
+            // 先确保元数据字段有默认值，再更新 folderId
+            val workflowsWithDefaults = workflows.map { wf ->
+                applyWorkflowDefaults(wf)
+            }
+
             // 重置 folderId 为新文件夹的 ID
-            val updatedWorkflows = workflows.map { workflow ->
+            val updatedWorkflows = workflowsWithDefaults.map { workflow ->
                 val originalFolderName = folders.find { it.id == workflow.folderId }?.name
                 if (originalFolderName != null) {
                     val newFolder = folderManager.getAllFolders().find { it.name == "${originalFolderName} (导入)" || it.name == originalFolderName }
@@ -145,8 +186,13 @@ class WorkflowImportHelper(
             val workflowListType = object : TypeToken<List<Workflow>>() {}.type
             val workflows: List<Workflow> = gson.fromJson(workflowsJson, workflowListType)
 
+            // 先确保元数据字段有默认值，再更新 folderId
+            val workflowsWithDefaults = workflows.map { wf ->
+                applyWorkflowDefaults(wf)
+            }
+
             // 更新工作流的 folderId
-            val updatedWorkflows = workflows.map { workflow ->
+            val updatedWorkflows = workflowsWithDefaults.map { workflow ->
                 workflow.copy(folderId = newFolderId)
             }
 
@@ -156,7 +202,34 @@ class WorkflowImportHelper(
         }
     }
 
+    /**
+     * 确保工作流元数据字段有默认值
+     */
+    private fun applyWorkflowDefaults(wf: Workflow): Workflow {
+        return wf.copy(
+            version = wf.version?.takeIf { it.isNotEmpty() } ?: "1.0.0",
+            vFlowLevel = if (wf.vFlowLevel == 0) 1 else wf.vFlowLevel,
+            description = wf.description ?: "",
+            author = wf.author ?: "",
+            homepage = wf.homepage ?: "",
+            tags = wf.tags ?: emptyList(),
+            modifiedAt = if (wf.modifiedAt == 0L) System.currentTimeMillis() else wf.modifiedAt
+        )
+    }
+
     private fun startImportProcess(workflows: List<Workflow>) {
-        ImportQueueProcessor(context, workflowManager, onImportCompleted).startImport(workflows)
+        // 确保所有工作流的元数据字段有默认值
+        val workflowsWithDefaults = workflows.map { wf ->
+            wf.copy(
+                version = wf.version?.takeIf { it.isNotEmpty() } ?: "1.0.0",
+                vFlowLevel = if (wf.vFlowLevel == 0) 1 else wf.vFlowLevel,
+                description = wf.description ?: "",
+                author = wf.author ?: "",
+                homepage = wf.homepage ?: "",
+                tags = wf.tags ?: emptyList(),
+                modifiedAt = if (wf.modifiedAt == 0L) System.currentTimeMillis() else wf.modifiedAt
+            )
+        }
+        ImportQueueProcessor(context, workflowManager, onImportCompleted).startImport(workflowsWithDefaults)
     }
 }

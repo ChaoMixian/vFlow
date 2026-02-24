@@ -37,8 +37,18 @@ class WorkflowManager(val context: Context) {
         if (firstStep != null && firstStep.moduleId != ManualTriggerModule().id) {
             config = firstStep.parameters + ("type" to firstStep.moduleId)
         }
-        // 保留 folderId，只更新 triggerConfig
-        val workflowToSave = workflow.copy(triggerConfig = config)
+
+        // 确保元数据字段有默认值
+        val workflowToSave = workflow.copy(
+            triggerConfig = config,
+            modifiedAt = System.currentTimeMillis(),
+            version = workflow.version?.takeIf { it.isNotEmpty() } ?: "1.0.0",
+            vFlowLevel = if (workflow.vFlowLevel == 0) 1 else workflow.vFlowLevel,
+            description = workflow.description ?: "",
+            author = workflow.author ?: "",
+            homepage = workflow.homepage ?: "",
+            tags = workflow.tags ?: emptyList()
+        )
 
         if (index != -1) {
             workflows[index] = workflowToSave
@@ -97,7 +107,24 @@ class WorkflowManager(val context: Context) {
         return if (json != null) {
             val type = object : TypeToken<List<Workflow>>() {}.type
             try {
-                gson.fromJson(json, type) ?: emptyList()
+                val workflows: List<Workflow> = gson.fromJson(json, type) ?: emptyList()
+                // 确保所有工作流的元数据字段都有默认值
+                workflows.map { wf ->
+                    if (wf.version.isNullOrEmpty() || wf.description.isNullOrEmpty() || wf.author.isNullOrEmpty() ||
+                        wf.homepage.isNullOrEmpty() || wf.tags.isNullOrEmpty() || wf.vFlowLevel == 0) {
+                        wf.copy(
+                            version = wf.version?.takeIf { it.isNotEmpty() } ?: "1.0.0",
+                            vFlowLevel = if (wf.vFlowLevel == 0) 1 else wf.vFlowLevel,
+                            description = wf.description ?: "",
+                            author = wf.author ?: "",
+                            homepage = wf.homepage ?: "",
+                            tags = wf.tags ?: emptyList(),
+                            modifiedAt = if (wf.modifiedAt == 0L) System.currentTimeMillis() else wf.modifiedAt
+                        )
+                    } else {
+                        wf
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 emptyList()

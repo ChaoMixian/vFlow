@@ -56,6 +56,7 @@
     <string name="common_delete">Delete</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_confirm">Confirm</string>
+    <string name="save">Save</string>
     <string name="workflow_editor_add_action">Add Action</string>
     <string name="picker_select_trigger">Select a trigger</string>
     <string name="picker_select_action">Select an action</string>
@@ -309,7 +310,27 @@
     <!-- Workflow Editor -->
     <string name="workflow_name_hint">Workflow name</string>
     <string name="ai_generate">AI Generate</string>
+    <string name="editor_more_options">More options</string>
+    <string name="editor_more_advanced_settings">Advanced Settings</string>
+    <string name="editor_more_ai_generate">AI Generate</string>
+    <string name="editor_more_ui_inspector">UI Inspector</string>
     <string name="add_workflow">Add workflow</string>
+
+    <!-- Workflow Metadata -->
+    <string name="workflow_metadata">Metadata</string>
+    <string name="workflow_tools">Tools</string>
+    <string name="workflow_not_exists">(Workflow not exists)</string>
+    <string name="workflow_id">ID</string>
+    <string name="workflow_version">Version</string>
+    <string name="workflow_vflow_level">vFlow Level</string>
+    <string name="workflow_description">Description</string>
+    <string name="workflow_author">Author</string>
+    <string name="workflow_homepage">Homepage</string>
+    <string name="workflow_tags_hint">Tags</string>
+    <string name="workflow_tags_helper">Separate tags with commas</string>
+    <string name="metadata_saved">Metadata saved</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+    <string name="clipboard_label_workflow_id">Workflow ID</string>
 
     <!-- Module Management -->
     <string name="install_module">Install module</string>

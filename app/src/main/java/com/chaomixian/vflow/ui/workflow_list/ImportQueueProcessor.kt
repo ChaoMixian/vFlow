@@ -87,7 +87,17 @@ class ImportQueueProcessor(
     }
 
     private fun handleKeepBoth(toImport: Workflow) {
-        val newWorkflow = toImport.copy(
+        // 先确保元数据字段有默认值，避免 copy 时 NPE
+        val workflowWithDefaults = toImport.copy(
+            version = toImport.version?.takeIf { it.isNotEmpty() } ?: "1.0.0",
+            vFlowLevel = if (toImport.vFlowLevel == 0) 1 else toImport.vFlowLevel,
+            description = toImport.description ?: "",
+            author = toImport.author ?: "",
+            homepage = toImport.homepage ?: "",
+            tags = toImport.tags ?: emptyList(),
+            modifiedAt = if (toImport.modifiedAt == 0L) System.currentTimeMillis() else toImport.modifiedAt
+        )
+        val newWorkflow = workflowWithDefaults.copy(
             id = UUID.randomUUID().toString(),
             name = "${toImport.name} (副本)"
         )
