@@ -165,6 +165,15 @@ class SettingsFragment : Fragment() {
             prefs.edit { putBoolean("enableTypeFilter", isChecked) }
         }
 
+        // 从最近任务中隐藏开关
+        val hideFromRecentsSwitch = view.findViewById<MaterialSwitch>(R.id.switch_hide_from_recents)
+        hideFromRecentsSwitch.isChecked = prefs.getBoolean("hideFromRecents", false)
+        hideFromRecentsSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean("hideFromRecents", isChecked) }
+            val msgRes = if (isChecked) R.string.settings_toast_hide_from_recents_enabled else R.string.settings_toast_hide_from_recents_disabled
+            requireContext().toast(msgRes)
+        }
+
         // 权限与 Shell 设置
         val shellModeToggle = view.findViewById<MaterialButtonToggleGroup>(R.id.toggle_shell_mode)
         val defaultMode = prefs.getString("default_shell_mode", "shizuku")

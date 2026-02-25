@@ -4,6 +4,7 @@ package com.chaomixian.vflow.ui.main
 
 import android.content.Context
 import android.content.Intent
+import android.app.ActivityManager
 import android.os.Bundle
 import android.view.View
 import android.view.ViewTreeObserver
@@ -51,8 +52,9 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 检查首次运行
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        // 检查首次运行
         if (prefs.getBoolean("is_first_run", true)) {
             startActivity(Intent(this, com.chaomixian.vflow.ui.onboarding.OnboardingActivity::class.java))
             finish()
@@ -113,6 +115,24 @@ class MainActivity : BaseActivity() {
         }
         // 每次返回主界面时，检查并应用 Shizuku 相关设置
         checkAndApplyStartupSettings()
+    }
+
+    /**
+     * 当Activity进入后台时，检查是否需要从最近任务中隐藏
+     */
+    override fun onStop() {
+        super.onStop()
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val hideFromRecents = prefs.getBoolean("hideFromRecents", false)
+        if (hideFromRecents) {
+            // 从最近任务中移除当前Activity
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            activityManager.appTasks.forEach { task ->
+                if (task.taskInfo.baseActivity?.packageName == packageName) {
+                    task.setExcludeFromRecents(true)
+                }
+            }
+        }
     }
 
     /**

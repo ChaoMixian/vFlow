@@ -162,6 +162,10 @@
     <string name="settings_switch_auto_enable_accessibility_desc">当服务意外关闭时，通过 Shizuku / Root 自动重新启用无障碍服务。此功能需要 Shizuku / Root权限。</string>
     <string name="settings_switch_enable_type_filter">启用变量类型限制</string>
     <string name="settings_switch_enable_type_filter_desc">开启后，变量选择器将按模块输入类型过滤变量，IF/循环模块的操作符也会按变量类型过滤。关闭时为快捷指令风格的弱类型模式。</string>
+    <string name="settings_switch_hide_from_recents">从最近任务中隐藏</string>
+    <string name="settings_switch_hide_from_recents_desc">开启后，当应用在后台时，从最近任务列表中隐藏应用。</string>
+    <string name="settings_toast_hide_from_recents_enabled">已开启从最近任务中隐藏</string>
+    <string name="settings_toast_hide_from_recents_disabled">已关闭从最近任务中隐藏</string>
     <string name="settings_section_permissions_shell">权限与 Shell</string>
     <string name="settings_shell_preference">Shell 偏好</string>
     <string name="settings_shell_preference_desc">用于执行截图、Shell 命令等操作</string>
