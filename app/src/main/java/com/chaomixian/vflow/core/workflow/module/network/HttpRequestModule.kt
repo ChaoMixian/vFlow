@@ -342,9 +342,17 @@ class HttpRequestModule : BaseModule() {
     private fun createRequestBody(context: ExecutionContext, bodyType: String, bodyData: Any?): RequestBody? {
         return when (bodyType) {
             "JSON" -> {
-                val json = Gson().toJson(bodyData)
+                // fixme: VList转字符串后不是Json格式
+                val jsonString = when (bodyData) {
+                    is String -> bodyData
+                    is Map<*, *> -> Gson().toJson(bodyData)
+                    is List<*> -> Gson().toJson(bodyData)
+                    is VDictionary -> Gson().toJson(bodyData.raw)
+                    is VList -> Gson().toJson(bodyData.raw)
+                    else -> bodyData?.toString() ?: ""
+                }
                 // 明确设置Content-Type为application/json
-                json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+                jsonString.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
             }
             "表单" -> {
                 val formBuilder = FormBody.Builder()
