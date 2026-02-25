@@ -16,8 +16,10 @@ import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.module.PickerType
 import com.chaomixian.vflow.core.module.ProgressUpdate
 import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
@@ -193,7 +195,8 @@ class FileOperationModule : BaseModule() {
         return when (operation) {
             "创建" -> {
                 val fileName = step.parameters["file_name"] as? String ?: "未指定文件名"
-                "创建: $fileName"
+                val fileNamePill = PillUtil.Pill(fileName, "file_name")
+                PillUtil.buildSpannable(context, "创建: ", fileNamePill)
             }
             else -> {
                 val filePath = step.parameters["file_path"] as? String ?: "未选择文件"
@@ -265,8 +268,9 @@ class FileOperationModule : BaseModule() {
             "创建" -> {
                 val directoryPath = currentStep.parameters["directory_path"] as? String
                     ?: return ExecutionResult.Failure("执行错误", "未指定目录路径")
-                val fileName = currentStep.parameters["file_name"] as? String
+                val rawFileName = currentStep.parameters["file_name"] as? String
                     ?: return ExecutionResult.Failure("执行错误", "未指定文件名")
+                val fileName = VariableResolver.resolve(rawFileName, context)
                 val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
                 val content = currentStep.parameters["create_content"] as? String ?: ""
 
