@@ -1949,4 +1949,25 @@
     <string name="error_vflow_device_vibration_unknown_mode">Unknown vibration mode: %s</string>
     <string name="error_vflow_device_vibration_failed">Vibration failed</string>
     <string name="error_vflow_device_vibration_unknown">Unknown error</string>
+
+    <!-- Flashlight Module -->
+    <string name="module_vflow_device_flashlight_name">Flashlight</string>
+    <string name="module_vflow_device_flashlight_desc">Control device flashlight with toggle, on, and off modes</string>
+    <string name="param_vflow_device_flashlight_mode_name">Operation Mode</string>
+    <string name="param_vflow_device_flashlight_strength_name">Flashlight Strength</string>
+    <string name="option_vflow_device_flashlight_toggle">Toggle</string>
+    <string name="option_vflow_device_flashlight_on">On</string>
+    <string name="option_vflow_device_flashlight_off">Off</string>
+    <string name="output_vflow_device_flashlight_success_name">Success</string>
+    <string name="summary_vflow_device_flashlight_toggle">Toggle</string>
+    <string name="summary_vflow_device_flashlight_on">On (Strength: %d%%)</string>
+    <string name="summary_vflow_device_flashlight_off">Off</string>
+    <string name="msg_vflow_device_flashlight_turning_on">Turning on flashlight...</string>
+    <string name="msg_vflow_device_flashlight_turning_off">Turning off flashlight...</string>
+    <string name="msg_vflow_device_flashlight_toggling">Toggling flashlight...</string>
+    <string name="msg_vflow_device_flashlight_completed">Operation completed</string>
+    <string name="error_vflow_device_flashlight_unavailable">Flashlight not available</string>
+    <string name="error_vflow_device_flashlight_no_camera">Device has no camera</string>
+    <string name="error_vflow_device_flashlight_failed">Flashlight operation failed</string>
+    <string name="error_vflow_device_flashlight_unknown_mode">Unknown operation mode: %s</string>
 </resources>

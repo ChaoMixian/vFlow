@@ -1820,4 +1820,25 @@
     <string name="error_vflow_device_vibration_failed">振动失败</string>
     <string name="error_vflow_device_vibration_unknown">未知错误</string>
 
+    <!-- Flashlight Module -->
+    <string name="module_vflow_device_flashlight_name">手电筒</string>
+    <string name="module_vflow_device_flashlight_desc">控制设备手电筒，支持切换、开启、关闭三种模式</string>
+    <string name="param_vflow_device_flashlight_mode_name">操作模式</string>
+    <string name="param_vflow_device_flashlight_strength_name">手电筒强度</string>
+    <string name="option_vflow_device_flashlight_toggle">切换</string>
+    <string name="option_vflow_device_flashlight_on">开启</string>
+    <string name="option_vflow_device_flashlight_off">关闭</string>
+    <string name="output_vflow_device_flashlight_success_name">是否成功</string>
+    <string name="summary_vflow_device_flashlight_toggle">切换</string>
+    <string name="summary_vflow_device_flashlight_on">开启 (强度: %d%%)</string>
+    <string name="summary_vflow_device_flashlight_off">关闭</string>
+    <string name="msg_vflow_device_flashlight_turning_on">正在打开手电筒...</string>
+    <string name="msg_vflow_device_flashlight_turning_off">正在关闭手电筒...</string>
+    <string name="msg_vflow_device_flashlight_toggling">正在切换手电筒...</string>
+    <string name="msg_vflow_device_flashlight_completed">操作完成</string>
+    <string name="error_vflow_device_flashlight_unavailable">设备不支持手电筒</string>
+    <string name="error_vflow_device_flashlight_no_camera">设备没有相机</string>
+    <string name="error_vflow_device_flashlight_failed">手电筒操作失败</string>
+    <string name="error_vflow_device_flashlight_unknown_mode">未知的操作模式: %s</string>
+
 </resources>

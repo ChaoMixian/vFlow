@@ -189,6 +189,7 @@ object ModuleRegistry {
         register(CallPhoneModule(), context)
         register(DarkModeModule(), context)
         register(VibrationModule(), context)
+        register(FlashlightModule(), context)
 
         // Core (Beta) 模块
         // 网络控制组
