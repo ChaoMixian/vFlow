@@ -1903,10 +1903,11 @@
 
     <!-- Dark Mode Module -->
     <string name="module_vflow_system_darkmode_name">Dark Mode</string>
-    <string name="module_vflow_system_darkmode_desc">Switch system dark/light mode (Automatic/Dark/Light)</string>
+    <string name="module_vflow_system_darkmode_desc">Switch system dark/light mode (Auto/Dark/Light/Toggle)</string>
     <string name="param_vflow_system_darkmode_mode_name">Mode</string>
     <string name="output_vflow_system_darkmode_success_name">Success</string>
     <string name="option_vflow_system_darkmode_auto">Auto</string>
     <string name="option_vflow_system_darkmode_dark">Dark</string>
     <string name="option_vflow_system_darkmode_light">Light</string>
+    <string name="option_vflow_system_darkmode_toggle">Toggle</string>
 </resources>
