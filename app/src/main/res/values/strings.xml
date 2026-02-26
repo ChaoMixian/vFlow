@@ -338,6 +338,7 @@
 
     <!-- Workflow Metadata -->
     <string name="workflow_metadata">元数据</string>
+    <string name="workflow_more_metadata">更多元数据</string>
     <string name="workflow_tools">工具</string>
     <string name="workflow_not_exists">（工作流不存在）</string>
     <string name="workflow_id">ID</string>
@@ -349,6 +350,11 @@
     <string name="workflow_tags_hint">标签</string>
     <string name="workflow_tags_helper">多个标签用逗号分隔</string>
     <string name="metadata_saved">元数据已保存</string>
+
+    <!-- Workflow Config -->
+    <string name="workflow_config">工作流配置</string>
+    <string name="workflow_max_execution_time_enabled">限制最大执行时长</string>
+    <string name="workflow_max_execution_time_value">%d 秒</string>
     <string name="copied_to_clipboard">已复制到剪贴板</string>
     <string name="clipboard_label_workflow_id">工作流 ID</string>
 

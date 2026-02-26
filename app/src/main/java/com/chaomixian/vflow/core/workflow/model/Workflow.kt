@@ -40,5 +40,7 @@ data class Workflow(
     // 元数据 - 主页
     var homepage: String = "",
     // 元数据 - 标签
-    var tags: List<String> = emptyList()
+    var tags: List<String> = emptyList(),
+    // 工作流配置 - 最大执行时长（秒），null 表示不限制
+    var maxExecutionTime: Int? = null
 ) : Parcelable

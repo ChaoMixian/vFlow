@@ -338,6 +338,7 @@
 
     <!-- Workflow Metadata -->
     <string name="workflow_metadata">Metadata</string>
+    <string name="workflow_more_metadata">More Metadata</string>
     <string name="workflow_tools">Tools</string>
     <string name="workflow_not_exists">(Workflow not exists)</string>
     <string name="workflow_id">ID</string>
@@ -349,6 +350,11 @@
     <string name="workflow_tags_hint">Tags</string>
     <string name="workflow_tags_helper">Separate tags with commas</string>
     <string name="metadata_saved">Metadata saved</string>
+
+    <!-- Workflow Config -->
+    <string name="workflow_config">Workflow Config</string>
+    <string name="workflow_max_execution_time_enabled">Limit Max Execution Time</string>
+    <string name="workflow_max_execution_time_value">%d seconds</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
     <string name="clipboard_label_workflow_id">Workflow ID</string>
 

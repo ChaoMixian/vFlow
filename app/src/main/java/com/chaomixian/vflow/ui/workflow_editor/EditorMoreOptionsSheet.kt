@@ -10,6 +10,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.chaomixian.vflow.R
@@ -43,6 +45,17 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
 
     private lateinit var layoutAiGenerate: MaterialCardView
     private lateinit var layoutUiInspector: MaterialCardView
+    private lateinit var cardMoreMetadata: MaterialCardView
+    private lateinit var layoutMoreMetadataHeader: LinearLayout
+    private lateinit var layoutMoreMetadataContent: LinearLayout
+    private lateinit var imageExpandIcon: ImageView
+
+    private lateinit var switchMaxExecutionTime: com.google.android.material.materialswitch.MaterialSwitch
+    private lateinit var layoutMaxExecutionTimeSlider: LinearLayout
+    private lateinit var textMaxExecutionTimeValue: TextView
+    private lateinit var sliderMaxExecutionTime: com.google.android.material.slider.Slider
+
+    private var isMoreMetadataExpanded = false
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
@@ -82,6 +95,15 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
 
         layoutAiGenerate = view.findViewById(R.id.card_ai_generate)
         layoutUiInspector = view.findViewById(R.id.card_ui_inspector)
+        cardMoreMetadata = view.findViewById(R.id.card_more_metadata)
+        layoutMoreMetadataHeader = view.findViewById(R.id.layout_more_metadata_header)
+        layoutMoreMetadataContent = view.findViewById(R.id.layout_more_metadata_content)
+        imageExpandIcon = view.findViewById(R.id.image_expand_icon)
+
+        switchMaxExecutionTime = view.findViewById(R.id.switch_max_execution_time)
+        layoutMaxExecutionTimeSlider = view.findViewById(R.id.layout_max_execution_time_slider)
+        textMaxExecutionTimeValue = view.findViewById(R.id.text_max_execution_time_value)
+        sliderMaxExecutionTime = view.findViewById(R.id.slider_max_execution_time)
 
         val btnSaveMetadata = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_metadata)
 
@@ -105,10 +127,29 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             editAuthor.setText(wf.author)
             editHomepage.setText(wf.homepage)
             editTags.setText(wf.tags.joinToString(", "))
+
+            // 填充最大执行时长配置
+            wf.maxExecutionTime?.let { maxTime ->
+                switchMaxExecutionTime.isChecked = true
+                layoutMaxExecutionTimeSlider.visibility = View.VISIBLE
+                sliderMaxExecutionTime.value = maxTime.toFloat()
+                updateMaxExecutionTimeValue(maxTime)
+            } ?: run {
+                switchMaxExecutionTime.isChecked = false
+                layoutMaxExecutionTimeSlider.visibility = View.GONE
+                sliderMaxExecutionTime.value = 60f // 默认值
+                updateMaxExecutionTimeValue(60)
+            }
         } ?: run {
             textWorkflowName.text = getString(R.string.workflow_not_exists)
             textWorkflowId.text = "-"
             textWorkflowModified.text = "-"
+
+            // 初始化默认配置
+            switchMaxExecutionTime.isChecked = false
+            layoutMaxExecutionTimeSlider.visibility = View.GONE
+            sliderMaxExecutionTime.value = 60f
+            updateMaxExecutionTimeValue(60)
         }
 
         // 保存元数据
@@ -122,6 +163,41 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
 
         layoutUiInspector.setOnClickListener {
             onUiInspectorClicked?.invoke()
+        }
+
+        // 折叠/展开更多元数据
+        layoutMoreMetadataHeader.setOnClickListener {
+            toggleMoreMetadataExpansion()
+        }
+
+        // 最大执行时长开关监听
+        switchMaxExecutionTime.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                layoutMaxExecutionTimeSlider.visibility = View.VISIBLE
+            } else {
+                layoutMaxExecutionTimeSlider.visibility = View.GONE
+            }
+        }
+
+        // 最大执行时长 Slider 监听
+        sliderMaxExecutionTime.addOnChangeListener { _, value, _ ->
+            updateMaxExecutionTimeValue(value.toInt())
+        }
+    }
+
+    private fun updateMaxExecutionTimeValue(seconds: Int) {
+        textMaxExecutionTimeValue.text = getString(R.string.workflow_max_execution_time_value, seconds)
+    }
+
+    private fun toggleMoreMetadataExpansion() {
+        isMoreMetadataExpanded = !isMoreMetadataExpanded
+
+        if (isMoreMetadataExpanded) {
+            layoutMoreMetadataContent.visibility = View.VISIBLE
+            imageExpandIcon.rotation = 180f
+        } else {
+            layoutMoreMetadataContent.visibility = View.GONE
+            imageExpandIcon.rotation = 0f
         }
     }
 
@@ -140,13 +216,20 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             emptyList()
         }
 
+        val maxExecutionTime = if (switchMaxExecutionTime.isChecked) {
+            sliderMaxExecutionTime.value.toInt()
+        } else {
+            null
+        }
+
         val updatedWorkflow = wf.copy(
             version = version,
             vFlowLevel = vFlowLevel,
             description = description,
             author = author,
             homepage = homepage,
-            tags = tags
+            tags = tags,
+            maxExecutionTime = maxExecutionTime
         )
 
         onMetadataSaved?.invoke(updatedWorkflow)

@@ -24,6 +24,7 @@ import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.ui.workflow_editor.ActionEditorSheet
 import kotlinx.coroutines.*
+import kotlinx.coroutines.TimeoutCancellationException
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -144,6 +145,8 @@ object WorkflowExecutor {
                 val workDir = File(StorageManager.tempDir, "exec_$executionId")
                 if (!workDir.exists()) workDir.mkdirs()
 
+                var isTimeout = false
+
                 try {
                     // 创建并注册执行期间所需的服务
                     val services = ExecutionServices()
@@ -166,15 +169,45 @@ object WorkflowExecutor {
                         workDir = workDir
                     )
 
-                    // 调用内部执行循环
-                    executeWorkflowInternal(workflow, initialContext)
+                    // 超时限制
+                    val maxExecutionTime = workflow.maxExecutionTime
 
-                    // 如果循环正常结束（没有break），则显示完成通知
-                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Completed("执行完毕"))
+                    if (maxExecutionTime != null && maxExecutionTime > 0) {
+                        try {
+                            withTimeout(maxExecutionTime * 1000L) {
+                                executeWorkflowInternal(workflow, initialContext)
+                            }
+                        } catch (e: TimeoutCancellationException) {
+                            DebugLogger.e("WorkflowExecutor", "工作流执行超时（最大 ${maxExecutionTime} 秒）")
+                            ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("执行超时（${maxExecutionTime}秒）"))
+                            isTimeout = true
+
+                            // 在主线程显示 Toast 提示
+                            try {
+                                withContext(Dispatchers.Main) {
+                                    android.widget.Toast.makeText(
+                                        initialContext.applicationContext,
+                                        "工作流执行超时（${maxExecutionTime}秒）",
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            } catch (toastException: Exception) {
+                                DebugLogger.w("WorkflowExecutor", "显示超时 Toast 失败", toastException)
+                            }
+                        }
+                    } else {
+                        executeWorkflowInternal(workflow, initialContext)
+                    }
+
+                    if (!isTimeout) {
+                        ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Completed("执行完毕"))
+                    }
 
                 } catch (e: CancellationException) {
-                    DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 已被取消。")
-                    ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("已停止"))
+                    if (!isTimeout) {
+                        DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 已被取消。")
+                        ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("已停止"))
+                    }
                 } catch (e: Exception) {
                     DebugLogger.e("WorkflowExecutor", "主工作流 '${workflow.name}' 执行时发生未捕获的异常。", e)
                     ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Cancelled("执行异常"))
@@ -206,7 +239,10 @@ object WorkflowExecutor {
                             stoppedWorkflows.remove(workflow.id)
                             executionLogs.remove(workflow.id)
 
-                            if (wasCancelled) {
+                            if (isTimeout) {
+                                // 超时取消，广播 Cancelled 状态
+                                ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id, fullLog))
+                            } else if (wasCancelled) {
                                 ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id, fullLog))
                             } else {
                                 // 正常结束或Stop信号都视为Finished
