@@ -28,7 +28,7 @@ class ParseJsonModule : BaseModule() {
         descriptionStringRes = R.string.module_vflow_data_parse_json_desc,
         name = "解析 JSON",
         description = "从 JSON 文本中提取数据，支持路径语法（如 user.name、users.0.name）",
-        iconRes = R.drawable.rounded_analytics_24,
+        iconRes = R.drawable.rounded_file_json_24,
         category = "数据"
     )
 

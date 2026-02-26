@@ -9,7 +9,7 @@
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/menu_sort_by_name"
-        android:icon="@drawable/rounded_auto_awesome_motion_24"
+        android:icon="@drawable/rounded_sort_24"
         android:title="按名称排序"
         app:iconTint="?attr/colorControlNormal"
         app:showAsAction="ifRoom" />

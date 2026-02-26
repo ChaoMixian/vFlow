@@ -153,7 +153,7 @@ class WorkflowListAdapter(
             if (missingPermissions.isNotEmpty()) {
                 val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
                 permissionChip.text = "缺少权限"
-                permissionChip.setChipIconResource(R.drawable.ic_shield)
+                permissionChip.setChipIconResource(R.drawable.rounded_security_24)
                 permissionChip.chipBackgroundColor = ColorStateList.valueOf(
                     MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorErrorContainer, 0)
                 )
@@ -167,7 +167,7 @@ class WorkflowListAdapter(
             if (stepCount >= 0) {
                 val stepChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
                 stepChip.text = "${stepCount.coerceAtLeast(0)} 个步骤"
-                stepChip.setChipIconResource(R.drawable.ic_workflows)
+                stepChip.setChipIconResource(R.drawable.rounded_dashboard_fill_24)
                 infoChipGroup.addView(stepChip)
             }
 
@@ -182,7 +182,7 @@ class WorkflowListAdapter(
                 for (permission in requiredPermissions) {
                     val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
                     permissionChip.text = permission.name
-                    permissionChip.setChipIconResource(R.drawable.ic_shield)
+                    permissionChip.setChipIconResource(R.drawable.rounded_security_24)
                     infoChipGroup.addView(permissionChip)
                 }
             }

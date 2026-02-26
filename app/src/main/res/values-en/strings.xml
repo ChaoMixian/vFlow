@@ -5,6 +5,8 @@
 
     <string name="title_home">Home</string>
     <string name="title_workflows">Workflows</string>
+    <string name="title_modules">Modules</string>
+    <string name="title_repository">Repository</string>
     <string name="title_settings">Settings</string>
     <string name="settings_section_theme">Theme</string>
     <string name="settings_switch_dynamic_color">Dynamic Color</string>

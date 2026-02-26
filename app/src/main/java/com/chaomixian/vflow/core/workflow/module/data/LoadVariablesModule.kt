@@ -15,7 +15,7 @@ class LoadVariablesModule : BaseModule() {
         descriptionStringRes = R.string.module_vflow_variable_load_desc,
         name = "载入变量",
         description = "从另一个工作流获取命名变量的使用权。",
-        iconRes = R.drawable.rounded_download_24,
+        iconRes = R.drawable.rounded_system_update_alt_24,
         category = "数据"
     )
 

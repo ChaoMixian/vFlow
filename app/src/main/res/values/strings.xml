@@ -5,6 +5,8 @@
 
     <string name="title_home">首页</string>
     <string name="title_workflows">工作流</string>
+    <string name="title_modules">模块</string>
+    <string name="title_repository">仓库</string>
     <string name="title_settings">设置</string>
     <string name="settings_section_theme">主题</string>
     <string name="settings_switch_dynamic_color">动态取色</string>
