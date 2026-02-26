@@ -1790,4 +1790,34 @@
     <string name="option_vflow_system_darkmode_light">浅色</string>
     <string name="option_vflow_system_darkmode_toggle">切换</string>
 
+    <!-- Vibration Module -->
+    <string name="module_vflow_device_vibration_name">振动</string>
+    <string name="module_vflow_device_vibration_desc">触发设备振动，支持设置持续时间和振动模式</string>
+    <string name="param_vflow_device_vibration_mode_name">振动模式</string>
+    <string name="option_vflow_device_vibration_once">单次振动</string>
+    <string name="option_vflow_device_vibration_notification">通知模式</string>
+    <string name="option_vflow_device_vibration_ringtone">铃声模式</string>
+    <string name="option_vflow_device_vibration_pattern">自定义模式</string>
+    <string name="param_vflow_device_vibration_duration_name">持续时间 (毫秒)</string>
+    <string name="param_vflow_device_vibration_pattern_vibrate_name">振动时长 (毫秒)</string>
+    <string name="param_vflow_device_vibration_pattern_pause_name">暂停时长 (毫秒)</string>
+    <string name="param_vflow_device_vibration_pattern_repeat_name">重复次数</string>
+    <string name="param_vflow_device_vibration_amplitude_name">振动强度</string>
+    <string name="output_vflow_device_vibration_success_name">是否成功</string>
+    <string name="summary_vflow_device_vibration_once">单次 %d ms</string>
+    <string name="summary_vflow_device_vibration_notification">通知模式</string>
+    <string name="summary_vflow_device_vibration_ringtone">铃声模式</string>
+    <string name="summary_vflow_device_vibration_pattern">自定义: %d ms 振 / %d ms 停 × %d</string>
+    <string name="msg_vflow_device_vibration_vibrating">正在振动...</string>
+    <string name="msg_vflow_device_vibration_notification">通知振动</string>
+    <string name="msg_vflow_device_vibration_ringtone">铃声振动</string>
+    <string name="msg_vflow_device_vibration_pattern">模式振动中...</string>
+    <string name="msg_vflow_device_vibration_completed">振动完成</string>
+    <string name="error_vflow_device_vibration_not_supported">设备不支持振动</string>
+    <string name="error_vflow_device_vibration_no_vibrator">当前设备没有振动器</string>
+    <string name="error_vflow_device_vibration_invalid_mode">无效的振动模式</string>
+    <string name="error_vflow_device_vibration_unknown_mode">未知的振动模式: %s</string>
+    <string name="error_vflow_device_vibration_failed">振动失败</string>
+    <string name="error_vflow_device_vibration_unknown">未知错误</string>
+
 </resources>

@@ -1919,4 +1919,34 @@
     <string name="option_vflow_system_darkmode_dark">Dark</string>
     <string name="option_vflow_system_darkmode_light">Light</string>
     <string name="option_vflow_system_darkmode_toggle">Toggle</string>
+
+    <!-- Vibration Module -->
+    <string name="module_vflow_device_vibration_name">Vibration</string>
+    <string name="module_vflow_device_vibration_desc">Trigger device vibration with configurable duration and patterns</string>
+    <string name="param_vflow_device_vibration_mode_name">Vibration Mode</string>
+    <string name="option_vflow_device_vibration_once">Once</string>
+    <string name="option_vflow_device_vibration_notification">Notification</string>
+    <string name="option_vflow_device_vibration_ringtone">Ringtone</string>
+    <string name="option_vflow_device_vibration_pattern">Custom Pattern</string>
+    <string name="param_vflow_device_vibration_duration_name">Duration (ms)</string>
+    <string name="param_vflow_device_vibration_pattern_vibrate_name">Vibrate Duration (ms)</string>
+    <string name="param_vflow_device_vibration_pattern_pause_name">Pause Duration (ms)</string>
+    <string name="param_vflow_device_vibration_pattern_repeat_name">Repeat Count</string>
+    <string name="param_vflow_device_vibration_amplitude_name">Amplitude</string>
+    <string name="output_vflow_device_vibration_success_name">Success</string>
+    <string name="summary_vflow_device_vibration_once">Once %d ms</string>
+    <string name="summary_vflow_device_vibration_notification">Notification</string>
+    <string name="summary_vflow_device_vibration_ringtone">Ringtone</string>
+    <string name="summary_vflow_device_vibration_pattern">Custom: %d ms vib / %d ms pause × %d</string>
+    <string name="msg_vflow_device_vibration_vibrating">Vibrating...</string>
+    <string name="msg_vflow_device_vibration_notification">Notification vibration</string>
+    <string name="msg_vflow_device_vibration_ringtone">Ringtone vibration</string>
+    <string name="msg_vflow_device_vibration_pattern">Pattern vibration...</string>
+    <string name="msg_vflow_device_vibration_completed">Vibration completed</string>
+    <string name="error_vflow_device_vibration_not_supported">Vibration not supported</string>
+    <string name="error_vflow_device_vibration_no_vibrator">Device has no vibrator</string>
+    <string name="error_vflow_device_vibration_invalid_mode">Invalid vibration mode</string>
+    <string name="error_vflow_device_vibration_unknown_mode">Unknown vibration mode: %s</string>
+    <string name="error_vflow_device_vibration_failed">Vibration failed</string>
+    <string name="error_vflow_device_vibration_unknown">Unknown error</string>
 </resources>
