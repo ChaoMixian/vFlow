@@ -18,6 +18,8 @@
     <string name="settings_switch_force_keep_alive_desc">实验性功能。通过 Shizuku 守护进程，在服务被系统意外终止时自动重启。可能会增加耗电。</string>
     <string name="settings_module_config">模块配置</string>
     <string name="settings_module_config_desc">配置各个模块的运行参数，如轻敲背面触发器的灵敏度。</string>
+    <string name="settings_switch_api_enabled">启用远程API</string>
+    <string name="settings_switch_api_enabled_desc">允许通过局域网访问和控制工作流</string>
 
     <string name="module_config_title">模块配置</string>
     <string name="module_config_section_backtap">轻敲背面触发器</string>

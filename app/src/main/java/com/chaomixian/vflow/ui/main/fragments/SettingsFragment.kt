@@ -26,6 +26,8 @@ import com.chaomixian.vflow.services.UiInspectorService
 import com.chaomixian.vflow.ui.changelog.ChangelogActivity
 import com.chaomixian.vflow.ui.settings.KeyTesterActivity
 import com.chaomixian.vflow.core.locale.LocaleManager
+import com.chaomixian.vflow.api.ApiService
+import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -268,6 +270,45 @@ class SettingsFragment : Fragment() {
         // 模块配置入口
         view.findViewById<View>(R.id.btn_module_config).setOnClickListener {
             val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.ModuleConfigActivity::class.java)
+            startActivity(intent)
+        }
+
+        // API开关逻辑
+        val apiSwitch = view.findViewById<MaterialSwitch>(R.id.switch_api_enabled)
+        val workflowManager = WorkflowManager(requireContext())
+        val apiService = ApiService.getInstance(requireContext(), workflowManager)
+
+        // 根据服务器状态设置开关状态
+        fun updateSwitchState() {
+            apiSwitch.isChecked = apiService.serverState.value == ApiService.ServerState.RUNNING
+        }
+        updateSwitchState()
+
+        // 监听服务器状态变化
+        apiService.serverState.let { stateFlow ->
+            viewLifecycleOwner.lifecycleScope.launch {
+                stateFlow.collect { updateSwitchState() }
+            }
+        }
+
+        apiSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                val started = apiService.startServer()
+                if (started) {
+                    requireContext().toast("远程API已启动")
+                } else {
+                    requireContext().toast("启动失败，端口可能被占用")
+                    apiSwitch.isChecked = false
+                }
+            } else {
+                apiService.stopServer()
+                requireContext().toast("远程API已停止")
+            }
+        }
+
+        // API设置入口
+        view.findViewById<View>(R.id.btn_api_settings).setOnClickListener {
+            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.ApiSettingsActivity::class.java)
             startActivity(intent)
         }
 

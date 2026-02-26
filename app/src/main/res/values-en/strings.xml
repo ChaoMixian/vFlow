@@ -18,6 +18,8 @@
     <string name="settings_switch_force_keep_alive_desc">Experimental feature. Automatically restart the service when killed by the system through Shizuku daemon. May increase battery usage.</string>
     <string name="settings_module_config">Module Config</string>
     <string name="settings_module_config_desc">Configure runtime parameters for various modules, such as back tap trigger sensitivity.</string>
+    <string name="settings_switch_api_enabled">Enable Remote API</string>
+    <string name="settings_switch_api_enabled_desc">Allow workflow access and control through LAN</string>
 
     <string name="module_config_title">Module Config</string>
     <string name="module_config_section_backtap">Back Tap Trigger</string>

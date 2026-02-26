@@ -138,6 +138,10 @@ dependencies {
     // 网络库
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // Web 服务器
+    implementation("org.nanohttpd:nanohttpd-webserver:2.3.1")
+    implementation("org.nanohttpd:nanohttpd-websocket:2.3.1")
+
     // Google ML Kit 文本识别库 (中文和英文)
     implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
     implementation("com.google.mlkit:text-recognition:16.0.1")

@@ -8,5 +8,8 @@ import java.util.UUID
 data class WorkflowFolder(
     val id: String = UUID.randomUUID().toString(),
     var name: String,
-    val createdAt: Long = System.currentTimeMillis()
+    var parentId: String? = null,
+    var order: Int = 0,
+    val createdAt: Long = System.currentTimeMillis(),
+    var modifiedAt: Long = System.currentTimeMillis()
 ) : Parcelable

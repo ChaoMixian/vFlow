@@ -304,6 +304,12 @@
             android:theme="@style/Theme.vFlow" />
 
         <activity
+            android:name=".ui.settings.ApiSettingsActivity"
+            android:exported="false"
+            android:label="远程API"
+            android:theme="@style/Theme.vFlow" />
+
+        <activity
             android:name=".ui.changelog.ChangelogActivity"
             android:exported="false"
             android:label="版本历史"
