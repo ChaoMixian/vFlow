@@ -190,9 +190,18 @@
 
     <!-- vflow.logic.stop_workflow - Stop Workflow Module -->
     <string name="module_vflow_logic_stop_workflow_name">Stop Workflow</string>
-    <string name="module_vflow_logic_stop_workflow_desc">Normally and unconditionally terminate the current workflow execution</string>
+    <string name="module_vflow_logic_stop_workflow_desc">Stop the current workflow or another specified workflow</string>
     <string name="summary_vflow_logic_stop_workflow">Stop workflow</string>
     <string name="msg_vflow_logic_stop_workflow_stopping">Stopping workflow...</string>
+    <string name="param_vflow_logic_stop_workflow_target_name">Target</string>
+    <string name="option_vflow_logic_stop_workflow_target_current">Current workflow</string>
+    <string name="option_vflow_logic_stop_workflow_target_other">Specified workflow</string>
+    <string name="param_vflow_logic_stop_workflow_workflow_id_name">Workflow</string>
+    <string name="summary_vflow_logic_stop_workflow_current">Stop current workflow</string>
+    <string name="summary_vflow_logic_stop_workflow_other_prefix">Stop workflow</string>
+    <string name="summary_vflow_logic_stop_workflow_other_invalid">No workflow selected</string>
+    <string name="text_workflow_to_stop">Workflow to stop</string>
+    <string name="button_select_workflow_to_stop">Select workflow</string>
 
     <!-- vflow.logic.break_loop - Break Loop Module -->
     <string name="module_vflow_logic_break_loop_name">Break Loop</string>

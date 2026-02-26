@@ -47,7 +47,8 @@ class WorkflowManager(val context: Context) {
             description = workflow.description ?: "",
             author = workflow.author ?: "",
             homepage = workflow.homepage ?: "",
-            tags = workflow.tags ?: emptyList()
+            tags = workflow.tags ?: emptyList(),
+            maxExecutionTime = workflow.maxExecutionTime
         )
 
         if (index != -1) {
@@ -119,7 +120,8 @@ class WorkflowManager(val context: Context) {
                             author = wf.author ?: "",
                             homepage = wf.homepage ?: "",
                             tags = wf.tags ?: emptyList(),
-                            modifiedAt = if (wf.modifiedAt == 0L) System.currentTimeMillis() else wf.modifiedAt
+                            modifiedAt = if (wf.modifiedAt == 0L) System.currentTimeMillis() else wf.modifiedAt,
+                            maxExecutionTime = wf.maxExecutionTime
                         )
                     } else {
                         wf
