@@ -57,7 +57,8 @@ class ShellCommandModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "echo 'Hello'",
             acceptsMagicVariable = true,
-            supportsRichText = false
+            acceptsNamedVariable = true,
+            supportsRichText = true,
         )
     )
 

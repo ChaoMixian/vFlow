@@ -70,7 +70,8 @@ class CoreShellCommandModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "echo 'Hello from Core'",
             acceptsMagicVariable = true,
-            supportsRichText = false,
+            acceptsNamedVariable = true,
+            supportsRichText = true,
             nameStringRes = R.string.param_vflow_core_shell_command_command_name
         )
     )
