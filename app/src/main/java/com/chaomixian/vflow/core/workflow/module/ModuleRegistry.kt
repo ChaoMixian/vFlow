@@ -187,6 +187,7 @@ object ModuleRegistry {
         register(PlayAudioModule(), context)
         register(TextToSpeechModule(), context)
         register(CallPhoneModule(), context)
+        register(DarkModeModule(), context)
 
         // Core (Beta) 模块
         // 网络控制组

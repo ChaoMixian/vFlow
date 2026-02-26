@@ -522,7 +522,7 @@ object StandardControlFactory {
             is ChipGroup -> {
                 val checkedId = view.checkedChipId
                 if (checkedId != View.NO_ID) {
-                    view.findViewById<com.google.android.material.chip.Chip>(checkedId)?.text?.toString()
+                    view.findViewById<com.google.android.material.chip.Chip>(checkedId)?.tag as? String
                 } else {
                     null
                 }

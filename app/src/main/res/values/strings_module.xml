@@ -1771,4 +1771,13 @@
     <string name="error_vflow_device_text_to_speech_timeout">朗读超时</string>
     <string name="error_vflow_device_text_to_speech_timeout_details">朗读操作超时，可能TTS引擎响应过慢</string>
 
+    <!-- Dark Mode Module -->
+    <string name="module_vflow_system_darkmode_name">深色模式</string>
+    <string name="module_vflow_system_darkmode_desc">切换系统的深色/浅色模式（自动/深色/浅色）</string>
+    <string name="param_vflow_system_darkmode_mode_name">模式</string>
+    <string name="output_vflow_system_darkmode_success_name">是否成功</string>
+    <string name="option_vflow_system_darkmode_auto">自动</string>
+    <string name="option_vflow_system_darkmode_dark">深色</string>
+    <string name="option_vflow_system_darkmode_light">浅色</string>
+
 </resources>
