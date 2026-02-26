@@ -1,4 +1,4 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/shizuku/AppShortcutsModule.kt
+// 文件: main/java/com/chaomixian/vflow/core/workflow/module/shizuku/x.kt
 package com.chaomixian.vflow.core.workflow.module.shizuku
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.*
@@ -77,27 +77,23 @@ class AlipayShortcutsModule : BaseShortcutModule() {
 
 /**
  * 微信快捷方式模块。
- * 需要使用 am start -n 命令直接启动微信的特定 Activity，必须使用 ROOT 权限。
+ * 使用 am start 命令直接启动微信的特定功能，不需要 root 权限。
  */
-class WeChatShortcutsModule : BaseModule() {
+class WeChatShortcutsModule : BaseShortcutModule() {
     override val id = "vflow.shizuku.wechat_shortcuts"
     override val metadata = ActionMetadata(
         name = "微信",  // Fallback
         nameStringRes = R.string.module_vflow_shizuku_wechat_shortcuts_name,
-        description = "快速打开微信的收款码、付款码。",  // Fallback
+        description = "快速打开微信的扫一扫、付款码等。",  // Fallback
         descriptionStringRes = R.string.module_vflow_shizuku_wechat_shortcuts_desc,
         iconRes = R.drawable.rounded_adb_24,
         category = "Shizuku"
     )
 
     private val actions = mapOf(
-        "收款码" to "am start -n com.tencent.mm/.plugin.collect.ui.CollectMainUI",
-        "付款码" to "am start -n com.tencent.mm/.plugin.offline.ui.WalletOfflineCoinPurseUI"
+        "微信支付" to "am start -n com.tencent.mm/com.tencent.mm.ui.LauncherUI -a com.tencent.mm.ui.ShortCutDispatchAction --es LauncherUI.Shortcut.LaunchType launch_type_offline_wallet",
+        "扫一扫" to "am start -n com.tencent.mm/com.tencent.mm.ui.LauncherUI -a com.tencent.mm.ui.ShortCutDispatchAction --es LauncherUI.Shortcut.LaunchType launch_type_scan_qrcode"
     )
-
-    override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
-        return listOf(PermissionManager.ROOT)
-    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("action", "操作", ParameterType.ENUM, actions.keys.first(), options = actions.keys.toList())
@@ -114,19 +110,8 @@ class WeChatShortcutsModule : BaseModule() {
             return ExecutionResult.Failure("参数错误", "未选择操作")
         }
         val command = actions[action] ?: return ExecutionResult.Failure("参数错误", "无效的操作")
-        onProgress(ProgressUpdate("正在执行快捷指令..."))
-        val result = ShellManager.execShellCommand(context.applicationContext, command, ShellManager.ShellMode.ROOT)
-
-        return if (result.startsWith("Error:")) {
-            ExecutionResult.Failure("执行失败", result)
-        } else {
-            ExecutionResult.Success(mapOf("result" to VString(result)))
-        }
+        return executeCommand(context, command, onProgress)
     }
-
-    override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "命令输出", VTypeRegistry.STRING.id)
-    )
 }
 
 /**
