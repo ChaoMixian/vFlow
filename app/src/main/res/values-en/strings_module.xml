@@ -1872,4 +1872,32 @@
     <string name="error_vflow_device_call_phone_exception">Phone call exception</string>
     <string name="error_vflow_device_call_phone_exception_desc">An exception occurred while making phone call</string>
     <string name="msg_vflow_device_call_phone_preparing">Preparing to call: %s</string>
+
+    <!-- TTS Module -->
+    <string name="module_vflow_device_text_to_speech_name">Text to Speech</string>
+    <string name="module_vflow_device_text_to_speech_desc">Convert text to speech and speak it aloud using Android\'s built-in TTS engine</string>
+    <string name="param_vflow_device_text_to_speech_text_name">Text to Speak</string>
+    <string name="param_vflow_device_text_to_speech_language_name">Language</string>
+    <string name="param_vflow_device_text_to_speech_speech_rate_name">Speech Rate</string>
+    <string name="param_vflow_device_text_to_speech_pitch_name">Pitch</string>
+    <string name="param_vflow_device_text_to_speech_queue_mode_name">Queue Mode</string>
+    <string name="param_vflow_device_text_to_speech_await_completion_name">Wait for Completion</string>
+    <string name="output_vflow_device_text_to_speech_success_name">Success</string>
+    <string name="summary_vflow_device_text_to_speech_prefix">Speak:</string>
+    <string name="msg_vflow_device_text_to_speech_initializing">Initializing TTS engine…</string>
+    <string name="msg_vflow_device_text_to_speech_speaking">Speaking…</string>
+    <string name="msg_vflow_device_text_to_speech_completed">Speech completed</string>
+    <string name="msg_vflow_device_text_to_speech_started">Started speaking</string>
+    <string name="error_vflow_device_text_to_speech_no_text">Text is empty</string>
+    <string name="error_vflow_device_text_to_speech_text_required">Please enter the text to speak</string>
+    <string name="error_vflow_device_text_to_speech_invalid_speech_rate">Invalid speech rate</string>
+    <string name="error_vflow_device_text_to_speech_speech_rate_range">Speech rate must be between 0.5 and 2.0</string>
+    <string name="error_vflow_device_text_to_speech_invalid_pitch">Invalid pitch</string>
+    <string name="error_vflow_device_text_to_speech_pitch_range">Pitch must be between 0.5 and 2.0</string>
+    <string name="error_vflow_device_text_to_speech_init_failed">TTS initialization failed</string>
+    <string name="error_vflow_device_text_to_speech_engine_error">Unable to initialize TTS engine, please check system TTS settings</string>
+    <string name="error_vflow_device_text_to_speech_failed">Speech failed</string>
+    <string name="error_vflow_device_text_to_speech_unknown">Unknown error</string>
+    <string name="error_vflow_device_text_to_speech_timeout">Speech timeout</string>
+    <string name="error_vflow_device_text_to_speech_timeout_details">Speech operation timed out, TTS engine may be too slow</string>
 </resources>

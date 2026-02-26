@@ -1742,4 +1742,33 @@
     <string name="error_vflow_device_call_phone_exception">拨打电话异常</string>
     <string name="error_vflow_device_call_phone_exception_desc">拨打电话时发生异常</string>
     <string name="msg_vflow_device_call_phone_preparing">准备拨打电话: %s</string>
+
+    <!-- TTS 朗读文本模块 -->
+    <string name="module_vflow_device_text_to_speech_name">朗读文本</string>
+    <string name="module_vflow_device_text_to_speech_desc">使用Android系统自带的TTS引擎将文本转换为语音并朗读</string>
+    <string name="param_vflow_device_text_to_speech_text_name">要朗读的文本</string>
+    <string name="param_vflow_device_text_to_speech_language_name">语言</string>
+    <string name="param_vflow_device_text_to_speech_speech_rate_name">语速</string>
+    <string name="param_vflow_device_text_to_speech_pitch_name">语调</string>
+    <string name="param_vflow_device_text_to_speech_queue_mode_name">排队模式</string>
+    <string name="param_vflow_device_text_to_speech_await_completion_name">等待朗读完成</string>
+    <string name="output_vflow_device_text_to_speech_success_name">是否成功</string>
+    <string name="summary_vflow_device_text_to_speech_prefix">朗读:</string>
+    <string name="msg_vflow_device_text_to_speech_initializing">正在初始化TTS引擎…</string>
+    <string name="msg_vflow_device_text_to_speech_speaking">正在朗读…</string>
+    <string name="msg_vflow_device_text_to_speech_completed">朗读完成</string>
+    <string name="msg_vflow_device_text_to_speech_started">开始朗读</string>
+    <string name="error_vflow_device_text_to_speech_no_text">文本为空</string>
+    <string name="error_vflow_device_text_to_speech_text_required">请输入要朗读的文本内容</string>
+    <string name="error_vflow_device_text_to_speech_invalid_speech_rate">语速参数无效</string>
+    <string name="error_vflow_device_text_to_speech_speech_rate_range">语速必须在0.5到2.0之间</string>
+    <string name="error_vflow_device_text_to_speech_invalid_pitch">语调参数无效</string>
+    <string name="error_vflow_device_text_to_speech_pitch_range">语调必须在0.5到2.0之间</string>
+    <string name="error_vflow_device_text_to_speech_init_failed">TTS初始化失败</string>
+    <string name="error_vflow_device_text_to_speech_engine_error">无法初始化TTS引擎，请检查系统TTS设置</string>
+    <string name="error_vflow_device_text_to_speech_failed">朗读失败</string>
+    <string name="error_vflow_device_text_to_speech_unknown">未知错误</string>
+    <string name="error_vflow_device_text_to_speech_timeout">朗读超时</string>
+    <string name="error_vflow_device_text_to_speech_timeout_details">朗读操作超时，可能TTS引擎响应过慢</string>
+
 </resources>

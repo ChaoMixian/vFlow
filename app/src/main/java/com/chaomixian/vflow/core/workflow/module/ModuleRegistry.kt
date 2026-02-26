@@ -185,6 +185,7 @@ object ModuleRegistry {
         register(InvokeModule(), context)
         register(SystemInfoModule(), context)
         register(PlayAudioModule(), context)
+        register(TextToSpeechModule(), context)
         register(CallPhoneModule(), context)
 
         // Core (Beta) 模块
