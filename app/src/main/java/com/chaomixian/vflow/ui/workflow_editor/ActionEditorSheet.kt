@@ -57,6 +57,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     private var retryIntervalSlider: Slider? = null
 
     companion object {
+        // 单次编辑会话的展开状态缓存
+        private val expandedSections = mutableMapOf<String, Boolean>()
+
         // 异常处理策略相关的常量 Key
         const val KEY_ERROR_POLICY = "__error_policy"
         const val KEY_RETRY_COUNT = "__retry_count"
@@ -367,11 +370,15 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
     /**
-     * 动态创建“更多设置”折叠区域。
+     * 动态创建"更多设置"折叠区域。
      */
     private fun createAdvancedSection(inputs: List<InputDefinition>): View {
         val context = requireContext()
         val density = resources.displayMetrics.density
+
+        // 为每个模块生成唯一的 key 来保存展开状态（单次会话）
+        val stateKey = "advanced_section_expanded_${module.id}"
+        var isExpanded = expandedSections[stateKey] ?: false
 
         // 根容器
         val rootLayout = LinearLayout(context).apply {
@@ -453,7 +460,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         // 设置点击事件
-        var isExpanded = false
         contentLayout.isVisible = isExpanded
         arrow.rotation = if (isExpanded) 180f else 0f
 
@@ -464,6 +470,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 .rotation(if (isExpanded) 180f else 0f)
                 .setDuration(200)
                 .start()
+
+            // 保存展开状态到内存（单次会话）
+            expandedSections[stateKey] = isExpanded
         }
 
         rootLayout.addView(headerLayout)
