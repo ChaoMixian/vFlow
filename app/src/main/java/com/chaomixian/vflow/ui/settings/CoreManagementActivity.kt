@@ -265,6 +265,7 @@ private fun CoreManagementScreen(
     // 保存的启动方式和自动启动设置
     var selectedLaunchMode by remember { mutableStateOf<ShellManager.ShellMode?>(null) }
     var autoStartEnabled by remember { mutableStateOf(false) }
+    var mutualKeepAliveEnabled by remember { mutableStateOf(false) }
 
     // 处理返回键
     BackHandler(enabled = true, onBack = onBackClick)
@@ -289,6 +290,7 @@ private fun CoreManagementScreen(
             ShellManager.ShellMode.SHIZUKU
         }
         autoStartEnabled = prefs.getBoolean("core_auto_start_enabled", false)
+        mutualKeepAliveEnabled = prefs.getBoolean("mutual_keep_alive_enabled", true)
 
         isServerRunning = onCheckStatus()
         logs = onLoadLogs()
@@ -644,7 +646,46 @@ private fun CoreManagementScreen(
                             }
                         )
                     }
-}
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // 分割线
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "双进程保活",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "App 与 Core 互相守护，任一进程被杀时自动重启",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Switch(
+                            checked = mutualKeepAliveEnabled,
+                            onCheckedChange = {
+                                mutualKeepAliveEnabled = it
+                                val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+                                prefs.edit { putBoolean("mutual_keep_alive_enabled", it) }
+                                showToast(if (it) "已启用双进程保活" else "已禁用双进程保活")
+                            }
+                        )
+                    }
+                }
             }
 
             // 底部间距

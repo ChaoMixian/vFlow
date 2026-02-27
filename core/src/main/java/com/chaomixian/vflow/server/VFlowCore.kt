@@ -24,6 +24,8 @@ object VFlowCore {
     private val executor = Executors.newCachedThreadPool()
     private val workerProcesses = mutableListOf<Process>()
     private var shellLauncherPath: String? = null
+    private var appPackageName: String? = null
+    private var appWatcherJob: Thread? = null
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -41,6 +43,12 @@ object VFlowCore {
                 "--shell-launcher" -> {
                     if (i + 1 < args.size) {
                         shellLauncherPath = args[i + 1]
+                        i++
+                    }
+                }
+                "--app-package" -> {
+                    if (i + 1 < args.size) {
+                        appPackageName = args[i + 1]
                         i++
                     }
                 }
@@ -78,15 +86,17 @@ object VFlowCore {
 
     private fun runAsMaster() {
         val isRoot = SystemUtils.isRoot()
-        val debugVersion = 13
+        val debugVersion = 14
         println(">>> vFlow Core MASTER Starting (PID: ${android.os.Process.myPid()}, UID: ${SystemUtils.getMyUid()}) <<<")
         println(">>> Debug Version: $debugVersion <<<")
 
         Runtime.getRuntime().addShutdownHook(Thread {
             workerProcesses.forEach { SystemUtils.killProcess(it) }
+            appWatcherJob?.interrupt()
         })
 
         spawnWorkers(isRoot, shellLauncherPath)
+        startAppWatcher() // 启动 App 进程监控
         startMasterServer()
     }
 
@@ -237,6 +247,114 @@ object VFlowCore {
             }
         } catch (e: Exception) {
             JSONObject().put("success", false).put("error", "Worker error: ${e.message}").toString()
+        }
+    }
+
+    // ================= App 进程守护逻辑 =================
+
+    /**
+     * 启动 App 进程监控器
+     * 定期检查 App 进程是否存活，如果被杀则自动重启
+     */
+    private fun startAppWatcher() {
+        val packageName = appPackageName
+        if (packageName == null) {
+            println("⚠️ App package name not provided, skipping App watcher")
+            return
+        }
+
+        println(">>> App Watcher: Starting to monitor app package: $packageName <<<")
+
+        appWatcherJob = Thread {
+            var restartAttempts = 0
+            val maxRestartAttempts = 10
+            val checkInterval = 30_000L // 30秒检查一次
+
+            while (isRunning && !Thread.currentThread().isInterrupted) {
+                try {
+                    Thread.sleep(checkInterval)
+                } catch (e: InterruptedException) {
+                    break
+                }
+
+                // 检查 App 进程是否存活
+                val isAppAlive = isAppProcessAlive(packageName)
+
+                if (!isAppAlive) {
+                    println("⚠️ App Watcher: App process not found, attempting to restart...")
+
+                    if (restartAttempts < maxRestartAttempts) {
+                        restartAttempts++
+                        val success = restartApp(packageName)
+                        if (success) {
+                            println("✅ App Watcher: Successfully restarted App service ($restartAttempts/$maxRestartAttempts)")
+                        } else {
+                            println("❌ App Watcher: Failed to restart App service ($restartAttempts/$maxRestartAttempts)")
+                        }
+                    } else {
+                        println("⚠️ App Watcher: Max restart attempts reached, giving up")
+                        break
+                    }
+                } else {
+                    // App 存活，重置计数器
+                    restartAttempts = 0
+                }
+            }
+        }.apply { start() }
+    }
+
+    /**
+     * 检查 App 进程是否存活
+     */
+    private fun isAppProcessAlive(packageName: String): Boolean {
+        return try {
+            // 使用 pidof 检查进程
+            val process = ProcessBuilder("sh", "-c", "pidof -s $packageName").start()
+            val output = process.inputStream.bufferedReader().use { it.readText().trim() }
+            process.waitFor()
+
+            // 如果有输出说明进程存在
+            output.isNotEmpty()
+
+        } catch (e: Exception) {
+            // 如果 pidof 不可用，使用 ps 命令
+            try {
+                val process = ProcessBuilder("sh", "-c", "ps | $packageName").start()
+                val output = process.inputStream.bufferedReader().use { it.readText() }
+                process.waitFor()
+                output.contains(packageName)
+            } catch (e2: Exception) {
+                false
+            }
+        }
+    }
+
+    /**
+     * 重启 App 服务
+     */
+    private fun restartApp(packageName: String): Boolean {
+        return try {
+            // 使用 am start-service 命令重启 TriggerService
+            val serviceComponent = "$packageName/${packageName}.services.TriggerService"
+            val command = "am start-service -n $serviceComponent"
+
+            println(">>> App Watcher: Executing: $command <<<")
+
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
+            val exitCode = process.waitFor()
+
+            // 读取错误输出
+            val error = process.errorStream.bufferedReader().use { it.readText().trim() }
+            if (error.isNotEmpty()) {
+                System.err.println("App Watcher Error: $error")
+            }
+
+            exitCode == 0
+
+        } catch (e: Exception) {
+            System.err.println("❌ App Watcher: Failed to restart app: ${e.message}")
+            e.printStackTrace()
+            false
         }
     }
 }

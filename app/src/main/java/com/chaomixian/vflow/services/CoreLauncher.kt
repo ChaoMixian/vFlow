@@ -260,6 +260,7 @@ object CoreLauncher {
     ): String {
         val classpath = dexFile.absolutePath
         val logPath = logFile.absolutePath
+        val packageName = context.packageName
 
         return if (mode == LaunchMode.ROOT) {
             // ROOT 模式：需要部署 vflow_shell_exec 来降权启动 shell worker
@@ -270,7 +271,7 @@ object CoreLauncher {
                 tempScript.writeText("""
                     #!/system/bin/sh
                     export CLASSPATH="$classpath"
-                    exec app_process /system/bin $CORE_CLASS --shell-launcher "${shellLauncher.absolutePath}"
+                    exec app_process /system/bin $CORE_CLASS --shell-launcher "${shellLauncher.absolutePath}" --app-package "$packageName"
                 """.trimIndent())
                 tempScript.setExecutable(true)
 
@@ -278,12 +279,12 @@ object CoreLauncher {
                 "sh ${tempScript.absolutePath} > \"$logPath\" 2>&1 & rm -f ${tempScript.absolutePath}"
             } else {
                 DebugLogger.w(TAG, "ROOT 模式但 vflow_shell_exec 部署失败，回退到直接启动（可能有权限问题）")
-                "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS' > \"$logPath\" 2>&1 &"
+                "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS --app-package \"$packageName\"' > \"$logPath\" 2>&1 &"
             }
         } else {
             // Shizuku 或 AUTO 模式：Master 以 shell 权限运行，无需降权，直接启动
             DebugLogger.d(TAG, "Shell 模式：直接启动（无需降权）")
-            "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS' > \"$logPath\" 2>&1 &"
+            "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS --app-package \"$packageName\"' > \"$logPath\" 2>&1 &"
         }
     }
 

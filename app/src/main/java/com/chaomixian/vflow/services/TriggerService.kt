@@ -27,6 +27,7 @@ import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandle
 import com.chaomixian.vflow.permissions.PermissionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -39,6 +40,8 @@ class TriggerService : Service() {
     private val triggerHandlers = mutableMapOf<String, ITriggerHandler>()
     // 为服务创建一个独立的协程作用域
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    // Core 守护任务
+    private var coreWatcherJob: Job? = null
 
 
     companion object {
@@ -74,6 +77,9 @@ class TriggerService : Service() {
 
         // 首次启动时，加载所有活动的触发器
         loadAllActiveTriggers()
+
+        // 启动 Core 进程守护（双进程保活机制）
+        startCoreWatcher()
 
         // 在服务创建时（如开机后）检查并应用启动设置
         checkAndApplyStartupSettings()
@@ -277,10 +283,67 @@ class TriggerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // 停止 Core 守护任务
+        coreWatcherJob?.cancel()
         triggerHandlers.values.forEach { it.stop(this) }
         // 服务销毁时，取消协程作用域
         serviceScope.cancel()
         DebugLogger.d(TAG, "TriggerService 已销毁。")
+    }
+
+    /**
+     * 启动 Core 进程守护（双进程保活机制）
+     * 定期检查 Core 是否存活，如果被杀则自动重启
+     */
+    private fun startCoreWatcher() {
+        // 检查是否启用了双进程保活
+        val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+        val mutualKeepAliveEnabled = prefs.getBoolean("mutual_keep_alive_enabled", true)
+
+        if (!mutualKeepAliveEnabled) {
+            DebugLogger.d(TAG, "双进程保活未启用，跳过 Core 守护")
+            return
+        }
+
+        coreWatcherJob = serviceScope.launch {
+            var restartAttempts = 0
+            val maxRestartAttempts = 10
+            val checkInterval = 30_000L // 30秒检查一次
+
+            DebugLogger.i(TAG, "Core Watcher: Starting to monitor vFlowCore process...")
+
+            while (!coroutineContext[Job]?.isCancelled!!) {
+                delay(checkInterval)
+
+                // 检查 Core 是否存活
+                val isCoreAlive = VFlowCoreBridge.ping()
+
+                if (!isCoreAlive) {
+                    DebugLogger.w(TAG, "Core Watcher: Core process not responding, attempting to restart...")
+
+                    if (restartAttempts < maxRestartAttempts) {
+                        restartAttempts++
+                        val success = CoreManager.ensureStarted(
+                            this@TriggerService,
+                            CoreLauncher.LaunchMode.AUTO
+                        )
+
+                        if (success) {
+                            DebugLogger.i(TAG, "Core Watcher: Successfully restarted Core ($restartAttempts/$maxRestartAttempts)")
+                            restartAttempts = 0 // 重置计数器
+                        } else {
+                            DebugLogger.e(TAG, "Core Watcher: Failed to restart Core ($restartAttempts/$maxRestartAttempts)")
+                        }
+                    } else {
+                        DebugLogger.e(TAG, "Core Watcher: Max restart attempts reached, giving up")
+                        break
+                    }
+                } else {
+                    // Core 存活，重置计数器
+                    restartAttempts = 0
+                }
+            }
+        }
     }
 
     private fun createNotification(): Notification {
