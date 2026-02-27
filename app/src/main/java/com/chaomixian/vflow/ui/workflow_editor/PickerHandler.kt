@@ -28,6 +28,7 @@ class PickerHandler(
     private val filePickerLauncher: ActivityResultLauncher<Array<String>>,
     private val mediaPickerLauncher: ActivityResultLauncher<Array<String>>,
     private val directoryPickerLauncher: ActivityResultLauncher<Uri?>,
+    private val generalIntentLauncher: ActivityResultLauncher<Intent>,
     private val onUpdateParameters: (Map<String, Any?>) -> Unit
 ) {
     // 当前正在处理的输入定义，用于结果回调
@@ -35,6 +36,9 @@ class PickerHandler(
 
     // 文件选择器的 pending 输入定义（防止被其他操作清空）
     private var pendingFileInputDef: InputDefinition? = null
+
+    // 通用 Intent 的回调（用于 ModuleUIProvider 启动的系统选择器）
+    private var generalIntentCallback: ((resultCode: Int, data: Intent?) -> Unit)? = null
 
     /**
      * 处理 Picker 请求
@@ -51,6 +55,41 @@ class PickerHandler(
             PickerType.DIRECTORY -> handleDirectoryPicker(inputDef)
             PickerType.MEDIA -> handleMediaPicker(inputDef)
             PickerType.NONE -> { currentInputDef = null }
+        }
+    }
+
+    /**
+     * 启动 Intent 并获取结果（统一入口）
+     *
+     * 用途：处理 ModuleUIProvider 中需要启动选择器的场景
+     * - 自动检测应用选择器 Intent（包含 EXTRA_MODE）
+     * - 自动处理系统标准 Intent（ACTION_PICK、ACTION_GET_CONTENT 等）
+     *
+     * @param intent 要启动的 Intent
+     * @param callback 结果回调 (resultCode, data)
+     */
+    fun launchIntentForResult(
+        intent: Intent,
+        callback: (resultCode: Int, data: Intent?) -> Unit
+    ) {
+        // 检查是否为应用选择器 Intent
+        if (intent.hasExtra(UnifiedAppPickerSheet.EXTRA_MODE)) {
+            val mode = try {
+                AppPickerMode.valueOf(intent.getStringExtra(UnifiedAppPickerSheet.EXTRA_MODE) ?: "SELECT_ACTIVITY")
+            } catch (e: Exception) {
+                AppPickerMode.SELECT_ACTIVITY
+            }
+
+            val pickerSheet = UnifiedAppPickerSheet.newInstance(mode)
+            pickerSheet.setOnResultCallback { result ->
+                handleAppPickerResult(Activity.RESULT_OK, result)
+                callback(Activity.RESULT_OK, result)
+            }
+            pickerSheet.show(activity.supportFragmentManager, "UnifiedAppPicker")
+        } else {
+            // 系统标准 Intent（图片选择、音频选择等）
+            generalIntentCallback = callback
+            generalIntentLauncher.launch(intent)
         }
     }
 
@@ -288,5 +327,13 @@ class PickerHandler(
     companion object {
         const val REQUEST_FILE_PICKER = 1001
         const val REQUEST_MEDIA_PICKER = 1002
+    }
+
+    /**
+     * 处理通用 Intent 的结果
+     */
+    fun handleIntentResult(resultCode: Int, data: Intent?) {
+        generalIntentCallback?.invoke(resultCode, data)
+        generalIntentCallback = null
     }
 }

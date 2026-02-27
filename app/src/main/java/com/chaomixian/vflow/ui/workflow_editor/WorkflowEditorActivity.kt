@@ -86,9 +86,6 @@ class WorkflowEditorActivity : BaseActivity() {
     private var listBeforeDrag: List<ActionStep>? = null
     private var dragStartPosition: Int = -1
 
-    private var appPickerCallback: ((resultCode: Int, data: Intent?) -> Unit)? = null
-    private var editingPositionForAppPicker: Int = -1
-
     // PickerHandler 用于处理各种选择器类型
     private var pickerHandler: PickerHandler? = null
 
@@ -119,46 +116,11 @@ class WorkflowEditorActivity : BaseActivity() {
         pendingExecutionWorkflow = null
     }
 
-    private val appPickerLauncher = registerForActivityResult(
+    // 通用的 Intent Launcher，用于处理 ModuleUIProvider 启动的选择器
+    private val generalIntentLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        handleAppPickerResult(result.resultCode, result.data, editingPositionForAppPicker)
-
-        // 交给 PickerHandler 处理结果
-        pickerHandler?.handleAppPickerResult(result.resultCode, result.data)
-
-        appPickerCallback?.invoke(result.resultCode, result.data)
-        appPickerCallback = null
-        editingPositionForAppPicker = -1
-    }
-
-    /**
-     * 启动应用选择器
-     */
-    private fun launchAppPicker(
-        intent: Intent,
-        position: Int,
-        callback: (Int, Intent?) -> Unit
-    ) {
-        // 从 Intent 中获取选择模式
-        val mode = try {
-            AppPickerMode.valueOf(intent.getStringExtra(UnifiedAppPickerSheet.EXTRA_MODE) ?: "SELECT_ACTIVITY")
-        } catch (e: Exception) {
-            AppPickerMode.SELECT_ACTIVITY
-        }
-
-        appPickerCallback = callback
-        editingPositionForAppPicker = position
-
-        val pickerSheet = UnifiedAppPickerSheet.newInstance(mode)
-        pickerSheet.setOnResultCallback { result ->
-            handleAppPickerResult(Activity.RESULT_OK, result, position)
-            pickerHandler?.handleAppPickerResult(Activity.RESULT_OK, result)
-            callback.invoke(Activity.RESULT_OK, result)
-            appPickerCallback = null
-            editingPositionForAppPicker = -1
-        }
-        pickerSheet.show(supportFragmentManager, "UnifiedAppPicker")
+        pickerHandler?.handleIntentResult(result.resultCode, result.data)
     }
 
     // 文件选择器 launcher - 使用 OpenDocument 获取持久权限
@@ -253,10 +215,11 @@ class WorkflowEditorActivity : BaseActivity() {
         // 初始化 PickerHandler
         pickerHandler = PickerHandler(
             activity = this,
-            appPickerLauncher = appPickerLauncher,
+            appPickerLauncher = generalIntentLauncher,
             filePickerLauncher = filePickerLauncher,
             mediaPickerLauncher = mediaPickerLauncher,
             directoryPickerLauncher = directoryPickerLauncher,
+            generalIntentLauncher = generalIntentLauncher,
             onUpdateParameters = { params ->
                 currentEditorSheet?.updateParametersAndRebuildUi(params)
             }
@@ -667,7 +630,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         editor.onStartActivityForResult = { intent, callback ->
-            launchAppPicker(intent, position, callback)
+            pickerHandler?.launchIntentForResult(intent, callback)
         }
 
         // 设置 Picker 监听器
@@ -923,7 +886,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 handleParameterPillClick(position, parameterId)
             },
             onStartActivityForResult = { position, intent, callback ->
-                launchAppPicker(intent, position, callback)
+                pickerHandler?.launchIntentForResult(intent, callback)
             }
         )
         findViewById<RecyclerView>(R.id.recycler_view_action_steps).apply {
@@ -962,38 +925,6 @@ class WorkflowEditorActivity : BaseActivity() {
 
         // 滚动到新复制的位置
         recyclerView.smoothScrollToPosition(insertPosition)
-    }
-
-    /**
-     * 处理应用选择器返回结果的方法。
-     * 现在可以正确处理 "添加" (position == -1) 和 "编辑" (position != -1) 两种情况。
-     */
-    private fun handleAppPickerResult(resultCode: Int, data: Intent?, position: Int) {
-        if (resultCode == Activity.RESULT_OK && data != null) {
-            val packageName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_PACKAGE_NAME)
-            val activityName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_ACTIVITY_NAME)
-
-            if (packageName != null && activityName != null) {
-                val updatedParams = mapOf(
-                    "packageName" to packageName,
-                    "activityName" to activityName
-                )
-
-                if (position != -1) {
-                    // 编辑模式：更新 actionSteps 列表中的现有步骤
-                    val step = actionSteps.getOrNull(position) ?: return
-                    val newParams = step.parameters.toMutableMap()
-                    newParams.putAll(updatedParams)
-                    actionSteps[position] = step.copy(parameters = newParams)
-                    recalculateAndNotify()
-                    // 通知打开的编辑器工作表更新其UI
-                    currentEditorSheet?.updateParametersAndRebuildUi(newParams)
-                } else {
-                    // 添加模式：只通知打开的编辑器工作表更新其内部状态
-                    currentEditorSheet?.updateParametersAndRebuildUi(updatedParams)
-                }
-            }
-        }
     }
 
 
@@ -1406,7 +1337,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         editor.onStartActivityForResult = { intent, callback ->
-            launchAppPicker(intent, insertPosition, callback)
+            pickerHandler?.launchIntentForResult(intent, callback)
         }
 
         editor.setOnPickerRequestedListener { inputDef ->
