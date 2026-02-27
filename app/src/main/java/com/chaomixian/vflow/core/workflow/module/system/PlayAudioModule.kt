@@ -226,6 +226,14 @@ class PlayAudioModule : BaseModule() {
             if (awaitComplete) {
                 try {
                     withContext(Dispatchers.IO) {
+                        // 等待播放真正开始（避免竞态条件）
+                        var retries = 0
+                        while (!mediaPlayer.isPlaying && retries < 50) {
+                            kotlinx.coroutines.delay(10)
+                            retries++
+                        }
+
+                        // 等待播放完成
                         while (mediaPlayer.isPlaying) {
                             kotlinx.coroutines.delay(100)
                         }
