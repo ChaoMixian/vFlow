@@ -7,6 +7,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
@@ -135,16 +136,9 @@ class TextToSpeechModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val text = step.parameters["text"] as? String ?: ""
-        val displayText = if (text.length > 30) {
-            text.take(30) + "..."
-        } else {
-            text
-        }
-
-        val textPill = PillUtil.Pill(
-            if (displayText.isBlank()) "未设置文本" else displayText,
-            "text"
+        val textPill = PillUtil.createPillFromParam(
+            step.parameters["text"],
+            getInputs().find { it.id == "text" }
         )
 
         return PillUtil.buildSpannable(
@@ -159,7 +153,8 @@ class TextToSpeechModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val step = context.allSteps[context.currentStepIndex]
-        val text = step.parameters["text"] as? String
+        val textObj = context.getVariable("text")
+        val text = textObj.asString()
 
         if (text.isNullOrBlank()) {
             return ExecutionResult.Failure(
@@ -167,6 +162,9 @@ class TextToSpeechModule : BaseModule() {
                 appContext.getString(R.string.error_vflow_device_text_to_speech_text_required)
             )
         }
+
+        // 解析变量
+        val resolvedText = VariableResolver.resolve(text, context)
 
         // 获取高级设置参数
         val language = step.parameters["language"] as? String ?: "自动"
@@ -241,7 +239,7 @@ class TextToSpeechModule : BaseModule() {
 
                 // 动态计算超时时间：根据文本长度和语速估算
                 // 假设平均语速为每分钟150字（正常语速1.0）
-                val estimatedDurationMs = ((text.length / 150.0) * 60000 / speechRate).toLong()
+                val estimatedDurationMs = ((resolvedText.length / 150.0) * 60000 / speechRate).toLong()
                 val timeoutMs = max(estimatedDurationMs + 5000, 10000) // 至少等待10秒，加上5秒缓冲
 
                 try {
@@ -264,7 +262,7 @@ class TextToSpeechModule : BaseModule() {
                             })
 
                             val result = tts.speak(
-                                text,
+                                resolvedText,
                                 if (queueMode == "flush") TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD,
                                 null,
                                 utteranceId
@@ -309,7 +307,7 @@ class TextToSpeechModule : BaseModule() {
                 })
 
                 tts.speak(
-                    text,
+                    resolvedText,
                     if (queueMode == "flush") TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD,
                     null,
                     "vflow_tts_${System.currentTimeMillis()}"
