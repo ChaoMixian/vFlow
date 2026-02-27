@@ -83,6 +83,9 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private var pendingExecutionWorkflow: Workflow? = null
 
+    // 跟踪当前正在执行的工作流 ID（包括未保存的工作流）
+    private var currentlyExecutingWorkflowId: String? = null
+
     private var listBeforeDrag: List<ActionStep>? = null
     private var dragStartPosition: Int = -1
 
@@ -109,6 +112,8 @@ class WorkflowEditorActivity : BaseActivity() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             pendingExecutionWorkflow?.let {
+                // 记录正在执行的工作流 ID，以便正确跟踪状态
+                currentlyExecutingWorkflowId = it.id
                 toast(getString(R.string.editor_toast_execution_start, it.name))
                 WorkflowExecutor.execute(it, this)
             }
@@ -239,7 +244,11 @@ class WorkflowEditorActivity : BaseActivity() {
             if (workflowId != null) {
                 currentWorkflow = workflowManager.getWorkflow(workflowId)
                 currentWorkflow?.let {
-                    updateExecuteButton(WorkflowExecutor.isRunning(it.id))
+                    val isRunning = WorkflowExecutor.isRunning(it.id)
+                    updateExecuteButton(isRunning)
+                    if (isRunning) {
+                        currentlyExecutingWorkflowId = it.id
+                    }
                     initialWorkflowJson = gson.toJson(getCurrentWorkflowState())
                 }
             }
@@ -263,20 +272,30 @@ class WorkflowEditorActivity : BaseActivity() {
                 toast(R.string.editor_toast_workflow_name_empty)
                 return@setOnClickListener
             }
-            val workflowToExecute = currentWorkflow?.copy(
-                name = name,
-                steps = actionSteps.toList()
-            ) ?: Workflow(
-                id = currentWorkflow?.id ?: UUID.randomUUID().toString(),
+
+            // 如果当前有正在执行的工作流，则停止它
+            if (currentlyExecutingWorkflowId != null &&
+                WorkflowExecutor.isRunning(currentlyExecutingWorkflowId!!)) {
+                WorkflowExecutor.stopExecution(currentlyExecutingWorkflowId!!)
+                return@setOnClickListener
+            }
+
+            // 确保已有 currentWorkflow 对象（未保存的工作流在执行时创建）
+            if (currentWorkflow == null) {
+                currentWorkflow = Workflow(
+                    id = UUID.randomUUID().toString(),
+                    name = name,
+                    steps = actionSteps.toList()
+                )
+            }
+
+            // 使用当前 UI 状态创建待执行的工作流
+            val workflowToExecute = currentWorkflow!!.copy(
                 name = name,
                 steps = actionSteps.toList()
             )
 
-            if (WorkflowExecutor.isRunning(workflowToExecute.id)) {
-                WorkflowExecutor.stopExecution(workflowToExecute.id)
-            } else {
-                executeWorkflow(workflowToExecute)
-            }
+            executeWorkflow(workflowToExecute)
         }
 
         // 更多选项按钮点击事件
@@ -286,8 +305,9 @@ class WorkflowEditorActivity : BaseActivity() {
 
         lifecycleScope.launch {
             ExecutionStateBus.stateFlow.collectLatest { state ->
-                val workflowId = currentWorkflow?.id ?: return@collectLatest
-                if (state.workflowId != workflowId) return@collectLatest
+                // 只处理当前正在执行的工作流的状态
+                val executingId = currentlyExecutingWorkflowId ?: return@collectLatest
+                if (state.workflowId != executingId) return@collectLatest
 
                 when (state) {
                     is ExecutionState.Running -> {
@@ -295,10 +315,12 @@ class WorkflowEditorActivity : BaseActivity() {
                         highlightStep(state.stepIndex)
                     }
                     is ExecutionState.Finished, is ExecutionState.Cancelled -> {
+                        currentlyExecutingWorkflowId = null
                         updateExecuteButton(false)
                         clearHighlight()
                     }
                     is ExecutionState.Failure -> {
+                        currentlyExecutingWorkflowId = null
                         updateExecuteButton(false)
                         highlightStepAsFailed(state.stepIndex)
                     }
@@ -496,6 +518,8 @@ class WorkflowEditorActivity : BaseActivity() {
     private fun executeWorkflow(workflow: Workflow) {
         val missingPermissions = PermissionManager.getMissingPermissions(this, workflow)
         if (missingPermissions.isEmpty()) {
+            // 记录正在执行的工作流 ID，以便正确跟踪状态
+            currentlyExecutingWorkflowId = workflow.id
             toast(getString(R.string.editor_toast_execution_start, workflow.name))
             WorkflowExecutor.execute(workflow, this)
         } else {
@@ -1217,7 +1241,11 @@ class WorkflowEditorActivity : BaseActivity() {
                 nameEditText.setText(it.name)
                 actionSteps.clear()
                 actionSteps.addAll(it.steps)
-                updateExecuteButton(WorkflowExecutor.isRunning(it.id))
+                val isRunning = WorkflowExecutor.isRunning(it.id)
+                updateExecuteButton(isRunning)
+                if (isRunning) {
+                    currentlyExecutingWorkflowId = it.id
+                }
             }
         }
 
@@ -1418,8 +1446,10 @@ class WorkflowEditorActivity : BaseActivity() {
             // 如果是第一次保存新工作流，则更新当前Activity的状态
             if (isNewWorkflow) {
                 currentWorkflow = workflowToSave
-                updateExecuteButton(WorkflowExecutor.isRunning(workflowToSave.id))
             }
+
+            // 更新执行按钮状态
+            updateExecuteButton(WorkflowExecutor.isRunning(workflowToSave.id))
 
             toast(R.string.editor_toast_workflow_saved)
 
