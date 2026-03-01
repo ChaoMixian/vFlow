@@ -22,7 +22,10 @@ class LaunchAppViewHolder(
     view: View,
     val summaryTextView: TextView,
     val pickButton: Button
-) : CustomEditorViewHolder(view)
+) : CustomEditorViewHolder(view) {
+    var selectedPackageName: String? = null
+    var selectedActivityName: String? = null
+}
 
 class LaunchAppUIProvider : ModuleUIProvider {
 
@@ -45,6 +48,8 @@ class LaunchAppUIProvider : ModuleUIProvider {
         )
 
         // 恢复已选择的应用状态
+        holder.selectedPackageName = currentParameters["packageName"] as? String
+        holder.selectedActivityName = currentParameters["activityName"] as? String
         updateSummaryText(context, holder.summaryTextView, currentParameters)
 
         // 点击按钮启动应用选择器
@@ -52,8 +57,20 @@ class LaunchAppUIProvider : ModuleUIProvider {
             val intent = Intent().apply {
                 putExtra(UnifiedAppPickerSheet.EXTRA_MODE, AppPickerMode.SELECT_ACTIVITY.name)
             }
-            onStartActivityForResult?.invoke(intent) { _, _ ->
-                // 结果由 WorkflowEditorActivity.handleAppPickerResult 处理
+            onStartActivityForResult?.invoke(intent) { resultCode, data ->
+                if (resultCode == android.app.Activity.RESULT_OK && data != null) {
+                    val packageName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_PACKAGE_NAME)
+                    val activityName = data.getStringExtra(UnifiedAppPickerSheet.EXTRA_SELECTED_ACTIVITY_NAME)
+                    if (packageName != null && activityName != null) {
+                        holder.selectedPackageName = packageName
+                        holder.selectedActivityName = activityName
+                        updateSummaryText(context, holder.summaryTextView, mapOf(
+                            "packageName" to packageName,
+                            "activityName" to activityName
+                        ))
+                        onParametersChanged()
+                    }
+                }
             }
         }
 
@@ -61,8 +78,11 @@ class LaunchAppUIProvider : ModuleUIProvider {
     }
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
-        // 参数通过 ActivityResult 更新，此方法返回空 Map
-        return emptyMap()
+        val launchAppHolder = holder as? LaunchAppViewHolder ?: return emptyMap()
+        return mapOf(
+            "packageName" to (launchAppHolder.selectedPackageName as Any?),
+            "activityName" to (launchAppHolder.selectedActivityName as Any?)
+        ).filterValues { it != null }
     }
 
     private fun updateSummaryText(context: Context, textView: TextView, parameters: Map<String, Any?>) {
