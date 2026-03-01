@@ -1,12 +1,6 @@
 package com.chaomixian.vflow.ui.workflow_list
 
 import android.annotation.SuppressLint
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.res.ColorStateList
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,22 +9,11 @@ import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.isVisible
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
-import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
-import com.chaomixian.vflow.permissions.PermissionManager
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.color.MaterialColors
-import androidx.core.view.isNotEmpty
 
 /**
  * 支持工作流和文件夹混合列表的 RecyclerView.Adapter。
@@ -109,8 +92,43 @@ class WorkflowListAdapter(
     @SuppressLint("ClickableViewAccessibility")
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
-            is WorkflowListItem.WorkflowItem -> (holder as WorkflowViewHolder).bind(item.workflow, itemTouchHelper, onMoveToFolder)
-            is WorkflowListItem.FolderItem -> (holder as FolderViewHolder).bind(item.folder, item.workflowCount, onFolderClick, onFolderRename, onFolderDelete, onFolderExport)
+            is WorkflowListItem.WorkflowItem -> {
+                val workflowHolder = holder as WorkflowViewHolder
+                workflowHolder.clickableWrapper.setOnClickListener { onEditWorkflow(item.workflow) }
+
+                // 长按启动拖拽（如果指定了移动到文件夹的回调）
+                if (onMoveToFolder != null) {
+                    workflowHolder.clickableWrapper.setOnLongClickListener {
+                        itemTouchHelper?.startDrag(holder)
+                        true
+                    }
+                }
+
+                workflowHolder.bind(
+                    workflow = item.workflow,
+                    workflowManager = workflowManager,
+                    workflowListRef = items,
+                    callbacks = WorkflowViewHolder.WorkflowCallbacks(
+                        showAddToTile = true,
+                        showMoveOutFolder = false,
+                        onAddShortcut = onAddShortcut,
+                        onAddToTile = { workflow ->
+                            val dialog = TileSelectionDialog.newInstance(workflow.id, workflow.name)
+                            dialog.show((holder.itemView.context as androidx.fragment.app.FragmentActivity).supportFragmentManager, TileSelectionDialog.TAG)
+                        },
+                        onDuplicate = onDuplicateWorkflow,
+                        onExport = onExportWorkflow,
+                        onDelete = onDeleteWorkflow,
+                        onExecute = onExecuteWorkflow,
+                        onExecuteDelayed = onExecuteWorkflowDelayed,
+                        notifyItemChanged = { index -> this@WorkflowListAdapter.notifyItemChanged(index) }
+                    )
+                )
+            }
+            is WorkflowListItem.FolderItem -> {
+                val folderHolder = holder as FolderViewHolder
+                folderHolder.bind(item.folder, item.workflowCount, onFolderClick, onFolderRename, onFolderDelete, onFolderExport)
+            }
         }
     }
 
@@ -123,208 +141,6 @@ class WorkflowListAdapter(
     }
 
     override fun getItemCount() = items.size
-
-    /**
-     * 工作流 ViewHolder
-     */
-    inner class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val name: TextView = itemView.findViewById(R.id.text_view_workflow_name)
-        val infoChipGroup: ChipGroup = itemView.findViewById(R.id.chip_group_info)
-        val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
-        val executeButton: FloatingActionButton = itemView.findViewById(R.id.button_execute_workflow)
-        val clickableWrapper: ConstraintLayout = itemView.findViewById(R.id.clickable_wrapper)
-        val enabledSwitch: MaterialSwitch = itemView.findViewById(R.id.switch_workflow_enabled)
-        val favoriteButton: ImageButton = itemView.findViewById(R.id.button_favorite)
-
-        @SuppressLint("ClickableViewAccessibility")
-        fun bind(
-            workflow: Workflow,
-            itemTouchHelper: ItemTouchHelper?,
-            onMoveToFolder: ((Workflow, String?) -> Unit)?
-        ) {
-            val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
-            val missingPermissions = PermissionManager.getMissingPermissions(itemView.context, workflow)
-
-            name.text = workflow.name
-            infoChipGroup.removeAllViews()
-            val inflater = LayoutInflater.from(itemView.context)
-
-            // 如果权限缺失，显示提示Chip
-            if (missingPermissions.isNotEmpty()) {
-                val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
-                permissionChip.text = "缺少权限"
-                permissionChip.setChipIconResource(R.drawable.rounded_security_24)
-                permissionChip.chipBackgroundColor = ColorStateList.valueOf(
-                    MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorErrorContainer, 0)
-                )
-                val onColor = MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorOnErrorContainer, 0)
-                permissionChip.chipIconTint = ColorStateList.valueOf(onColor)
-                permissionChip.setTextColor(onColor)
-                infoChipGroup.addView(permissionChip)
-            }
-
-            val stepCount = workflow.steps.size - 1
-            if (stepCount >= 0) {
-                val stepChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
-                stepChip.text = "${stepCount.coerceAtLeast(0)} 个步骤"
-                stepChip.setChipIconResource(R.drawable.rounded_dashboard_fill_24)
-                infoChipGroup.addView(stepChip)
-            }
-
-            val requiredPermissions = workflow.steps
-                .mapNotNull { step ->
-                    ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step)
-                }
-                .flatten()
-                .distinct()
-
-            if (requiredPermissions.isNotEmpty()) {
-                for (permission in requiredPermissions) {
-                    val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
-                    permissionChip.text = permission.name
-                    permissionChip.setChipIconResource(R.drawable.rounded_security_24)
-                    infoChipGroup.addView(permissionChip)
-                }
-            }
-
-            infoChipGroup.isVisible = infoChipGroup.isNotEmpty()
-
-            // 点击编辑
-            clickableWrapper.setOnClickListener { onEditWorkflow(workflow) }
-
-            // 长按启动拖拽（如果指定了移动到文件夹的回调）
-            if (onMoveToFolder != null) {
-                clickableWrapper.setOnLongClickListener {
-                    itemTouchHelper?.startDrag(this)
-                    true
-                }
-            }
-
-            // 收藏按钮
-            favoriteButton.setImageResource(
-                if (workflow.isFavorite) R.drawable.ic_star else R.drawable.ic_star_border
-            )
-            favoriteButton.setOnClickListener {
-                val updatedWorkflow = workflow.copy(isFavorite = !workflow.isFavorite)
-                workflowManager.saveWorkflow(updatedWorkflow)
-                val index = items.indexOfFirst {
-                    it is WorkflowListItem.WorkflowItem && it.workflow.id == workflow.id
-                }
-                if (index != -1) {
-                    items[index] = WorkflowListItem.WorkflowItem(updatedWorkflow)
-                    notifyItemChanged(index)
-                }
-            }
-
-            // 更多选项
-            moreOptionsButton.setOnClickListener { view ->
-                val popup = PopupMenu(view.context, view)
-                popup.menuInflater.inflate(R.menu.workflow_item_menu, popup.menu)
-
-                val addShortcutItem = popup.menu.findItem(R.id.menu_add_shortcut)
-                addShortcutItem.isVisible = isManualTrigger
-
-                // 添加到控制中心也只显示给手动触发器的工作流
-                val addToTileItem = popup.menu.findItem(R.id.menu_add_to_tile)
-                addToTileItem.isVisible = isManualTrigger
-
-                // 在主列表中，工作流不在文件夹里，不需要显示"移出文件夹"
-                popup.menu.findItem(R.id.menu_move_out_folder).isVisible = false
-
-                popup.setOnMenuItemClickListener { menuItem ->
-                    when (menuItem.itemId) {
-                        R.id.menu_add_shortcut -> {
-                            // 启动快捷方式配置 Activity
-                            val intent = android.content.Intent(
-                                view.context,
-                                com.chaomixian.vflow.ui.shortcut.ShortcutConfigActivity::class.java
-                            ).apply {
-                                putExtra(
-                                    com.chaomixian.vflow.ui.shortcut.ShortcutConfigActivity.EXTRA_WORKFLOW_ID,
-                                    workflow.id
-                                )
-                            }
-                            view.context.startActivity(intent)
-                            true
-                        }
-                        R.id.menu_copy_id -> {
-                            // 复制工作流ID到剪贴板
-                            val clipboard = view.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("Workflow ID", workflow.id)
-                            clipboard.setPrimaryClip(clip)
-                            android.widget.Toast.makeText(view.context, "工作流ID已复制", android.widget.Toast.LENGTH_SHORT).show()
-                            true
-                        }
-                        R.id.menu_delete -> { onDeleteWorkflow(workflow); true }
-                        R.id.menu_duplicate -> { onDuplicateWorkflow(workflow); true }
-                        R.id.menu_export_single -> { onExportWorkflow(workflow); true }
-                        R.id.menu_add_to_tile -> {
-                            // 显示Tile选择对话框
-                            val dialog = TileSelectionDialog.newInstance(workflow.id, workflow.name)
-                            dialog.show((view.context as androidx.fragment.app.FragmentActivity).supportFragmentManager, TileSelectionDialog.TAG)
-                            true
-                        }
-                        else -> false
-                    }
-                }
-                popup.show()
-            }
-
-            executeButton.isVisible = isManualTrigger
-            enabledSwitch.isVisible = !isManualTrigger
-
-            if (isManualTrigger) {
-                executeButton.setImageResource(
-                    if (WorkflowExecutor.isRunning(workflow.id)) R.drawable.rounded_pause_24 else R.drawable.ic_play_arrow
-                )
-                executeButton.setOnClickListener { onExecuteWorkflow(workflow) }
-
-                // 长按执行按钮显示延迟执行菜单
-                executeButton.setOnLongClickListener { view ->
-                    showDelayedExecuteMenu(view, workflow)
-                    true
-                }
-            } else {
-                enabledSwitch.setOnCheckedChangeListener(null)
-                enabledSwitch.isChecked = workflow.isEnabled
-                enabledSwitch.isEnabled = missingPermissions.isEmpty()
-
-                enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
-                    val updatedWorkflow = workflow.copy(
-                        isEnabled = isChecked,
-                        wasEnabledBeforePermissionsLost = false
-                    )
-                    workflowManager.saveWorkflow(updatedWorkflow)
-                    val index = items.indexOfFirst {
-                        it is WorkflowListItem.WorkflowItem && it.workflow.id == workflow.id
-                    }
-                    if (index != -1) {
-                        items[index] = WorkflowListItem.WorkflowItem(updatedWorkflow)
-                    }
-                }
-            }
-        }
-
-        /**
-         * 显示延迟执行菜单
-         */
-        private fun showDelayedExecuteMenu(anchorView: View, workflow: Workflow) {
-            val popup = PopupMenu(anchorView.context, anchorView)
-            popup.menuInflater.inflate(R.menu.workflow_execute_delayed_menu, popup.menu)
-
-            popup.setOnMenuItemClickListener { menuItem ->
-                val delayMs = when (menuItem.itemId) {
-                    R.id.menu_execute_in_5s -> 5_000L      // 5秒
-                    R.id.menu_execute_in_15s -> 15_000L     // 15秒
-                    R.id.menu_execute_in_1min -> 60_000L    // 1分钟
-                    else -> return@setOnMenuItemClickListener false
-                }
-                onExecuteWorkflowDelayed(workflow, delayMs)
-                true
-            }
-            popup.show()
-        }
-    }
 
     /**
      * 文件夹 ViewHolder

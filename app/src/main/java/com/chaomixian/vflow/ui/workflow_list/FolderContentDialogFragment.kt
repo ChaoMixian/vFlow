@@ -1,9 +1,5 @@
 package com.chaomixian.vflow.ui.workflow_list
 
-import android.annotation.SuppressLint
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,11 +7,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
-import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -24,15 +18,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.materialswitch.MaterialSwitch
-import androidx.core.view.isNotEmpty
 import com.google.gson.Gson
 
 /**
@@ -273,7 +261,6 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
     /**
      * 文件夹内工作流的 Adapter
      */
-    @SuppressLint("ClickableViewAccessibility")
     inner class FolderWorkflowAdapter(
         private var workflows: MutableList<Workflow>,
         private val workflowManager: WorkflowManager,
@@ -281,8 +268,8 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
         private val onDelete: (Workflow) -> Unit,
         private val onMoveOutFolder: (Workflow) -> Unit,
         private val onExecute: (Workflow) -> Unit,
-        private val onExecuteDelayed: (Workflow, Long) -> Unit // 延迟执行回调
-    ) : RecyclerView.Adapter<FolderWorkflowAdapter.ViewHolder>() {
+        private val onExecuteDelayed: (Workflow, Long) -> Unit
+    ) : RecyclerView.Adapter<WorkflowViewHolder>() {
 
         private var itemTouchHelper: ItemTouchHelper? = null
 
@@ -311,15 +298,13 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
             notifyItemMoved(fromPosition, toPosition)
         }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkflowViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_workflow, parent, false)
-            return ViewHolder(view)
+            return WorkflowViewHolder(view)
         }
 
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        override fun onBindViewHolder(holder: WorkflowViewHolder, position: Int) {
             val workflow = workflows[position]
-            holder.bind(workflow)
-
             holder.clickableWrapper.setOnClickListener { onEdit(workflow) }
 
             // 长按拖拽排序
@@ -327,126 +312,32 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
                 itemTouchHelper?.startDrag(holder)
                 true
             }
+
+            holder.bind(
+                workflow = workflow,
+                workflowManager = workflowManager,
+                workflowListRef = workflows,
+                callbacks = WorkflowViewHolder.WorkflowCallbacks(
+                    showAddToTile = false,  // 文件夹内不显示快捷方式选项
+                    showMoveOutFolder = true,
+                    onDuplicate = { wf ->
+                        workflowManager.duplicateWorkflow(wf.id)
+                        Toast.makeText(context, "工作流已复制", Toast.LENGTH_SHORT).show()
+                        loadData()
+                    },
+                    onMoveOutFolder = onMoveOutFolder,
+                    onExport = { wf ->
+                        pendingExportWorkflow = wf
+                        exportSingleLauncher.launch("${wf.name}.json")
+                    },
+                    onDelete = onDelete,
+                    onExecute = onExecute,
+                    onExecuteDelayed = onExecuteDelayed,
+                    notifyItemChanged = { index -> this@FolderWorkflowAdapter.notifyItemChanged(index) }
+                )
+            )
         }
 
         override fun getItemCount() = workflows.size
-
-        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            val name: TextView = itemView.findViewById(R.id.text_view_workflow_name)
-            val infoChipGroup: ChipGroup = itemView.findViewById(R.id.chip_group_info)
-            val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
-            val executeButton: FloatingActionButton = itemView.findViewById(R.id.button_execute_workflow)
-            val clickableWrapper: ConstraintLayout = itemView.findViewById(R.id.clickable_wrapper)
-            val enabledSwitch: MaterialSwitch = itemView.findViewById(R.id.switch_workflow_enabled)
-            val favoriteButton: ImageButton = itemView.findViewById(R.id.button_favorite)
-
-            fun bind(workflow: Workflow) {
-                val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
-
-                name.text = workflow.name
-                infoChipGroup.removeAllViews()
-                val inflater = LayoutInflater.from(itemView.context)
-
-                val stepCount = workflow.steps.size - 1
-                if (stepCount >= 0) {
-                    val stepChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
-                    stepChip.text = "${stepCount.coerceAtLeast(0)} 个步骤"
-                    stepChip.setChipIconResource(R.drawable.ic_workflows)
-                    infoChipGroup.addView(stepChip)
-                }
-
-                infoChipGroup.isVisible = infoChipGroup.isNotEmpty()
-
-                // 收藏按钮
-                favoriteButton.setImageResource(
-                    if (workflow.isFavorite) R.drawable.ic_star else R.drawable.ic_star_border
-                )
-                favoriteButton.setOnClickListener {
-                    val updatedWorkflow = workflow.copy(isFavorite = !workflow.isFavorite)
-                    workflowManager.saveWorkflow(updatedWorkflow)
-                    val index = workflows.indexOfFirst { it.id == workflow.id }
-                    if (index != -1) {
-                        workflows[index] = updatedWorkflow
-                        notifyItemChanged(index)
-                    }
-                }
-
-                // 更多选项
-                moreOptionsButton.setOnClickListener { view ->
-                    val popup = android.widget.PopupMenu(view.context, view)
-                    popup.menuInflater.inflate(R.menu.workflow_item_menu, popup.menu)
-                    popup.menu.findItem(R.id.menu_add_shortcut).isVisible = isManualTrigger
-                    popup.menu.findItem(R.id.menu_move_out_folder).isVisible = true
-
-                    popup.setOnMenuItemClickListener { menuItem ->
-                        when (menuItem.itemId) {
-                            R.id.menu_add_shortcut -> {
-                                com.chaomixian.vflow.ui.common.ShortcutHelper.requestPinnedShortcut(view.context, workflow)
-                                true
-                            }
-                            R.id.menu_copy_id -> {
-                                // 复制工作流ID到剪贴板
-                                val clipboard = view.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                val clip = ClipData.newPlainText("Workflow ID", workflow.id)
-                                clipboard.setPrimaryClip(clip)
-                                Toast.makeText(view.context, "工作流ID已复制", Toast.LENGTH_SHORT).show()
-                                true
-                            }
-                            R.id.menu_duplicate -> {
-                                workflowManager.duplicateWorkflow(workflow.id)
-                                Toast.makeText(view.context, getString(R.string.toast_copied_as, workflow.name), Toast.LENGTH_SHORT).show()
-                                loadData() // 刷新列表
-                                true
-                            }
-                            R.id.menu_move_out_folder -> { onMoveOutFolder(workflow); true }
-                            R.id.menu_export_single -> {
-                                pendingExportWorkflow = workflow
-                                exportSingleLauncher.launch("${workflow.name}.json")
-                                true
-                            }
-                            R.id.menu_delete -> { onDelete(workflow); true }
-                            else -> false
-                        }
-                    }
-                    popup.show()
-                }
-
-                executeButton.isVisible = isManualTrigger
-                enabledSwitch.isVisible = !isManualTrigger
-
-                if (isManualTrigger) {
-                    executeButton.setImageResource(
-                        if (WorkflowExecutor.isRunning(workflow.id)) R.drawable.rounded_pause_24 else R.drawable.ic_play_arrow
-                    )
-                    executeButton.setOnClickListener { onExecute(workflow) }
-
-                    // 长按执行按钮显示延迟执行菜单
-                    executeButton.setOnLongClickListener { view ->
-                        showDelayedExecuteMenu(view, workflow)
-                        true
-                    }
-                }
-            }
-
-            /**
-             * 显示延迟执行菜单
-             */
-            private fun showDelayedExecuteMenu(anchorView: View, workflow: Workflow) {
-                val popup = PopupMenu(anchorView.context, anchorView)
-                popup.menuInflater.inflate(R.menu.workflow_execute_delayed_menu, popup.menu)
-
-                popup.setOnMenuItemClickListener { menuItem ->
-                    val delayMs = when (menuItem.itemId) {
-                        R.id.menu_execute_in_5s -> 5_000L      // 5秒
-                        R.id.menu_execute_in_15s -> 15_000L     // 15秒
-                        R.id.menu_execute_in_1min -> 60_000L    // 1分钟
-                        else -> return@setOnMenuItemClickListener false
-                    }
-                    onExecuteDelayed(workflow, delayMs)
-                    true
-                }
-                popup.show()
-            }
-        }
     }
 }
