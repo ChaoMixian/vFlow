@@ -251,10 +251,14 @@ class HttpRequestModule : BaseModule() {
      */
     private fun resolveMap(map: Map<String, Any?>, context: ExecutionContext): Map<String, String> {
         return map.entries.associate { (key, value) ->
-            val resolvedValue = if (value is String) {
-                VariableResolver.resolve(value, context)
-            } else {
-                value?.toString() ?: ""
+            val resolvedValue = when (value) {
+                is String -> VariableResolver.resolve(value, context)
+                is VString -> {
+                    val rawStr = value.raw ?: ""
+                    VariableResolver.resolve(rawStr, context)
+                }
+                is VObject -> value.asString()
+                else -> value?.toString() ?: ""
             }
             key to resolvedValue
         }
