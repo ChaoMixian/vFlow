@@ -105,8 +105,12 @@ object UpdateChecker {
      * @return 负数：v1 < v2，零：v1 == v2，正数：v1 > v2
      */
     private fun compareVersions(v1: String, v2: String): Int {
-        val parts1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
-        val parts2 = v2.split(".").map { it.toIntOrNull() ?: 0 }
+        // 去掉版本号后缀
+        val cleanV1 = v1.split("-")[0]
+        val cleanV2 = v2.split("-")[0]
+
+        val parts1 = cleanV1.split(".").map { it.toIntOrNull() ?: 0 }
+        val parts2 = cleanV2.split(".").map { it.toIntOrNull() ?: 0 }
 
         val maxLength = maxOf(parts1.size, parts2.size)
 
