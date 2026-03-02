@@ -5,6 +5,7 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
@@ -192,10 +193,12 @@ class HttpRequestModule : BaseModule() {
                     else -> bodyDataRaw
                 }
 
-                // 现在 variables 是 Map<String, VObject>，使用 getVariableAsLong 获取
                 val timeout = context.getVariableAsLong("timeout") ?: 10
 
                 val client = OkHttpClient.Builder()
+                    .connectTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
+                    .writeTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
                     .callTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
                     .build()
 
