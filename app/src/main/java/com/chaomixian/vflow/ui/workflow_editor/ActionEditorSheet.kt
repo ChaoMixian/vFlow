@@ -670,10 +670,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             if (richTextView == null) {
                 richTextView = customEditorHolder?.view?.findViewWithTag<RichTextView>("rich_text_view_value")
             }
-            // 最后尝试用ID查找作为后备
-            if (richTextView == null) {
-                richTextView = customEditorHolder?.view?.findViewById(R.id.rich_text_view)
-            }
         }
 
         if (richTextView != null) {

@@ -241,7 +241,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                     richTextView.setVariableTypeFilter(setOf("vflow.type.image"))
                 }
 
-                richTextView.tag = "rich_text_view_body"
+                richTextView.tag = "body"
 
                 holder.rawBodyRichTextView = richTextView
 
