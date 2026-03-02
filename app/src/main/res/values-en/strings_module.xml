@@ -50,6 +50,7 @@
     <string name="module_vflow_system_launch_app_desc">Launch a specified application or one of its internal pages (Activity).</string>
     <string name="param_vflow_system_launch_app_packageName_name">Package Name</string>
     <string name="param_vflow_system_launch_app_activityName_name">Activity Name</string>
+    <string name="param_vflow_system_launch_app_useAdb_name">Use Shell Command</string>
     <string name="output_vflow_system_launch_app_success_name">Success</string>
     <string name="error_vflow_system_launch_app_empty_package">Package name cannot be empty</string>
     <string name="error_vflow_system_launch_app_package_required">Package name cannot be empty</string>

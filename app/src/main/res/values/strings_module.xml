@@ -41,6 +41,7 @@
     <string name="module_vflow_system_launch_app_desc">启动一个指定的应用程序或其内部的某个页面(Activity)。</string>
     <string name="param_vflow_system_launch_app_packageName_name">应用包名</string>
     <string name="param_vflow_system_launch_app_activityName_name">Activity 名称</string>
+    <string name="param_vflow_system_launch_app_useAdb_name">使用 Shell 命令</string>
     <string name="output_vflow_system_launch_app_success_name">是否成功</string>
     <string name="error_vflow_system_launch_app_empty_package">应用包名不能为空</string>
     <string name="error_vflow_system_launch_app_package_required">应用包名不能为空</string>
