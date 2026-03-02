@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.text.Collator
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -58,6 +59,11 @@ class WorkflowListFragment : Fragment() {
 
     // 排序状态：false = 默认排序，true = 按名称排序
     private var isSortedByName = false
+
+    // 中文排序器（按拼音排序）
+    private val chineseCollator = Collator.getInstance(java.util.Locale.CHINA).apply {
+        strength = Collator.PRIMARY
+    }
 
     // 延迟执行处理器
     private val delayedExecuteHandler = Handler(Looper.getMainLooper())
@@ -374,7 +380,7 @@ class WorkflowListFragment : Fragment() {
 
         // 根据排序状态决定排序方式
         val sortedFolders = if (isSortedByName) {
-            folders.sortedBy { it.name }
+            folders.sortedWith(compareWithChineseCollator { it.name })
         } else {
             folders
         }
@@ -390,7 +396,7 @@ class WorkflowListFragment : Fragment() {
 
         // 根据排序状态决定排序方式
         val sortedWorkflows = if (isSortedByName) {
-            rootWorkflows.sortedBy { it.name }
+            rootWorkflows.sortedWith(compareWithChineseCollator { it.name })
         } else {
             rootWorkflows
         }
@@ -732,5 +738,15 @@ class WorkflowListFragment : Fragment() {
         )
         workflowManager.saveWorkflow(newWorkflow)
         Toast.makeText(requireContext(), getString(R.string.toast_workflow_imported_as_copy, workflow.name), Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * 使用中文排序器进行比较的辅助函数
+     * 按照拼音首字母顺序排序中文
+     */
+    private inline fun <T> compareWithChineseCollator(crossinline selector: (T) -> String): Comparator<T> {
+        return Comparator { a, b ->
+            chineseCollator.compare(selector(a), selector(b))
+        }
     }
 }
