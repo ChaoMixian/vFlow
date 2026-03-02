@@ -143,6 +143,7 @@ class AgentModuleUIProvider : ModuleUIProvider {
         val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
         richTextView.setRichText(initialValue, holder.allSteps ?: emptyList())
+        richTextView.tag = "instruction"
 
         holder.instructionRichText = richTextView
         valueContainer.addView(richEditorLayout)

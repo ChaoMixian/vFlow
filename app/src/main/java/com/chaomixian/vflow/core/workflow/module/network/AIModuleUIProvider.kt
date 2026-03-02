@@ -168,6 +168,7 @@ class AIModuleUIProvider : ModuleUIProvider {
         val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
         richTextView.setRichText(initialValue, holder.allSteps ?: emptyList())
+        richTextView.tag = "prompt"
 
         // 将引用保存到 ViewHolder
         holder.promptRichText = richTextView

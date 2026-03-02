@@ -175,7 +175,7 @@ class HttpRequestModule : BaseModule() {
                             resolveValuePreservingType(bodyDataRaw, context)
                         } else {
                             // 字符串输入：解析变量引用，然后尝试解析 JSON
-                            val jsonString = VariableResolver.resolve(bodyDataRaw?.toString() ?: "", context)
+                            val jsonString = VariableResolver.resolve(bodyDataRaw?.asString() ?: "", context)
                             // 尝试解析 JSON 字符串为对象，以便保留类型
                             try {
                                 Gson().fromJson(jsonString, Any::class.java)

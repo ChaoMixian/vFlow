@@ -137,7 +137,7 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         richTextView.setRichText(initialValue, holder.allSteps ?: emptyList())
 
         // 给 RichTextView 设置 tag，以便 ActionEditorSheet 能找到它进行变量插入
-        richTextView.tag = "rich_text_view_value"
+        richTextView.tag = "text"
 
         holder.richTextView = richTextView
         valueContainer.addView(richEditorLayout)

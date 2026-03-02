@@ -260,6 +260,7 @@ class VariableModuleUIProvider(
                 val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
                 richTextView.setRichText(currentValue?.toString() ?: "", holder.allSteps ?: emptyList())
+                richTextView.tag = "value"
                 valueContainer.addView(richEditorLayout)
                 row
             }
