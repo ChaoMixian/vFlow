@@ -36,31 +36,28 @@ object UpdateChecker {
                 .header("Accept", "application/vnd.github.v3+json")
                 .build()
 
-            val response = client.newCall(request).execute()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Result.failure(IOException("获取releases失败: ${response.code}"))
+                } else {
+                    val json = response.body?.string()
+                        ?: return@use Result.failure(IOException("响应体为空"))
 
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(
-                    IOException("获取releases失败: ${response.code}")
-                )
+                    try {
+                        val releases = gson.fromJson<List<GitHubReleaseItem>>(
+                            json,
+                            object : TypeToken<List<GitHubReleaseItem>>() {}.type
+                        )
+                        Result.success(releases.map { it.toGitHubRelease() })
+                    } catch (e: Exception) {
+                        Result.failure(IOException("解析releases失败: ${e.message}", e))
+                    }
+                }
             }
-
-            val json = response.body?.string()
-                ?: return@withContext Result.failure(
-                    IOException("响应体为空")
-                )
-
-            val releases = gson.fromJson<List<GitHubReleaseItem>>(
-                json,
-                object : TypeToken<List<GitHubReleaseItem>>() {}.type
-            )
-
-            val result = releases.map { it.toGitHubRelease() }
-            Result.success(result)
-
         } catch (e: IOException) {
             Result.failure(e)
         } catch (e: Exception) {
-            Result.failure(IOException("解析releases失败: ${e.message}", e))
+            Result.failure(IOException("网络请求失败: ${e.message}", e))
         }
     }
 
