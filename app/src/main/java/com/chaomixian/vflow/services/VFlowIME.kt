@@ -76,9 +76,9 @@ class VFlowIME : InputMethodService() {
         DebugLogger.d(TAG, "vFlow IME Destroyed")
     }
 
-    override fun onCreateInputView(): View {
-        // 加载一个极简布局，避免遮挡屏幕
-        return layoutInflater.inflate(R.layout.layout_vflow_ime, null)
+    override fun onCreateInputView(): View? {
+        // 返回 null，不显示任何输入法 UI
+        return null
     }
 
     private fun inputText(text: String, performEditorAction: Boolean, keyAction: String) {
