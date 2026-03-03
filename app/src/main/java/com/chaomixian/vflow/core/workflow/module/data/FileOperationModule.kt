@@ -272,7 +272,8 @@ class FileOperationModule : BaseModule() {
                     ?: return ExecutionResult.Failure("执行错误", "未指定文件名")
                 val fileName = VariableResolver.resolve(rawFileName, context)
                 val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
-                val content = currentStep.parameters["create_content"] as? String ?: ""
+                val rawContent = currentStep.parameters["create_content"] as? String ?: ""
+                val content = VariableResolver.resolve(rawContent, context)
 
                 executeCreate(
                     context = context.applicationContext,
@@ -295,7 +296,8 @@ class FileOperationModule : BaseModule() {
                 val filePath = currentStep.parameters["file_path"] as? String
                     ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
                 val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
-                val content = currentStep.parameters["content"] as? String ?: ""
+                val rawContent = currentStep.parameters["content"] as? String ?: ""
+                val content = VariableResolver.resolve(rawContent, context)
                 val overwrite = currentStep.parameters["overwrite"] as? Boolean ?: true
 
                 executeWrite(context.applicationContext, filePath, content, encoding, overwrite, onProgress)
@@ -304,7 +306,8 @@ class FileOperationModule : BaseModule() {
                 val filePath = currentStep.parameters["file_path"] as? String
                     ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
                 val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
-                val content = currentStep.parameters["content"] as? String ?: ""
+                val rawContent = currentStep.parameters["content"] as? String ?: ""
+                val content = VariableResolver.resolve(rawContent, context)
 
                 executeAppend(context.applicationContext, filePath, content, encoding, onProgress)
             }
