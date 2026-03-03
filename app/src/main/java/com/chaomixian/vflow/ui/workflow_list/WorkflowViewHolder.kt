@@ -142,8 +142,6 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
                         true
                     }
                     R.id.menu_duplicate -> {
-                        workflowManager.duplicateWorkflow(workflow.id)
-                        Toast.makeText(view.context, "工作流已复制", Toast.LENGTH_SHORT).show()
                         callbacks.onDuplicate?.invoke(workflow)
                         true
                     }
