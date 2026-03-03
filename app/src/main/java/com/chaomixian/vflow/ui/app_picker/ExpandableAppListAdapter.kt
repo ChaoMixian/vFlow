@@ -110,9 +110,17 @@ class ExpandableAppListAdapter(
             val filteredActivities = if (lowercaseQuery.isEmpty()) {
                 activities
             } else {
-                activities.filter { activity ->
-                    activity.name.lowercase(Locale.getDefault()).contains(lowercaseQuery) ||
-                            activity.label.lowercase(Locale.getDefault()).contains(lowercaseQuery)
+                val launchItem = activities.find { it.name == "LAUNCH" }
+                val otherActivities = activities.filter { it.name != "LAUNCH" }
+                        .filter { activity ->
+                            activity.name.lowercase(Locale.getDefault()).contains(lowercaseQuery) ||
+                                    activity.label.lowercase(Locale.getDefault()).contains(lowercaseQuery)
+                        }
+                // 确保 LAUNCH 始终在第一位
+                if (launchItem != null) {
+                    listOf(launchItem) + otherActivities
+                } else {
+                    otherActivities
                 }
             }
 
