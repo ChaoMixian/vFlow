@@ -47,6 +47,16 @@
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
+            <!-- 最小化按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_minimize"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:contentDescription="@string/content_desc_minimize"
+                app:icon="@drawable/ic_minimize"
+                app:iconSize="20dp" />
+
             <!-- 关闭按钮 -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_close"

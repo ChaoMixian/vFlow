@@ -668,6 +668,7 @@
     <string name="title_core_status">vFlow Core 状态</string>
     <string name="content_desc_close">关闭</string>
     <string name="content_desc_expand_panel">展开面板</string>
+    <string name="content_desc_minimize">最小化</string>
 
     <!-- Permissions -->
     <string name="permission_name_core">vFlow Core 服务</string>

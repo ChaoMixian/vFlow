@@ -668,6 +668,7 @@
     <string name="title_core_status">vFlow Core Status</string>
     <string name="content_desc_close">Close</string>
     <string name="content_desc_expand_panel">Expand panel</string>
+    <string name="content_desc_minimize">Minimize</string>
 
     <!-- Permissions -->
     <string name="permission_name_core">vFlow Core Service</string>

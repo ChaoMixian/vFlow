@@ -134,6 +134,11 @@ class WorkflowsFloatPanelService : Service() {
         // 设置拖拽
         setupDragBehavior(floatView!!, params!!)
 
+        // 设置最小化按钮
+        floatView?.findViewById<MaterialButton>(R.id.btn_minimize)?.setOnClickListener {
+            collapseToSidebar()
+        }
+
         // 设置关闭按钮
         floatView?.findViewById<MaterialButton>(R.id.btn_close)?.setOnClickListener {
             hideFloatWindow()
