@@ -45,20 +45,46 @@ class OCRModule : BaseModule() {
 
     override val uiProvider: ModuleUIProvider? = null
 
-    private val modeOptions = listOf("识别全文", "查找文本")
-    private val languageOptions = listOf("中英混合", "中文", "英文")
-    private val strategyOptions = listOf("默认 (从上到下)", "最接近中心", "置信度最高")
+    // 序列化值使用与语言无关的标识符
+    companion object {
+        const val MODE_RECOGNIZE = "recognize"
+        const val MODE_FIND = "find"
+
+        const val LANGUAGE_MIXED = "mixed"
+        const val LANGUAGE_CHINESE = "chinese"
+        const val LANGUAGE_ENGLISH = "english"
+
+        const val STRATEGY_DEFAULT = "default"
+        const val STRATEGY_CENTER = "center"
+        const val STRATEGY_CONFIDENCE = "confidence"
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("image", "输入图片", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)),
+        InputDefinition(
+            id = "image",
+            name = "输入图片",
+            staticType = ParameterType.ANY,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id),
+            nameStringRes = R.string.param_vflow_interaction_ocr_image_name
+        ),
         InputDefinition(
             id = "mode",
             name = "模式",
             staticType = ParameterType.ENUM,
-            defaultValue = "识别全文",
-            options = modeOptions,
+            defaultValue = MODE_RECOGNIZE,
+            options = listOf(MODE_RECOGNIZE, MODE_FIND),
             acceptsMagicVariable = false,
-            inputStyle = InputStyle.CHIP_GROUP
+            inputStyle = InputStyle.CHIP_GROUP,
+            nameStringRes = R.string.param_vflow_interaction_ocr_mode_name,
+            optionsStringRes = listOf(
+                R.string.param_vflow_interaction_ocr_mode_opt_recognize,
+                R.string.param_vflow_interaction_ocr_mode_opt_find
+            ),
+            legacyValueMap = mapOf(
+                "识别全文" to MODE_RECOGNIZE,
+                "查找文本" to MODE_FIND
+            )
         ),
         InputDefinition(
             id = "target_text",
@@ -67,27 +93,51 @@ class OCRModule : BaseModule() {
             defaultValue = "",
             acceptsMagicVariable = true,
             supportsRichText = true,
-            visibility = InputVisibility.whenEquals("mode", "查找文本")
+            visibility = InputVisibility.whenEquals("mode", MODE_FIND),
+            nameStringRes = R.string.param_vflow_interaction_ocr_target_text_name,
+            hintStringRes = R.string.param_vflow_interaction_ocr_target_text_hint
         ),
         // 折叠到"更多设置"的选项
         InputDefinition(
             id = "language",
             name = "识别语言",
             staticType = ParameterType.ENUM,
-            defaultValue = "中英混合",
-            options = languageOptions,
+            defaultValue = LANGUAGE_MIXED,
+            options = listOf(LANGUAGE_MIXED, LANGUAGE_CHINESE, LANGUAGE_ENGLISH),
             acceptsMagicVariable = false,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_ocr_language_name,
+            optionsStringRes = listOf(
+                R.string.param_vflow_interaction_ocr_language_opt_mixed,
+                R.string.param_vflow_interaction_ocr_language_opt_chinese,
+                R.string.param_vflow_interaction_ocr_language_opt_english
+            ),
+            legacyValueMap = mapOf(
+                "中英混合" to LANGUAGE_MIXED,
+                "中文" to LANGUAGE_CHINESE,
+                "英文" to LANGUAGE_ENGLISH
+            )
         ),
         InputDefinition(
             id = "search_strategy",
             name = "查找策略",
             staticType = ParameterType.ENUM,
-            defaultValue = "默认 (从上到下)",
-            options = strategyOptions,
+            defaultValue = STRATEGY_DEFAULT,
+            options = listOf(STRATEGY_DEFAULT, STRATEGY_CENTER, STRATEGY_CONFIDENCE),
             acceptsMagicVariable = false,
             isFolded = true,
-            visibility = InputVisibility.whenEquals("mode", "查找文本")
+            visibility = InputVisibility.whenEquals("mode", MODE_FIND),
+            nameStringRes = R.string.param_vflow_interaction_ocr_search_strategy_name,
+            optionsStringRes = listOf(
+                R.string.param_vflow_interaction_ocr_search_strategy_opt_default,
+                R.string.param_vflow_interaction_ocr_search_strategy_opt_center,
+                R.string.param_vflow_interaction_ocr_search_strategy_opt_confidence
+            ),
+            legacyValueMap = mapOf(
+                "默认 (从上到下)" to STRATEGY_DEFAULT,
+                "最接近中心" to STRATEGY_CENTER,
+                "置信度最高" to STRATEGY_CONFIDENCE
+            )
         ),
         InputDefinition(
             id = "region",
@@ -97,7 +147,9 @@ class OCRModule : BaseModule() {
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id),
             isFolded = true,
-            hint = "留空则识别全屏"
+            hint = "留空则识别全屏",
+            nameStringRes = R.string.param_vflow_interaction_ocr_region_name,
+            hintStringRes = R.string.param_vflow_interaction_ocr_region_hint
         ),
         // 用于保存"更多设置"展开状态的内部参数
         InputDefinition(
@@ -115,30 +167,30 @@ class OCRModule : BaseModule() {
     }
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val mode = step?.parameters?.get("mode") as? String ?: "识别全文"
-        return if (mode == "识别全文") {
+        val mode = step?.parameters?.get("mode") as? String ?: MODE_RECOGNIZE
+        return if (mode == MODE_RECOGNIZE) {
             listOf(
-                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-                OutputDefinition("full_text", "识别到的文字", VTypeRegistry.STRING.id)
+                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_ocr_success_name),
+                OutputDefinition("full_text", "识别到的文字", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_ocr_full_text_name)
             )
         } else {
             listOf(
-                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-                OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
-                OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id),
-                OutputDefinition("first_match", "第一个结果 (区域)", VTypeRegistry.COORDINATE_REGION.id),
-                OutputDefinition("first_center", "第一个结果 (中心坐标)", VTypeRegistry.COORDINATE.id),
-                OutputDefinition("all_matches", "所有结果 (区域列表)", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.COORDINATE_REGION.id),
-                OutputDefinition("all_centers", "所有结果 (中心坐标列表)", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.COORDINATE.id)
+                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_ocr_success_name),
+                OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_ocr_found_name),
+                OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_interaction_ocr_count_name),
+                OutputDefinition("first_match", "第一个结果 (区域)", VTypeRegistry.COORDINATE_REGION.id, nameStringRes = R.string.output_vflow_interaction_ocr_first_match_name),
+                OutputDefinition("first_center", "第一个结果 (中心坐标)", VTypeRegistry.COORDINATE.id, nameStringRes = R.string.output_vflow_interaction_ocr_first_center_name),
+                OutputDefinition("all_matches", "所有结果 (区域列表)", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.COORDINATE_REGION.id, nameStringRes = R.string.output_vflow_interaction_ocr_all_matches_name),
+                OutputDefinition("all_centers", "所有结果 (中心坐标列表)", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.COORDINATE.id, nameStringRes = R.string.output_vflow_interaction_ocr_all_centers_name)
             )
         }
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val mode = step.parameters["mode"] as? String ?: "识别全文"
+        val mode = step.parameters["mode"] as? String ?: MODE_RECOGNIZE
         val imagePill = PillUtil.createPillFromParam(step.parameters["image"], getInputs().find { it.id == "image" })
 
-        return if (mode == "查找文本") {
+        return if (mode == MODE_FIND) {
             val targetPill = PillUtil.createPillFromParam(step.parameters["target_text"], getInputs().find { it.id == "target_text" })
             PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_ocr_find_in), imagePill, context.getString(R.string.summary_vflow_device_ocr_find_middle), targetPill)
         } else {
@@ -153,9 +205,9 @@ class OCRModule : BaseModule() {
         // 获取参数
         val imageVar = context.getVariable("image") as? VImage
             ?: return ExecutionResult.Failure("参数错误", "请提供一张有效的图片。")
-        val mode = context.getVariableAsString("mode", "识别全文")
-        val language = context.getVariableAsString("language", "中英混合")
-        val strategy = context.getVariableAsString("search_strategy", "默认 (从上到下)")
+        val mode = context.getVariableAsString("mode", MODE_RECOGNIZE)
+        val language = context.getVariableAsString("language", LANGUAGE_MIXED)
+        val strategy = context.getVariableAsString("search_strategy", STRATEGY_DEFAULT)
         val rawTargetText = context.getVariableAsString("target_text", "")
         val targetText = VariableResolver.resolve(rawTargetText, context)
 
@@ -169,15 +221,27 @@ class OCRModule : BaseModule() {
             return ExecutionResult.Failure("参数错误", "识别区域需要同时设置左上和右下坐标。")
         }
 
-        if (mode == "查找文本" && targetText.isEmpty()) {
+        if (mode == MODE_FIND && targetText.isEmpty()) {
             return ExecutionResult.Failure("参数错误", "查找内容不能为空。")
         }
 
         val appContext = context.applicationContext
 
+        // 将标识符转换为本地化文本用于显示
+        val languageDisplay = when (language) {
+            LANGUAGE_ENGLISH -> appContext.getString(R.string.param_vflow_interaction_ocr_language_opt_english)
+            LANGUAGE_CHINESE -> appContext.getString(R.string.param_vflow_interaction_ocr_language_opt_chinese)
+            else -> appContext.getString(R.string.param_vflow_interaction_ocr_language_opt_mixed)
+        }
+        val strategyDisplay = when (strategy) {
+            STRATEGY_CENTER -> appContext.getString(R.string.param_vflow_interaction_ocr_search_strategy_opt_center)
+            STRATEGY_CONFIDENCE -> appContext.getString(R.string.param_vflow_interaction_ocr_search_strategy_opt_confidence)
+            else -> appContext.getString(R.string.param_vflow_interaction_ocr_search_strategy_opt_default)
+        }
+
         // 准备识别器
         val recognizer = when (language) {
-            "英文" -> TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            LANGUAGE_ENGLISH -> TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
             else -> TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
         }
 
@@ -195,7 +259,7 @@ class OCRModule : BaseModule() {
             val result: Text = recognizer.process(inputImage).await()
 
             // 处理结果 - 识别全文模式
-            if (mode == "识别全文") {
+            if (mode == MODE_RECOGNIZE) {
                 val fullText = result.text
                 onProgress(ProgressUpdate("识别完成，文字长度: ${fullText.length}"))
                 return ExecutionResult.Success(mapOf(
@@ -234,7 +298,7 @@ class OCRModule : BaseModule() {
                 // 用户可以选择：重试（OCR 可能识别不准确）、忽略错误继续、停止工作流
                 return ExecutionResult.Failure(
                     "未找到文字",
-                    "在图片中未找到指定文字: '$targetText'（语言: $language, 策略: $strategy）",
+                    "在图片中未找到指定文字: '$targetText'（语言: $languageDisplay, 策略: $strategyDisplay）",
                     // 提供 partialOutputs，让"跳过此步骤继续"时有语义化的默认值
                     partialOutputs = mapOf(
                         "success" to VBoolean(true),
@@ -250,7 +314,7 @@ class OCRModule : BaseModule() {
 
             // 应用排序策略
             val sortedMatches = when (strategy) {
-                "最接近中心" -> {
+                STRATEGY_CENTER -> {
                     // 如果使用了区域识别，中心点应该是识别区域的中心（在原始图片坐标系中）
                     val cx = if (topLeft != null && bottomRight != null) {
                         (topLeft.first + bottomRight.first) / 2
@@ -268,10 +332,10 @@ class OCRModule : BaseModule() {
                         dx.toDouble().pow(2) + dy.toDouble().pow(2)
                     }
                 }
-                "置信度最高" -> {
+                STRATEGY_CONFIDENCE -> {
                     matches.sortedBy { it.top } // 暂回退到默认排序
                 }
-                else -> { // "默认 (从上到下)"
+                else -> { // STRATEGY_DEFAULT
                     matches.sortedWith(compareBy({ it.top }, { it.left }))
                 }
             }

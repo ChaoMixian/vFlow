@@ -143,7 +143,8 @@ object StandardControlFactory {
                 context,
                 inputDef.options,
                 currentValue as? String ?: inputDef.defaultValue as? String,
-                onItemSelectedCallback
+                onItemSelectedCallback,
+                inputDef.optionsStringRes
             )
             else -> createTextInputLayout(
                 context,
@@ -306,15 +307,28 @@ object StandardControlFactory {
 
     /**
      * 创建下拉选择器。
+     * @param context 上下文
+     * @param options 选项值列表（序列化值）
+     * @param selectedValue 当前选中的值（序列化值）
+     * @param onItemSelectedCallback 选项变化时的回调
+     * @param optionsStringRes 可选的本地化文本资源ID列表，与 options 一一对应
      */
     fun createSpinner(
         context: Context,
         options: List<String>,
         selectedValue: String?,
-        onItemSelectedCallback: ((String) -> Unit)? = null
+        onItemSelectedCallback: ((String) -> Unit)? = null,
+        optionsStringRes: List<Int>? = null
     ): Spinner {
+        // 使用本地化选项（如果有），否则使用原始选项值
+        val displayOptions = if (optionsStringRes != null && optionsStringRes.size == options.size) {
+            optionsStringRes.map { context.getString(it) }
+        } else {
+            options
+        }
+
         return Spinner(context).apply {
-            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, options).also {
+            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, displayOptions).also {
                 it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             }
             val selectionIndex = options.indexOf(selectedValue)
@@ -324,6 +338,7 @@ object StandardControlFactory {
             post {
                 onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                        // 返回序列化值，而不是显示文本
                         val selectedItem = options[position]
                         // 只在值真正改变时才触发回调
                         if (tag != selectedItem) {

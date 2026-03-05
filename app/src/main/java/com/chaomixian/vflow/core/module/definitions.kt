@@ -382,6 +382,7 @@ sealed class InputVisibility {
  * @param nameStringRes 参数显示名称的字符串资源ID（用于国际化，可选）
  * @param optionsStringRes 如果 staticType 是 ENUM，这些是可选项的字符串资源ID列表（用于国际化，可选）
  * @param hintStringRes 输入框提示文本的字符串资源ID（用于国际化，可选）
+ * @param legacyValueMap 旧值到新值的映射，用于向后兼容（可选）
  */
 data class InputDefinition(
     val id: String,
@@ -404,7 +405,9 @@ data class InputDefinition(
     val hint: String? = null,
     val nameStringRes: Int? = null,
     val optionsStringRes: List<Int> = emptyList(),
-    val hintStringRes: Int? = null
+    val hintStringRes: Int? = null,
+    /** 向后兼容映射：旧值 -> 新值 */
+    val legacyValueMap: Map<String, String>? = null
 ) {
     /**
      * 获取本地化的参数名称

@@ -1463,6 +1463,32 @@
     <string name="module_vflow_interaction_find_until_name">Find Until</string>
     <string name="module_vflow_interaction_ocr_desc">Recognize text in image, or find coordinates of specified text</string>
     <string name="module_vflow_interaction_ocr_name">OCR</string>
+    <!-- OCR Parameters -->
+    <string name="param_vflow_interaction_ocr_image_name">Input Image</string>
+    <string name="param_vflow_interaction_ocr_mode_name">Mode</string>
+    <string name="param_vflow_interaction_ocr_mode_opt_recognize">Recognize Full Text</string>
+    <string name="param_vflow_interaction_ocr_mode_opt_find">Find Text</string>
+    <string name="param_vflow_interaction_ocr_target_text_name">Target Text</string>
+    <string name="param_vflow_interaction_ocr_target_text_hint">Text to find</string>
+    <string name="param_vflow_interaction_ocr_language_name">Recognition Language</string>
+    <string name="param_vflow_interaction_ocr_language_opt_mixed">Chinese &amp; English</string>
+    <string name="param_vflow_interaction_ocr_language_opt_chinese">Chinese</string>
+    <string name="param_vflow_interaction_ocr_language_opt_english">English</string>
+    <string name="param_vflow_interaction_ocr_search_strategy_name">Search Strategy</string>
+    <string name="param_vflow_interaction_ocr_search_strategy_opt_default">Default (Top to Bottom)</string>
+    <string name="param_vflow_interaction_ocr_search_strategy_opt_center">Closest to Center</string>
+    <string name="param_vflow_interaction_ocr_search_strategy_opt_confidence">Highest Confidence</string>
+    <string name="param_vflow_interaction_ocr_region_name">Recognition Region (Optional)</string>
+    <string name="param_vflow_interaction_ocr_region_hint">Leave empty for full screen</string>
+    <!-- OCR Outputs -->
+    <string name="output_vflow_interaction_ocr_success_name">Success</string>
+    <string name="output_vflow_interaction_ocr_full_text_name">Recognized Text</string>
+    <string name="output_vflow_interaction_ocr_found_name">Found</string>
+    <string name="output_vflow_interaction_ocr_count_name">Count</string>
+    <string name="output_vflow_interaction_ocr_first_match_name">First Match (Region)</string>
+    <string name="output_vflow_interaction_ocr_first_center_name">First Match (Center)</string>
+    <string name="output_vflow_interaction_ocr_all_matches_name">All Matches (Region List)</string>
+    <string name="output_vflow_interaction_ocr_all_centers_name">All Matches (Center List)</string>
     <string name="module_vflow_interaction_screen_operation_desc">Perform tap, long press, or swipe operations on screen</string>
     <string name="module_vflow_interaction_screen_operation_name">Screen Operation</string>
     <string name="module_vflow_interaction_ui_selector_desc">Use GKD selector syntax to find screen controls</string>

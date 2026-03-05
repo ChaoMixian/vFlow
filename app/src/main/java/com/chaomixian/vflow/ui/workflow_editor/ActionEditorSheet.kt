@@ -281,7 +281,14 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             if (inputDef.staticType == ParameterType.ENUM) {
                 val currentValue = currentParameters[inputDef.id] as? String
                 if (currentValue != null && !inputDef.options.contains(currentValue)) {
-                    currentParameters[inputDef.id] = inputDef.defaultValue
+                    // 尝试使用向后兼容映射
+                    val mappedValue = inputDef.legacyValueMap?.get(currentValue)
+                    if (mappedValue != null && inputDef.options.contains(mappedValue)) {
+                        currentParameters[inputDef.id] = mappedValue
+                    } else {
+                        // 映射失败，使用默认值
+                        currentParameters[inputDef.id] = inputDef.defaultValue
+                    }
                 }
             }
         }
