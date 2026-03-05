@@ -161,7 +161,8 @@ class UiSelectorModule : BaseModule() {
                 val name = node.className?.toString()?.substringAfterLast('.') ?: "unknown"
                 val text = node.text?.toString() ?: ""
                 val desc = node.contentDescription?.toString() ?: ""
-                allNodesInfo.add("  [$totalNodes] class=$name, text='$text', desc='$desc'")
+                val vid = node.viewIdResourceName?.toString() ?: ""
+                allNodesInfo.add("  [$totalNodes] class=$name, text='$text', desc='$desc', vid='$vid'")
             }
 
             DebugLogger.d("UiSelectorModule", "选择器: $selectorString")
@@ -304,12 +305,15 @@ class UiSelectorModule : BaseModule() {
                                 }
                                 is li.songe.selector.FastQuery.Vid -> {
                                     val id = node.viewIdResourceName ?: continue
-                                    val pkg = node.packageName?.toString()
-                                    val vid = if (pkg != null && id.startsWith(pkg) && id.startsWith(":id/", pkg.length)) {
-                                        id.substring(pkg.length + ":id/".length)
+                                    val vid = if (id.contains(":id/")) {
+                                        id.substringAfter(":id/")
+                                    } else if (id.contains("/id/")) {
+                                        id.substringAfter("/id/")
                                     } else {
-                                        id
+                                        id.substringAfterLast("/")
                                     }
+
+                                    DebugLogger.d("UiSelector", "Vid匹配: className=${node.className}, id='$id', vid='$vid', expected='${fq.value}'")
                                     if (vid != fq.value) {
                                         match = false
                                         break
@@ -345,11 +349,12 @@ class UiSelectorModule : BaseModule() {
             "id" -> node.viewIdResourceName
             "vid" -> {
                 val id = node.viewIdResourceName ?: return null
-                val pkg = node.packageName?.toString() ?: return null
-                if (id.startsWith(pkg) && id.startsWith(":id/", pkg.length)) {
-                    id.substring(pkg.length + ":id/".length)
+                if (id.contains(":id/")) {
+                    id.substringAfter(":id/")
+                } else if (id.contains("/id/")) {
+                    id.substringAfter("/id/")
                 } else {
-                    id
+                    id.substringAfterLast("/")
                 }
             }
             "viewId" -> node.viewIdResourceName

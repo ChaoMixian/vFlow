@@ -332,6 +332,7 @@ class UiInspectorService : Service() {
         list.add(InspectorItem.Property("控件ID", node.viewIdResourceName ?: "无"))
         list.add(InspectorItem.Property("控件文本", node.text?.toString() ?: ""))
         list.add(InspectorItem.Property("控件类型", node.className?.toString() ?: "未知"))
+        list.add(InspectorItem.Property("GKD选择器", generateGkdSelector(node)))
 
         list.add(InspectorItem.Header("布局坐标"))
         list.add(InspectorItem.Property("左上坐标", "${rect.left},${rect.top}"))
@@ -492,6 +493,137 @@ class UiInspectorService : Service() {
             parent = parent.parent
         }
         return depth
+    }
+
+    /**
+     * 生成 GKD 选择器路径
+     * 根据 GKD 语法，从右往左匹配，父子关系由 A > B 建立，代表 A 是 B 的父节点。
+     * 支持跨越层级：A >2 B 代表 A 是 B 的祖父节点。
+     */
+    private fun generateGkdSelector(node: AccessibilityNodeInfo): String {
+        DebugLogger.d("GKDSelector", "开始生成选择器...")
+
+        // 存储提取到的有用节点与它们的层级深度
+        data class NodeItem(val selector: String, val depth: Int)
+        val items = mutableListOf<NodeItem>()
+
+        var currentNode: AccessibilityNodeInfo? = node
+        var depth = 0
+        var lastUsefulDepth = -1
+
+        // 向上遍历，收集有用节点并记录其与目标节点的层级深度
+        while (currentNode != null && depth < 8) {
+            val isTarget = depth == 0
+            val hasVid = !currentNode.viewIdResourceName.isNullOrBlank()
+            val hasText = !currentNode.text.isNullOrBlank() && currentNode.text.toString().isNotEmpty()
+            val hasDesc = !currentNode.contentDescription.isNullOrBlank() && currentNode.contentDescription.toString().isNotEmpty()
+
+            // 目标节点总是包含，其它节点仅当其带有唯一标识时才作为辅助路径包含
+            val isUseful = isTarget || hasVid || hasText || hasDesc
+
+            if (isUseful) {
+                val nodeSelector = buildConciseNodeSelector(currentNode, isTarget)
+                items.add(NodeItem(nodeSelector, depth))
+                lastUsefulDepth = depth
+            }
+
+            currentNode = currentNode.parent
+            depth++
+
+            // 如果连续3层都没有有用节点，停止遍历
+            if (depth - lastUsefulDepth > 3) {
+                break
+            }
+        }
+
+        if (items.isEmpty()) return "*"
+        if (items.size == 1) return items[0].selector
+
+        // items 数组收集顺序是从底层(target)到顶层(ancestor)。
+        // 根据 GKD 规范，关系选择器是从左向右书写 (祖先 > 父级 > ... > 目标)，且从右向左匹配。
+        val reversedItems = items.reversed()
+        var result = reversedItems[0].selector
+        var currentDepth = reversedItems[0].depth
+
+        for (i in 1 until reversedItems.size) {
+            val next = reversedItems[i]
+            // 计算层级差值以准确表达 GKD 中的结构：> 代表直系父节点，>n 代表第 n 层祖先节点
+            val diff = currentDepth - next.depth
+            val operator = if (diff == 1) " > " else " >$diff "
+
+            result += operator + next.selector
+            currentDepth = next.depth
+        }
+
+        DebugLogger.d("GKDSelector", "生成选择器: $result")
+        return result
+    }
+
+    /**
+     * 为节点构建简洁的选择器
+     * 根据 GKD 快速查询优化：包含 vid/text 属性可优化检索性能。
+     * @param isTarget 是否是目标节点
+     */
+    private fun buildConciseNodeSelector(node: AccessibilityNodeInfo, isTarget: Boolean): String {
+        val attrs = mutableListOf<String>()
+
+        // 获取简单类名（如 TextView, FrameLayout）
+        val className = node.className?.toString() ?: "*"
+        val simpleClassName = if (className.contains('.')) {
+            className.substringAfterLast('.')
+        } else {
+            className
+        }
+
+        // 优先处理 vid，以便符合快速查询规则
+        val viewId = node.viewIdResourceName
+        if (!viewId.isNullOrBlank()) {
+            val shortVid = if (viewId.contains(":id/")) {
+                viewId.substringAfter(":id/")
+            } else if (viewId.contains("/id/")) {
+                viewId.substringAfter("/id/")
+            } else {
+                viewId.substringAfterLast("/")
+            }
+            attrs.add("vid='${escapeGkdString(shortVid)}'")
+        }
+
+        // 其次添加 text
+        val text = node.text?.toString()
+        if (!text.isNullOrBlank() && text.length <= 30) {
+            attrs.add("text='${escapeGkdString(text)}'")
+        }
+
+        // 最后添加 desc
+        val desc = node.contentDescription?.toString()
+        if (!desc.isNullOrBlank() && desc.length <= 30) {
+            attrs.add("desc='${escapeGkdString(desc)}'")
+        }
+
+        // 如果是目标节点且无明显标识，但可点击，补充 clickable 状态
+        if (isTarget && attrs.isEmpty() && node.isClickable) {
+            attrs.add("clickable=true")
+        }
+
+        // 组装选择器，各属性独立使用 [] 包裹（对应 GKD 中的 && 操作）
+        return if (attrs.isEmpty()) {
+            simpleClassName
+        } else {
+            val attrStr = attrs.joinToString("][")
+            "$simpleClassName[$attrStr]"
+        }
+    }
+
+    /**
+     * 转义 GKD 选择器字符串中的特殊字符
+     */
+    private fun escapeGkdString(str: String): String {
+        return str
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
     }
 
     override fun onDestroy() {
