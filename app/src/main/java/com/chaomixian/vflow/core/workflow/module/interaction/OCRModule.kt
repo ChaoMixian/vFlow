@@ -43,22 +43,71 @@ class OCRModule : BaseModule() {
         category = "界面交互"
     )
 
-    override val uiProvider: ModuleUIProvider = OCRModuleUIProvider()
+    override val uiProvider: ModuleUIProvider? = null
 
-    val modeOptions = listOf("识别全文", "查找文本")
-    val languageOptions = listOf("中英混合", "中文", "英文")
-    val strategyOptions = listOf("默认 (从上到下)", "最接近中心", "置信度最高")
+    private val modeOptions = listOf("识别全文", "查找文本")
+    private val languageOptions = listOf("中英混合", "中文", "英文")
+    private val strategyOptions = listOf("默认 (从上到下)", "最接近中心", "置信度最高")
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("image", "输入图片", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id)),
-        InputDefinition("mode", "模式", ParameterType.ENUM, "识别全文", options = modeOptions, acceptsMagicVariable = false),
-        InputDefinition("target_text", "查找内容", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        // 高级选项
-        InputDefinition("language", "识别语言", ParameterType.ENUM, "中英混合", options = languageOptions, acceptsMagicVariable = false, isHidden = true),
-        InputDefinition("search_strategy", "查找策略", ParameterType.ENUM, "默认 (从上到下)", options = strategyOptions, acceptsMagicVariable = false, isHidden = true),
-        InputDefinition("region", "识别区域", ParameterType.ANY, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id), isHidden = true),
-        // 用于保存"更多设置"开关的状态
-        InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
+        InputDefinition(
+            id = "mode",
+            name = "模式",
+            staticType = ParameterType.ENUM,
+            defaultValue = "识别全文",
+            options = modeOptions,
+            acceptsMagicVariable = false,
+            inputStyle = InputStyle.CHIP_GROUP
+        ),
+        InputDefinition(
+            id = "target_text",
+            name = "查找内容",
+            staticType = ParameterType.STRING,
+            defaultValue = "",
+            acceptsMagicVariable = true,
+            supportsRichText = true,
+            visibility = InputVisibility.whenEquals("mode", "查找文本")
+        ),
+        // 折叠到"更多设置"的选项
+        InputDefinition(
+            id = "language",
+            name = "识别语言",
+            staticType = ParameterType.ENUM,
+            defaultValue = "中英混合",
+            options = languageOptions,
+            acceptsMagicVariable = false,
+            isFolded = true
+        ),
+        InputDefinition(
+            id = "search_strategy",
+            name = "查找策略",
+            staticType = ParameterType.ENUM,
+            defaultValue = "默认 (从上到下)",
+            options = strategyOptions,
+            acceptsMagicVariable = false,
+            isFolded = true,
+            visibility = InputVisibility.whenEquals("mode", "查找文本")
+        ),
+        InputDefinition(
+            id = "region",
+            name = "识别区域（可选）",
+            staticType = ParameterType.ANY,
+            defaultValue = "",
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id),
+            isFolded = true,
+            hint = "留空则识别全屏"
+        ),
+        // 用于保存"更多设置"展开状态的内部参数
+        InputDefinition(
+            id = "show_advanced",
+            name = "显示高级选项",
+            staticType = ParameterType.BOOLEAN,
+            defaultValue = false,
+            acceptsMagicVariable = false,
+            isHidden = true
+        )
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
