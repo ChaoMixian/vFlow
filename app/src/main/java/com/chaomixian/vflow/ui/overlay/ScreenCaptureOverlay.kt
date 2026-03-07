@@ -6,6 +6,8 @@ import android.content.Context
 import android.graphics.*
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.MotionEvent
@@ -46,6 +48,7 @@ class ScreenCaptureOverlay(
     // 截图预览和裁剪界面
     private var cropRoot: FrameLayout? = null
     private var cropView: CropView? = null
+    private var bgImageView: ImageView? = null
     private var screenshotBitmap: Bitmap? = null
 
     private var resultDeferred: CompletableDeferred<Uri?>? = null
@@ -221,11 +224,11 @@ class ScreenCaptureOverlay(
         }
 
         // 背景图片（使用 appContext）
-        val bgImage = ImageView(appContext).apply {
+        bgImageView = ImageView(appContext).apply {
             setImageBitmap(bitmap)
             scaleType = ImageView.ScaleType.FIT_XY
         }
-        cropRoot?.addView(bgImage, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        cropRoot?.addView(bgImageView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
         // 裁剪视图（使用 appContext）
         cropView = CropView(appContext, bitmap.width, bitmap.height)
@@ -344,6 +347,7 @@ class ScreenCaptureOverlay(
                     cropped.compress(Bitmap.CompressFormat.PNG, 100, fos)
                 }
 
+                // 只回收新创建的 bitmap，避免回收源 bitmap (screenshotBitmap)
                 if (cropped != source) {
                     cropped.recycle()
                 }
@@ -370,8 +374,25 @@ class ScreenCaptureOverlay(
         } catch (e: Exception) {
             // 忽略
         }
-        screenshotBitmap?.recycle()
+
+        // 立即清除 ImageView 对 bitmap 的引用，防止继续绘制
+        bgImageView?.setImageDrawable(null)
+        bgImageView = null
+
+        // 延迟回收 bitmap，确保视图已经完全移除且没有正在进行的绘制操作
+        val bitmapToRecycle = screenshotBitmap
         screenshotBitmap = null
+        if (bitmapToRecycle != null) {
+            Handler(Looper.getMainLooper()).post {
+                try {
+                    if (!bitmapToRecycle.isRecycled) {
+                        bitmapToRecycle.recycle()
+                    }
+                } catch (e: Exception) {
+                    DebugLogger.e("ScreenCaptureOverlay", "回收 bitmap 失败", e)
+                }
+            }
+        }
     }
 
     private fun getOverlayType(): Int {
