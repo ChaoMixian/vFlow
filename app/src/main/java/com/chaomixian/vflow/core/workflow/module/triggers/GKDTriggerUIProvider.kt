@@ -79,6 +79,10 @@ class GKDTriggerUIProvider : ModuleUIProvider {
                     if (response.isSuccessful) {
                         val body = response.body?.string()
                         if (body != null && body.isNotEmpty()) {
+                            // 确保目录存在
+                            if (!rulesDir.exists()) {
+                                rulesDir.mkdirs()
+                            }
                             val fileName = url.substringAfterLast("/").ifEmpty { "subscription_${System.currentTimeMillis()}.json" }
                             val destFile = File(rulesDir, fileName)
                             destFile.writeText(body)
