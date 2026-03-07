@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.button.MaterialButton xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.Material3.Button.TonalButton.Icon"
+    android:id="@+id/button_grant_all_action"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:paddingStart="8dp"
+    android:paddingEnd="16dp"
+    android:text="@string/permission_menu_grant_all"
+    android:textSize="14sp"
+    app:icon="@drawable/rounded_check_circle_24"
+    app:iconTint="?attr/colorControlNormal" />

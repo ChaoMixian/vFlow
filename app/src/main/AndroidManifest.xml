@@ -207,6 +207,11 @@
             android:name=".services.UiInspectorService"
             android:exported="false" />
 
+        <service
+            android:name=".services.PermissionGuardianService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
         <receiver
             android:name=".services.BootReceiver"
             android:exported="true">
@@ -307,6 +312,12 @@
             android:name=".ui.settings.ApiSettingsActivity"
             android:exported="false"
             android:label="远程API"
+            android:theme="@style/Theme.vFlow" />
+
+        <activity
+            android:name=".ui.settings.PermissionGuardianActivity"
+            android:exported="false"
+            android:label="@string/permission_guardian_title"
             android:theme="@style/Theme.vFlow" />
 
         <activity

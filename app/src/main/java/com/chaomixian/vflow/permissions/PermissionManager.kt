@@ -30,6 +30,8 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 
 object PermissionManager {
 
+    private const val TAG = "PermissionManager"
+
     // --- 权限定义 ---
     /**
      * vFlow Core 服务权限。
@@ -224,6 +226,12 @@ object PermissionManager {
     private interface PermissionStrategy {
         fun isGranted(context: Context, permission: Permission): Boolean
         fun createRequestIntent(context: Context, permission: Permission): Intent?
+        /**
+         * 自动授予权限（通过 adb 命令）
+         * @param context 上下文
+         * @return 是否成功授予
+         */
+        suspend fun autoGrant(context: Context): Boolean = false
     }
 
     /** 标准运行时权限策略 */
@@ -247,6 +255,25 @@ object PermissionManager {
         }
 
         override fun createRequestIntent(context: Context, permission: Permission): Intent? = null // 运行时权限不通过Intent请求
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            // 尝试通过 adb 授予 POST_NOTIFICATIONS 权限（Android 13+）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    val packageName = context.packageName
+                    val command = "appops set $packageName android:post_notifications allow"
+                    val result = ShellManager.execShellCommand(context, command)
+                    return !result.startsWith("Error")
+                } catch (e: Exception) {
+                    DebugLogger.e(TAG, "自动授予通知权限失败", e)
+                }
+            }
+
+            // 尝试通过 adb 授予其他运行时权限
+            // 注意：这里需要根据具体的 permission.id 来判断授予哪个权限
+            // 但由于 runtimeStrategy 是通用的，我们在 autoGrantPermission 方法中会单独处理
+            return false
+        }
     }
 
     /** 无障碍服务策略 */
@@ -261,6 +288,10 @@ object PermissionManager {
         }
         override fun createRequestIntent(context: Context, permission: Permission) =
             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            return ShellManager.enableAccessibilityService(context)
+        }
     }
 
     /** 悬浮窗策略 */
@@ -271,6 +302,21 @@ object PermissionManager {
         override fun createRequestIntent(context: Context, permission: Permission) =
             Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 "package:${context.packageName}".toUri())
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            try {
+                val packageName = context.packageName
+                // Android 6.0+ 使用 appops 授予悬浮窗权限
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val command = "appops set $packageName android:system_alert_window allow"
+                    val result = ShellManager.execShellCommand(context, command)
+                    return !result.startsWith("Error")
+                }
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "自动授予悬浮窗权限失败", e)
+            }
+            return false
+        }
     }
 
     /** 修改系统设置策略 */
@@ -280,6 +326,21 @@ object PermissionManager {
 
         override fun createRequestIntent(context: Context, permission: Permission) =
             Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, "package:${context.packageName}".toUri())
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            try {
+                val packageName = context.packageName
+                // Android 6.0+ 使用 appops 授予修改设置权限
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val command = "appops set $packageName android:write_settings allow"
+                    val result = ShellManager.execShellCommand(context, command)
+                    return !result.startsWith("Error")
+                }
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "自动授予修改设置权限失败", e)
+            }
+            return false
+        }
     }
 
     /** 电池优化策略 */
@@ -293,6 +354,21 @@ object PermissionManager {
         override fun createRequestIntent(context: Context, permission: Permission) =
             Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                 "package:${context.packageName}".toUri())
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            try {
+                val packageName = context.packageName
+                // 使用 adb 命令添加电池优化白名单
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val command = "dumpsys deviceidle whitelist +$packageName"
+                    val result = ShellManager.execShellCommand(context, command)
+                    return !result.startsWith("Error")
+                }
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "自动授予电池优化白名单失败", e)
+            }
+            return false
+        }
     }
 
     /** 通知使用权策略 */
@@ -303,6 +379,29 @@ object PermissionManager {
             return enabledListeners?.contains(componentName) == true
         }
         override fun createRequestIntent(context: Context, permission: Permission) = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            try {
+                val packageName = context.packageName
+                val serviceName = "$packageName/com.chaomixian.vflow.services.VFlowNotificationListenerService"
+                // 读取当前已启用的监听器列表
+                val currentListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners") ?: ""
+
+                // 如果已经在列表中，返回成功
+                if (currentListeners.contains(serviceName)) {
+                    return true
+                }
+
+                // 添加到列表中
+                val newListeners = if (currentListeners.isEmpty()) serviceName else "$currentListeners:$serviceName"
+                val command = "settings put secure enabled_notification_listeners \"$newListeners\""
+                val result = ShellManager.execShellCommand(context, command)
+                return !result.startsWith("Error")
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "自动授予通知使用权失败", e)
+            }
+            return false
+        }
     }
 
     /** 精确闹钟策略 */
@@ -311,6 +410,21 @@ object PermissionManager {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms() else true
         override fun createRequestIntent(context: Context, permission: Permission) =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM) else null
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            try {
+                val packageName = context.packageName
+                // Android 12+ 使用 appops 授予精确闹钟权限
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val command = "appops set $packageName android:schedule_exact_alarm allow"
+                    val result = ShellManager.execShellCommand(context, command)
+                    return !result.startsWith("Error")
+                }
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "自动授予精确闹钟权限失败", e)
+            }
+            return false
+        }
     }
 
     /** Shizuku 策略 */
@@ -350,6 +464,26 @@ object PermissionManager {
                 null // 旧版本通过 runtime 请求
             }
         }
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            return try {
+                val packageName = context.packageName
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    // Android 11+ 使用 appops 授予所有文件访问权限
+                    val command = "appops set $packageName android:manage_external_storage allow"
+                    val result = ShellManager.execShellCommand(context, command)
+                    !result.startsWith("Error")
+                } else {
+                    // Android 10 及以下，授予存储权限
+                    val command = "pm grant $packageName android.permission.WRITE_EXTERNAL_STORAGE"
+                    val result = ShellManager.execShellCommand(context, command)
+                    !result.startsWith("Error")
+                }
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "自动授予存储权限失败", e)
+                false
+            }
+        }
     }
 
     // 使用情况权限策略
@@ -366,6 +500,19 @@ object PermissionManager {
 
         override fun createRequestIntent(context: Context, permission: Permission) =
             Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+
+        override suspend fun autoGrant(context: Context): Boolean {
+            return try {
+                val packageName = context.packageName
+                // 使用 appops 授予使用情况访问权限
+                val command = "appops set $packageName android:get_usage_stats allow"
+                val result = ShellManager.execShellCommand(context, command)
+                !result.startsWith("Error")
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "自动授予使用情况权限失败", e)
+                false
+            }
+        }
     }
 
     /** vFlow Core 策略 (Shell 或 Root 均可) */
@@ -442,6 +589,78 @@ object PermissionManager {
     fun getSpecialPermissionIntent(context: Context, permission: Permission): Intent? {
         val strategy = strategies[permission.id]
         return strategy?.createRequestIntent(context, permission)
+    }
+
+    /**
+     * 自动授予权限
+     * @param context 上下文
+     * @param permission 要授予的权限
+     * @return 是否成功授予
+     */
+    suspend fun autoGrantPermission(context: Context, permission: Permission): Boolean {
+        // 检查是否有可用的 Shell 方式
+        val canUseShell = ShellManager.isShizukuActive(context) || ShellManager.isRootAvailable()
+        if (!canUseShell) {
+            DebugLogger.w(TAG, "无可用 Shell 方式，无法自动授予权限")
+            return false
+        }
+
+        // 如果权限已经授予，直接返回成功
+        if (isGranted(context, permission)) {
+            DebugLogger.d(TAG, "权限 ${permission.name} 已授予，跳过")
+            return true
+        }
+
+        DebugLogger.d(TAG, "开始自动授予权限: ${permission.name}")
+
+        // 获取对应的策略并执行自动授予
+        val strategy = strategies[permission.id]
+        if (strategy != null) {
+            val result = strategy.autoGrant(context)
+            if (result) {
+                DebugLogger.d(TAG, "成功自动授予权限: ${permission.name}")
+                return true
+            }
+        }
+
+        // 如果策略未实现 autoGrant 或失败，尝试授予运行时权限
+        // 对于权限组（如 SMS），逐个授予其中的运行时权限
+        val permissionsToGrant = if (permission.runtimePermissions.isNotEmpty()) {
+            permission.runtimePermissions
+        } else {
+            listOf(permission.id)
+        }
+
+        val packageName = context.packageName
+        var allGranted = true
+
+        for (perm in permissionsToGrant) {
+            // 检查此权限是否已授予
+            if (ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED) {
+                continue
+            }
+
+            try {
+                val command = "pm grant $packageName $perm"
+                val result = ShellManager.execShellCommand(context, command)
+                if (result.startsWith("Error")) {
+                    DebugLogger.w(TAG, "自动授予运行时权限失败: $perm")
+                    allGranted = false
+                } else {
+                    DebugLogger.d(TAG, "成功授予运行时权限: $perm")
+                }
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "授予运行时权限异常: $perm", e)
+                allGranted = false
+            }
+        }
+
+        if (allGranted) {
+            DebugLogger.d(TAG, "成功自动授予权限: ${permission.name}")
+        } else {
+            DebugLogger.w(TAG, "自动授予权限失败: ${permission.name}")
+        }
+        return allGranted
     }
 
 

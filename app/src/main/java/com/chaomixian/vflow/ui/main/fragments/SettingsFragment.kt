@@ -201,6 +201,12 @@ class SettingsFragment : Fragment() {
             startActivity(intent)
         }
 
+        // 权限守护入口
+        view.findViewById<View>(R.id.btn_open_permission_guardian).setOnClickListener {
+            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.PermissionGuardianActivity::class.java)
+            startActivity(intent)
+        }
+
         // --- 调试功能逻辑 ---
         val loggingSwitch = view.findViewById<MaterialSwitch>(R.id.switch_enable_logging)
         val exportButton = view.findViewById<Button>(R.id.button_export_logs)

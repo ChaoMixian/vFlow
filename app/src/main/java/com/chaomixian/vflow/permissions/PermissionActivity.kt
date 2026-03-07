@@ -9,23 +9,36 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Menu
+import android.view.MenuItem
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.button.MaterialButton
 import android.widget.Button
 import android.widget.TextView
+import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 import com.chaomixian.vflow.core.locale.toast
+import com.chaomixian.vflow.core.logging.DebugLogger
 import androidx.core.net.toUri
 
 // 继承 BaseActivity 以应用动态主题
 class PermissionActivity : BaseActivity() {
+
+    companion object {
+        const val EXTRA_PERMISSIONS = "permissions_list"
+        const val EXTRA_WORKFLOW_NAME = "workflow_name"
+        private const val TAG = "PermissionActivity"
+    }
 
     private lateinit var requiredPermissions: ArrayList<Permission>
     private lateinit var headerTextView: TextView
@@ -75,6 +88,29 @@ class PermissionActivity : BaseActivity() {
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
 
         setupUI()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_permission, menu)
+
+        // 设置一键授权按钮的点击监听器
+        val grantAllItem = menu.findItem(R.id.menu_grant_all)
+        val grantAllButton = grantAllItem?.actionView as? MaterialButton
+        grantAllButton?.setOnClickListener {
+            grantAllPermissions()
+        }
+
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_grant_all -> {
+                grantAllPermissions()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     override fun onDestroy() {
@@ -155,8 +191,65 @@ class PermissionActivity : BaseActivity() {
         }
     }
 
-    companion object {
-        const val EXTRA_PERMISSIONS = "permissions_list"
-        const val EXTRA_WORKFLOW_NAME = "workflow_name"
+    /**
+     * 一键授予所有权限
+     * 使用 adb 命令通过 Shizuku 或 Root 授予所有可自动授予的权限
+     */
+    private fun grantAllPermissions() {
+        lifecycleScope.launch {
+            try {
+                // 检查是否有可用的 Shell 方式
+                val canUseShell = ShellManager.isShizukuActive(this@PermissionActivity) ||
+                                 ShellManager.isRootAvailable()
+                if (!canUseShell) {
+                    toast(R.string.permission_grant_all_no_shell)
+                    return@launch
+                }
+
+                toast(R.string.permission_grant_all_started)
+
+                var grantedCount = 0
+                var failedCount = 0
+                val totalCount = requiredPermissions.size
+
+                // 遍历所有权限并尝试授予
+                for (permission in requiredPermissions) {
+                    // 只尝试授予尚未授予的权限
+                    if (PermissionManager.isGranted(this@PermissionActivity, permission)) {
+                        continue
+                    }
+
+                    val success = PermissionManager.autoGrantPermission(this@PermissionActivity, permission)
+                    if (success) {
+                        grantedCount++
+                    } else {
+                        failedCount++
+                    }
+                }
+
+                // 延迟一下再刷新状态
+                kotlinx.coroutines.delay(500)
+                refreshPermissionsStatus()
+
+                // 显示结果
+                when {
+                    grantedCount > 0 && failedCount == 0 -> {
+                        toast(getString(R.string.permission_grant_all_success, grantedCount))
+                    }
+                    grantedCount > 0 && failedCount > 0 -> {
+                        toast(getString(R.string.permission_grant_all_partial, grantedCount, failedCount))
+                    }
+                    failedCount > 0 && grantedCount == 0 -> {
+                        toast(getString(R.string.permission_grant_all_failed, failedCount))
+                    }
+                    else -> {
+                        toast(R.string.permission_grant_all_already_granted)
+                    }
+                }
+            } catch (e: Exception) {
+                DebugLogger.e(TAG, "一键授权出错", e)
+                toast(getString(R.string.permission_grant_all_error, e.message ?: "未知错误"))
+            }
+        }
     }
 }

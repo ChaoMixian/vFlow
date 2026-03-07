@@ -37,6 +37,8 @@
 
     <string name="settings_section_permissions">Permission Manager</string>
     <string name="settings_section_permissions_desc">View and manage all permissions required by the app.</string>
+    <string name="settings_permission_guardian">Permission Guardian</string>
+    <string name="settings_permission_guardian_desc">Auto-grant and guard key permissions</string>
     <string name="settings_section_about">About</string>
     <string name="settings_section_about_desc">View app version, open source licenses, and developer info.</string>
     <string name="about_version_label">Version %s</string>
@@ -228,6 +230,29 @@
 
     <!-- Permission Activity -->
     <string name="permission_toast_shizuku_not_started">Shizuku is not started, please start Shizuku service first</string>
+    <string name="permission_menu_grant_all">Grant All</string>
+    <string name="permission_grant_all_no_shell">Root or Shizuku permission required</string>
+    <string name="permission_grant_all_started">Granting permissions…</string>
+    <string name="permission_grant_all_success" formatted="false">%d permissions granted successfully</string>
+    <string name="permission_grant_all_partial" formatted="false">Granted %d, failed %d</string>
+    <string name="permission_grant_all_failed" formatted="false">Failed to grant %d permissions</string>
+    <string name="permission_grant_all_already_granted">All permissions already granted</string>
+    <string name="permission_grant_all_error" formatted="false">Grant error: %s</string>
+
+    <!-- Permission Guardian -->
+    <string name="permission_guardian_title">Permission Guardian</string>
+    <string name="permission_guardian_description_title">Overview</string>
+    <string name="permission_guardian_description">Permission Guardian periodically checks key permissions and automatically re-grants them if revoked by the system. Requires Root or Shizuku permission.</string>
+    <string name="permission_guardian_accessibility_title">Accessibility Service</string>
+    <string name="permission_guardian_accessibility_desc">Required for core automation features like tapping and finding elements</string>
+    <string name="permission_guardian_enable_guard">Enable Guardian</string>
+    <string name="permission_guardian_open_settings">Open System Settings</string>
+    <string name="permission_guardian_status_granted">Granted</string>
+    <string name="permission_guardian_status_denied">Denied</string>
+    <string name="permission_guardian_shell_required_hint">This feature requires Root or Shizuku permission</string>
+    <string name="permission_guardian_service_channel">Permission Guardian</string>
+    <string name="permission_guardian_service_running">Permission Guardian Running</string>
+    <string name="permission_guardian_service_protecting">Protecting key permissions</string>
 
     <!-- WorkflowListFragment -->
     <string name="toast_overlay_permission_required">Overlay permission required to show quick control panel</string>

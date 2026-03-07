@@ -37,6 +37,8 @@
 
     <string name="settings_section_permissions">权限管理器</string>
     <string name="settings_section_permissions_desc">查看和管理应用运行所需的所有权限。</string>
+    <string name="settings_permission_guardian">权限守护</string>
+    <string name="settings_permission_guardian_desc">自动授权并守护关键权限</string>
     <string name="settings_section_about">关于</string>
     <string name="settings_section_about_desc">查看应用版本、开源许可和开发者信息。</string>
     <string name="about_version_label">版本 %s</string>
@@ -52,6 +54,14 @@
     <string name="permission_button_grant">授权</string>
     <string name="permission_button_granted">已授权</string>
     <string name="permission_button_continue">全部授权后继续</string>
+    <string name="permission_menu_grant_all">一键授权</string>
+    <string name="permission_grant_all_no_shell">需要 Root 或 Shizuku 权限才能使用此功能</string>
+    <string name="permission_grant_all_started">正在自动授予权限…</string>
+    <string name="permission_grant_all_success" formatted="false">成功授予 %d 个权限</string>
+    <string name="permission_grant_all_partial" formatted="false">成功授予 %d 个，失败 %d 个</string>
+    <string name="permission_grant_all_failed" formatted="false">授予失败，共 %d 个</string>
+    <string name="permission_grant_all_already_granted">所有权限已授予</string>
+    <string name="permission_grant_all_error" formatted="false">授权出错：%s</string>
 
     <string name="workflow_item_menu_add_shortcut">添加到主屏幕</string>
     <string name="workflow_item_menu_duplicate">复制</string>
@@ -699,6 +709,21 @@
     <string name="permission_desc_read_phone_state">用于监听电话状态变化，以实现电话触发器功能。</string>
     <string name="permission_name_call_phone">拨打电话</string>
     <string name="permission_desc_call_phone">允许应用直接拨打电话号码。</string>
+
+    <!-- Permission Guardian -->
+    <string name="permission_guardian_title">权限守护</string>
+    <string name="permission_guardian_description_title">功能说明</string>
+    <string name="permission_guardian_description">权限守护功能会定期检查关键权限的状态，如果发现权限被系统撤销，会自动尝试重新授权。需要 Root 或 Shizuku 权限才能使用。</string>
+    <string name="permission_guardian_accessibility_title">无障碍服务</string>
+    <string name="permission_guardian_accessibility_desc">自动化点击、查找等核心功能所必需的权限</string>
+    <string name="permission_guardian_enable_guard">启用守护</string>
+    <string name="permission_guardian_open_settings">打开系统设置</string>
+    <string name="permission_guardian_status_granted">已授权</string>
+    <string name="permission_guardian_status_denied">未授权</string>
+    <string name="permission_guardian_shell_required_hint">此功能需要 Root 或 Shizuku 权限才能使用</string>
+    <string name="permission_guardian_service_channel">权限守护</string>
+    <string name="permission_guardian_service_running">权限守护运行中</string>
+    <string name="permission_guardian_service_protecting">正在保护关键权限</string>
 
     <!-- Folder -->
     <string name="folder_icon">文件夹图标</string>

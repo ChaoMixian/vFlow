@@ -26,6 +26,7 @@ import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandle
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.TriggerService
+import com.chaomixian.vflow.services.PermissionGuardianService
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -78,6 +79,8 @@ class MainActivity : BaseActivity() {
         ShellManager.proactiveConnect(applicationContext)
         // 检查并自动启动 vFlow Core
         checkCoreAutoStart()
+        // 检查并自动启动权限守护
+        checkPermissionGuardianAutoStart()
         // 启动后台触发器服务
         startService(Intent(this, TriggerService::class.java))
 
@@ -186,6 +189,23 @@ class MainActivity : BaseActivity() {
                     DebugLogger.d("MainActivity", "Core 已经在运行，跳过自动启动")
                 }
             }
+        }
+    }
+
+    /**
+     * 检查并自动启动权限守护服务
+     */
+    private fun checkPermissionGuardianAutoStart() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val guardianEnabled = prefs.getBoolean("accessibilityGuardEnabled", false)
+
+        DebugLogger.d("MainActivity", "checkPermissionGuardianAutoStart: guardianEnabled=$guardianEnabled")
+
+        if (guardianEnabled) {
+            DebugLogger.i("MainActivity", "权限守护已启用，自动启动权限守护服务")
+            PermissionGuardianService.start(this)
+        } else {
+            DebugLogger.d("MainActivity", "权限守护未启用，跳过自动启动")
         }
     }
 

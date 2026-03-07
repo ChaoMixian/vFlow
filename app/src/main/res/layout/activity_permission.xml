@@ -16,7 +16,9 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:title="@string/permission_activity_title"
-            app:navigationIcon="?attr/homeAsUpIndicator"/>
+            app:navigationIcon="?attr/homeAsUpIndicator"
+            app:contentInsetEnd="0dp"
+            android:paddingEnd="16dp"/>
     </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
