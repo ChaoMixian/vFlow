@@ -751,4 +751,45 @@
     <string name="button_save_shortcut">保存快捷方式</string>
     <string name="button_reset_default">恢复默认</string>
     <string name="shortcut_name_default">使用工作流名称</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">欢迎使用 vFlow</string>
+    <string name="onboarding_welcome_desc">vFlow 是一款强大的自动化工具，帮助您自动执行重复的手机操作，解放双手。</string>
+    <string name="onboarding_shell_title">Shell 增强</string>
+    <string name="onboarding_shell_desc">配置 Shizuku 或 Root 权限，解锁模拟物理按键、后台截图等高级功能。</string>
+    <string name="onboarding_permissions_title">必要的权限</string>
+    <string name="onboarding_permissions_desc">为了模拟操作和感知屏幕，vFlow 需要无障碍等核心权限。</string>
+    <string name="onboarding_ready_title">准备就绪</string>
+    <string name="onboarding_ready_desc">我们为您准备了一个简单的"Hello World"工作流。点击开始，开启您的自动化之旅！</string>
+
+    <string name="onboarding_shell_mode_title">Shell 增强模式</string>
+    <string name="onboarding_shell_mode_desc">vFlow 可以利用 Shizuku 或 Root 权限执行更强大的操作（如模拟物理按键、后台截图等）。</string>
+    <string name="onboarding_mode_shizuku">Shizuku (推荐)</string>
+    <string name="onboarding_mode_shizuku_desc">配合 Shizuku 使用，需预先激活 Shizuku。</string>
+    <string name="onboarding_mode_root">Root 权限</string>
+    <string name="onboarding_mode_root_desc">获取最高权限，仍然推荐激活 Shizuku 使用。</string>
+    <string name="onboarding_mode_none">暂不使用</string>
+    <string name="onboarding_mode_none_desc">仅使用无障碍服务，部分高级功能不可用。</string>
+    <string name="onboarding_verify_button">检测权限并授权</string>
+    <string name="onboarding_permission_verified">权限验证通过</string>
+    <string name="onboarding_auto_enable_acc">服务关闭时自动开启 (推荐)</string>
+    <string name="onboarding_force_keep_alive">启用守护进程 (防杀后台)</string>
+    <string name="onboarding_continue_without_shell">继续 (不使用 Shell)</string>
+    <string name="onboarding_save_and_continue">保存配置并继续</string>
+    <string name="onboarding_shizuku_not_running">Shizuku 未运行或未授权</string>
+    <string name="onboarding_root_unavailable">无法获取 Root 权限</string>
+
+    <string name="onboarding_permissions_required">必要的权限</string>
+    <string name="onboarding_permissions_desc2">为了让自动化流畅运行，vFlow 需要以下核心权限（不可跳过）。</string>
+    <string name="onboarding_permissions_ready">全部就绪，继续</string>
+    <string name="onboarding_permissions_request">请先授予所有权限</string>
+    <string name="onboarding_grant">授权</string>
+
+    <string name="onboarding_completion_title">准备起飞！</string>
+    <string name="onboarding_completion_desc">您已经完成了所有基本配置。\n我们为您准备了一个示例工作流，\n现在就开始体验自动化吧！</string>
+    <string name="onboarding_start_button">开始使用</string>
+    <string name="onboarding_next_button">下一步</string>
+
+    <string name="onboarding_hello_workflow">Hello vFlow</string>
+    <string name="onboarding_hello_toast">🎉 恭喜！vFlow 配置成功，您的第一个工作流执行完毕！</string>
 </resources>

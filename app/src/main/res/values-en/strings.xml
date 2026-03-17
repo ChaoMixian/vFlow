@@ -751,4 +751,45 @@
     <string name="button_save_shortcut">Save shortcut</string>
     <string name="button_reset_default">Reset to default</string>
     <string name="shortcut_name_default">Use workflow name</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Welcome to vFlow</string>
+    <string name="onboarding_welcome_desc">vFlow is a powerful automation tool that helps you automatically perform repetitive mobile tasks and free your hands.</string>
+    <string name="onboarding_shell_title">Shell Enhancement</string>
+    <string name="onboarding_shell_desc">Configure Shizuku or Root permissions to unlock advanced features like simulating physical keys and background screenshots.</string>
+    <string name="onboarding_permissions_title">Required Permissions</string>
+    <string name="onboarding_permissions_desc">To simulate operations and perceive the screen, vFlow needs core permissions like accessibility.</string>
+    <string name="onboarding_ready_title">Ready to Go</string>
+    <string name="onboarding_ready_desc">We\'ve prepared a simple \"Hello World\" workflow for you. Tap start to begin your automation journey!</string>
+
+    <string name="onboarding_shell_mode_title">Shell Enhancement Mode</string>
+    <string name="onboarding_shell_mode_desc">vFlow can use Shizuku or Root permissions to perform more powerful operations (such as simulating physical keys, background screenshots, etc.).</string>
+    <string name="onboarding_mode_shizuku">Shizuku (Recommended)</string>
+    <string name="onboarding_mode_shizuku_desc">Use with Shizuku, requires Shizuku to be activated in advance.</string>
+    <string name="onboarding_mode_root">Root Permission</string>
+    <string name="onboarding_mode_root_desc">Get the highest permission, still recommend activating Shizuku.</string>
+    <string name="onboarding_mode_none">Not for now</string>
+    <string name="onboarding_mode_none_desc">Only use accessibility service, some advanced features are unavailable.</string>
+    <string name="onboarding_verify_button">Verify Permission and Authorize</string>
+    <string name="onboarding_permission_verified">Permission Verified</string>
+    <string name="onboarding_auto_enable_acc">Auto-enable when service is down (Recommended)</string>
+    <string name="onboarding_force_keep_alive">Enable daemon process (Prevent background kill)</string>
+    <string name="onboarding_continue_without_shell">Continue (Without Shell)</string>
+    <string name="onboarding_save_and_continue">Save Config and Continue</string>
+    <string name="onboarding_shizuku_not_running">Shizuku not running or not authorized</string>
+    <string name="onboarding_root_unavailable">Unable to obtain Root permission</string>
+
+    <string name="onboarding_permissions_required">Required Permissions</string>
+    <string name="onboarding_permissions_desc2">For smooth automation, vFlow needs the following core permissions (cannot be skipped).</string>
+    <string name="onboarding_permissions_ready">All Ready, Continue</string>
+    <string name="onboarding_permissions_request">Please grant all permissions first</string>
+    <string name="onboarding_grant">Grant</string>
+
+    <string name="onboarding_completion_title">Ready to Launch!</string>
+    <string name="onboarding_completion_desc">You have completed all basic configurations.\nWe have prepared a sample workflow for you,\nlet\'s experience automation now!</string>
+    <string name="onboarding_start_button">Get Started</string>
+    <string name="onboarding_next_button">Next</string>
+
+    <string name="onboarding_hello_workflow">Hello vFlow</string>
+    <string name="onboarding_hello_toast">🎉 Congratulations! vFlow is configured successfully, your first workflow has been executed!</string>
 </resources>

@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -76,7 +77,7 @@ class OnboardingActivity : BaseActivity() {
 
     private fun completeOnboarding() {
         createTutorialWorkflow()
-        val prefs = getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE)
         prefs.edit().putBoolean("is_first_run", false).apply()
         startActivity(Intent(this, MainActivity::class.java))
         finish()
@@ -84,17 +85,17 @@ class OnboardingActivity : BaseActivity() {
 
     private fun createTutorialWorkflow() {
         val workflowManager = WorkflowManager(this)
-        if (workflowManager.getAllWorkflows().any { it.name == "Hello vFlow" }) return
+        if (workflowManager.getAllWorkflows().any { it.name == getString(R.string.onboarding_hello_workflow) }) return
 
         val steps = listOf(
             ActionStep("vflow.trigger.manual", emptyMap()),
             ActionStep("vflow.device.delay", mapOf("duration" to 1000.0)),
-            ActionStep("vflow.device.toast", mapOf("message" to "🎉 恭喜！vFlow 配置成功，您的第一个工作流执行完毕！"))
+            ActionStep("vflow.device.toast", mapOf("message" to getString(R.string.onboarding_hello_toast)))
         )
 
         val workflow = Workflow(
             id = UUID.randomUUID().toString(),
-            name = "Hello vFlow",
+            name = getString(R.string.onboarding_hello_workflow),
             steps = steps,
             isFavorite = true
         )
@@ -115,31 +116,29 @@ data class OnboardingPageData(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(onFinish: () -> Unit) {
-    val pages = remember {
-        listOf(
-            OnboardingPageData(
-                "欢迎使用 vFlow",
-                "vFlow 是一款强大的自动化工具，帮助您自动执行重复的手机操作，解放双手。",
-                R.mipmap.ic_launcher_round
-            ),
-            OnboardingPageData(
-                "Shell 增强",
-                "配置 Shizuku 或 Root 权限，解锁模拟物理按键、后台截图等高级功能。", // 占位描述，实际由 ShellConfigPage 渲染
-                R.drawable.rounded_terminal_24
-            ),
-            OnboardingPageData(
-                "必要的权限",
-                "为了模拟操作和感知屏幕，vFlow 需要无障碍等核心权限。", // 占位描述，实际由 PermissionsPage 渲染
-                R.drawable.ic_shield,
-                isPermissionPage = true
-            ),
-            OnboardingPageData(
-                "准备就绪",
-                "我们为您准备了一个简单的“Hello World”工作流。点击开始，开启您的自动化之旅！",
-                R.drawable.rounded_play_arrow_24
-            )
+    val pages = listOf(
+        OnboardingPageData(
+            stringResource(R.string.onboarding_welcome_title),
+            stringResource(R.string.onboarding_welcome_desc),
+            R.mipmap.ic_launcher_round
+        ),
+        OnboardingPageData(
+            stringResource(R.string.onboarding_shell_title),
+            stringResource(R.string.onboarding_shell_desc),
+            R.drawable.rounded_terminal_24
+        ),
+        OnboardingPageData(
+            stringResource(R.string.onboarding_permissions_title),
+            stringResource(R.string.onboarding_permissions_desc),
+            R.drawable.ic_shield,
+            isPermissionPage = true
+        ),
+        OnboardingPageData(
+            stringResource(R.string.onboarding_ready_title),
+            stringResource(R.string.onboarding_ready_desc),
+            R.drawable.rounded_play_arrow_24
         )
-    }
+    )
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val scope = rememberCoroutineScope()
@@ -237,6 +236,10 @@ fun ShellConfigPage(onNext: () -> Unit) {
     val prefs = remember { context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
 
+    // 在 Composable 上下文中预先获取字符串
+    val shizukuNotRunningMsg = stringResource(R.string.onboarding_shizuku_not_running)
+    val rootUnavailableMsg = stringResource(R.string.onboarding_root_unavailable)
+
     var selectedMode by remember { mutableStateOf("none") } // none, shizuku, root
     var isVerified by remember { mutableStateOf(false) }
     var autoEnableAcc by remember { mutableStateOf(false) }
@@ -258,12 +261,12 @@ fun ShellConfigPage(onNext: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Shell 增强模式",
+            text = stringResource(R.string.onboarding_shell_mode_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "vFlow 可以利用 Shizuku 或 Root 权限执行更强大的操作（如模拟物理按键、后台截图等）。",
+            text = stringResource(R.string.onboarding_shell_mode_desc),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -274,22 +277,22 @@ fun ShellConfigPage(onNext: () -> Unit) {
 
         // 选项卡片
         ModeSelectionCard(
-            title = "Shizuku (推荐)",
-            desc = "配合 Shizuku 使用，需预先激活 Shizuku。",
+            title = stringResource(R.string.onboarding_mode_shizuku),
+            desc = stringResource(R.string.onboarding_mode_shizuku_desc),
             isSelected = selectedMode == "shizuku",
             onClick = { selectedMode = "shizuku"; isVerified = false }
         )
         Spacer(modifier = Modifier.height(8.dp))
         ModeSelectionCard(
-            title = "Root 权限",
-            desc = "获取最高权限，仍然推荐激活 Shizuku 使用。",
+            title = stringResource(R.string.onboarding_mode_root),
+            desc = stringResource(R.string.onboarding_mode_root_desc),
             isSelected = selectedMode == "root",
             onClick = { selectedMode = "root"; isVerified = false }
         )
         Spacer(modifier = Modifier.height(8.dp))
         ModeSelectionCard(
-            title = "暂不使用",
-            desc = "仅使用无障碍服务，部分高级功能不可用。",
+            title = stringResource(R.string.onboarding_mode_none),
+            desc = stringResource(R.string.onboarding_mode_none_desc),
             isSelected = selectedMode == "none",
             onClick = { selectedMode = "none"; isVerified = true }
         )
@@ -305,15 +308,15 @@ fun ShellConfigPage(onNext: () -> Unit) {
                             onClick = {
                                 if (mode == "shizuku") {
                                     if (ShellManager.isShizukuActive(context)) isVerified = true
-                                    else Toast.makeText(context, "Shizuku 未运行或未授权", Toast.LENGTH_SHORT).show()
+                                    else Toast.makeText(context, shizukuNotRunningMsg, Toast.LENGTH_SHORT).show()
                                 } else {
                                     if (ShellManager.isRootAvailable()) isVerified = true
-                                    else Toast.makeText(context, "无法获取 Root 权限", Toast.LENGTH_SHORT).show()
+                                    else Toast.makeText(context, rootUnavailableMsg, Toast.LENGTH_SHORT).show()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
                         ) {
-                            Text("检测权限并授权")
+                            Text(stringResource(R.string.onboarding_verify_button))
                         }
                     } else {
                         // 验证通过后的高级选项
@@ -325,7 +328,7 @@ fun ShellConfigPage(onNext: () -> Unit) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("权限验证通过", fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.onboarding_permission_verified), fontWeight = FontWeight.Bold)
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -335,7 +338,7 @@ fun ShellConfigPage(onNext: () -> Unit) {
                                     modifier = Modifier.clickable { autoEnableAcc = !autoEnableAcc }
                                 ) {
                                     Checkbox(checked = autoEnableAcc, onCheckedChange = { autoEnableAcc = it })
-                                    Text("服务关闭时自动开启 (推荐)")
+                                    Text(stringResource(R.string.onboarding_auto_enable_acc))
                                 }
 
                                 // Shizuku 特有的保活
@@ -345,7 +348,7 @@ fun ShellConfigPage(onNext: () -> Unit) {
                                         modifier = Modifier.clickable { forceKeepAlive = !forceKeepAlive }
                                     ) {
                                         Checkbox(checked = forceKeepAlive, onCheckedChange = { forceKeepAlive = it })
-                                        Text("启用守护进程 (防杀后台)")
+                                        Text(stringResource(R.string.onboarding_force_keep_alive))
                                     }
                                 }
                             }
@@ -382,7 +385,7 @@ fun ShellConfigPage(onNext: () -> Unit) {
             enabled = canProceed,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (selectedMode == "none") "继续 (不使用 Shell)" else "保存配置并继续")
+            Text(if (selectedMode == "none") stringResource(R.string.onboarding_continue_without_shell) else stringResource(R.string.onboarding_save_and_continue))
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.Default.ChevronRight, null)
         }
@@ -451,8 +454,8 @@ fun PermissionsPage(onNext: () -> Unit) {
         Spacer(modifier = Modifier.height(64.dp))
         Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(16.dp))
-        Text("必要的权限", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("为了让自动化流畅运行，vFlow 需要以下核心权限（不可跳过）。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.onboarding_permissions_required), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.onboarding_permissions_desc2), color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -471,11 +474,11 @@ fun PermissionsPage(onNext: () -> Unit) {
             enabled = permissionsGranted
         ) {
             if (permissionsGranted) {
-                Text("全部就绪，继续")
+                Text(stringResource(R.string.onboarding_permissions_ready))
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(Icons.Default.Check, null)
             } else {
-                Text("请先授予所有权限")
+                Text(stringResource(R.string.onboarding_permissions_request))
             }
         }
     }
@@ -519,8 +522,8 @@ fun PermissionItemView(permission: Permission, onCheckChanged: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = permission.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(text = permission.description, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                Text(text = permission.getLocalizedName(context), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = permission.getLocalizedDescription(context), style = MaterialTheme.typography.bodySmall, maxLines = 2)
             }
             if (!isGranted) {
                 Button(
@@ -538,7 +541,7 @@ fun PermissionItemView(permission: Permission, onCheckChanged: () -> Unit) {
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                     modifier = Modifier.height(36.dp)
                 ) {
-                    Text("授权", fontSize = 12.sp)
+                Text(stringResource(R.string.onboarding_grant), fontSize = 12.sp)
                 }
             }
         }
@@ -559,10 +562,10 @@ fun CompletionPage(onFinish: () -> Unit) {
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(32.dp))
-        Text("准备起飞！", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.onboarding_completion_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            "您已经完成了所有基本配置。\n我们为您准备了一个示例工作流，\n现在就开始体验自动化吧！",
+            stringResource(R.string.onboarding_completion_desc),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge
         )
@@ -572,7 +575,7 @@ fun CompletionPage(onFinish: () -> Unit) {
             modifier = Modifier.fillMaxWidth().height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text("开始使用", fontSize = 18.sp)
+            Text(stringResource(R.string.onboarding_start_button), fontSize = 18.sp)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.Default.KeyboardArrowRight, null)
         }
@@ -611,7 +614,7 @@ fun BottomNavigation(pagerState: PagerState, onNext: () -> Unit) {
         }
 
         FilledTonalButton(onClick = onNext) {
-            Text("下一步")
+            Text(stringResource(R.string.onboarding_next_button))
             Icon(Icons.Default.ChevronRight, null)
         }
     }
