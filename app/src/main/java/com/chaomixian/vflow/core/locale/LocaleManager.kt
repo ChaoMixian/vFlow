@@ -34,11 +34,48 @@ object LocaleManager {
     /**
      * 获取当前设置的语言代码
      *
+     * 如果用户没有手动设置过语言（首次启动），则根据系统语言自动选择：
+     * - 系统语言是中文（简体/繁体）时使用 "zh"
+     * - 其他情况使用 "en"
+     *
      * @param context Android上下文
-     * @return 语言代码，默认为 "zh"（简体中文）
+     * @return 语言代码
      */
     fun getLanguage(context: Context): String {
-        return getPersistence(context).getString(KEY_LANGUAGE, "zh") ?: "zh"
+        val prefs = getPersistence(context)
+        val savedLanguage = prefs.getString(KEY_LANGUAGE, null)
+
+        return if (savedLanguage != null) {
+            // 用户已手动设置过语言，使用用户的设置
+            savedLanguage
+        } else {
+            // 首次启动，根据系统语言自动选择
+            if (isSystemLanguageChinese()) {
+                "zh"
+            } else {
+                "en"
+            }
+        }
+    }
+
+    /**
+     * 检查系统语言是否为中文（简体或繁体）
+     *
+     * @return 如果系统语言是中文返回true，否则返回false
+     */
+    private fun isSystemLanguageChinese(): Boolean {
+        val systemLanguage = Locale.getDefault().language
+        val systemCountry = Locale.getDefault().country
+
+        // 检查语言是否为中文
+        return if (systemLanguage == "zh") {
+            true
+        } else {
+            // 检查一些常见的中文地区设置（例如有些设备使用 "cn"、"tw" 等作为语言代码）
+            listOf("CN", "TW", "HK", "MO", "SG").any {
+                systemCountry.equals(it, ignoreCase = true)
+            }
+        }
     }
 
     /**
