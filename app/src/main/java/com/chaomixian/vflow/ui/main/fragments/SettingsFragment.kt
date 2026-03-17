@@ -269,9 +269,14 @@ class SettingsFragment : Fragment() {
         }
 
         // 语言设置
-        view.findViewById<View>(R.id.btn_language_settings).setOnClickListener {
+        view.findViewById<View>(R.id.card_language).setOnClickListener {
             showLanguageDialog()
         }
+
+        // 显示当前语言
+        val currentLanguage = LocaleManager.getLanguage(requireContext())
+        val languageDisplayName = LocaleManager.getLanguageDisplayName(currentLanguage)
+        view.findViewById<TextView>(R.id.text_language_value).text = languageDisplayName
 
         // 模块配置入口
         view.findViewById<View>(R.id.btn_module_config).setOnClickListener {
