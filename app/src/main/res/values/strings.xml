@@ -541,6 +541,7 @@
     <string name="button_clear">清除</string>
     <string name="label_generate_workflow">生成工作流</string>
     <string name="label_select_action">选择一个动作</string>
+    <string name="label_recent_modules">最近使用</string>
     <string name="text_no_matching_modules">未找到匹配的模块</string>
     <string name="label_input_content">输入内容</string>
     <string name="label_execution_mode">执行模式</string>

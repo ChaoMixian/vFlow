@@ -556,6 +556,7 @@
     <string name="button_clear">Clear</string>
     <string name="label_generate_workflow">Generate Workflow</string>
     <string name="label_select_action">Select Action</string>
+    <string name="label_recent_modules">Recently Used</string>
     <string name="text_no_matching_modules">No matching modules found</string>
     <string name="label_input_content">Input Content</string>
     <string name="label_execution_mode">Execution Mode</string>

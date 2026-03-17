@@ -22,10 +22,12 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.ActionModule
 import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.module.RecentModulesManager
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.*
+import java.util.LinkedHashMap
 
 class ActionPickerSheet : BottomSheetDialogFragment() {
     var onActionSelected: ((ActionModule) -> Unit)? = null
@@ -66,8 +68,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
     private fun setupRecyclerView() {
         recyclerView.layoutManager = LinearLayoutManager(context)
         recyclerView.adapter = ActionPickerGroupAdapter(filteredModuleGroups) { module ->
-            onActionSelected?.invoke(module)
-            dismiss()
+            onModuleSelected(module)
         }
     }
 
@@ -96,9 +97,18 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
                 ModuleRegistry.getModulesByCategory().filterKeys { it != "触发器" }
             }
 
-            // 将分类名转换为本地化名称
-            val localizedModules = categorizedModules.mapKeys { (category, _) ->
-                localizeCategoryName(category)
+            // 使用 LinkedHashMap 保持插入顺序
+            val localizedModules = LinkedHashMap<String, List<ActionModule>>()
+
+            // 加载最近使用的模块，并作为第一个分类插入
+            val recentModules = RecentModulesManager.getRecentModules(requireContext())
+            if (recentModules.isNotEmpty()) {
+                localizedModules[""] = recentModules
+            }
+
+            // 将其他分类名转换为本地化名称并添加
+            categorizedModules.forEach { (category, modules) ->
+                localizedModules[localizeCategoryName(category)] = modules
             }
 
             allModuleGroups = localizedModules
@@ -202,6 +212,16 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
         (recyclerView.adapter as? ActionPickerGroupAdapter)?.updateData(filteredModuleGroups)
         noResultsView.visibility = if (filteredModuleGroups.isEmpty()) View.VISIBLE else View.GONE
     }
+
+    private fun onModuleSelected(module: ActionModule) {
+        // 保存到最近使用记录
+        lifecycleScope.launch(Dispatchers.IO) {
+            RecentModulesManager.addRecentModule(requireContext(), module.id)
+        }
+
+        onActionSelected?.invoke(module)
+        dismiss()
+    }
 }
 
 
@@ -249,7 +269,12 @@ class ActionPickerGroupAdapter(
         }
 
         fun bind(categoryName: String, modules: List<ActionModule>) {
-            categoryNameTextView.text = categoryName
+            // 空字符串表示"最近使用"分类
+            categoryNameTextView.text = if (categoryName.isEmpty()) {
+                itemView.context.getString(R.string.label_recent_modules)
+            } else {
+                categoryName
+            }
             // 为内部 RecyclerView 设置适配器
             actionsRecyclerView.adapter = ActionPickerItemAdapter(modules, onActionClick)
         }
