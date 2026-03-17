@@ -1,0 +1,4 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#20FFFFFF" /> <!-- 半透明白色，实际颜色在代码中动态设置 -->
+    <corners android:radius="24dp" />
+</shape>
