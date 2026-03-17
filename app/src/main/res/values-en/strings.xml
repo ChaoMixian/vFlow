@@ -792,4 +792,136 @@
 
     <string name="onboarding_hello_workflow">Hello vFlow</string>
     <string name="onboarding_hello_toast">🎉 Congratulations! vFlow is configured successfully, your first workflow has been executed!</string>
+
+    <!-- UI Inspector -->
+    <string name="ui_inspector_service_started">UI Inspector service started</string>
+    <string name="ui_inspector_start_failed">Failed to start: %s</string>
+    <string name="ui_inspector_enable_accessibility">Please enable accessibility service first</string>
+    <string name="ui_inspector_no_selection">No control selected</string>
+    <string name="ui_inspector_properties_title">Control Properties</string>
+    <string name="ui_inspector_copy_all">Copy All</string>
+    <string name="ui_inspector_close_service">Close Service</string>
+    <string name="ui_inspector_close">Close</string>
+    <string name="ui_inspector_unknown">Unknown</string>
+    <string name="ui_inspector_none">None</string>
+    <string name="ui_inspector_basic_info">Basic Info</string>
+    <string name="ui_inspector_current_page">Current Page</string>
+    <string name="ui_inspector_control_id">Control ID</string>
+    <string name="ui_inspector_control_text">Control Text</string>
+    <string name="ui_inspector_control_type">Control Type</string>
+    <string name="ui_inspector_app_package">App Package</string>
+    <string name="ui_inspector_app_name">App Name</string>
+    <string name="ui_inspector_layout_coordinates">Layout Coordinates</string>
+    <string name="ui_inspector_top_left">Top-Left</string>
+    <string name="ui_inspector_bottom_right">Bottom-Right</string>
+    <string name="ui_inspector_center_point">Center Point</string>
+    <string name="ui_inspector_size">Size</string>
+    <string name="ui_inspector_hierarchy">Hierarchy &amp; Children</string>
+    <string name="ui_inspector_child_count">Child Count</string>
+    <string name="ui_inspector_total_children">Total Children</string>
+    <string name="ui_inspector_child_text">Child Text</string>
+    <string name="ui_inspector_depth">Control Depth</string>
+    <string name="ui_inspector_parent">Parent Control</string>
+    <string name="ui_inspector_state">State Properties</string>
+    <string name="ui_inspector_visibility">Visibility</string>
+    <string name="ui_inspector_visible">Visible</string>
+    <string name="ui_inspector_invisible">Invisible</string>
+    <string name="ui_inspector_enabled">Enabled</string>
+    <string name="ui_inspector_clickable">Clickable</string>
+    <string name="ui_inspector_long_clickable">Long Clickable</string>
+    <string name="ui_inspector_scrollable">Scrollable</string>
+    <string name="ui_inspector_checkable">Checkable</string>
+    <string name="ui_inspector_checked">Checked</string>
+    <string name="ui_inspector_focusable">Focusable</string>
+    <string name="ui_inspector_focused">Focused</string>
+    <string name="ui_inspector_enabled_status">Enabled Status</string>
+    <string name="ui_inspector_current_app">Current App</string>
+    <string name="ui_inspector_coord_x">Coordinate X</string>
+    <string name="ui_inspector_coord_y">Coordinate Y</string>
+    <string name="ui_inspector_width">Width (W)</string>
+    <string name="ui_inspector_height">Height (H)</string>
+    <string name="ui_inspector_gkd_selector">GKD Selector</string>
+    <string name="ui_inspector_float_permission_error">Cannot display floating window, please check permissions</string>
+    <string name="ui_inspector_copied">Copied %s</string>
+    <string name="ui_inspector_service_closed">UI Inspector closed</string>
+    <string name="ui_inspector_selected">Selected</string>
+    <string name="ui_inspector_yes">Yes</string>
+    <string name="ui_inspector_no">No</string>
+
+    <!-- Workflow Item Chips -->
+    <string name="workflow_chip_missing_permissions">Missing Permissions</string>
+    <string name="workflow_chip_steps">%d steps</string>
+    <string name="workflow_id_copied">Workflow ID copied</string>
+
+    <!-- Key Tester -->
+    <string name="key_tester_title">Key Tester</string>
+    <string name="key_tester_subtitle">Find device paths and key codes for physical keys</string>
+    <string name="key_tester_status_ready">Ready</string>
+    <string name="key_tester_status_stopped">Stopped</string>
+    <string name="key_tester_status_listening">Listening</string>
+    <string name="key_tester_back">Back</string>
+    <string name="key_tester_clear">Clear</string>
+    <string name="key_tester_stop">Stop</string>
+    <string name="key_tester_start">Start</string>
+    <string name="key_tester_press_any_key">Press any physical key</string>
+    <string name="key_tester_click_to_start">Click start button to begin listening</string>
+    <string name="key_tester_info_placeholder">Key information will appear here</string>
+    <string name="key_tester_key_info">Key Information</string>
+    <string name="key_tester_copied">Copied: %s</string>
+    <string name="key_tester_device_path">Device Path</string>
+    <string name="key_tester_key_code">Key Code</string>
+    <string name="key_tester_action">Action</string>
+    <string name="key_tester_click_to_copy">Click to copy</string>
+    <string name="key_tester_no_data">No data</string>
+    <string name="key_tester_time">Time</string>
+    <string name="key_tester_event">Event</string>
+    <string name="key_tester_shell_not_available">Shizuku/Root not available, cannot listen to keys</string>
+    <string name="key_tester_initializing">Initializing listener script...</string>
+    <string name="key_tester_listening_hint">Listening... Press any physical key</string>
+    <string name="key_tester_error">Error: %s</string>
+
+    <!-- API Settings -->
+    <string name="api_settings_title">Remote API Settings</string>
+    <string name="api_settings_back">Back</string>
+    <string name="api_settings_server_status">Server Status</string>
+    <string name="api_settings_status_running">Running</string>
+    <string name="api_settings_status_stopped">Stopped</string>
+    <string name="api_settings_status_error">Error</string>
+    <string name="api_settings_server_url">Server URL: %s</string>
+    <string name="api_settings_server_config">Server Configuration</string>
+    <string name="api_settings_port">Port: %d</string>
+    <string name="api_settings_access_tokens">Access Tokens</string>
+    <string name="api_settings_generate_token">Generate Token</string>
+    <string name="api_settings_no_tokens">No active tokens</string>
+    <string name="api_settings_instructions">Instructions</string>
+    <string name="api_settings_instructions_text">
+1. Enable the server switch
+2. Visit the server URL to view API documentation
+3. Generate a token for authentication
+4. Add to request header: Authorization: Bearer &lt;token&gt;
+
+Note: Ensure device and web editor are on the same network
+    </string>
+    <string name="api_settings_unknown_device">Unknown Device</string>
+    <string name="api_settings_device_id">Device ID: %s</string>
+    <string name="api_settings_token">Token: %s</string>
+    <string name="api_settings_expires_at">Expires: %s</string>
+    <string name="api_settings_revoke_token">Revoke Token</string>
+    <string name="api_settings_port_label">Port:</string>
+    <string name="api_settings_port_hint">8080</string>
+    <string name="api_settings_save">Save</string>
+    <string name="api_settings_cancel">Cancel</string>
+    <string name="api_settings_device_id_label">Device ID</string>
+    <string name="api_settings_device_name_label">Device Name (Optional)</string>
+    <string name="api_settings_token_generated">Token Generated</string>
+    <string name="api_settings_token_warning">Please save this token, it cannot be viewed again after closing</string>
+    <string name="api_settings_generate">Generate</string>
+    <string name="api_settings_copy">Copy</string>
+    <string name="api_settings_copied">Copied!</string>
+    <string name="api_settings_close">Close</string>
+    <string name="api_settings_toast_started">Remote API started</string>
+    <string name="api_settings_toast_start_failed">Failed to start, port may be in use</string>
+    <string name="api_settings_toast_stopped">Remote API stopped</string>
+    <string name="api_settings_label">API Settings</string>
+    <string name="api_settings_desc">View server status and manage access tokens</string>
 </resources>

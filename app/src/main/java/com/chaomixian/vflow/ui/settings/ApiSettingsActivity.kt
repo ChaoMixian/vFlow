@@ -1,5 +1,6 @@
 package com.chaomixian.vflow.ui.settings
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalInspectionMode
 import com.chaomixian.vflow.api.ApiService
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -18,6 +20,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 class ApiSettingsActivity : ComponentActivity() {
 
     private lateinit var apiService: ApiService
+
+    override fun attachBaseContext(newBase: Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        super.attachBaseContext(context)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

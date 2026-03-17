@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.utils.StorageManager
 import kotlinx.coroutines.*
 import java.io.File
@@ -42,6 +43,12 @@ class CoreManagementService : Service() {
     }
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        super.attachBaseContext(context)
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 

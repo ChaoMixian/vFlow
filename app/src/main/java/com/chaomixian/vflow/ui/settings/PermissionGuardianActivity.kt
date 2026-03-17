@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.locale.toast
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -43,6 +44,12 @@ import kotlinx.coroutines.withContext
 class PermissionGuardianActivity : ComponentActivity() {
 
     private val viewModel: GuardianViewModel by viewModels()
+
+    override fun attachBaseContext(newBase: Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        super.attachBaseContext(context)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

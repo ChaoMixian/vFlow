@@ -67,7 +67,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         // 显示权限缺失提示
         if (missingPermissions.isNotEmpty()) {
             val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
-            permissionChip.text = "缺少权限"
+            permissionChip.text = itemView.context.getString(R.string.workflow_chip_missing_permissions)
             permissionChip.setChipIconResource(R.drawable.rounded_security_24)
             permissionChip.chipBackgroundColor = ColorStateList.valueOf(
                 MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorErrorContainer, 0)
@@ -82,7 +82,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val stepCount = workflow.steps.size - 1
         if (stepCount >= 0) {
             val stepChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
-            stepChip.text = "${stepCount.coerceAtLeast(0)} 个步骤"
+            stepChip.text = itemView.context.getString(R.string.workflow_chip_steps, stepCount.coerceAtLeast(0))
             stepChip.setChipIconResource(R.drawable.rounded_dashboard_fill_24)
             infoChipGroup.addView(stepChip)
         }
@@ -97,7 +97,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         for (permission in requiredPermissions) {
             val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
-            permissionChip.text = permission.name
+            permissionChip.text = permission.getLocalizedName(itemView.context)
             permissionChip.setChipIconResource(R.drawable.rounded_security_24)
             infoChipGroup.addView(permissionChip)
         }
@@ -138,7 +138,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
                         val clipboard = view.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         val clip = ClipData.newPlainText("Workflow ID", workflow.id)
                         clipboard.setPrimaryClip(clip)
-                        Toast.makeText(view.context, "工作流ID已复制", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(view.context, R.string.workflow_id_copied, Toast.LENGTH_SHORT).show()
                         true
                     }
                     R.id.menu_duplicate -> {

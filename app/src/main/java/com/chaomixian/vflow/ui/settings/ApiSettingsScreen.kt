@@ -13,9 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.api.ApiService
 import kotlinx.coroutines.launch
 
@@ -56,10 +58,10 @@ fun ApiSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("远程API设置") },
+                title = { Text(stringResource(R.string.api_settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.api_settings_back))
                     }
                 }
             )
@@ -81,7 +83,7 @@ fun ApiSettingsScreen(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "服务器状态",
+                            text = stringResource(R.string.api_settings_server_status),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -94,9 +96,9 @@ fun ApiSettingsScreen(
                         ) {
                             Text(
                                 text = when (serverState) {
-                                    ApiService.ServerState.RUNNING -> "运行中"
-                                    ApiService.ServerState.STOPPED -> "已停止"
-                                    ApiService.ServerState.ERROR -> "错误"
+                                    ApiService.ServerState.RUNNING -> stringResource(R.string.api_settings_status_running)
+                                    ApiService.ServerState.STOPPED -> stringResource(R.string.api_settings_status_stopped)
+                                    ApiService.ServerState.ERROR -> stringResource(R.string.api_settings_status_error)
                                 },
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = when (serverState) {
@@ -121,9 +123,10 @@ fun ApiSettingsScreen(
                         }
 
                         if (serverUrl != null) {
+                            val url = serverUrl
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "服务器地址: $serverUrl",
+                                text = stringResource(R.string.api_settings_server_url, url ?: ""),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -142,13 +145,13 @@ fun ApiSettingsScreen(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "服务器配置",
+                            text = stringResource(R.string.api_settings_server_config),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "端口: ${serverConfig.port}",
+                            text = stringResource(R.string.api_settings_port, serverConfig.port),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
@@ -169,12 +172,12 @@ fun ApiSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "访问令牌",
+                                text = stringResource(R.string.api_settings_access_tokens),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Button(onClick = { showTokenDialog = true }) {
-                                Text("生成令牌")
+                                Text(stringResource(R.string.api_settings_generate_token))
                             }
                         }
 
@@ -182,7 +185,7 @@ fun ApiSettingsScreen(
 
                         if (tokens.isEmpty()) {
                             Text(
-                                text = "暂无活跃令牌",
+                                text = stringResource(R.string.api_settings_no_tokens),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -212,20 +215,13 @@ fun ApiSettingsScreen(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "使用说明",
+                            text = stringResource(R.string.api_settings_instructions),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = """
-                                1. 启用服务器开关
-                                2. 访问服务器地址查看API文档
-                                3. 生成令牌用于身份验证
-                                4. 在请求头中添加: Authorization: Bearer <令牌>
-
-                                注意: 请确保设备和Web编辑器在同一网络
-                            """.trimIndent(),
+                            text = stringResource(R.string.api_settings_instructions_text),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -281,12 +277,12 @@ fun TokenItem(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = token.deviceName ?: "未知设备",
+                        text = token.deviceName ?: stringResource(R.string.api_settings_unknown_device),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "设备ID: ${token.deviceId.take(8)}...",
+                        text = stringResource(R.string.api_settings_device_id, token.deviceId.take(8)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -306,12 +302,12 @@ fun TokenItem(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "令牌: ${token.token.take(32)}...",
+                    text = stringResource(R.string.api_settings_token, token.token.take(32)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "过期时间: ${java.util.Date(token.expiresAt)}",
+                    text = stringResource(R.string.api_settings_expires_at, java.util.Date(token.expiresAt)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -325,7 +321,7 @@ fun TokenItem(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("撤销令牌")
+                    Text(stringResource(R.string.api_settings_revoke_token))
                 }
             }
         }
@@ -342,17 +338,17 @@ fun ApiConfigDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("服务器配置") },
+        title = { Text(stringResource(R.string.api_settings_server_config)) },
         text = {
             Column {
-                Text("端口:")
+                Text(stringResource(R.string.api_settings_port_label))
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = port,
                     onValueChange = { port = it },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("8080") }
+                    placeholder = { Text(stringResource(R.string.api_settings_port_hint)) }
                 )
             }
         },
@@ -363,12 +359,12 @@ fun ApiConfigDialog(
                     onSave(currentConfig.copy(port = portNum.coerceIn(1024, 65535)))
                 }
             ) {
-                Text("保存")
+                Text(stringResource(R.string.api_settings_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.api_settings_cancel))
             }
         }
     )
@@ -388,7 +384,7 @@ fun GenerateTokenDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (generatedToken == null) "生成令牌" else "令牌已生成") },
+        title = { Text(if (generatedToken == null) stringResource(R.string.api_settings_generate_token) else stringResource(R.string.api_settings_token_generated)) },
         text = {
             val token = generatedToken
             if (token == null) {
@@ -396,7 +392,7 @@ fun GenerateTokenDialog(
                     OutlinedTextField(
                         value = deviceId,
                         onValueChange = { deviceId = it },
-                        label = { Text("设备ID") },
+                        label = { Text(stringResource(R.string.api_settings_device_id_label)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -404,7 +400,7 @@ fun GenerateTokenDialog(
                     OutlinedTextField(
                         value = deviceName,
                         onValueChange = { deviceName = it },
-                        label = { Text("设备名称 (可选)") },
+                        label = { Text(stringResource(R.string.api_settings_device_name_label)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -412,7 +408,7 @@ fun GenerateTokenDialog(
             } else {
                 Column {
                     Text(
-                        text = "请保存此令牌，关闭对话框后将无法再次查看",
+                        text = stringResource(R.string.api_settings_token_warning),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -437,7 +433,7 @@ fun GenerateTokenDialog(
                     },
                     enabled = deviceId.isNotBlank()
                 ) {
-                    Text("生成")
+                    Text(stringResource(R.string.api_settings_generate))
                 }
             } else {
                 Button(
@@ -450,13 +446,13 @@ fun GenerateTokenDialog(
                         showCopySuccess = true
                     }
                 ) {
-                    Text(if (showCopySuccess) "已复制!" else "复制")
+                    Text(if (showCopySuccess) stringResource(R.string.api_settings_copied) else stringResource(R.string.api_settings_copy))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(if (generatedToken == null) "取消" else "关闭")
+                Text(if (generatedToken == null) stringResource(R.string.api_settings_cancel) else stringResource(R.string.api_settings_close))
             }
         }
     )

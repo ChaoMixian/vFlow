@@ -203,13 +203,13 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="API管理"
+                        android:text="@string/api_settings_label"
                         android:textAppearance="?attr/textAppearanceBodyMedium" />
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="查看服务器状态和管理访问令牌"
+                        android:text="@string/api_settings_desc"
                         android:textAppearance="?attr/textAppearanceBodySmall" />
                 </LinearLayout>
 

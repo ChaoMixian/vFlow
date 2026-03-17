@@ -792,4 +792,136 @@
 
     <string name="onboarding_hello_workflow">Hello vFlow</string>
     <string name="onboarding_hello_toast">🎉 恭喜！vFlow 配置成功，您的第一个工作流执行完毕！</string>
+
+    <!-- UI Inspector -->
+    <string name="ui_inspector_service_started">UI 检查器服务已启动</string>
+    <string name="ui_inspector_start_failed">启动失败: %s</string>
+    <string name="ui_inspector_enable_accessibility">请先开启无障碍服务</string>
+    <string name="ui_inspector_no_selection">未选中任何控件</string>
+    <string name="ui_inspector_properties_title">控件属性</string>
+    <string name="ui_inspector_copy_all">复制全部</string>
+    <string name="ui_inspector_close_service">关闭服务</string>
+    <string name="ui_inspector_close">关闭</string>
+    <string name="ui_inspector_unknown">未知</string>
+    <string name="ui_inspector_none">无</string>
+    <string name="ui_inspector_basic_info">基础信息</string>
+    <string name="ui_inspector_current_page">所在页面</string>
+    <string name="ui_inspector_control_id">控件ID</string>
+    <string name="ui_inspector_control_text">控件文本</string>
+    <string name="ui_inspector_control_type">控件类型</string>
+    <string name="ui_inspector_app_package">应用包名</string>
+    <string name="ui_inspector_app_name">应用名称</string>
+    <string name="ui_inspector_layout_coordinates">布局坐标</string>
+    <string name="ui_inspector_top_left">左上坐标</string>
+    <string name="ui_inspector_bottom_right">右下坐标</string>
+    <string name="ui_inspector_center_point">中心点</string>
+    <string name="ui_inspector_size">尺寸</string>
+    <string name="ui_inspector_hierarchy">层级与子节点</string>
+    <string name="ui_inspector_child_count">子控件数</string>
+    <string name="ui_inspector_total_children">子控件总数</string>
+    <string name="ui_inspector_child_text">子控件文本</string>
+    <string name="ui_inspector_depth">控件层级</string>
+    <string name="ui_inspector_parent">父控件</string>
+    <string name="ui_inspector_state">状态属性</string>
+    <string name="ui_inspector_visibility">可见性</string>
+    <string name="ui_inspector_visible">可见</string>
+    <string name="ui_inspector_invisible">不可见</string>
+    <string name="ui_inspector_enabled">可用性</string>
+    <string name="ui_inspector_clickable">可点击 (Clickable)</string>
+    <string name="ui_inspector_long_clickable">可长按 (LongClickable)</string>
+    <string name="ui_inspector_scrollable">可滑动 (Scrollable)</string>
+    <string name="ui_inspector_checkable">可选中 (Checkable)</string>
+    <string name="ui_inspector_checked">已选中 (Checked)</string>
+    <string name="ui_inspector_focusable">可聚焦 (Focusable)</string>
+    <string name="ui_inspector_focused">已聚焦 (Focused)</string>
+    <string name="ui_inspector_enabled_status">启用状态</string>
+    <string name="ui_inspector_current_app">所在APP</string>
+    <string name="ui_inspector_coord_x">坐标 X</string>
+    <string name="ui_inspector_coord_y">坐标 Y</string>
+    <string name="ui_inspector_width">控件长度(W)</string>
+    <string name="ui_inspector_height">控件宽度(H)</string>
+    <string name="ui_inspector_gkd_selector">GKD选择器</string>
+    <string name="ui_inspector_float_permission_error">无法显示悬浮窗，请检查权限</string>
+    <string name="ui_inspector_copied">已复制 %s</string>
+    <string name="ui_inspector_service_closed">UI 检查器已关闭</string>
+    <string name="ui_inspector_selected">已选择</string>
+    <string name="ui_inspector_yes">是</string>
+    <string name="ui_inspector_no">否</string>
+
+    <!-- Workflow Item Chips -->
+    <string name="workflow_chip_missing_permissions">缺少权限</string>
+    <string name="workflow_chip_steps">%d 个步骤</string>
+    <string name="workflow_id_copied">工作流ID已复制</string>
+
+    <!-- Key Tester -->
+    <string name="key_tester_title">按键测试器</string>
+    <string name="key_tester_subtitle">查找物理按键的设备路径和按键码</string>
+    <string name="key_tester_status_ready">准备就绪</string>
+    <string name="key_tester_status_stopped">已停止监听</string>
+    <string name="key_tester_status_listening">监听中</string>
+    <string name="key_tester_back">返回</string>
+    <string name="key_tester_clear">清除</string>
+    <string name="key_tester_stop">停止</string>
+    <string name="key_tester_start">开始</string>
+    <string name="key_tester_press_any_key">按下任意物理按键</string>
+    <string name="key_tester_click_to_start">点击开始按钮开始监听</string>
+    <string name="key_tester_info_placeholder">按键信息将显示在这里</string>
+    <string name="key_tester_key_info">按键信息</string>
+    <string name="key_tester_copied">已复制: %s</string>
+    <string name="key_tester_device_path">设备路径</string>
+    <string name="key_tester_key_code">按键码</string>
+    <string name="key_tester_action">操作</string>
+    <string name="key_tester_click_to_copy">点击复制</string>
+    <string name="key_tester_no_data">无数据</string>
+    <string name="key_tester_time">时间</string>
+    <string name="key_tester_event">事件</string>
+    <string name="key_tester_shell_not_available">Shizuku/Root 不可用，无法监听按键</string>
+    <string name="key_tester_initializing">正在初始化监听脚本...</string>
+    <string name="key_tester_listening_hint">监听中... 按下任意物理按键</string>
+    <string name="key_tester_error">监听出错: %s</string>
+
+    <!-- API Settings -->
+    <string name="api_settings_title">远程API设置</string>
+    <string name="api_settings_back">返回</string>
+    <string name="api_settings_server_status">服务器状态</string>
+    <string name="api_settings_status_running">运行中</string>
+    <string name="api_settings_status_stopped">已停止</string>
+    <string name="api_settings_status_error">错误</string>
+    <string name="api_settings_server_url">服务器地址: %s</string>
+    <string name="api_settings_server_config">服务器配置</string>
+    <string name="api_settings_port">端口: %d</string>
+    <string name="api_settings_access_tokens">访问令牌</string>
+    <string name="api_settings_generate_token">生成令牌</string>
+    <string name="api_settings_no_tokens">暂无活跃令牌</string>
+    <string name="api_settings_instructions">使用说明</string>
+    <string name="api_settings_instructions_text">
+1. 启用服务器开关
+2. 访问服务器地址查看API文档
+3. 生成令牌用于身份验证
+4. 在请求头中添加: Authorization: Bearer &lt;令牌&gt;
+
+注意: 请确保设备和Web编辑器在同一网络
+    </string>
+    <string name="api_settings_unknown_device">未知设备</string>
+    <string name="api_settings_device_id">设备ID: %s</string>
+    <string name="api_settings_token">令牌: %s</string>
+    <string name="api_settings_expires_at">过期时间: %s</string>
+    <string name="api_settings_revoke_token">撤销令牌</string>
+    <string name="api_settings_port_label">端口:</string>
+    <string name="api_settings_port_hint">8080</string>
+    <string name="api_settings_save">保存</string>
+    <string name="api_settings_cancel">取消</string>
+    <string name="api_settings_device_id_label">设备ID</string>
+    <string name="api_settings_device_name_label">设备名称 (可选)</string>
+    <string name="api_settings_token_generated">令牌已生成</string>
+    <string name="api_settings_token_warning">请保存此令牌，关闭对话框后将无法再次查看</string>
+    <string name="api_settings_generate">生成</string>
+    <string name="api_settings_copy">复制</string>
+    <string name="api_settings_copied">已复制!</string>
+    <string name="api_settings_close">关闭</string>
+    <string name="api_settings_toast_started">远程API已启动</string>
+    <string name="api_settings_toast_start_failed">启动失败，端口可能被占用</string>
+    <string name="api_settings_toast_stopped">远程API已停止</string>
+    <string name="api_settings_label">API管理</string>
+    <string name="api_settings_desc">查看服务器状态和管理访问令牌</string>
 </resources>

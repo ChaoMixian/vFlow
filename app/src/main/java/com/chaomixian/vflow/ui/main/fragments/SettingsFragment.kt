@@ -306,14 +306,14 @@ class SettingsFragment : Fragment() {
             if (isChecked) {
                 val started = apiService.startServer()
                 if (started) {
-                    requireContext().toast("远程API已启动")
+                    requireContext().toast(R.string.api_settings_toast_started)
                 } else {
-                    requireContext().toast("启动失败，端口可能被占用")
+                    requireContext().toast(R.string.api_settings_toast_start_failed)
                     apiSwitch.isChecked = false
                 }
             } else {
                 apiService.stopServer()
-                requireContext().toast("远程API已停止")
+                requireContext().toast(R.string.api_settings_toast_stopped)
             }
         }
 

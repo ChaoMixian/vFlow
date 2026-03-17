@@ -31,6 +31,7 @@ import android.widget.Toast
 import androidx.annotation.AttrRes
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlin.math.abs
@@ -59,10 +60,16 @@ class UiInspectorService : Service() {
         data class Property(val label: String, val value: String) : InspectorItem()
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        super.attachBaseContext(context)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Toast.makeText(this, "UI 检查器服务已启动", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.ui_inspector_service_started), Toast.LENGTH_SHORT).show()
         return START_NOT_STICKY
     }
 
@@ -76,7 +83,7 @@ class UiInspectorService : Service() {
             DebugLogger.d("UiInspector", "UI Inspector Created")
         } catch (e: Exception) {
             DebugLogger.e("UiInspector", "Error creating UI Inspector", e)
-            Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.ui_inspector_start_failed, e.message), Toast.LENGTH_LONG).show()
             stopSelf()
         }
     }
@@ -177,7 +184,7 @@ class UiInspectorService : Service() {
                     val service = ServiceStateBus.getAccessibilityService()
                     currentRootNode = service?.rootInActiveWindow
                     if (service == null) {
-                        Toast.makeText(this, "请先开启无障碍服务", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.ui_inspector_enable_accessibility), Toast.LENGTH_SHORT).show()
                     }
                     true
                 }
@@ -215,7 +222,7 @@ class UiInspectorService : Service() {
         try {
             windowManager.addView(floatIconView, iconParams)
         } catch (e: Exception) {
-            Toast.makeText(this, "无法显示悬浮窗，请检查权限", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.ui_inspector_float_permission_error), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -277,7 +284,7 @@ class UiInspectorService : Service() {
 
     private fun showNodeDetails() {
         val node = currentNodeInfo ?: run {
-            Toast.makeText(this, "未选中任何控件", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.ui_inspector_no_selection), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -288,9 +295,9 @@ class UiInspectorService : Service() {
         val detailsView = createDetailsListView(dialogContext, items)
 
         val dialog = MaterialAlertDialogBuilder(dialogContext)
-            .setTitle("控件属性")
+            .setTitle(getString(R.string.ui_inspector_properties_title))
             .setView(detailsView)
-            .setPositiveButton("复制全部") { _, _ ->
+            .setPositiveButton(getString(R.string.ui_inspector_copy_all)) { _, _ ->
                 val fullText = items.joinToString("\n") { item ->
                     when(item) {
                         is InspectorItem.Header -> "\n=== ${item.title} ==="
@@ -299,8 +306,8 @@ class UiInspectorService : Service() {
                 }
                 copyToClipboard("Full Details", fullText)
             }
-            .setNeutralButton("关闭服务") { _, _ -> stopSelf() }
-            .setNegativeButton("关闭", null)
+            .setNeutralButton(getString(R.string.ui_inspector_close_service)) { _, _ -> stopSelf() }
+            .setNegativeButton(getString(R.string.ui_inspector_close), null)
             .create()
 
         dialog.window?.setType(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -316,52 +323,52 @@ class UiInspectorService : Service() {
         val rect = Rect()
         node.getBoundsInScreen(rect)
 
-        val packageName = node.packageName?.toString() ?: "未知"
-        var appName = "未知"
+        val packageName = node.packageName?.toString() ?: getString(R.string.ui_inspector_unknown)
+        var appName = getString(R.string.ui_inspector_unknown)
         try {
             val pm = packageManager
             val info = pm.getApplicationInfo(packageName, 0)
             appName = pm.getApplicationLabel(info).toString()
         } catch (e: Exception) { }
 
-        val currentActivity = ServiceStateBus.lastWindowClassName ?: "未知"
+        val currentActivity = ServiceStateBus.lastWindowClassName ?: getString(R.string.ui_inspector_unknown)
 
-        list.add(InspectorItem.Header("基础信息"))
-        list.add(InspectorItem.Property("所在APP", "$appName ($packageName)"))
-        list.add(InspectorItem.Property("所在页面", currentActivity))
-        list.add(InspectorItem.Property("控件ID", node.viewIdResourceName ?: "无"))
-        list.add(InspectorItem.Property("控件文本", node.text?.toString() ?: ""))
-        list.add(InspectorItem.Property("控件类型", node.className?.toString() ?: "未知"))
-        list.add(InspectorItem.Property("GKD选择器", generateGkdSelector(node)))
+        list.add(InspectorItem.Header(getString(R.string.ui_inspector_basic_info)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_app), "$appName ($packageName)"))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_page), currentActivity))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_id), node.viewIdResourceName ?: getString(R.string.ui_inspector_none)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_text), node.text?.toString() ?: ""))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_type), node.className?.toString() ?: getString(R.string.ui_inspector_unknown)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_gkd_selector), generateGkdSelector(node)))
 
-        list.add(InspectorItem.Header("布局坐标"))
-        list.add(InspectorItem.Property("左上坐标", "${rect.left},${rect.top}"))
-        list.add(InspectorItem.Property("右下坐标", "${rect.right},${rect.bottom}"))
-        list.add(InspectorItem.Property("中心点", "${rect.centerX()},${rect.centerY()}"))
-        list.add(InspectorItem.Property("坐标 X", rect.left.toString()))
-        list.add(InspectorItem.Property("坐标 Y", rect.top.toString()))
-        list.add(InspectorItem.Property("控件长度(W)", rect.width().toString()))
-        list.add(InspectorItem.Property("控件宽度(H)", rect.height().toString()))
+        list.add(InspectorItem.Header(getString(R.string.ui_inspector_layout_coordinates)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_top_left), "${rect.left},${rect.top}"))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_bottom_right), "${rect.right},${rect.bottom}"))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_center_point), "${rect.centerX()},${rect.centerY()}"))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_coord_x), rect.left.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_coord_y), rect.top.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_width), rect.width().toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_height), rect.height().toString()))
 
-        list.add(InspectorItem.Header("层级与子节点"))
+        list.add(InspectorItem.Header(getString(R.string.ui_inspector_hierarchy)))
         val directChildCount = node.childCount
         val (totalChildCount, childTexts) = countAllChildrenAndText(node)
-        list.add(InspectorItem.Property("子控件数", directChildCount.toString()))
-        list.add(InspectorItem.Property("子控件总数", totalChildCount.toString()))
-        list.add(InspectorItem.Property("子控件文本", if(childTexts.length > 300) childTexts.take(300) + "..." else childTexts))
-        list.add(InspectorItem.Property("控件层级", calculateDepth(node).toString()))
-        list.add(InspectorItem.Property("父控件", node.parent?.className?.toString() ?: "无"))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_child_count), directChildCount.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_total_children), totalChildCount.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_child_text), if(childTexts.length > 300) childTexts.take(300) + "..." else childTexts))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_depth), calculateDepth(node).toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_parent), node.parent?.className?.toString() ?: getString(R.string.ui_inspector_none)))
 
-        list.add(InspectorItem.Header("状态属性"))
-        list.add(InspectorItem.Property("可点击 (Clickable)", node.isClickable.toString()))
-        list.add(InspectorItem.Property("可长按 (LongClickable)", node.isLongClickable.toString()))
-        list.add(InspectorItem.Property("可滑动 (Scrollable)", node.isScrollable.toString()))
-        list.add(InspectorItem.Property("可选中 (Checkable)", node.isCheckable.toString()))
-        list.add(InspectorItem.Property("已选中 (Checked)", node.isChecked.toString()))
-        list.add(InspectorItem.Property("可聚焦 (Focusable)", node.isFocusable.toString()))
-        list.add(InspectorItem.Property("已聚焦 (Focused)", node.isFocused.toString()))
-        list.add(InspectorItem.Property("可见性 (Visible)", if(node.isVisibleToUser) "可见" else "不可见"))
-        list.add(InspectorItem.Property("启用状态 (Enabled)", node.isEnabled.toString()))
+        list.add(InspectorItem.Header(getString(R.string.ui_inspector_state)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_clickable), node.isClickable.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_long_clickable), node.isLongClickable.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_scrollable), node.isScrollable.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_checkable), node.isCheckable.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_checked), node.isChecked.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_focusable), node.isFocusable.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_focused), node.isFocused.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_visibility), if(node.isVisibleToUser) getString(R.string.ui_inspector_visible) else getString(R.string.ui_inspector_invisible)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_enabled_status), node.isEnabled.toString()))
 
         return list
     }
@@ -468,7 +475,7 @@ class UiInspectorService : Service() {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText(label, text)
         clipboard.setPrimaryClip(clip)
-        Toast.makeText(this, "已复制 $label", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.ui_inspector_copied, label), Toast.LENGTH_SHORT).show()
     }
 
     private fun countAllChildrenAndText(node: AccessibilityNodeInfo): Pair<Int, String> {
@@ -632,6 +639,6 @@ class UiInspectorService : Service() {
             if (floatIconView != null) windowManager.removeView(floatIconView)
             if (selectionFrameView != null) windowManager.removeView(selectionFrameView)
         } catch (e: Exception) { }
-        Toast.makeText(this, "UI 检查器已关闭", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.ui_inspector_service_closed), Toast.LENGTH_SHORT).show()
     }
 }

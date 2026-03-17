@@ -13,6 +13,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.settings.PermissionGuardianActivity
 import kotlinx.coroutines.CoroutineScope
@@ -81,6 +82,12 @@ class PermissionGuardianService : Service() {
             startGuard()
         }
         return START_STICKY // 服务被杀掉后自动重启
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        super.attachBaseContext(context)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
