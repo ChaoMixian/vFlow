@@ -141,8 +141,9 @@ class ClickModule : BaseModule() {
                 performGestureClick(service, target.x, target.y, onProgress)
             }
             is VString -> {
+                // 先解析字符串中的变量引用
+                val coordStr = com.chaomixian.vflow.core.execution.VariableResolver.resolve(target.raw, context)
                 // 尝试解析为坐标字符串 (格式: "x,y" 或 "x, y")
-                val coordStr = target.raw
                 val parts = coordStr.split(",")
                 if (parts.size == 2) {
                     val x = parts[0].trim().toIntOrNull()
@@ -160,8 +161,9 @@ class ClickModule : BaseModule() {
                 }
             }
             else -> {
+                // 先解析字符串中的变量引用
+                val coordStr = com.chaomixian.vflow.core.execution.VariableResolver.resolve(target.asString(), context)
                 // 尝试解析为坐标字符串
-                val coordStr = target.asString()
                 val parts = coordStr.split(",")
                 if (parts.size == 2) {
                     val x = parts[0].trim().toIntOrNull()

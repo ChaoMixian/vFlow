@@ -168,10 +168,14 @@ class ScreenOperationModule : BaseModule() {
             }
             is VString -> {
                 val str = target.asString()
-                parseStringToPoint(str)
+                // 先解析字符串中的变量引用
+                val resolvedStr = com.chaomixian.vflow.core.execution.VariableResolver.resolve(str, context)
+                parseStringToPoint(resolvedStr)
             }
             is String -> {
-                parseStringToPoint(target)
+                // 先解析字符串中的变量引用
+                val resolvedStr = com.chaomixian.vflow.core.execution.VariableResolver.resolve(target, context)
+                parseStringToPoint(resolvedStr)
             }
             else -> null
         }

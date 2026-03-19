@@ -305,7 +305,9 @@ class CoreScreenOperationModule : BaseModule() {
         if (value is VString) {
             val coordStr = value.asString()
             DebugLogger.d(TAG, "解析坐标 $paramKey: VString('$coordStr')")
-            return parseStringToCoordinate(coordStr)
+            // 先解析字符串中的变量引用
+            val resolvedStr = com.chaomixian.vflow.core.execution.VariableResolver.resolve(coordStr, context)
+            return parseStringToCoordinate(resolvedStr)
         }
 
         val coordStr = value.asString()
