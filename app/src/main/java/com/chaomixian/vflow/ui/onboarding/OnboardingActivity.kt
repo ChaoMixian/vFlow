@@ -426,6 +426,10 @@ fun PermissionsPage(onNext: () -> Unit) {
     val context = LocalContext.current
     var permissionsGranted by remember { mutableStateOf(false) }
 
+    // 连续点击跳过逻辑
+    var clickCount by remember { mutableStateOf(0) }
+    var lastClickTime by remember { mutableStateOf(0L) }
+
     // 定义需要检查和申请的权限列表（不允许跳过）
     val requiredPermissions = listOf(
         PermissionManager.NOTIFICATIONS,
@@ -452,7 +456,28 @@ fun PermissionsPage(onNext: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(64.dp))
-        Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(
+            Icons.Rounded.Shield,
+            null,
+            modifier = Modifier
+                .size(64.dp)
+                .clickable {
+                    val currentTime = System.currentTimeMillis()
+                    // 如果距离上次点击超过2秒，重置计数器
+                    if (currentTime - lastClickTime > 2000) {
+                        clickCount = 1
+                    } else {
+                        clickCount++
+                    }
+                    lastClickTime = currentTime
+
+                    // 点击5次后跳过
+                    if (clickCount >= 5) {
+                        onNext()
+                    }
+                },
+            tint = MaterialTheme.colorScheme.primary
+        )
         Spacer(modifier = Modifier.height(16.dp))
         Text(stringResource(R.string.onboarding_permissions_required), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.onboarding_permissions_desc2), color = MaterialTheme.colorScheme.onSurfaceVariant)
