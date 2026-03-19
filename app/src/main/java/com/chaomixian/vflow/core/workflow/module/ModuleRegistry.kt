@@ -86,6 +86,7 @@ object ModuleRegistry {
         register(BackTapTriggerModule(), context)
         register(TimeTriggerModule(), context)
         register(BatteryTriggerModule(), context)
+        register(PowerTriggerModule(), context)
         register(WifiTriggerModule(), context)
         register(BluetoothTriggerModule(), context)
         register(SmsTriggerModule(), context)

@@ -289,6 +289,12 @@
     <string name="msg_vflow_trigger_battery_triggered">电量任务已触发</string>
     <string name="option_vflow_trigger_battery_below">低于</string>
     <string name="option_vflow_trigger_battery_above">高于</string>
+    <string name="module_vflow_trigger_power_name">电源触发</string>
+    <string name="module_vflow_trigger_power_desc">当电源连接或断开时触发工作流</string>
+    <string name="param_vflow_trigger_power_state_name">触发条件</string>
+    <string name="summary_vflow_trigger_power_prefix">电源</string>
+    <string name="option_vflow_trigger_power_connected">已连接</string>
+    <string name="option_vflow_trigger_power_disconnected">已断开</string>
     <string name="module_vflow_trigger_bluetooth_name">蓝牙触发器</string>
     <string name="module_vflow_trigger_bluetooth_desc">当蓝牙状态或设备连接变化时触发</string>
     <string name="param_vflow_trigger_bluetooth_trigger_type_name">触发类型</string>

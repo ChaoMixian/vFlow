@@ -332,6 +332,14 @@
     <string name="option_vflow_trigger_battery_below">Below</string>
     <string name="option_vflow_trigger_battery_above">Above</string>
 
+    <!-- vflow.trigger.power - Power Trigger -->
+    <string name="module_vflow_trigger_power_name">Power Trigger</string>
+    <string name="module_vflow_trigger_power_desc">Trigger workflow when power is connected or disconnected</string>
+    <string name="param_vflow_trigger_power_state_name">Trigger Condition</string>
+    <string name="summary_vflow_trigger_power_prefix">Power</string>
+    <string name="option_vflow_trigger_power_connected">Connected</string>
+    <string name="option_vflow_trigger_power_disconnected">Disconnected</string>
+
     <!-- vflow.trigger.bluetooth - Bluetooth Trigger -->
     <string name="module_vflow_trigger_bluetooth_name">Bluetooth Trigger</string>
     <string name="module_vflow_trigger_bluetooth_desc">Trigger when Bluetooth state or device connection changes</string>
