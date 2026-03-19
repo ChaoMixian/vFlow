@@ -101,9 +101,11 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
             val localizedModules = LinkedHashMap<String, List<ActionModule>>()
 
             // 加载最近使用的模块，并作为第一个分类插入
-            val recentModules = RecentModulesManager.getRecentModules(requireContext())
-            if (recentModules.isNotEmpty()) {
-                localizedModules[""] = recentModules
+            if (!isTriggerPicker) {
+                val recentModules = RecentModulesManager.getRecentModules(requireContext())
+                if (recentModules.isNotEmpty()) {
+                    localizedModules[""] = recentModules
+                }
             }
 
             // 将其他分类名转换为本地化名称并添加
