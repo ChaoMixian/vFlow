@@ -12,6 +12,9 @@
 
 **vFlow** is a powerful and highly extensible automation tool designed for the Android platform. It allows you to freely combine a series of "action modules" into powerful "workflows" through a graphical interface, automating various daily and repetitive screen operation tasks.
 
+> [!WARNING]
+> **Disclaimer**: By using this software, you acknowledge that you have fully understood and accepted all terms. This software involves high-risk features such as automated operations and Root privilege execution, which may cause device damage, data loss, account bans, etc. **All risks are borne by the user. The developer assumes no liability.** Please read the [Full Disclaimer](DISCLAIMER.md) before use.
+
 ## ✨ Overview
 
 **vFlow's core design philosophy** is to decompose complex automation logic into independent, reusable, and easy-to-understand modules. Whether it's a simple "daily check-in" or an automated testing process with complex conditional judgments and loops, vFlow aims to provide an intuitive, flexible, and powerful platform.
@@ -119,8 +122,12 @@ This project is licensed under the [GPL License](LICENSE).
 
 vFlow is still developing and lags significantly in functionality compared to mature software. Currently, we are operating on a voluntary basis and **do not accept sponsorships**. Thank you.
 
-Sponsor List (not through the vFlow project, in chronological order):
+<details>
+<summary>Sponsor List (not through the vFlow project, in chronological order)</summary>
+
 ```
 鲨鱼辣椒    RMB 18.88   2026/01/29
 罗密欧的沉默  RMB 26.66   2026/02/10
 ```
+
+</details>
