@@ -1,6 +1,6 @@
 # vFlow - 强大的 Android 可视化工作流自动化工具
-
-<div align="center">
+[English](README_EN.md) | 简体中文
+<div>
 
   <a href="https://discord.gg/WkuUcSWB" target="_blank">
     <img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord"/>
@@ -9,7 +9,6 @@
     <img src="https://img.shields.io/badge/Join%20QQ%20Group-%230366CC?style=for-the-badge&logo=qq&logoColor=white" alt="Join QQ Group"/>
   </a>
 
-[English](README_EN.md) | 简体中文
 </div>
 
 [![Latest Release](https://img.shields.io/github/v/release/ChaoMixian/vFlow?display_name=tag&style=flat-square)](https://github.com/ChaoMixian/vFlow/releases/latest)
