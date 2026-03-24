@@ -812,6 +812,7 @@
     <string name="ui_inspector_app_package">应用包名</string>
     <string name="ui_inspector_app_name">应用名称</string>
     <string name="ui_inspector_layout_coordinates">布局坐标</string>
+    <string name="ui_inspector_current_coordinate">当前坐标</string>
     <string name="ui_inspector_top_left">左上坐标</string>
     <string name="ui_inspector_bottom_right">右下坐标</string>
     <string name="ui_inspector_center_point">中心点</string>

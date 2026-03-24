@@ -812,6 +812,7 @@
     <string name="ui_inspector_app_package">App Package</string>
     <string name="ui_inspector_app_name">App Name</string>
     <string name="ui_inspector_layout_coordinates">Layout Coordinates</string>
+    <string name="ui_inspector_current_coordinate">Current Coordinate</string>
     <string name="ui_inspector_top_left">Top-Left</string>
     <string name="ui_inspector_bottom_right">Bottom-Right</string>
     <string name="ui_inspector_center_point">Center Point</string>

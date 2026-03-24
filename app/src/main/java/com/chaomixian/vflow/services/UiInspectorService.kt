@@ -35,17 +35,25 @@ import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 /**
  * UI 检查器服务
  */
 class UiInspectorService : Service() {
+    companion object {
+        private const val INSPECT_THROTTLE_MS = 32L
+        private const val COORD_LABEL_MARGIN_DP = 8
+    }
 
     private lateinit var windowManager: WindowManager
     private var floatIconView: ImageView? = null
+    private var coordinateLabelView: TextView? = null
     private var selectionFrameView: View? = null
 
     private lateinit var iconParams: WindowManager.LayoutParams
+    private lateinit var coordinateLabelParams: WindowManager.LayoutParams
     private lateinit var frameParams: WindowManager.LayoutParams
 
     private var currentNodeInfo: AccessibilityNodeInfo? = null
@@ -53,6 +61,15 @@ class UiInspectorService : Service() {
 
     private var screenWidth = 0
     private var screenHeight = 0
+    private var currentProbeX = 0
+    private var currentProbeY = 0
+    private var pendingInspectX = 0
+    private var pendingInspectY = 0
+    private var isInspectScheduled = false
+    private val inspectRunnable = Runnable {
+        isInspectScheduled = false
+        performNodeInspection(pendingInspectX, pendingInspectY)
+    }
 
     // 用于列表展示的数据结构
     private sealed class InspectorItem {
@@ -134,16 +151,62 @@ class UiInspectorService : Service() {
         // 使用 ThemeUtils 确保能获取到 Material 3 动态取色
         val themedContext = ThemeUtils.createThemedContext(this)
 
+        val containerColor = resolveThemeColor(themedContext, com.google.android.material.R.attr.colorPrimaryContainer)
+        val iconColor = resolveThemeColor(themedContext, com.google.android.material.R.attr.colorOnPrimaryContainer)
+        val surfaceColor = resolveThemeColor(themedContext, com.google.android.material.R.attr.colorSurface)
+        val onSurfaceColor = resolveThemeColor(themedContext, com.google.android.material.R.attr.colorOnSurface)
+
+        coordinateLabelView = TextView(themedContext).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            typeface = Typeface.MONOSPACE
+            setTextColor(onSurfaceColor)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            maxLines = 1
+            setPadding(dp(8), dp(3), dp(8), dp(3))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(12).toFloat()
+                setColor(surfaceColor)
+                setStroke(dp(1), containerColor)
+            }
+            elevation = 22f
+
+            val maxCoordLabel = "$screenWidth,$screenHeight"
+            minWidth = ceil(paint.measureText(maxCoordLabel)).toInt() + paddingLeft + paddingRight
+
+            isClickable = true
+            isFocusable = false
+            setOnClickListener {
+                copyToClipboard(
+                    getString(R.string.ui_inspector_current_coordinate),
+                    "$currentProbeX,$currentProbeY"
+                )
+            }
+        }
+
+        coordinateLabelParams = WindowManager.LayoutParams().apply {
+            type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_PHONE
+            }
+            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            format = PixelFormat.TRANSLUCENT
+            width = WindowManager.LayoutParams.WRAP_CONTENT
+            height = WindowManager.LayoutParams.WRAP_CONTENT
+            gravity = Gravity.TOP or Gravity.START
+            x = 100
+            y = 400
+        }
+
         floatIconView = ImageView(themedContext).apply {
             setImageResource(R.drawable.rounded_architecture_24)
             setBackgroundResource(R.drawable.bg_widget_rounded)
-            val containerColor = resolveThemeColor(themedContext, com.google.android.material.R.attr.colorPrimaryContainer)
-            val iconColor = resolveThemeColor(themedContext, com.google.android.material.R.attr.colorOnPrimaryContainer)
-
             background.setTint(containerColor)
             setColorFilter(iconColor)
-
-            setPadding(25, 25, 25, 25)
+            setPadding(dp(13), dp(13), dp(13), dp(13))
             elevation = 20f
         }
 
@@ -156,8 +219,8 @@ class UiInspectorService : Service() {
             flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
             format = PixelFormat.TRANSLUCENT
-            width = 150
-            height = 150
+            width = WindowManager.LayoutParams.WRAP_CONTENT
+            height = WindowManager.LayoutParams.WRAP_CONTENT
             gravity = Gravity.TOP or Gravity.START
             x = 100
             y = 400
@@ -171,7 +234,7 @@ class UiInspectorService : Service() {
         var downTime = 0L
         val LONG_PRESS_TIMEOUT = 500L // 长按阈值（毫秒）
 
-        floatIconView?.setOnTouchListener { view, event ->
+        floatIconView?.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     initialX = iconParams.x
@@ -200,16 +263,18 @@ class UiInspectorService : Service() {
                     iconParams.y = initialY + dy
                     windowManager.updateViewLayout(floatIconView, iconParams)
 
-                    inspectNodeAt(event.rawX.toInt(), event.rawY.toInt())
+                    scheduleInspectionAtCurrentIconCenter()
                     true
                 }
                 MotionEvent.ACTION_UP -> {
+                    flushPendingInspection()
                     val pressDuration = System.currentTimeMillis() - downTime
                     if (!isDragging && pressDuration >= LONG_PRESS_TIMEOUT) {
                         // 长按：关闭服务
                         stopSelf()
                     } else if (!isDragging) {
                         // 短按：显示详情
+                        inspectCurrentIconCenter()
                         showNodeDetails()
                     }
                     currentRootNode = null
@@ -220,13 +285,73 @@ class UiInspectorService : Service() {
         }
 
         try {
+            windowManager.addView(coordinateLabelView, coordinateLabelParams)
             windowManager.addView(floatIconView, iconParams)
+            floatIconView?.post { refreshCurrentProbeCoordinate() }
         } catch (e: Exception) {
             Toast.makeText(this, getString(R.string.ui_inspector_float_permission_error), Toast.LENGTH_LONG).show()
         }
     }
 
+    private fun inspectCurrentIconCenter() {
+        if (!refreshCurrentProbeCoordinate()) return
+        inspectNodeAt(currentProbeX, currentProbeY)
+    }
+
+    private fun scheduleInspectionAtCurrentIconCenter() {
+        if (!refreshCurrentProbeCoordinate()) return
+        pendingInspectX = currentProbeX
+        pendingInspectY = currentProbeY
+        if (isInspectScheduled) return
+        isInspectScheduled = true
+        floatIconView?.postDelayed(inspectRunnable, INSPECT_THROTTLE_MS)
+    }
+
+    private fun flushPendingInspection() {
+        floatIconView?.removeCallbacks(inspectRunnable)
+        if (isInspectScheduled) {
+            isInspectScheduled = false
+            performNodeInspection(pendingInspectX, pendingInspectY)
+        }
+    }
+
+    private fun refreshCurrentProbeCoordinate(): Boolean {
+        val iconView = floatIconView ?: return false
+        if (iconView.width == 0 || iconView.height == 0) return false
+
+        currentProbeX = iconParams.x + iconView.width / 2
+        currentProbeY = iconParams.y + iconView.height / 2
+        updateCurrentCoordinateLabel(currentProbeX, currentProbeY)
+        return true
+    }
+
+    private fun updateCurrentCoordinateLabel(x: Int, y: Int) {
+        val newLabel = "$x,$y"
+        val labelView = coordinateLabelView ?: return
+
+        if (labelView.text != newLabel) {
+            labelView.text = newLabel
+        }
+
+        val labelWidth = labelView.width
+        val labelHeight = labelView.height
+        if (labelWidth <= 0 || labelHeight <= 0) {
+            labelView.post { updateCurrentCoordinateLabel(x, y) }
+            return
+        }
+
+        coordinateLabelParams.x = x - labelWidth / 2
+        coordinateLabelParams.y = iconParams.y - labelHeight - dp(COORD_LABEL_MARGIN_DP)
+        try {
+            windowManager.updateViewLayout(labelView, coordinateLabelParams)
+        } catch (_: Exception) { }
+    }
+
     private fun inspectNodeAt(x: Int, y: Int) {
+        performNodeInspection(x, y)
+    }
+
+    private fun performNodeInspection(x: Int, y: Int) {
         val root = currentRootNode ?: return
         val targetNode = findSmallestNodeAtPoint(root, x, y)
 
@@ -322,6 +447,7 @@ class UiInspectorService : Service() {
         val list = mutableListOf<InspectorItem>()
         val rect = Rect()
         node.getBoundsInScreen(rect)
+        refreshCurrentProbeCoordinate()
 
         val packageName = node.packageName?.toString() ?: getString(R.string.ui_inspector_unknown)
         var appName = getString(R.string.ui_inspector_unknown)
@@ -342,6 +468,7 @@ class UiInspectorService : Service() {
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_gkd_selector), generateGkdSelector(node)))
 
         list.add(InspectorItem.Header(getString(R.string.ui_inspector_layout_coordinates)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_coordinate), "$currentProbeX,$currentProbeY"))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_top_left), "${rect.left},${rect.top}"))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_bottom_right), "${rect.right},${rect.bottom}"))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_center_point), "${rect.centerX()},${rect.centerY()}"))
@@ -380,6 +507,14 @@ class UiInspectorService : Service() {
         val typedValue = TypedValue()
         context.theme.resolveAttribute(attrRes, typedValue, true)
         return typedValue.data
+    }
+
+    private fun dp(value: Int): Int {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            value.toFloat(),
+            resources.displayMetrics
+        ).roundToInt()
     }
 
     private fun createDetailsListView(context: Context, items: List<InspectorItem>): View {
@@ -636,6 +771,8 @@ class UiInspectorService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         try {
+            floatIconView?.removeCallbacks(inspectRunnable)
+            if (coordinateLabelView != null) windowManager.removeView(coordinateLabelView)
             if (floatIconView != null) windowManager.removeView(floatIconView)
             if (selectionFrameView != null) windowManager.removeView(selectionFrameView)
         } catch (e: Exception) { }
