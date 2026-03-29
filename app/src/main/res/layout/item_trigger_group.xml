@@ -20,7 +20,7 @@
             android:id="@+id/text_trigger_group_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="#0 触发器"
+            android:text="@string/workflow_editor_trigger_group_title"
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:textStyle="bold" />
 
@@ -37,7 +37,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="添加触发器"
+            android:text="@string/workflow_editor_add_trigger"
             app:icon="@drawable/ic_add" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

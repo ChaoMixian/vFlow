@@ -235,7 +235,7 @@ class ActionStepAdapter(
         private val addButton: Button = itemView.findViewById(R.id.button_add_trigger)
 
         fun bind(triggerSteps: List<ActionStep>, allSteps: List<ActionStep>) {
-            titleView.text = "#0 触发器"
+            titleView.text = itemView.context.getString(R.string.workflow_editor_trigger_group_title)
 
             triggerContainer.removeAllViews()
             val inflater = LayoutInflater.from(itemView.context)

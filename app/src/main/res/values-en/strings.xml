@@ -78,6 +78,8 @@
     <string name="common_confirm">Confirm</string>
     <string name="save">Save</string>
     <string name="workflow_editor_add_action">Add Action</string>
+    <string name="workflow_editor_add_trigger">Add Trigger</string>
+    <string name="workflow_editor_trigger_group_title">#0 Triggers</string>
     <string name="picker_select_trigger">Select a trigger</string>
     <string name="picker_select_action">Select an action</string>
     <string name="picker_select_date">Select Date</string>
