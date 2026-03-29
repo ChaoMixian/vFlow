@@ -16,6 +16,7 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
  * 提取自旧的PillRenderer，职责更加单一明确。
  */
 object PillVariableResolver {
+    private const val TRIGGER_MODULE_PREFIX = "vflow.trigger."
 
     /**
      * 解析后的变量信息
@@ -78,7 +79,7 @@ object PillVariableResolver {
 
         // 获取步骤序号（用于标识来源）
         val stepIndex = varInfo.sourceStepId?.let { stepId ->
-            allSteps.indexOfFirst { it.id == stepId }
+            resolveDisplayStepIndex(stepId, allSteps)
         } ?: -1
 
         // 构建显示名称（使用本地化属性名）
@@ -91,6 +92,18 @@ object PillVariableResolver {
         }
 
         return ResolvedInfo(displayName, color, propertyName)
+    }
+
+    private fun resolveDisplayStepIndex(stepId: String, allSteps: List<ActionStep>): Int {
+        val sourceStepIndex = allSteps.indexOfFirst { it.id == stepId }
+        if (sourceStepIndex < 0) return -1
+
+        if (allSteps[sourceStepIndex].moduleId.startsWith(TRIGGER_MODULE_PREFIX)) {
+            return 0
+        }
+
+        val triggerCount = allSteps.takeWhile { it.moduleId.startsWith(TRIGGER_MODULE_PREFIX) }.size
+        return sourceStepIndex - triggerCount + 1
     }
 
     /**

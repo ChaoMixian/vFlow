@@ -848,7 +848,7 @@ class WorkflowEditorActivity : BaseActivity() {
             }
 
             if (outputs.isNotEmpty()) {
-                val groupName = "#$i ${module.metadata.getLocalizedName(this)}"
+                val groupName = buildMagicVariableGroupTitle(i, module.metadata.getLocalizedName(this))
                 val items = outputs.map { outputDef ->
                     MagicVariableItem(
                         variableReference = "{{${step.id}.${outputDef.id}}}",
@@ -870,7 +870,7 @@ class WorkflowEditorActivity : BaseActivity() {
             val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId) as? LoopModule
             if (loopModule != null) {
                 val loopIndex = actionSteps.indexOf(enclosingLoopStep)
-                val groupName = "#$loopIndex ${loopModule.metadata.getLocalizedName(this)}"
+                val groupName = buildMagicVariableGroupTitle(triggerSteps.size + loopIndex, loopModule.metadata.getLocalizedName(this))
                 val items = loopModule.getDynamicOutputs(enclosingLoopStep, allSteps).map { outputDef ->
                     MagicVariableItem(
                         variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
@@ -888,7 +888,7 @@ class WorkflowEditorActivity : BaseActivity() {
             val forEachModule = ModuleRegistry.getModule(enclosingForEachStep.moduleId) as? ForEachModule
             if (forEachModule != null) {
                 val forEachIndex = actionSteps.indexOf(enclosingForEachStep)
-                val groupName = "#$forEachIndex ${forEachModule.metadata.getLocalizedName(this)}"
+                val groupName = buildMagicVariableGroupTitle(triggerSteps.size + forEachIndex, forEachModule.metadata.getLocalizedName(this))
                 val items = forEachModule.getDynamicOutputs(enclosingForEachStep, allSteps).map { outputDef ->
                     // 使用 listElementType 作为类型描述（如果有的话）
                     val typeDescription = when {
@@ -925,6 +925,15 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
         picker.show(supportFragmentManager, "MagicVariablePicker")
+    }
+
+    private fun buildMagicVariableGroupTitle(stepPositionInAllSteps: Int, moduleName: String): String {
+        val displayIndex = if (stepPositionInAllSteps < triggerSteps.size) {
+            0
+        } else {
+            stepPositionInAllSteps - triggerSteps.size + 1
+        }
+        return "#$displayIndex $moduleName"
     }
 
 
