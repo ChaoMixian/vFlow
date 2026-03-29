@@ -139,9 +139,7 @@ class HomeFragment : Fragment() {
     private fun updateStatistics() {
         val allWorkflows = workflowManager.getAllWorkflows()
         val totalCount = allWorkflows.size
-        val autoWorkflows = allWorkflows.filter {
-            it.steps.firstOrNull()?.moduleId != ManualTriggerModule().id
-        }
+        val autoWorkflows = allWorkflows.filter { it.hasAutoTriggers() }
         val autoCount = autoWorkflows.size
         val enabledAutoCount = autoWorkflows.count { it.isEnabled }
 
@@ -213,7 +211,7 @@ class HomeFragment : Fragment() {
     private fun updatePermissionHealthCheck() {
         val allWorkflows = workflowManager.getAllWorkflows()
         val requiredPermissions = allWorkflows
-            .flatMap { it.steps }
+            .flatMap { it.allSteps }
             .mapNotNull { step ->
                 ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step) }
             .flatten()
@@ -305,7 +303,7 @@ class HomeFragment : Fragment() {
 
     private fun updateQuickExecuteCard() {
         val favoritedManualWorkflows = workflowManager.getAllWorkflows()
-            .filter { it.isFavorite && it.steps.firstOrNull()?.moduleId == ManualTriggerModule().id }
+            .filter { it.isFavorite && it.hasManualTrigger() }
         quickExecuteContainer.removeAllViews()
         quickExecuteViews.clear()
 
@@ -352,7 +350,11 @@ class HomeFragment : Fragment() {
             }
         }
         requireContext().toast(getString(R.string.home_starting_execution, workflow.name))
-        WorkflowExecutor.execute(workflow, requireContext())
+        WorkflowExecutor.execute(
+            workflow = workflow,
+            context = requireContext(),
+            triggerStepId = workflow.manualTrigger()?.id
+        )
     }
 
     private fun handleQuickExecuteClick(workflow: Workflow) {

@@ -7,7 +7,6 @@ import android.service.quicksettings.TileService
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.TileManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
-import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.ui.main.MainActivity
 
 /**
@@ -80,7 +79,7 @@ abstract class BaseWorkflowTileService : TileService() {
         }
 
         // 允许执行禁用的工作流（通过Tile强制执行）
-        val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
+        val isManualTrigger = workflow.hasManualTrigger()
         if (!isManualTrigger) {
             android.widget.Toast.makeText(
                 applicationContext,

@@ -1,8 +1,5 @@
 package com.chaomixian.vflow.api.model
 
-/**
- * VObject DTO - 用于API传输的VObject表示
- */
 data class VObjectDto(
     val type: String,
     val value: Any?
@@ -23,9 +20,6 @@ data class VObjectDto(
     }
 }
 
-/**
- * 工作流步骤 DTO
- */
 data class ActionStepDto(
     val id: String,
     val moduleId: String,
@@ -33,18 +27,12 @@ data class ActionStepDto(
     val parameters: Map<String, VObjectDto>
 )
 
-/**
- * 简单工作流步骤DTO - 接受普通JSON对象
- */
 data class SimpleActionStepDto(
     val id: String,
     val moduleId: String,
     val indentationLevel: Int? = 0,
     val parameters: Map<String, Any?>? = emptyMap()
 ) {
-    /**
-     * 转换为ActionStep
-     */
     fun toActionStep(): com.chaomixian.vflow.core.workflow.model.ActionStep {
         return com.chaomixian.vflow.core.workflow.model.ActionStep(
             id = id,
@@ -55,23 +43,19 @@ data class SimpleActionStepDto(
     }
 }
 
-/**
- * 简单创建工作流请求 - 接受普通JSON对象
- */
 data class SimpleCreateWorkflowRequest(
     val name: String,
     val description: String? = "",
     val folderId: String? = null,
+    val triggers: List<SimpleActionStepDto>? = emptyList(),
     val steps: List<SimpleActionStepDto>? = emptyList(),
+    val triggerConfig: Map<String, Any?>? = null,
+    val triggerConfigs: List<Map<String, Any?>>? = null,
     val isEnabled: Boolean? = false,
     val tags: List<String>? = emptyList(),
-    val maxExecutionTime: Int? = null,
-    val triggerConfig: Map<String, Any?>? = null
+    val maxExecutionTime: Int? = null
 )
 
-/**
- * 工作流摘要
- */
 data class WorkflowSummary(
     val id: String,
     val name: String,
@@ -81,15 +65,12 @@ data class WorkflowSummary(
     val folderId: String?,
     val order: Int,
     val stepCount: Int,
+    val triggerCount: Int,
     val modifiedAt: Long,
     val tags: List<String>,
-    val version: String,
-    val triggerConfig: Map<String, Any?>?
+    val version: String
 )
 
-/**
- * 工作流元数据
- */
 data class WorkflowMetadata(
     val author: String,
     val homepage: String,
@@ -98,9 +79,6 @@ data class WorkflowMetadata(
     val description: String
 )
 
-/**
- * 工作流详情
- */
 data class WorkflowDetail(
     val id: String,
     val name: String,
@@ -109,31 +87,27 @@ data class WorkflowDetail(
     val isFavorite: Boolean,
     val folderId: String?,
     val order: Int,
+    val triggers: List<ActionStepDto>,
     val steps: List<ActionStepDto>,
-    val triggerConfig: Map<String, Any?>?,
     val modifiedAt: Long,
     val version: String,
     val maxExecutionTime: Int?,
     val metadata: WorkflowMetadata
 )
 
-/**
- * 创建工作流请求
- */
 data class CreateWorkflowRequest(
     val name: String,
     val description: String = "",
     val folderId: String? = null,
+    val triggers: List<ActionStepDto> = emptyList(),
     val steps: List<ActionStepDto> = emptyList(),
+    val triggerConfig: Map<String, Any?>? = null,
+    val triggerConfigs: List<Map<String, Any?>>? = null,
     val isEnabled: Boolean = false,
     val tags: List<String> = emptyList(),
-    val maxExecutionTime: Int? = null,
-    val triggerConfig: Map<String, Any?>? = null
+    val maxExecutionTime: Int? = null
 )
 
-/**
- * 更新工作流请求
- */
 data class UpdateWorkflowRequest(
     val name: String? = null,
     val description: String? = null,
@@ -141,23 +115,17 @@ data class UpdateWorkflowRequest(
     val isFavorite: Boolean? = null,
     val folderId: String? = null,
     val order: Int? = null,
+    val triggers: List<ActionStepDto>? = null,
     val steps: List<ActionStepDto>? = null,
-    val triggerConfig: Map<String, Any?>? = null,
     val maxExecutionTime: Int? = null,
     val tags: List<String>? = null
 )
 
-/**
- * 复制工作流请求
- */
 data class DuplicateWorkflowRequest(
     val newName: String? = null,
     val targetFolderId: String? = null
 )
 
-/**
- * 批量操作请求
- */
 data class BatchWorkflowRequest(
     val action: BatchAction,
     val workflowIds: List<String>,
@@ -171,9 +139,6 @@ enum class BatchAction {
     MOVE
 }
 
-/**
- * 批量操作响应
- */
 data class BatchOperationResponse(
     val succeeded: List<String>,
     val failed: List<String>,

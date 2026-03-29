@@ -39,15 +39,17 @@ object WorkflowAiGenerator {
             2. `id`: Must be a unique UUID string.
             3. `name`: A descriptive name for the workflow (in Chinese).
             4. `isEnabled`: Boolean, usually true.
-            5. `steps`: An array of `ActionStep` objects.
+            5. `triggers`: An array of trigger `ActionStep` objects.
+            6. `steps`: An array of action `ActionStep` objects.
             
-            ### CRITICAL RULE: TRIGGER FIRST
-            1. **The first step (index 0) in the `steps` array MUST be a module from the '触发器' (Trigger) category.**
-            2. If the user's requirement specifies a trigger (e.g., "when receiving SMS", "at 8:00 AM"), use the corresponding trigger module.
-            3. If the user's requirement DOES NOT specify a trigger (e.g., "click this button", "extract text"), **YOU MUST USE 'vflow.trigger.manual' (手动触发) as the first step.**
+            ### CRITICAL RULE: SEPARATE TRIGGERS AND ACTIONS
+            1. `triggers` MUST contain only modules from the '触发器' category.
+            2. `steps` MUST NOT contain any trigger module.
+            3. If the user's requirement specifies a trigger (e.g., "when receiving SMS", "at 8:00 AM"), put the corresponding trigger module in `triggers`.
+            4. If the user's requirement DOES NOT specify a trigger, you MUST add `vflow.trigger.manual` to `triggers`.
             
             ### ActionStep Structure
-            Each step in `steps` array has:
+            Each item in `triggers` or `steps` has:
             - `id`: A unique UUID string (Critical: used for variable referencing).
             - `moduleId`: The exact ID of the module (see Module Definitions below).
             - `parameters`: A dictionary of input parameters.

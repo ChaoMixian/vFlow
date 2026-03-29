@@ -110,7 +110,11 @@ class ExecutionManager(
 
         try {
             // 执行工作流
-            WorkflowExecutor.execute(workflow, context, null)
+            WorkflowExecutor.execute(
+                workflow = workflow,
+                context = context,
+                triggerStepId = workflow.manualTrigger()?.id
+            )
 
             // 简化处理 - 假设执行成功
             val now = System.currentTimeMillis()

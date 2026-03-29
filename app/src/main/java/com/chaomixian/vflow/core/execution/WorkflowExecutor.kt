@@ -113,7 +113,12 @@ object WorkflowExecutor {
      * @param context Android 上下文。
      * @param triggerData (可选) 触发器传入的外部数据。
      */
-    fun execute(workflow: Workflow, context: Context, triggerData: Parcelable? = null) {
+    fun execute(
+        workflow: Workflow,
+        context: Context,
+        triggerData: Parcelable? = null,
+        triggerStepId: String? = null
+    ) {
         // 如果工作流已在运行，则不允许重复执行
         if (isRunning(workflow.id)) {
             // 这里无法直接使用本地 DebugLogger 记录到日志，因为不在协程上下文中
@@ -175,6 +180,7 @@ object WorkflowExecutor {
                     if (maxExecutionTime != null && maxExecutionTime > 0) {
                         try {
                             withTimeout(maxExecutionTime * 1000L) {
+                                seedTriggerOutputs(workflow, initialContext, triggerStepId)
                                 executeWorkflowInternal(workflow, initialContext)
                             }
                         } catch (e: TimeoutCancellationException) {
@@ -196,6 +202,7 @@ object WorkflowExecutor {
                             }
                         }
                     } else {
+                        seedTriggerOutputs(workflow, initialContext, triggerStepId)
                         executeWorkflowInternal(workflow, initialContext)
                     }
 
@@ -280,6 +287,8 @@ object WorkflowExecutor {
             // 子工作流共享父工作流的 namedVariables，这样命名变量会自动传递
         )
 
+        seedTriggerOutputs(workflow, subWorkflowContext, workflow.manualTrigger()?.id)
+
         // 调用内部执行循环，获取返回值
         val returnValue = executeWorkflowInternal(workflow, subWorkflowContext)
 
@@ -288,6 +297,32 @@ object WorkflowExecutor {
             returnValue = returnValue,
             namedVariables = subWorkflowContext.namedVariables.toMap()
         )
+    }
+
+    private suspend fun seedTriggerOutputs(
+        workflow: Workflow,
+        executionContext: ExecutionContext,
+        triggerStepId: String?
+    ) {
+        val effectiveTriggerId = triggerStepId ?: return
+        val triggerStep = workflow.getTrigger(effectiveTriggerId) ?: return
+        val module = ModuleRegistry.getModule(triggerStep.moduleId) ?: return
+
+        val triggerContext = executionContext.copy(
+            variables = triggerStep.parameters.mapValues { (_, value) -> VObjectFactory.from(value) }.toMutableMap(),
+            magicVariables = mutableMapOf(),
+            currentStepIndex = -1
+        )
+
+        when (val result = module.execute(triggerContext) {}) {
+            is ExecutionResult.Success -> {
+                executionContext.stepOutputs[triggerStep.id] = VObjectFactory.fromMapAny(result.outputs)
+            }
+            is ExecutionResult.Failure -> {
+                throw IllegalStateException(result.errorMessage ?: "触发器执行失败")
+            }
+            else -> Unit
+        }
     }
 
     /**
@@ -429,7 +464,7 @@ object WorkflowExecutor {
             }
 
             // 使用本地 DebugLogger，它会自动记录到 detailedLog
-            DebugLogger.d("WorkflowExecutor", "[${workflow.name}][$pc] -> 执行: ${module.metadata.name}")
+            DebugLogger.d("WorkflowExecutor", "[${workflow.name}][#${pc + 1}] -> 执行: ${module.metadata.name}")
 
             // --- 错误处理与重试逻辑 ---
             val errorPolicy = step.parameters[ActionEditorSheet.KEY_ERROR_POLICY] as? String ?: ActionEditorSheet.POLICY_STOP
@@ -516,7 +551,7 @@ object WorkflowExecutor {
                             val uiService = initialContext.services.get(ExecutionUIService::class)
                             uiService?.showError(
                                 workflowName = workflow.name,
-                                moduleName = "#${pc} ${module.metadata.name}",
+                                moduleName = "#${pc + 1} ${module.metadata.name}",
                                 errorMessage = result.errorMessage
                             )
                         } catch (e: Exception) {

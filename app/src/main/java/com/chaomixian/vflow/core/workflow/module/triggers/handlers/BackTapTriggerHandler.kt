@@ -10,14 +10,12 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.module.triggers.BackTapTriggerModule
-import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.settings.ModuleConfigActivity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 class BackTapTriggerHandler : BaseTriggerHandler(), SensorEventListener {
@@ -43,7 +41,6 @@ class BackTapTriggerHandler : BaseTriggerHandler(), SensorEventListener {
     private var accelerometer: Sensor? = null
     private var isListening = false
 
-    private val listeningWorkflows = CopyOnWriteArrayList<Workflow>()
     private val activeTriggers = CopyOnWriteArrayList<ResolvedBackTapTrigger>()
 
     // 敲击时间戳队列
@@ -57,7 +54,7 @@ class BackTapTriggerHandler : BaseTriggerHandler(), SensorEventListener {
     private lateinit var prefs: SharedPreferences
 
     data class ResolvedBackTapTrigger(
-        val workflowId: String,
+        val trigger: TriggerSpec,
         val mode: String // "双击" 或 "三击"
     )
 
@@ -102,30 +99,23 @@ class BackTapTriggerHandler : BaseTriggerHandler(), SensorEventListener {
         DebugLogger.d(TAG, "Stopped listening to accelerometer")
     }
 
-    override fun addWorkflow(context: Context, workflow: Workflow) {
-        listeningWorkflows.removeAll { it.id == workflow.id }
-        listeningWorkflows.add(workflow)
-        DebugLogger.d(TAG, "Added workflow: ${workflow.name}")
+    override fun addTrigger(context: Context, trigger: TriggerSpec) {
+        activeTriggers.removeAll { it.trigger.triggerId == trigger.triggerId }
+        DebugLogger.d(TAG, "Added trigger: ${trigger.triggerId}")
+        val mode = trigger.parameters["mode"] as? String ?: BackTapTriggerModule.MODE_DOUBLE_TAP
+        activeTriggers.add(ResolvedBackTapTrigger(trigger, mode))
         reloadTriggers()
     }
 
-    override fun removeWorkflow(context: Context, workflowId: String) {
-        val removed = listeningWorkflows.removeAll { it.id == workflowId }
+    override fun removeTrigger(context: Context, triggerId: String) {
+        val removed = activeTriggers.removeAll { it.trigger.triggerId == triggerId }
         if (removed) {
-            DebugLogger.d(TAG, "Removed workflow: $workflowId")
+            DebugLogger.d(TAG, "Removed trigger: $triggerId")
             reloadTriggers()
         }
     }
 
     private fun reloadTriggers() {
-        activeTriggers.clear()
-        val triggers = listeningWorkflows.mapNotNull { workflow ->
-            val config = workflow.triggerConfig ?: return@mapNotNull null
-            val mode = config["mode"] as? String ?: BackTapTriggerModule.MODE_DOUBLE_TAP
-            ResolvedBackTapTrigger(workflow.id, mode)
-        }
-        activeTriggers.addAll(triggers)
-
         if (activeTriggers.isEmpty()) {
             stopListening()
         } else {
@@ -277,17 +267,13 @@ class BackTapTriggerHandler : BaseTriggerHandler(), SensorEventListener {
         val ctx = context ?: return
         val mode = if (tapCount == 2) BackTapTriggerModule.MODE_DOUBLE_TAP else BackTapTriggerModule.MODE_TRIPLE_TAP
 
-        val matchingWorkflowIds = activeTriggers.filter {
+        val matchingTriggers = activeTriggers.filter {
             it.mode == mode
-        }.map { it.workflowId }
+        }
 
-        if (matchingWorkflowIds.isNotEmpty()) {
-            val matchingWorkflows = listeningWorkflows.filter { it.id in matchingWorkflowIds }
-            if (matchingWorkflows.isNotEmpty()) {
-                // 简化处理：直接执行第一个匹配的 workflow
-                triggerScope.launch {
-                    com.chaomixian.vflow.core.execution.WorkflowExecutor.execute(matchingWorkflows.first(), ctx)
-                }
+        if (matchingTriggers.isNotEmpty()) {
+            triggerScope.launch {
+                matchingTriggers.forEach { executeTrigger(ctx, it.trigger) }
             }
         }
     }

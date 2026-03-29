@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.telephony.TelephonyManager
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VString
@@ -18,8 +17,6 @@ class CallTriggerHandler : ListeningTriggerHandler() {
     companion object {
         private const val TAG = "CallTriggerHandler"
     }
-
-    override fun getTriggerModuleId(): String = "vflow.trigger.call"
 
     override fun startListening(context: Context) {
         if (callReceiver != null) return
@@ -57,15 +54,15 @@ class CallTriggerHandler : ListeningTriggerHandler() {
 
     private fun findAndExecuteWorkflows(context: Context, callState: String) {
         triggerScope.launch {
-            listeningWorkflows.forEach { workflow ->
-                val config = workflow.triggerConfig ?: return@forEach
+            listeningTriggers.forEach { trigger ->
+                val config = trigger.parameters
                 val matchResult = checkFilters(callState, config)
                 if (matchResult.isMatch) {
-                    DebugLogger.i(TAG, "电话事件满足条件，触发工作流 '${workflow.name}'")
+                    DebugLogger.i(TAG, "电话事件满足条件，触发工作流 '${trigger.workflowName}'")
                     val triggerDataMap = mutableMapOf(
                         "call_state" to VString(callState)
                     )
-                    WorkflowExecutor.execute(workflow, context.applicationContext, VDictionary(triggerDataMap))
+                    executeTrigger(context, trigger, VDictionary(triggerDataMap))
                 }
             }
         }

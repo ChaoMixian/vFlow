@@ -1,7 +1,7 @@
 package com.chaomixian.vflow.core.workflow.module.triggers
 
 import android.view.accessibility.AccessibilityNodeInfo
-import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import li.songe.selector.Selector
 
 /**
@@ -9,7 +9,7 @@ import li.songe.selector.Selector
  * 参考 gkd ResolvedRule.kt 实现
  */
 data class ElementTriggerState(
-    val workflow: Workflow,
+    val trigger: TriggerSpec,
     val selector: Selector,
     // 触发配置参数
     val matchDelay: Long = 0L,

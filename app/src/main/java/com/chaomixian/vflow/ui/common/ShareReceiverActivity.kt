@@ -61,21 +61,25 @@ class ShareReceiverActivity : AppCompatActivity() {
                         // 处理普通分享内容
                         val shareableWorkflows = workflowManager.findShareableWorkflows()
                         val triggerData = handleIncomingIntent(intent)
+                        val sharedType = resolveSharedType(intent)
+                        val matchingWorkflows = shareableWorkflows.filter {
+                            resolveMatchingShareTriggerId(it, sharedType) != null
+                        }
 
                         when {
-                            shareableWorkflows.isEmpty() -> {
+                            matchingWorkflows.isEmpty() -> {
                                 // 在主线程显示 Toast
                                 CoroutineScope(Dispatchers.Main).launch {
                                     Toast.makeText(applicationContext, "没有找到可处理分享的工作流", Toast.LENGTH_SHORT).show()
                                 }
                             }
-                            shareableWorkflows.size == 1 -> {
-                                val workflow = shareableWorkflows.first()
+                            matchingWorkflows.size == 1 -> {
+                                val workflow = matchingWorkflows.first()
                                 executeWorkflow(workflow, triggerData)
                             }
                             else -> {
                                 val uiService = ExecutionUIService(applicationContext)
-                                val selectedWorkflowId = uiService.showWorkflowChooser(shareableWorkflows)
+                                val selectedWorkflowId = uiService.showWorkflowChooser(matchingWorkflows)
                                 if (selectedWorkflowId != null) {
                                     val selectedWorkflow = workflowManager.getWorkflow(selectedWorkflowId)
                                     if (selectedWorkflow != null) {
@@ -97,11 +101,37 @@ class ShareReceiverActivity : AppCompatActivity() {
     }
 
     private fun executeWorkflow(workflow: Workflow, triggerData: Parcelable?) {
-        WorkflowExecutor.execute(workflow, applicationContext, triggerData)
+        val triggerId = resolveMatchingShareTriggerId(workflow, resolveSharedType(intent))
+        WorkflowExecutor.execute(
+            workflow = workflow,
+            context = applicationContext,
+            triggerData = triggerData,
+            triggerStepId = triggerId
+        )
         // 在主线程显示 Toast
         CoroutineScope(Dispatchers.Main).launch {
             Toast.makeText(applicationContext, "已通过分享启动工作流: ${workflow.name}", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun resolveSharedType(intent: Intent): String {
+        return when {
+            intent.type?.startsWith("image/") == true -> "图片"
+            intent.type?.startsWith("text/") == true -> {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+                if (text.startsWith("http://") || text.startsWith("https://")) "链接" else "文本"
+            }
+            else -> "文件"
+        }
+    }
+
+    private fun resolveMatchingShareTriggerId(workflow: Workflow, sharedType: String): String? {
+        return workflow.triggerStepsByType("vflow.trigger.share")
+            .firstOrNull { step ->
+                val acceptedType = step.parameters["acceptedType"] as? String ?: "任意"
+                acceptedType == "任意" || acceptedType == sharedType
+            }
+            ?.id
     }
 
     /**

@@ -3,10 +3,9 @@ package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 import android.content.Context
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.complex.VScreenElement
-import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.module.triggers.*
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.*
@@ -36,12 +35,9 @@ class ElementTriggerHandler : ListeningTriggerHandler() {
     // 监听Job
     private var listeningJob: Job? = null
 
-    override fun getTriggerModuleId(): String = ElementTriggerModule().id
-
     override fun startListening(context: Context) {
         DebugLogger.d(TAG, "开始监听元素变化")
 
-        // 确保 triggerStates 与 listeningWorkflows 同步
         syncTriggerStates()
 
         listeningJob = triggerScope.launch {
@@ -69,23 +65,21 @@ class ElementTriggerHandler : ListeningTriggerHandler() {
     }
 
     /**
-     * 同步 triggerStates 与 listeningWorkflows
+     * 同步 triggerStates 与 listeningTriggers
      */
     private fun syncTriggerStates() {
-        val currentWorkflowIds = listeningWorkflows.map { it.id }.toSet()
+        val currentTriggerIds = listeningTriggers.map { it.triggerId }.toSet()
 
-        // 移除不存在的workflow的state
         triggerStates.removeAll { state ->
-            !currentWorkflowIds.contains(state.workflow.id)
+            !currentTriggerIds.contains(state.trigger.triggerId)
         }
 
-        // 为新workflow创建state
-        for (workflow in listeningWorkflows) {
-            if (triggerStates.none { it.workflow.id == workflow.id }) {
-                val state = createTriggerState(workflow)
+        for (trigger in listeningTriggers) {
+            if (triggerStates.none { it.trigger.triggerId == trigger.triggerId }) {
+                val state = createTriggerState(trigger)
                 if (state != null) {
                     triggerStates.add(state)
-                    DebugLogger.d(TAG, "加载工作流 '${workflow.name}'")
+                    DebugLogger.d(TAG, "加载触发器 '${trigger.triggerId}'")
                 }
             }
         }
@@ -94,8 +88,8 @@ class ElementTriggerHandler : ListeningTriggerHandler() {
     /**
      * 创建触发器状态
      */
-    private fun createTriggerState(workflow: Workflow): ElementTriggerState? {
-        val config = workflow.triggerConfig ?: return null
+    private fun createTriggerState(trigger: TriggerSpec): ElementTriggerState? {
+        val config = trigger.parameters
 
         val selectorString = config["selector"] as? String
         if (selectorString.isNullOrBlank()) {
@@ -110,7 +104,7 @@ class ElementTriggerHandler : ListeningTriggerHandler() {
         }
 
         return ElementTriggerState(
-            workflow = workflow,
+            trigger = trigger,
             selector = selector,
             matchDelay = (config["matchDelay"] as? Number)?.toLong() ?: 0L,
             actionDelay = (config["actionDelay"] as? Number)?.toLong() ?: 0L,
@@ -172,7 +166,7 @@ class ElementTriggerHandler : ListeningTriggerHandler() {
                     performTrigger(context, state, matchedNode)
                 }
             } catch (e: Exception) {
-                DebugLogger.e(TAG, "处理工作流 '${state.workflow.name}' 时出错", e)
+                DebugLogger.e(TAG, "处理工作流 '${state.trigger.workflowName}' 时出错", e)
             }
         }
     }
@@ -190,11 +184,7 @@ class ElementTriggerHandler : ListeningTriggerHandler() {
         val element = VScreenElement.fromAccessibilityNode(node, calculateDepth(node))
 
         // 调用 WorkflowExecutor
-        WorkflowExecutor.execute(
-            workflow = state.workflow,
-            context = context.applicationContext,
-            triggerData = ElementTriggerData(element)
-        )
+        executeTrigger(context, state.trigger, ElementTriggerData(element))
 
         // 更新状态
         state.actionTriggerTime = System.currentTimeMillis()

@@ -21,7 +21,6 @@ import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -56,7 +55,8 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         workflowListRef: Any, // MutableList<Workflow> 或 MutableList<WorkflowListItem>
         callbacks: WorkflowCallbacks
     ) {
-        val isManualTrigger = workflow.steps.firstOrNull()?.moduleId == ManualTriggerModule().id
+        val isManualTrigger = workflow.hasManualTrigger()
+        val hasAutoTriggers = workflow.hasAutoTriggers()
         val missingPermissions = PermissionManager.getMissingPermissions(itemView.context, workflow)
 
         // 基本信息
@@ -79,7 +79,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         }
 
         // 显示步骤数
-        val stepCount = workflow.steps.size - 1
+        val stepCount = workflow.steps.size
         if (stepCount >= 0) {
             val stepChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
             stepChip.text = itemView.context.getString(R.string.workflow_chip_steps, stepCount.coerceAtLeast(0))
@@ -88,7 +88,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         }
 
         // 显示所需权限
-        val requiredPermissions = workflow.steps
+        val requiredPermissions = workflow.allSteps
             .mapNotNull { step ->
                 ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step)
             }
@@ -169,7 +169,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         // 执行按钮 vs 开关
         executeButton.isVisible = isManualTrigger
-        enabledSwitch.isVisible = !isManualTrigger
+        enabledSwitch.isVisible = hasAutoTriggers
 
         if (isManualTrigger) {
             executeButton.setImageResource(
@@ -182,8 +182,9 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
                 showDelayedExecuteMenu(view, workflow, callbacks.onExecuteDelayed)
                 true
             }
-        } else {
-            // 开关状态
+        }
+
+        if (hasAutoTriggers) {
             enabledSwitch.setOnCheckedChangeListener(null)
             enabledSwitch.isChecked = workflow.isEnabled
             enabledSwitch.isEnabled = missingPermissions.isEmpty()

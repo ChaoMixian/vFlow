@@ -8,8 +8,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.util.Log
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VString
@@ -22,8 +20,6 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
     companion object {
         private const val TAG = "BluetoothTriggerHandler"
     }
-
-    override fun getTriggerModuleId(): String = "vflow.trigger.bluetooth"
 
     override fun startListening(context: Context) {
         if (bluetoothReceiver != null) return
@@ -78,8 +74,8 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
 
     private fun findAndExecuteWorkflows(context: Context, triggerType: String, event: String, device: BluetoothDevice?) {
         triggerScope.launch {
-            listeningWorkflows.forEach { workflow ->
-                val config = workflow.triggerConfig ?: return@forEach
+            listeningTriggers.forEach { trigger ->
+                val config = trigger.parameters
                 val configTriggerType = config["trigger_type"] as? String
 
                 if (configTriggerType != triggerType) return@forEach
@@ -87,19 +83,19 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
                 if (triggerType == "蓝牙状态") {
                     val configEvent = config["state_event"] as? String
                     if (configEvent == event) {
-                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: 蓝牙 $event")
-                        WorkflowExecutor.execute(workflow, context.applicationContext)
+                        DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: 蓝牙 $event")
+                        executeTrigger(context, trigger)
                     }
                 } else { // 设备连接
                     val configEvent = config["device_event"] as? String
                     val configAddress = config["device_address"] as? String
                     if (configEvent == event && (configAddress == "any" || configAddress == device?.address)) {
-                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '${device?.name}'")
+                        DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: $event '${device?.name}'")
                         val triggerData = VDictionary(mapOf(
                             "name" to VString(device?.name ?: ""),
                             "address" to VString(device?.address ?: "")
                         ))
-                        WorkflowExecutor.execute(workflow, context.applicationContext, triggerData)
+                        executeTrigger(context, trigger, triggerData)
                     }
                 }
             }

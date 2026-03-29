@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.launch
 
@@ -17,8 +16,6 @@ class PowerTriggerHandler : ListeningTriggerHandler() {
     companion object {
         private const val TAG = "PowerTriggerHandler"
     }
-
-    override fun getTriggerModuleId(): String = "vflow.trigger.power"
 
     override fun startListening(context: Context) {
         if (powerReceiver != null) return
@@ -58,8 +55,8 @@ class PowerTriggerHandler : ListeningTriggerHandler() {
         DebugLogger.d(TAG, "收到电源事件: $action")
 
         triggerScope.launch {
-            listeningWorkflows.forEach { workflow ->
-                val config = workflow.triggerConfig ?: return@forEach
+            listeningTriggers.forEach { trigger ->
+                val config = trigger.parameters
                 val desiredState = config["power_state"] as? String ?: return@forEach
 
                 val shouldTrigger = when (desiredState) {
@@ -70,8 +67,8 @@ class PowerTriggerHandler : ListeningTriggerHandler() {
 
                 if (shouldTrigger) {
                     val stateDescription = if (desiredState == "connected") "已连接" else "已断开"
-                    DebugLogger.i(TAG, "条件满足, 触发工作流: ${workflow.name} (电源 $stateDescription)")
-                    WorkflowExecutor.execute(workflow, context.applicationContext)
+                    DebugLogger.i(TAG, "条件满足, 触发工作流: ${trigger.workflowName} (电源 $stateDescription)")
+                    executeTrigger(context, trigger)
                 }
             }
         }

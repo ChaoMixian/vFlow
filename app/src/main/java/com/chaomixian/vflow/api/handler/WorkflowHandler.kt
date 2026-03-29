@@ -3,10 +3,10 @@ package com.chaomixian.vflow.api.handler
 import com.chaomixian.vflow.api.auth.RateLimiter
 import com.chaomixian.vflow.api.model.*
 import com.chaomixian.vflow.api.server.ApiDependencies
-import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.core.workflow.WorkflowNormalizer
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.google.gson.Gson
 import fi.iki.elonen.NanoHTTPD
+import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
@@ -157,10 +157,10 @@ class WorkflowHandler(
                 folderId = wf.folderId,
                 order = wf.order,
                 stepCount = wf.steps.size,
+                triggerCount = wf.triggers.size,
                 modifiedAt = wf.modifiedAt,
                 tags = wf.tags ?: emptyList(),
-                version = wf.version ?: "1.0.0",
-                triggerConfig = wf.triggerConfig
+                version = wf.version ?: "1.0.0"
             )
         }
 
@@ -203,20 +203,28 @@ class WorkflowHandler(
         }
 
         // 转换步骤，处理可能的null
-        val steps = request.steps?.map { it.toActionStep() } ?: emptyList()
+        val normalizedContent = WorkflowNormalizer.normalize(
+            triggers = request.triggers?.map { it.toActionStep() },
+            steps = request.steps?.map { it.toActionStep() },
+            legacyTriggerConfigs = buildList {
+                request.triggerConfigs?.let { addAll(it) }
+                request.triggerConfig?.let { add(it) }
+            }
+        )
 
         // 创建新工作流
         val newWorkflow = Workflow(
             id = UUID.randomUUID().toString(),
             name = request.name,
-            steps = steps,
+            triggers = normalizedContent.triggers,
+            steps = normalizedContent.steps,
             isEnabled = request.isEnabled ?: false,
             description = request.description ?: "",
             folderId = request.folderId,
             order = 0,
             tags = request.tags ?: emptyList(),
             version = "1.0.0",
-            triggerConfig = request.triggerConfig,
+            maxExecutionTime = request.maxExecutionTime,
             modifiedAt = System.currentTimeMillis()
         )
 
