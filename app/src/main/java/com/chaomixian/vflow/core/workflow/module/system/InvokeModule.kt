@@ -8,6 +8,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -147,16 +148,9 @@ class InvokeModule : BaseModule() {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        // Extras 智能类型推断与注入
+        // Extras 需要先解包 VObject，再写入 Intent，避免把 data class 的调试字符串透传出去。
         extrasMap.forEach { (k, v) ->
-            val strVal = v.toString()
-            when {
-                strVal.equals("true", ignoreCase = true) -> intent.putExtra(k, true)
-                strVal.equals("false", ignoreCase = true) -> intent.putExtra(k, false)
-                strVal.toIntOrNull() != null -> intent.putExtra(k, strVal.toInt())
-                strVal.toDoubleOrNull() != null -> intent.putExtra(k, strVal.toDouble())
-                else -> intent.putExtra(k, strVal) // 默认为字符串
-            }
+            putIntentExtra(intent, k, coerceIntentExtraValue(v))
         }
 
         onProgress(ProgressUpdate("正在执行调用 ($mode)..."))
@@ -192,5 +186,52 @@ class InvokeModule : BaseModule() {
         } catch (e: Exception) {
             return ExecutionResult.Failure("调用失败", "执行 Intent 失败: ${e.message}\nIntent: $intent")
         }
+    }
+}
+
+internal fun coerceIntentExtraValue(value: Any?): Any? = when (value) {
+    null, VNull -> null
+    is VString -> value.raw
+    is VBoolean -> value.raw
+    is VNumber -> coerceNumberExtraValue(value.raw)
+    is VObject -> value.raw ?: value.asString()
+    is String -> coerceStringExtraValue(value)
+    is Boolean, is Int, is Long, is Float, is Double -> value
+    is Number -> coerceNumberExtraValue(value)
+    else -> value.toString()
+}
+
+private fun coerceStringExtraValue(value: String): Any = when {
+    value.equals("true", ignoreCase = true) -> true
+    value.equals("false", ignoreCase = true) -> false
+    value.toIntOrNull() != null -> value.toInt()
+    value.toLongOrNull() != null -> value.toLong()
+    value.toDoubleOrNull() != null -> value.toDouble()
+    else -> value
+}
+
+private fun coerceNumberExtraValue(value: Number): Any = when (value) {
+    is Int, is Long, is Float, is Double -> value
+    else -> {
+        val doubleValue = value.toDouble()
+        if (doubleValue % 1.0 == 0.0) {
+            val longValue = doubleValue.toLong()
+            if (longValue in Int.MIN_VALUE..Int.MAX_VALUE) longValue.toInt() else longValue
+        } else {
+            doubleValue
+        }
+    }
+}
+
+private fun putIntentExtra(intent: Intent, key: String, value: Any?) {
+    when (value) {
+        null -> return
+        is String -> intent.putExtra(key, value)
+        is Boolean -> intent.putExtra(key, value)
+        is Int -> intent.putExtra(key, value)
+        is Long -> intent.putExtra(key, value)
+        is Float -> intent.putExtra(key, value)
+        is Double -> intent.putExtra(key, value)
+        else -> intent.putExtra(key, value.toString())
     }
 }
