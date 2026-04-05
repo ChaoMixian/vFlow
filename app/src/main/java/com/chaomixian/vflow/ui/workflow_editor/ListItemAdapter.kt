@@ -4,6 +4,7 @@ package com.chaomixian.vflow.ui.workflow_editor
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewParent
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.core.widget.doAfterTextChanged
@@ -26,6 +27,28 @@ class ListItemAdapter(
     private val allSteps: List<ActionStep>? = null,
     private val onMagicClick: (position: Int) -> Unit
 ) : RecyclerView.Adapter<ListItemAdapter.ViewHolder>() {
+
+    private fun ViewHolder.currentDataPosition(): Int {
+        val position = adapterPosition
+        return if (position in data.indices) position else RecyclerView.NO_POSITION
+    }
+
+    private fun isDescendantOf(child: View, ancestor: View): Boolean {
+        var current: ViewParent? = child.parent
+        while (current is View) {
+            if (current === ancestor) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    private fun ViewHolder.clearFocusBeforeRemoval() {
+        val focusedView = itemView.rootView.findFocus()
+        if (focusedView != null && (focusedView === itemView || isDescendantOf(focusedView, itemView))) {
+            focusedView.clearFocus()
+            (itemView.parent as? RecyclerView)?.requestFocus()
+        }
+    }
 
     fun addItem() {
         data.add("")
@@ -94,8 +117,9 @@ class ListItemAdapter(
             textView.text = displayName
             holder.valueContainer.addView(pillView)
             pillView.setOnClickListener {
-                if (holder.adapterPosition != RecyclerView.NO_POSITION) {
-                    onMagicClick(holder.adapterPosition)
+                val position = holder.currentDataPosition()
+                if (position != RecyclerView.NO_POSITION) {
+                    onMagicClick(position)
                 }
             }
         } else {
@@ -114,8 +138,9 @@ class ListItemAdapter(
                 (editText.tag as? android.text.TextWatcher)?.let { editText.removeTextChangedListener(it) }
                 // 添加文本变化监听器，实时更新数据源
                 val watcher = editText.doAfterTextChanged { text ->
-                    if (holder.adapterPosition != RecyclerView.NO_POSITION) {
-                        data[holder.adapterPosition] = text.toString()
+                    val currentPosition = holder.currentDataPosition()
+                    if (currentPosition != RecyclerView.NO_POSITION) {
+                        data[currentPosition] = text.toString()
                     }
                 }
                 editText.tag = watcher
@@ -125,16 +150,22 @@ class ListItemAdapter(
 
         // 删除按钮的点击事件
         holder.deleteButton.setOnClickListener {
-            if (holder.adapterPosition != RecyclerView.NO_POSITION) {
-                data.removeAt(holder.adapterPosition)
-                notifyItemRemoved(holder.adapterPosition)
+            val position = holder.currentDataPosition()
+            if (position != RecyclerView.NO_POSITION) {
+                holder.clearFocusBeforeRemoval()
+                data.removeAt(position)
+                notifyItemRemoved(position)
+                if (position < data.size) {
+                    notifyItemRangeChanged(position, data.size - position)
+                }
             }
         }
 
         // 魔法变量按钮的点击事件
         holder.magicButton.setOnClickListener {
-            if (holder.adapterPosition != RecyclerView.NO_POSITION) {
-                onMagicClick(holder.adapterPosition)
+            val position = holder.currentDataPosition()
+            if (position != RecyclerView.NO_POSITION) {
+                onMagicClick(position)
             }
         }
     }

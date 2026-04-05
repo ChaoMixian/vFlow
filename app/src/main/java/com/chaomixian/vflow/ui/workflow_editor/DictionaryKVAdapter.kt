@@ -4,6 +4,7 @@ package com.chaomixian.vflow.ui.workflow_editor
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewParent
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -29,6 +30,28 @@ class DictionaryKVAdapter(
     private val allSteps: List<ActionStep>? = null,
     private val onMagicClick: ((key: String) -> Unit)? = null
 ) : RecyclerView.Adapter<DictionaryKVAdapter.ViewHolder>() {
+
+    private fun ViewHolder.currentDataPosition(): Int {
+        val position = adapterPosition
+        return if (position in data.indices) position else RecyclerView.NO_POSITION
+    }
+
+    private fun isDescendantOf(child: View, ancestor: View): Boolean {
+        var current: ViewParent? = child.parent
+        while (current is View) {
+            if (current === ancestor) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    private fun ViewHolder.clearFocusBeforeRemoval() {
+        val focusedView = itemView.rootView.findFocus()
+        if (focusedView != null && (focusedView === itemView || isDescendantOf(focusedView, itemView))) {
+            focusedView.clearFocus()
+            (itemView.parent as? RecyclerView)?.requestFocus()
+        }
+    }
 
     /** 将当前列表中的所有键值对转换为 Map<String, String>。 */
     fun getItemsAsMap(): Map<String, String> {
@@ -105,8 +128,9 @@ class DictionaryKVAdapter(
 
                 (editText.tag as? android.text.TextWatcher)?.let { editText.removeTextChangedListener(it) }
                 val valueWatcher = editText.doAfterTextChanged { text ->
-                    if (holder.adapterPosition != RecyclerView.NO_POSITION) {
-                        data[holder.adapterPosition] = data[holder.adapterPosition].first to text.toString()
+                    val position = holder.currentDataPosition()
+                    if (position != RecyclerView.NO_POSITION) {
+                        data[position] = data[position].first to text.toString()
                     }
                 }
                 editText.tag = valueWatcher
@@ -116,23 +140,30 @@ class DictionaryKVAdapter(
 
         (holder.keyEditText.tag as? android.text.TextWatcher)?.let { holder.keyEditText.removeTextChangedListener(it) }
         val keyWatcher = holder.keyEditText.doAfterTextChanged {
-            if (holder.adapterPosition != RecyclerView.NO_POSITION) {
-                data[holder.adapterPosition] = it.toString() to data[holder.adapterPosition].second
+            val position = holder.currentDataPosition()
+            if (position != RecyclerView.NO_POSITION) {
+                data[position] = it.toString() to data[position].second
             }
         }
         holder.keyEditText.tag = keyWatcher
 
         // 删除按钮点击事件
         holder.deleteButton.setOnClickListener {
-            if (holder.adapterPosition != RecyclerView.NO_POSITION) {
-                data.removeAt(holder.adapterPosition)
-                notifyItemRemoved(holder.adapterPosition)
+            val position = holder.currentDataPosition()
+            if (position != RecyclerView.NO_POSITION) {
+                holder.clearFocusBeforeRemoval()
+                data.removeAt(position)
+                notifyItemRemoved(position)
+                if (position < data.size) {
+                    notifyItemRangeChanged(position, data.size - position)
+                }
             }
         }
 
         holder.magicButton.isVisible = onMagicClick != null
         holder.magicButton.setOnClickListener {
-            if (holder.adapterPosition != RecyclerView.NO_POSITION) {
+            val position = holder.currentDataPosition()
+            if (position != RecyclerView.NO_POSITION) {
                 val currentKey = holder.keyEditText.text.toString()
                 if (currentKey.isNotBlank()) {
                     onMagicClick?.invoke(currentKey)
