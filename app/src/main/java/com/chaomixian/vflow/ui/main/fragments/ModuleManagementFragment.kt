@@ -179,7 +179,7 @@ class ModuleManagementFragment : Fragment() {
     private fun checkDependencies(moduleId: String): List<String> {
         val workflowManager = WorkflowManager(requireContext())
         return workflowManager.getAllWorkflows()
-            .filter { wf -> wf.steps.any { it.moduleId == moduleId } }
+            .filter { wf -> wf.allSteps.any { it.moduleId == moduleId } }
             .map { it.name }
     }
 

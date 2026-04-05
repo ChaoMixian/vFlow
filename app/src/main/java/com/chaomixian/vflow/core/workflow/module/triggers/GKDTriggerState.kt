@@ -1,6 +1,6 @@
 package com.chaomixian.vflow.core.workflow.module.triggers
 
-import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import li.songe.selector.Selector
 import kotlinx.coroutines.Job
 
@@ -8,7 +8,7 @@ import kotlinx.coroutines.Job
  * GKD订阅触发器状态数据类
  */
 data class GKDTriggerState(
-    val workflow: Workflow,
+    val trigger: TriggerSpec,
     val rules: List<ResolvedGKDRule>,
     // 每个规则的执行状态
     val ruleStates: MutableMap<ResolvedGKDRule, RuleExecutionState> = mutableMapOf()

@@ -3,6 +3,7 @@ package com.chaomixian.vflow.api.handler
 import com.chaomixian.vflow.api.auth.RateLimiter
 import com.chaomixian.vflow.api.model.*
 import com.chaomixian.vflow.api.server.ApiDependencies
+import com.chaomixian.vflow.core.workflow.WorkflowNormalizer
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.google.gson.Gson
@@ -110,6 +111,17 @@ class ImportExportHandler(
             val newId = UUID.randomUUID().toString()
 
             // 构建步骤列表
+            val triggers: List<ActionStep> = workflowData.triggers?.map { stepMap ->
+                val stepMapTyped = stepMap as? Map<String, Any?>
+                    ?: throw IllegalArgumentException("Invalid trigger format")
+                ActionStep(
+                    moduleId = stepMapTyped["moduleId"] as? String ?: "",
+                    parameters = (stepMapTyped["parameters"] as? Map<String, Any?>) ?: emptyMap(),
+                    indentationLevel = (stepMapTyped["indentationLevel"] as? Number)?.toInt() ?: 0,
+                    id = stepMapTyped["id"] as? String ?: UUID.randomUUID().toString()
+                )
+            } ?: emptyList()
+
             val steps: List<ActionStep> = workflowData.steps?.map { stepMap ->
                 val stepMapTyped = stepMap as? Map<String, Any?>
                     ?: throw IllegalArgumentException("Invalid step format")
@@ -121,19 +133,28 @@ class ImportExportHandler(
                 )
             } ?: emptyList()
 
+            val normalizedContent = WorkflowNormalizer.normalize(
+                triggers = triggers,
+                steps = steps,
+                legacyTriggerConfigs = buildList {
+                    workflowData.triggerConfigs?.let { addAll(it) }
+                    workflowData.triggerConfig?.let { add(it) }
+                }
+            )
+
             // 创建新工作流
             val newWorkflow = Workflow(
                 id = newId,
                 name = workflowData.name ?: "Imported Workflow",
                 description = workflowData.description ?: "",
-                steps = steps,
+                triggers = normalizedContent.triggers,
+                steps = normalizedContent.steps,
                 isEnabled = false,
                 isFavorite = workflowData.isFavorite ?: false,
                 folderId = request.folderId,
                 order = 0,
                 tags = workflowData.tags ?: emptyList(),
                 version = workflowData.version ?: "1.0.0",
-                triggerConfig = workflowData.triggerConfig,
                 modifiedAt = System.currentTimeMillis()
             )
 
@@ -175,10 +196,12 @@ data class ImportWorkflowDataRequest(
 data class WorkflowImportData(
     val name: String?,
     val description: String?,
+    val triggers: List<Map<String, Any?>>?,
     val steps: List<Map<String, Any?>>?,
+    val triggerConfig: Map<String, Any?>? = null,
+    val triggerConfigs: List<Map<String, Any?>>? = null,
     val isEnabled: Boolean?,
     val isFavorite: Boolean?,
     val tags: List<String>?,
-    val version: String?,
-    val triggerConfig: Map<String, Any?>?
+    val version: String?
 )

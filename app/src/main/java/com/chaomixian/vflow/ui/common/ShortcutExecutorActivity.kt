@@ -30,7 +30,11 @@ class ShortcutExecutorActivity : AppCompatActivity() {
                         getString(com.chaomixian.vflow.R.string.shortcut_executing, workflow.name),
                         Toast.LENGTH_SHORT
                     ).show()
-                    WorkflowExecutor.execute(workflow, applicationContext)
+                    WorkflowExecutor.execute(
+                        workflow = workflow,
+                        context = applicationContext,
+                        triggerStepId = workflow.manualTrigger()?.id
+                    )
                 } else {
                     // ID 存在但找不到对应工作流（可能已被删除，或者外部传入了错误的ID）
                     Toast.makeText(applicationContext, "错误：找不到指定ID的工作流\nID: $workflowId", Toast.LENGTH_LONG).show()

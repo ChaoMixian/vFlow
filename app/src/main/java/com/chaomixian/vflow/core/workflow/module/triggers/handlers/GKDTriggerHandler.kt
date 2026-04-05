@@ -2,11 +2,10 @@ package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
 import android.view.accessibility.AccessibilityNodeInfo
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.utils.StorageManager
-import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.module.triggers.*
 import com.chaomixian.vflow.core.workflow.module.triggers.RuleExecutionState
 import com.chaomixian.vflow.services.ServiceStateBus
@@ -61,12 +60,9 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
     // 监听Job
     private var listeningJob: Job? = null
 
-    override fun getTriggerModuleId(): String = GKDTriggerModule().id
-
     override fun startListening(context: Context) {
         DebugLogger.d(TAG, "开始监听 GKD 订阅规则")
 
-        // 确保 triggerStates 与 listeningWorkflows 同步
         syncTriggerStates()
 
         listeningJob = triggerScope.launch {
@@ -93,23 +89,21 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
     }
 
     /**
-     * 同步 triggerStates 与 listeningWorkflows
+     * 同步 triggerStates 与 listeningTriggers
      */
     private fun syncTriggerStates() {
-        val currentWorkflowIds = listeningWorkflows.map { it.id }.toSet()
+        val currentTriggerIds = listeningTriggers.map { it.triggerId }.toSet()
 
-        // 移除不存在的workflow的state
         triggerStates.removeAll { state ->
-            !currentWorkflowIds.contains(state.workflow.id)
+            !currentTriggerIds.contains(state.trigger.triggerId)
         }
 
-        // 为新workflow创建state
-        for (workflow in listeningWorkflows) {
-            if (triggerStates.none { it.workflow.id == workflow.id }) {
-                val state = createTriggerState(workflow)
+        for (trigger in listeningTriggers) {
+            if (triggerStates.none { it.trigger.triggerId == trigger.triggerId }) {
+                val state = createTriggerState(trigger)
                 if (state != null) {
                     triggerStates.add(state)
-                    DebugLogger.d(TAG, "加载工作流 '${workflow.name}' 的 GKD 规则")
+                    DebugLogger.d(TAG, "加载工作流 '${trigger.workflowName}' 的 GKD 规则")
                 }
             }
         }
@@ -118,17 +112,17 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
     /**
      * 创建触发器状态
      */
-    private fun createTriggerState(workflow: Workflow): GKDTriggerState? {
-        val config = workflow.triggerConfig ?: return null
+    private fun createTriggerState(trigger: TriggerSpec): GKDTriggerState? {
+        val config = trigger.parameters
 
         val rules = mutableListOf<ResolvedGKDRule>()
 
         // 1. 从订阅 URL 下载
         val subscriptionUrl = config["subscriptionUrl"] as? String
         if (!subscriptionUrl.isNullOrBlank()) {
-            DebugLogger.d(TAG, "工作流 '${workflow.name}' 从订阅 URL 加载: $subscriptionUrl")
+            DebugLogger.d(TAG, "工作流 '${trigger.workflowName}' 从订阅 URL 加载: $subscriptionUrl")
             val parsedRules = downloadAndParseSubscription(subscriptionUrl, getRulesDir())
-            DebugLogger.d(TAG, "工作流 '${workflow.name}' 解析到 ${parsedRules.size} 条规则")
+            DebugLogger.d(TAG, "工作流 '${trigger.workflowName}' 解析到 ${parsedRules.size} 条规则")
             rules.addAll(parsedRules)
         }
 
@@ -140,11 +134,11 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
         }
 
         if (rules.isEmpty()) {
-            DebugLogger.w(TAG, "工作流 '${workflow.name}' 没有有效的 GKD 规则")
+            DebugLogger.w(TAG, "工作流 '${trigger.workflowName}' 没有有效的 GKD 规则")
             return null
         }
 
-        return GKDTriggerState(workflow = workflow, rules = rules)
+        return GKDTriggerState(trigger = trigger, rules = rules)
     }
 
     /**
@@ -658,7 +652,7 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
                     break // 触发后退出规则循环
                 }
             } catch (e: Exception) {
-                DebugLogger.e(TAG, "处理工作流 '${state.workflow.name}' 时出错", e)
+                DebugLogger.e(TAG, "处理工作流 '${state.trigger.workflowName}' 时出错", e)
             }
         }
     }
@@ -782,10 +776,9 @@ class GKDTriggerHandler : ListeningTriggerHandler() {
                     "actionCount=${ruleState.actionCount}"
         )
 
-        // 调用 WorkflowExecutor
-        WorkflowExecutor.execute(
-            workflow = state.workflow,
-            context = context.applicationContext,
+        executeTrigger(
+            context = context,
+            trigger = state.trigger,
             triggerData = GKDTriggerData(
                 element = element,
                 allElements = allElements,

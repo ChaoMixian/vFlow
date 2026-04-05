@@ -1,46 +1,58 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/model/Workflow.kt
-
 package com.chaomixian.vflow.core.workflow.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.RawValue
+
+private const val MANUAL_TRIGGER_ID = "vflow.trigger.manual"
 
 @Parcelize
 data class Workflow(
     val id: String,
     var name: String,
-    var steps: List<ActionStep>,
-    // 工作流是否启用，对非手动触发器有效
+    var triggers: List<ActionStep> = emptyList(),
+    var steps: List<ActionStep> = emptyList(),
     var isEnabled: Boolean = true,
-    // 用于存储触发器的特定配置，例如分享别名
-    val triggerConfig: @RawValue Map<String, Any?>? = null,
-    // 工作流是否被收藏
     var isFavorite: Boolean = false,
-    // 记录在权限丢失前，此工作流是否由用户设置为启用
     var wasEnabledBeforePermissionsLost: Boolean = false,
-    // 所属文件夹 ID - 使用 @RawValue 确保 Parcelize 正确处理
-    var folderId: @RawValue String? = null,
-    // 用于列表排序
+    var folderId: String? = null,
     var order: Int = 0,
-    // 快捷方式自定义名称（为空时使用工作流名称）
     var shortcutName: String? = null,
-    // 快捷方式自定义图标资源名称（为空时使用默认图标）
     var shortcutIconRes: String? = null,
-    // 最后修改时间（时间戳）
     var modifiedAt: Long = System.currentTimeMillis(),
-    // 元数据 - 版本号
     var version: String = "1.0.0",
-    // 元数据 - vFlow级别
     var vFlowLevel: Int = 1,
-    // 元数据 - 描述
     var description: String = "",
-    // 元数据 - 作者
     var author: String = "",
-    // 元数据 - 主页
     var homepage: String = "",
-    // 元数据 - 标签
     var tags: List<String> = emptyList(),
-    // 工作流配置 - 最大执行时长（秒），null 表示不限制
     var maxExecutionTime: Int? = null
-) : Parcelable
+) : Parcelable {
+    val allSteps: List<ActionStep>
+        get() = triggers + steps
+
+    fun hasTriggerType(triggerModuleId: String): Boolean {
+        return triggers.any { it.moduleId == triggerModuleId }
+    }
+
+    fun triggerStepsByType(triggerModuleId: String): List<ActionStep> {
+        return triggers.filter { it.moduleId == triggerModuleId }
+    }
+
+    fun autoTriggerSteps(): List<ActionStep> {
+        return triggers.filter { it.moduleId != MANUAL_TRIGGER_ID }
+    }
+
+    fun hasAutoTriggers(): Boolean = autoTriggerSteps().isNotEmpty()
+
+    fun hasManualTrigger(): Boolean = manualTrigger() != null
+
+    fun manualTrigger(): ActionStep? = triggers.firstOrNull { it.moduleId == MANUAL_TRIGGER_ID }
+
+    fun isManualOnly(): Boolean = hasManualTrigger() && !hasAutoTriggers()
+
+    fun getTrigger(triggerId: String): ActionStep? = triggers.firstOrNull { it.id == triggerId }
+
+    fun toAutoTriggerSpecs(): List<TriggerSpec> {
+        return autoTriggerSteps().map { TriggerSpec(this, it) }
+    }
+}

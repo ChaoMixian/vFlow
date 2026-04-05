@@ -135,9 +135,9 @@ class WorkflowListFragment : Fragment() {
         val workflowMap = mapOf(
             "id" to workflow.id,
             "name" to workflow.name,
+            "triggers" to workflow.triggers,
             "steps" to workflow.steps,
             "isEnabled" to workflow.isEnabled,
-            "triggerConfig" to workflow.triggerConfig,
             "isFavorite" to workflow.isFavorite,
             "wasEnabledBeforePermissionsLost" to workflow.wasEnabledBeforePermissionsLost,
             "folderId" to workflow.folderId,
@@ -552,7 +552,11 @@ class WorkflowListFragment : Fragment() {
         val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
         if (missingPermissions.isEmpty()) {
             Toast.makeText(requireContext(), getString(R.string.toast_starting_workflow, workflow.name), Toast.LENGTH_SHORT).show()
-            WorkflowExecutor.execute(workflow, requireContext())
+            WorkflowExecutor.execute(
+                workflow = workflow,
+                context = requireContext(),
+                triggerStepId = workflow.manualTrigger()?.id
+            )
         } else {
             pendingWorkflow = workflow
             val intent = Intent(requireContext(), PermissionActivity::class.java).apply {

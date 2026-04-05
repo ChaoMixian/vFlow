@@ -1,21 +1,19 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/WorkflowManager.kt
-// 描述: 管理工作流的持久化，并通过 TriggerServiceProxy 直接通知服务层。
-
 package com.chaomixian.vflow.core.workflow
 
 import android.content.Context
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.serialization.VObjectGsonAdapter
+import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
-import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerModule
 import com.chaomixian.vflow.services.TriggerServiceProxy
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
-import java.util.*
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
+import java.util.UUID
 
 class WorkflowManager(val context: Context) {
     private val prefs = context.getSharedPreferences("vflow_workflows", Context.MODE_PRIVATE)
@@ -23,32 +21,47 @@ class WorkflowManager(val context: Context) {
         .registerTypeHierarchyAdapter(VObject::class.java, VObjectGsonAdapter())
         .create()
 
-    /**
-     * 保存单个工作流。
-     */
+    private data class WorkflowStorageRecord(
+        val id: String? = null,
+        val name: String? = null,
+        val triggers: List<ActionStep>? = null,
+        val steps: List<ActionStep>? = null,
+        val isEnabled: Boolean? = null,
+        val isFavorite: Boolean? = null,
+        val wasEnabledBeforePermissionsLost: Boolean? = null,
+        val folderId: String? = null,
+        val order: Int? = null,
+        val shortcutName: String? = null,
+        val shortcutIconRes: String? = null,
+        val modifiedAt: Long? = null,
+        val version: String? = null,
+        val vFlowLevel: Int? = null,
+        val description: String? = null,
+        val author: String? = null,
+        val homepage: String? = null,
+        val tags: List<String>? = null,
+        val maxExecutionTime: Int? = null,
+        val triggerConfig: Map<String, Any?>? = null,
+        val triggerConfigs: List<Map<String, Any?>>? = null
+    )
+
     fun saveWorkflow(workflow: Workflow) {
         val workflows = getAllWorkflows().toMutableList()
         val index = workflows.indexOfFirst { it.id == workflow.id }
         val oldWorkflow = if (index != -1) workflows[index] else null
+        val normalizedWorkflow = normalizeWorkflow(workflow)
 
-        // 重新计算 triggerConfig
-        val firstStep = workflow.steps.firstOrNull()
-        var config: Map<String, Any?>? = null
-        if (firstStep != null && firstStep.moduleId != ManualTriggerModule().id) {
-            config = firstStep.parameters + ("type" to firstStep.moduleId)
-        }
-
-        // 确保元数据字段有默认值
-        val workflowToSave = workflow.copy(
-            triggerConfig = config,
+        val workflowToSave = normalizedWorkflow.copy(
             modifiedAt = System.currentTimeMillis(),
-            version = workflow.version?.takeIf { it.isNotEmpty() } ?: "1.0.0",
-            vFlowLevel = if (workflow.vFlowLevel == 0) 1 else workflow.vFlowLevel,
-            description = workflow.description ?: "",
-            author = workflow.author ?: "",
-            homepage = workflow.homepage ?: "",
-            tags = workflow.tags ?: emptyList(),
-            maxExecutionTime = workflow.maxExecutionTime
+            version = normalizedWorkflow.version.ifBlank { "1.0.0" },
+            vFlowLevel = normalizedWorkflow.vFlowLevel.takeIf { it > 0 } ?: 1,
+            description = normalizedWorkflow.description,
+            author = normalizedWorkflow.author,
+            homepage = normalizedWorkflow.homepage,
+            tags = normalizedWorkflow.tags,
+            triggers = normalizedWorkflow.triggers,
+            steps = normalizedWorkflow.steps,
+            maxExecutionTime = normalizedWorkflow.maxExecutionTime
         )
 
         if (index != -1) {
@@ -57,44 +70,34 @@ class WorkflowManager(val context: Context) {
             workflows.add(workflowToSave)
         }
 
-        // 保存到磁盘
-        val json = gson.toJson(workflows)
-        prefs.edit().putString("workflow_list", json).apply()
-
-        // 直接通过代理精确通知 TriggerService
+        prefs.edit().putString("workflow_list", gson.toJson(workflows)).apply()
         TriggerServiceProxy.notifyWorkflowChanged(context, workflowToSave, oldWorkflow)
     }
 
     fun findShareableWorkflows(): List<Workflow> {
         return getAllWorkflows().filter {
-            it.isEnabled && it.triggerConfig?.get("type") == ReceiveShareTriggerModule().id
+            it.isEnabled && it.hasTriggerType(ReceiveShareTriggerModule().id)
         }
     }
 
     fun findAppStartTriggerWorkflows(): List<Workflow> {
         return getAllWorkflows().filter {
-            it.isEnabled && it.triggerConfig?.get("type") == AppStartTriggerModule().id
+            it.isEnabled && it.hasTriggerType(AppStartTriggerModule().id)
         }
     }
 
     fun findKeyEventTriggerWorkflows(): List<Workflow> {
         return getAllWorkflows().filter {
-            it.isEnabled && it.triggerConfig?.get("type") == KeyEventTriggerModule().id
+            it.isEnabled && it.hasTriggerType(KeyEventTriggerModule().id)
         }
     }
 
-    /**
-     * 根据ID删除一个工作流。
-     */
     fun deleteWorkflow(id: String) {
         val workflows = getAllWorkflows().toMutableList()
         val workflowToRemove = workflows.find { it.id == id }
         if (workflowToRemove != null) {
             workflows.remove(workflowToRemove)
-            val json = gson.toJson(workflows)
-            prefs.edit().putString("workflow_list", json).apply()
-
-            // 通知服务工作流已被删除
+            prefs.edit().putString("workflow_list", gson.toJson(workflows)).apply()
             TriggerServiceProxy.notifyWorkflowRemoved(context, workflowToRemove)
         }
     }
@@ -104,34 +107,32 @@ class WorkflowManager(val context: Context) {
     }
 
     fun getAllWorkflows(): List<Workflow> {
-        val json = prefs.getString("workflow_list", null)
-        return if (json != null) {
-            val type = object : TypeToken<List<Workflow>>() {}.type
-            try {
-                val workflows: List<Workflow> = gson.fromJson(json, type) ?: emptyList()
-                // 确保所有工作流的元数据字段都有默认值
-                workflows.map { wf ->
-                    if (wf.version.isNullOrEmpty() || wf.description.isNullOrEmpty() || wf.author.isNullOrEmpty() ||
-                        wf.homepage.isNullOrEmpty() || wf.tags.isNullOrEmpty() || wf.vFlowLevel == 0) {
-                        wf.copy(
-                            version = wf.version?.takeIf { it.isNotEmpty() } ?: "1.0.0",
-                            vFlowLevel = if (wf.vFlowLevel == 0) 1 else wf.vFlowLevel,
-                            description = wf.description ?: "",
-                            author = wf.author ?: "",
-                            homepage = wf.homepage ?: "",
-                            tags = wf.tags ?: emptyList(),
-                            modifiedAt = if (wf.modifiedAt == 0L) System.currentTimeMillis() else wf.modifiedAt,
-                            maxExecutionTime = wf.maxExecutionTime
-                        )
-                    } else {
-                        wf
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                emptyList()
+        val json = prefs.getString("workflow_list", null) ?: return emptyList()
+        return try {
+            val root = JsonParser.parseString(json)
+            if (!root.isJsonArray) {
+                DebugLogger.w("WorkflowManager", "workflow_list is not a JSON array")
+                return emptyList()
             }
-        } else {
+
+            var skippedCount = 0
+            val workflows = root.asJsonArray.mapIndexedNotNull { index, element ->
+                try {
+                    parseWorkflowRecord(element)
+                } catch (e: Exception) {
+                    skippedCount++
+                    DebugLogger.w("WorkflowManager", "Failed to parse workflow record at index $index", e)
+                    null
+                }
+            }
+
+            if (skippedCount > 0) {
+                DebugLogger.w("WorkflowManager", "Skipped $skippedCount invalid workflow record(s) while loading")
+            }
+
+            workflows
+        } catch (e: Exception) {
+            DebugLogger.e("WorkflowManager", "Failed to load workflow_list", e)
             emptyList()
         }
     }
@@ -142,37 +143,79 @@ class WorkflowManager(val context: Context) {
 
     fun duplicateWorkflow(id: String) {
         val original = getWorkflow(id) ?: return
-        val newName = "${original.name} (副本)"
         val newWorkflow = original.copy(
             id = UUID.randomUUID().toString(),
-            name = newName,
-            isEnabled = false // 复制的工作流默认为禁用状态
+            name = "${original.name} (副本)",
+            isEnabled = false
         )
         saveWorkflow(newWorkflow)
     }
 
-    /**
-     * 将所有工作流保存到 SharedPreferences (主要用于拖拽排序后)。
-     * 注意：保留不在新列表中的工作流（如文件夹中的工作流）。
-     */
     fun saveAllWorkflows(newWorkflows: List<Workflow>) {
-        // 先获取现有数据
         val existingWorkflows = getAllWorkflows().associateBy { it.id }
-        val newWorkflowIds = newWorkflows.map { it.id }.toSet()
+        val normalizedNewWorkflows = newWorkflows.map(::normalizeWorkflow)
+        val newWorkflowIds = normalizedNewWorkflows.map { it.id }.toSet()
 
-        // 合并数据：使用新列表中的工作流，但保留现有数据中不在新列表中的工作流（文件夹中的）
-        val mergedWorkflows = newWorkflows.map { newWf ->
-            val existing = existingWorkflows[newWf.id]
+        val mergedWorkflows = normalizedNewWorkflows.map { newWorkflow ->
+            val existing = existingWorkflows[newWorkflow.id]
             if (existing != null) {
-                // 保留 folderId 等字段，只更新排序相关字段
-                newWf.copy(folderId = existing.folderId)
+                newWorkflow.copy(folderId = existing.folderId)
             } else {
-                newWf
+                newWorkflow
             }
         } + existingWorkflows.values.filter { it.id !in newWorkflowIds }
 
-        val json = gson.toJson(mergedWorkflows)
-        prefs.edit().putString("workflow_list", json).apply()
-        // 排序操作不应触发重新加载，所以这里不通知服务
+        prefs.edit().putString("workflow_list", gson.toJson(mergedWorkflows)).apply()
+    }
+
+    private fun normalizeWorkflow(workflow: Workflow): Workflow {
+        val normalizedContent = WorkflowNormalizer.normalize(
+            triggers = workflow.triggers,
+            steps = workflow.steps
+        )
+
+        return workflow.copy(
+            triggers = normalizedContent.triggers,
+            steps = normalizedContent.steps
+        )
+    }
+
+    private fun parseWorkflowRecord(element: JsonElement): Workflow {
+        val record = gson.fromJson(element, WorkflowStorageRecord::class.java)
+        return record?.toWorkflow() ?: throw IllegalStateException("Workflow record is null")
+    }
+
+    private fun WorkflowStorageRecord.toWorkflow(): Workflow {
+        val legacyTriggerConfigs = buildList {
+            triggerConfigs?.let { addAll(it) }
+            triggerConfig?.let { add(it) }
+        }
+        val normalizedContent = WorkflowNormalizer.normalize(
+            triggers = triggers,
+            steps = steps,
+            legacyTriggerConfigs = legacyTriggerConfigs
+        )
+
+        return Workflow(
+            id = id?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
+            name = name?.takeIf { it.isNotBlank() } ?: "未命名工作流",
+            triggers = normalizedContent.triggers,
+            steps = normalizedContent.steps,
+            isEnabled = isEnabled ?: true,
+            isFavorite = isFavorite ?: false,
+            wasEnabledBeforePermissionsLost = wasEnabledBeforePermissionsLost ?: false,
+            folderId = folderId,
+            order = order ?: 0,
+            shortcutName = shortcutName,
+            shortcutIconRes = shortcutIconRes,
+            modifiedAt = modifiedAt?.takeIf { it > 0 } ?: System.currentTimeMillis(),
+            version = version?.takeIf { it.isNotBlank() } ?: "1.0.0",
+            vFlowLevel = vFlowLevel?.takeIf { it > 0 } ?: 1,
+            description = description ?: "",
+            author = author ?: "",
+            homepage = homepage ?: "",
+            tags = tags ?: emptyList(),
+            maxExecutionTime = maxExecutionTime
+        )
     }
 }

@@ -539,7 +539,11 @@ class WorkflowsFloatPanelService : Service() {
             return
         }
         Toast.makeText(this, "执行: ${latestWorkflow.name}", Toast.LENGTH_SHORT).show()
-        WorkflowExecutor.execute(latestWorkflow, this)
+        WorkflowExecutor.execute(
+            workflow = latestWorkflow,
+            context = this,
+            triggerStepId = latestWorkflow.manualTrigger()?.id
+        )
         adapter.notifyDataSetChanged()
     }
 
