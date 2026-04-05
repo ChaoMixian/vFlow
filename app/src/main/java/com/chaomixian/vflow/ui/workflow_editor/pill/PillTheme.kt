@@ -31,6 +31,7 @@ object PillTheme {
         "数据" -> R.color.category_data
         "文件" -> R.color.category_file
         "网络" -> R.color.category_network
+        "飞书" -> R.color.category_feishu
         "应用与系统" -> R.color.category_system
         "Shizuku" -> R.color.category_shizuku
         "用户模块" -> R.color.category_user_module

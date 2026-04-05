@@ -15,6 +15,7 @@
     <color name="category_file">#4CAF50</color>
     <color name="category_system">#03A9F4</color>
     <color name="category_network">#E75EA9</color>
+    <color name="category_feishu">#00B96B</color>
     <color name="category_shizuku">#3F4DAB</color>
     <color name="category_user_module">#A8E066</color>
     <color name="variable_pill_color">#93B1CF</color>

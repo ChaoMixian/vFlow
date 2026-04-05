@@ -134,6 +134,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
             "数据" -> getString(R.string.category_data)
             "文件" -> getString(R.string.category_file)
             "网络" -> getString(R.string.category_network)
+            "飞书" -> getString(R.string.category_feishu)
             "应用与系统" -> getString(R.string.category_device)
             "Core (Beta)" -> "Core (Beta)"
             "Shizuku" -> "Shizuku"

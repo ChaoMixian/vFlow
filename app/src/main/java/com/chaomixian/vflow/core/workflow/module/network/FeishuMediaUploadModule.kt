@@ -4,12 +4,14 @@ package com.chaomixian.vflow.core.workflow.module.network
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.integration.feishu.FeishuModuleConfig
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,7 +33,7 @@ class FeishuMediaUploadModule : BaseModule() {
         name = "飞书上传素材",
         description = "上传文件到飞书云文档",
         iconRes = R.drawable.rounded_cloud_24,
-        category = "网络"
+        category = "飞书"
     )
 
     private val parentTypeOptions = listOf(
@@ -49,56 +51,80 @@ class FeishuMediaUploadModule : BaseModule() {
         InputDefinition(
             id = "access_token",
             name = "访问令牌",
-            staticType = ParameterType.STRING,
-            acceptsMagicVariable = true,
-            supportsRichText = true,
-            hint = "飞书应用的 access_token 或 user_access_token"
-        ),
-        InputDefinition(
-            id = "file",
-            name = "文件",
-            staticType = ParameterType.ANY,
-            acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id),
-            hint = "选择或引用要上传的图片文件"
-        ),
-        InputDefinition(
-            id = "file_name",
-            name = "文件名",
-            staticType = ParameterType.STRING,
-            acceptsMagicVariable = true,
-            supportsRichText = true,
-            defaultValue = "",
-            hint = "留空则使用原始文件名"
-        ),
-        InputDefinition(
-            id = "parent_type",
-            name = "上传点类型",
-            staticType = ParameterType.ENUM,
-            defaultValue = "docx_image",
-            options = parentTypeOptions.map { it.first }
-        ),
-        InputDefinition(
-            id = "parent_node",
-            name = "文档 Token",
-            staticType = ParameterType.STRING,
-            acceptsMagicVariable = true,
-            supportsRichText = true,
-            hint = "要上传到的云文档 token"
-        ),
-        InputDefinition(
-            id = "extra",
-            name = "额外参数",
+            nameStringRes = R.string.param_vflow_feishu_upload_access_token_name,
             staticType = ParameterType.STRING,
             acceptsMagicVariable = true,
             supportsRichText = true,
             defaultValue = "",
             isFolded = true,
-            hint = "JSON 格式，如 {\"drive_route_token\":\"xxx\"}"
+            hint = "留空则使用设置中的飞书访问令牌",
+            hintStringRes = R.string.hint_vflow_feishu_upload_access_token
+        ),
+        InputDefinition(
+            id = "file",
+            name = "文件",
+            nameStringRes = R.string.param_vflow_feishu_upload_file_name,
+            staticType = ParameterType.ANY,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id),
+            hint = "选择或引用要上传的图片文件",
+            hintStringRes = R.string.hint_vflow_feishu_upload_file
+        ),
+        InputDefinition(
+            id = "file_name",
+            name = "文件名",
+            nameStringRes = R.string.param_vflow_feishu_upload_file_name_name,
+            staticType = ParameterType.STRING,
+            acceptsMagicVariable = true,
+            supportsRichText = true,
+            defaultValue = "",
+            hint = "留空则使用原始文件名",
+            hintStringRes = R.string.hint_vflow_feishu_upload_file_name
+        ),
+        InputDefinition(
+            id = "parent_type",
+            name = "上传点类型",
+            nameStringRes = R.string.param_vflow_feishu_upload_parent_type_name,
+            staticType = ParameterType.ENUM,
+            defaultValue = "docx_image",
+            options = parentTypeOptions.map { it.first },
+            optionsStringRes = listOf(
+                R.string.option_vflow_feishu_upload_parent_type_doc_image,
+                R.string.option_vflow_feishu_upload_parent_type_docx_image,
+                R.string.option_vflow_feishu_upload_parent_type_sheet_image,
+                R.string.option_vflow_feishu_upload_parent_type_doc_file,
+                R.string.option_vflow_feishu_upload_parent_type_docx_file,
+                R.string.option_vflow_feishu_upload_parent_type_sheet_file,
+                R.string.option_vflow_feishu_upload_parent_type_bitable_image,
+                R.string.option_vflow_feishu_upload_parent_type_bitable_file
+            )
+        ),
+        InputDefinition(
+            id = "parent_node",
+            name = "文档 Token",
+            nameStringRes = R.string.param_vflow_feishu_upload_parent_node_name,
+            staticType = ParameterType.STRING,
+            acceptsMagicVariable = true,
+            supportsRichText = true,
+            hint = "要上传到的云文档 token",
+            hintStringRes = R.string.hint_vflow_feishu_upload_parent_node
+        ),
+        InputDefinition(
+            id = "extra",
+            name = "额外参数",
+            nameStringRes = R.string.param_vflow_feishu_upload_extra_name,
+            staticType = ParameterType.STRING,
+            acceptsMagicVariable = true,
+            supportsRichText = true,
+            defaultValue = "",
+            isFolded = true,
+            hint = "JSON 格式，如 {\"drive_route_token\":\"xxx\"}",
+            hintStringRes = R.string.hint_vflow_feishu_upload_extra
         ),
         InputDefinition(
             id = "timeout",
             name = "超时(秒)",
+            nameStringRes = R.string.param_vflow_feishu_upload_timeout_name,
             staticType = ParameterType.NUMBER,
             defaultValue = 30.0,
             acceptsMagicVariable = true,
@@ -111,17 +137,20 @@ class FeishuMediaUploadModule : BaseModule() {
         OutputDefinition(
             id = "file_token",
             name = "文件 Token",
-            typeName = VTypeRegistry.STRING.id
+            typeName = VTypeRegistry.STRING.id,
+            nameStringRes = R.string.output_vflow_feishu_upload_file_token_name
         ),
         OutputDefinition(
             id = "code",
             name = "响应码",
-            typeName = VTypeRegistry.NUMBER.id
+            typeName = VTypeRegistry.NUMBER.id,
+            nameStringRes = R.string.output_vflow_feishu_upload_code_name
         ),
         OutputDefinition(
             id = "msg",
             name = "响应消息",
-            typeName = VTypeRegistry.STRING.id
+            typeName = VTypeRegistry.STRING.id,
+            nameStringRes = R.string.output_vflow_feishu_upload_msg_name
         )
     )
 
@@ -136,12 +165,14 @@ class FeishuMediaUploadModule : BaseModule() {
         return withContext(Dispatchers.IO) {
             try {
                 val rawAccessToken = context.getVariableAsString("access_token", "")
-                val accessToken = rawAccessToken.trim()
+                val accessToken = VariableResolver.resolve(rawAccessToken, context)
+                    .trim()
+                    .ifEmpty { FeishuModuleConfig.getToken(appContext) }
 
                 if (accessToken.isEmpty()) {
                     return@withContext ExecutionResult.Failure(
                         "参数错误",
-                        "访问令牌不能为空"
+                        "访问令牌不能为空，请在步骤中填写或前往设置 -> 模块配置配置飞书令牌"
                     )
                 }
 

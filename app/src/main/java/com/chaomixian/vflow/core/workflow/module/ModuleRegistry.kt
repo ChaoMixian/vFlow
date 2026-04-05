@@ -54,6 +54,7 @@ object ModuleRegistry {
                     "Shizuku" -> 8
                     "模板" -> 9
                     "UI 组件" -> 10
+                    "飞书" -> 11
                     else -> 99
                 }
             })
@@ -158,6 +159,7 @@ object ModuleRegistry {
         register(GetIpAddressModule(), context)
         register(HttpRequestModule(), context)
         register(AIModule(), context)
+        register(FeishuSendMessageModule(), context)
         register(FeishuMediaUploadModule(), context)
 
         // 应用与系统

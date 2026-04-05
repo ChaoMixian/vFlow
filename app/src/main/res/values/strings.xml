@@ -27,6 +27,10 @@
     <string name="module_config_backtap_title">模块配置</string>
     <string name="module_config_backtap_desc">点击下方按钮可配置轻敲背面灵敏度和检测参数</string>
     <string name="module_config_backtap_button">打开模块配置</string>
+    <string name="module_config_section_feishu">飞书</string>
+    <string name="module_config_feishu_access_token">访问令牌</string>
+    <string name="module_config_feishu_access_token_hint">粘贴飞书访问令牌，飞书模块会共享使用</string>
+    <string name="module_config_feishu_desc">此处配置的飞书访问令牌会被飞书相关模块复用。发送消息接口通常使用 tenant_access_token。</string>
 
     <string name="settings_section_debugging">调试</string>
     <string name="settings_switch_enable_logging">记录调试日志</string>

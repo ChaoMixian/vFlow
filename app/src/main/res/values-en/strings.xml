@@ -27,6 +27,10 @@
     <string name="module_config_backtap_title">Module Config</string>
     <string name="module_config_backtap_desc">Tap the button below to configure back tap sensitivity and detection parameters</string>
     <string name="module_config_backtap_button">Open Module Config</string>
+    <string name="module_config_section_feishu">Feishu</string>
+    <string name="module_config_feishu_access_token">Access Token</string>
+    <string name="module_config_feishu_access_token_hint">Paste the shared token used by Feishu modules</string>
+    <string name="module_config_feishu_desc">The token configured here is reused by all Feishu modules. Sending messages usually requires a tenant_access_token.</string>
 
     <string name="settings_section_debugging">Debugging</string>
     <string name="settings_switch_enable_logging">Record Debug Logs</string>
