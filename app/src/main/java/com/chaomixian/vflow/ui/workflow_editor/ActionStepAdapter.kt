@@ -18,6 +18,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.PopupMenu
@@ -26,203 +27,307 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.BlockType
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.pill.ParameterPillSpan
 import com.chaomixian.vflow.ui.workflow_editor.pill.PillTheme
 import com.google.android.material.color.MaterialColors
-import java.util.*
+import java.util.Collections
 
 class ActionStepAdapter(
     private val actionSteps: MutableList<ActionStep>,
+    private val visiblePositionProvider: (List<ActionStep>) -> List<Int> = { steps -> steps.indices.toList() },
+    private val displayIndexProvider: (adapterPosition: Int, actualPosition: Int) -> Int = { _, actualPosition -> actualPosition },
+    private val getAllSteps: () -> List<ActionStep> = { actionSteps },
+    private val getTriggerSteps: () -> List<ActionStep> = { emptyList() },
+    private val onAddTriggerClick: () -> Unit = {},
+    private val onEditTriggerClick: (position: Int, inputId: String?) -> Unit = { _, _ -> },
+    private val onDeleteTriggerClick: (position: Int) -> Unit = {},
     private val onEditClick: (position: Int, inputId: String?) -> Unit,
     private val onDeleteClick: (position: Int) -> Unit,
-    private val onDuplicateClick: (position: Int) -> Unit, // 双击复制回调
-    private val onInsertBelowClick: (position: Int) -> Unit, // 在下方插入回调
+    private val onDuplicateClick: (position: Int) -> Unit,
+    private val onInsertBelowClick: (position: Int) -> Unit,
+    private val onTriggerParameterPillClick: (position: Int, parameterId: String) -> Unit = { _, _ -> },
     private val onParameterPillClick: (position: Int, parameterId: String) -> Unit,
     private val onStartActivityForResult: (position: Int, Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit
-) : RecyclerView.Adapter<ActionStepAdapter.ActionStepViewHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    companion object {
+        private const val VIEW_TYPE_TRIGGER_GROUP = 0
+        private const val VIEW_TYPE_ACTION_STEP = 1
+    }
+
+    private fun getVisiblePositions(): List<Int> = visiblePositionProvider(actionSteps)
+
+    fun getActualPosition(adapterPosition: Int): Int? {
+        if (adapterPosition <= 0) return null
+        return getVisiblePositions().getOrNull(adapterPosition - 1)
+    }
 
     fun moveItem(fromPosition: Int, toPosition: Int) {
-        if (fromPosition > 0 && toPosition > 0 && fromPosition < actionSteps.size && toPosition < actionSteps.size) {
-            Collections.swap(actionSteps, fromPosition, toPosition)
+        val actualFrom = getActualPosition(fromPosition) ?: return
+        val actualTo = getActualPosition(toPosition) ?: return
+        if (actualFrom in actionSteps.indices && actualTo in actionSteps.indices) {
+            Collections.swap(actionSteps, actualFrom, actualTo)
             notifyItemMoved(fromPosition, toPosition)
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ActionStepViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_action_step, parent, false)
-        return ActionStepViewHolder(view)
+    override fun getItemViewType(position: Int): Int {
+        return if (position == 0) VIEW_TYPE_TRIGGER_GROUP else VIEW_TYPE_ACTION_STEP
     }
 
-    override fun onBindViewHolder(holder: ActionStepViewHolder, position: Int) {
-        val step = actionSteps[position]
-        holder.bind(step, position, actionSteps)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return when (viewType) {
+            VIEW_TYPE_TRIGGER_GROUP -> TriggerGroupViewHolder(
+                inflater.inflate(R.layout.item_trigger_group, parent, false)
+            )
+            else -> ActionStepViewHolder(
+                inflater.inflate(R.layout.item_action_step, parent, false)
+            )
+        }
     }
 
-    override fun getItemCount() = actionSteps.size
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when (holder) {
+            is TriggerGroupViewHolder -> holder.bind(getTriggerSteps(), getAllSteps())
+            is ActionStepViewHolder -> {
+                val actualPosition = getActualPosition(position) ?: return
+                val step = actionSteps[actualPosition]
+                val displayIndex = displayIndexProvider(position, actualPosition)
+                holder.bind(step, actualPosition, displayIndex, getAllSteps())
+            }
+        }
+    }
+
+    override fun getItemCount(): Int = getVisiblePositions().size + 1
+
+    private fun buildStepHeader(
+        context: Context,
+        summary: CharSequence,
+        prefixText: String?
+    ): CharSequence {
+        if (prefixText.isNullOrBlank()) return summary
+        val spannablePrefix = SpannableStringBuilder(prefixText).apply {
+            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val prefixColor = MaterialColors.getColor(
+                context,
+                com.google.android.material.R.attr.colorOnSurfaceVariant,
+                Color.GRAY
+            )
+            setSpan(ForegroundColorSpan(prefixColor), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return SpannableStringBuilder().append(spannablePrefix).append(summary)
+    }
+
+    private fun bindEmbeddedStepCard(
+        cardView: View,
+        step: ActionStep,
+        actualPosition: Int,
+        title: CharSequence,
+        allSteps: List<ActionStep>,
+        indentLevel: Int,
+        isDeletable: Boolean,
+        onParameterPillClick: (parameterId: String) -> Unit,
+        onClick: () -> Unit,
+        onDelete: (() -> Unit)? = null,
+        onLongPress: (() -> Unit)? = null
+    ) {
+        val context = cardView.context
+        val module = ModuleRegistry.getModule(step.moduleId) ?: return
+        val indentSpace: Space = cardView.findViewById(R.id.indent_space)
+        val contentContainer: LinearLayout = cardView.findViewById(R.id.content_container)
+        val categoryColorBarContainer: View = cardView.findViewById(R.id.category_color_bar_container)
+        val categoryColorBar: View = cardView.findViewById(R.id.category_color_bar)
+        val deleteButton: ImageButton = cardView.findViewById(R.id.button_delete_action)
+
+        indentSpace.layoutParams.width = (indentLevel * 24 * context.resources.displayMetrics.density).toInt()
+        val categoryColor = ContextCompat.getColor(context, PillTheme.getCategoryColor(module.metadata.category))
+        val drawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = (4 * context.resources.displayMetrics.density)
+            setColor(categoryColor)
+        }
+        categoryColorBar.background = drawable
+
+        contentContainer.removeAllViews()
+        val headerView = createHeaderRow(
+            context = context,
+            summary = title,
+            clickTarget = cardView,
+            onParameterPillClick = onParameterPillClick,
+            onFallbackClick = onClick
+        )
+        contentContainer.addView(headerView)
+
+        val customPreview = module.uiProvider?.createPreview(context, contentContainer, step, allSteps) { intent, callback ->
+            onStartActivityForResult(actualPosition, intent, callback)
+        }
+        if (customPreview != null) {
+            val layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            layoutParams.topMargin = (8 * context.resources.displayMetrics.density).toInt()
+            customPreview.layoutParams = layoutParams
+            contentContainer.addView(customPreview)
+        }
+
+        deleteButton.visibility = if (isDeletable) View.VISIBLE else View.GONE
+        deleteButton.setOnClickListener { onDelete?.invoke() }
+
+        cardView.setOnClickListener { onClick() }
+        categoryColorBarContainer.setOnLongClickListener {
+            onLongPress?.invoke()
+            onLongPress != null
+        }
+    }
+
+    private fun createHeaderRow(
+        context: Context,
+        summary: CharSequence,
+        clickTarget: View,
+        onParameterPillClick: (parameterId: String) -> Unit,
+        onFallbackClick: () -> Unit
+    ): View {
+        val textView = TextView(context).apply {
+            text = summary
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium)
+            movementMethod = LinkMovementMethod.getInstance()
+            highlightColor = Color.TRANSPARENT
+            includeFontPadding = false
+            setLineSpacing(0f, 1.4f)
+        }
+
+        textView.setOnTouchListener { v, event ->
+            val widget = v as TextView
+            val text = widget.text
+            if (text is Spanned && event.action == MotionEvent.ACTION_UP) {
+                val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
+                val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
+                val layout = widget.layout ?: return@setOnTouchListener false
+                val line = layout.getLineForVertical(y)
+                if (x < 0 || x > layout.getLineWidth(line)) {
+                    clickTarget.performClick()
+                    return@setOnTouchListener true
+                }
+                val offset = layout.getOffsetForHorizontal(line, x.toFloat())
+                val links = text.getSpans(offset, offset, ParameterPillSpan::class.java)
+                if (links.isNotEmpty()) {
+                    onParameterPillClick(links[0].parameterId)
+                    true
+                } else {
+                    onFallbackClick()
+                    true
+                }
+            } else {
+                false
+            }
+        }
+        return textView
+    }
+
+    inner class TriggerGroupViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val titleView: TextView = itemView.findViewById(R.id.text_trigger_group_title)
+        private val triggerContainer: LinearLayout = itemView.findViewById(R.id.layout_trigger_steps)
+        private val addButton: Button = itemView.findViewById(R.id.button_add_trigger)
+
+        fun bind(triggerSteps: List<ActionStep>, allSteps: List<ActionStep>) {
+            titleView.text = itemView.context.getString(R.string.workflow_editor_trigger_group_title)
+
+            triggerContainer.removeAllViews()
+            val inflater = LayoutInflater.from(itemView.context)
+            triggerSteps.forEachIndexed { index, step ->
+                val module = ModuleRegistry.getModule(step.moduleId) ?: return@forEachIndexed
+                val rawSummary = module.getSummary(itemView.context, step)
+                val summary = PillRenderer.renderPills(itemView.context, rawSummary, allSteps, step)
+                    ?: module.metadata.getLocalizedName(itemView.context)
+                val cardTitle = buildStepHeader(itemView.context, summary, null)
+                val embeddedCard = inflater.inflate(R.layout.item_action_step, triggerContainer, false)
+                bindEmbeddedStepCard(
+                    cardView = embeddedCard,
+                    step = step,
+                    actualPosition = index,
+                    title = cardTitle,
+                    allSteps = allSteps,
+                    indentLevel = 0,
+                    isDeletable = triggerSteps.size > 1,
+                    onParameterPillClick = { parameterId ->
+                        onTriggerParameterPillClick(index, parameterId)
+                    },
+                    onClick = { onEditTriggerClick(index, null) },
+                    onDelete = { onDeleteTriggerClick(index) }
+                )
+                triggerContainer.addView(embeddedCard)
+            }
+
+            addButton.setOnClickListener { onAddTriggerClick() }
+        }
+    }
 
     inner class ActionStepViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val context: Context = itemView.context
-        private val deleteButton: ImageButton = itemView.findViewById(R.id.button_delete_action)
-        private val indentSpace: Space = itemView.findViewById(R.id.indent_space)
-        private val contentContainer: LinearLayout = itemView.findViewById(R.id.content_container)
-        private val categoryColorBarContainer: View = itemView.findViewById(R.id.category_color_bar_container)
-        private val categoryColorBar: View = itemView.findViewById(R.id.category_color_bar)
-
-        // 用于处理点击事件的 Handler
         private val handler = Handler(Looper.getMainLooper())
         private var clickCount = 0
 
-        fun bind(step: ActionStep, position: Int, allSteps: List<ActionStep>) {
+        fun bind(step: ActionStep, actualPosition: Int, displayIndex: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
-
-            indentSpace.layoutParams.width = (step.indentationLevel * 24 * context.resources.displayMetrics.density).toInt()
-
-            val categoryColor = ContextCompat.getColor(context, PillTheme.getCategoryColor(module.metadata.category))
-            val drawable = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = (4 * context.resources.displayMetrics.density)
-                setColor(categoryColor)
-            }
-            categoryColorBar.background = drawable
-
-            // 为颜色条容器添加长按弹出菜单
-            categoryColorBarContainer.setOnLongClickListener { view ->
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    showPopupMenu(view, adapterPosition)
-                    true
-                } else {
-                    false
-                }
-            }
-
-            contentContainer.removeAllViews()
-
-            // 移除所有特殊判断，统一调用 uiProvider
-            val customPreview = module.uiProvider?.createPreview(context, contentContainer, step, allSteps) { intent, callback ->
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    onStartActivityForResult(adapterPosition, intent, callback)
-                }
-            }
-
-            val hasCustomPreview = customPreview != null
-
-            // 根据是否存在自定义预览来决定标题内容
             val rawSummary = module.getSummary(context, step)
-            val fallbackName = module.metadata.getLocalizedName(context)
-            val headerSummary: CharSequence = if (hasCustomPreview) {
-                // 如果有自定义预览，标题只显示简洁的摘要（不包含值）
-                PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: fallbackName
-            } else {
-                // 否则，显示完整的、带"药丸"的摘要
-                PillRenderer.renderPills(context, rawSummary, allSteps, step) ?: fallbackName
-            }
+            val summary = PillRenderer.renderPills(context, rawSummary, allSteps, step)
+                ?: module.metadata.getLocalizedName(context)
+            val title = buildStepHeader(context, summary, "#$displayIndex ")
 
-            // 总是创建并添加标题行
-            val prefix = "#$position "
-            val spannablePrefix = SpannableStringBuilder(prefix).apply {
-                setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                val prefixColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY)
-                setSpan(ForegroundColorSpan(prefixColor), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-            val finalTitle = SpannableStringBuilder().append(spannablePrefix).append(headerSummary)
-            val headerView = createHeaderRow(finalTitle)
-            contentContainer.addView(headerView)
-
-            // 如果有自定义预览，将其添加到标题行下方
-            if (customPreview != null) {
-                val layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                layoutParams.topMargin = (8 * context.resources.displayMetrics.density).toInt()
-                customPreview.layoutParams = layoutParams
-                contentContainer.addView(customPreview)
-            }
-
-            deleteButton.setOnClickListener {
-                if(adapterPosition != RecyclerView.NO_POSITION) onDeleteClick(adapterPosition)
-            }
-
-            // --- 实现单击编辑、双击复制逻辑 ---
-            itemView.setOnClickListener {
-                clickCount++
-                if (clickCount == 1) {
-                    // 第一次点击，延迟 250ms 执行，等待可能的第二次点击
-                    handler.postDelayed({
-                        if (clickCount == 1) {
-                            // 确认是单击 -> 编辑
-                            if (adapterPosition != RecyclerView.NO_POSITION) {
-                                onEditClick(adapterPosition, null)
+            bindEmbeddedStepCard(
+                cardView = itemView,
+                step = step,
+                actualPosition = actualPosition,
+                title = title,
+                allSteps = allSteps,
+                indentLevel = step.indentationLevel,
+                isDeletable = module.blockBehavior.isIndividuallyDeletable ||
+                    module.blockBehavior.type == BlockType.BLOCK_START ||
+                    module.blockBehavior.type == BlockType.NONE,
+                onParameterPillClick = { parameterId ->
+                    onParameterPillClick(actualPosition, parameterId)
+                },
+                onClick = {
+                    clickCount++
+                    if (clickCount == 1) {
+                        handler.postDelayed({
+                            if (clickCount == 1 && adapterPosition != RecyclerView.NO_POSITION) {
+                                onEditClick(actualPosition, null)
                             }
-                        }
-                        clickCount = 0 // 重置
-                    }, 250)
-                } else if (clickCount == 2) {
-                    // 第二次点击 -> 双击 -> 复制
-                    clickCount = 0 // 重置
-                    if (adapterPosition != RecyclerView.NO_POSITION) {
-                        onDuplicateClick(adapterPosition)
-                    }
-                }
-            }
-
-            val behavior = module.blockBehavior
-            val isDeletable = position != 0 && (behavior.isIndividuallyDeletable || behavior.type == BlockType.BLOCK_START || behavior.type == BlockType.NONE)
-            deleteButton.visibility = if (isDeletable) View.VISIBLE else View.GONE
-        }
-
-        private fun createHeaderRow(summary: CharSequence): View {
-            val textView = TextView(context).apply {
-                text = summary
-                setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium)
-                movementMethod = LinkMovementMethod.getInstance()
-                highlightColor = Color.TRANSPARENT
-                includeFontPadding = false
-                setLineSpacing(0f, 1.4f)
-            }
-
-            textView.setOnTouchListener { v, event ->
-                val widget = v as TextView
-                val text = widget.text
-                if (text is Spanned && event.action == MotionEvent.ACTION_UP) {
-                    val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
-                    val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
-                    val layout = widget.layout ?: return@setOnTouchListener false
-                    val line = layout.getLineForVertical(y)
-                    if (x < 0 || x > layout.getLineWidth(line)) {
-                        itemView.performClick()
-                        return@setOnTouchListener true
-                    }
-                    val offset = layout.getOffsetForHorizontal(line, x.toFloat())
-                    val links = text.getSpans(offset, offset, ParameterPillSpan::class.java)
-                    if (links.isNotEmpty()) {
+                            clickCount = 0
+                        }, 250)
+                    } else if (clickCount == 2) {
+                        clickCount = 0
                         if (adapterPosition != RecyclerView.NO_POSITION) {
-                            onParameterPillClick(adapterPosition, links[0].parameterId)
+                            onDuplicateClick(actualPosition)
                         }
-                        true
-                    } else {
-                        itemView.performClick()
-                        true
                     }
-                } else {
-                    false
+                },
+                onDelete = {
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        onDeleteClick(actualPosition)
+                    }
+                },
+                onLongPress = {
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        showPopupMenu(itemView.findViewById(R.id.category_color_bar_container), actualPosition)
+                    }
                 }
-            }
-            return textView
+            )
         }
 
-        private fun showPopupMenu(anchor: View, position: Int) {
+        private fun showPopupMenu(anchor: View, actualPosition: Int) {
             val popup = PopupMenu(context, anchor)
             popup.menu.add(0, 1, 0, R.string.insert_below)
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     1 -> {
-                        onInsertBelowClick(position)
+                        onInsertBelowClick(actualPosition)
                         true
                     }
                     else -> false

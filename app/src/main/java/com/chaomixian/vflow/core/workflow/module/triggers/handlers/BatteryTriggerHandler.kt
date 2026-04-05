@@ -7,8 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import android.util.Log
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.launch
 
@@ -21,8 +19,6 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
     companion object {
         private const val TAG = "BatteryTriggerHandler"
     }
-
-    override fun getTriggerModuleId(): String = "vflow.trigger.battery"
 
     override fun startListening(context: Context) {
         if (batteryReceiver != null) return
@@ -75,8 +71,8 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
         lastBatteryPercentage = currentPercentage
 
         triggerScope.launch {
-            listeningWorkflows.forEach { workflow ->
-                val config = workflow.triggerConfig ?: return@forEach
+            listeningTriggers.forEach { trigger ->
+                val config = trigger.parameters
                 val threshold = (config["level"] as? Number)?.toInt() ?: return@forEach
                 val condition = config["above_or_below"] as? String ?: return@forEach
 
@@ -88,8 +84,8 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
                 }
 
                 if (shouldTrigger) {
-                    DebugLogger.i(TAG, "条件满足, 触发工作流: ${workflow.name} (电量 $currentPercentage% $condition $threshold%)")
-                    WorkflowExecutor.execute(workflow, context.applicationContext)
+                    DebugLogger.i(TAG, "条件满足, 触发工作流: ${trigger.workflowName} (电量 $currentPercentage% $condition $threshold%)")
+                    executeTrigger(context, trigger)
                 }
             }
         }

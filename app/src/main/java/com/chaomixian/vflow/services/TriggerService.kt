@@ -18,6 +18,7 @@ import com.chaomixian.vflow.core.logging.ExecutionLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
 import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
@@ -217,50 +218,41 @@ class TriggerService : Service() {
      * @param oldWorkflow 旧的工作流状态，可能为null（表示新增）。
      */
     private fun handleWorkflowChanged(newWorkflow: Workflow, oldWorkflow: Workflow?) {
-        val newHandler = getHandlerForWorkflow(newWorkflow)
-        val oldHandler = oldWorkflow?.let { getHandlerForWorkflow(it) }
+        val newHandlers = getHandlersForWorkflow(newWorkflow)
+        val oldHandlers = oldWorkflow?.let { getHandlersForWorkflow(it) }.orEmpty()
 
-        // 步骤1：如果存在旧版本，无论如何都先从其处理器中移除，确保状态更新的原子性。
-        if (oldWorkflow != null && oldHandler != null) {
+        if (oldWorkflow != null && oldHandlers.isNotEmpty()) {
             DebugLogger.d(TAG, "准备更新，正在从处理器中移除旧版: ${oldWorkflow.name}")
-            oldHandler.removeWorkflow(this, oldWorkflow.id)
+            oldHandlers.forEach { (handler, trigger) -> handler.removeTrigger(this, trigger.triggerId) }
         }
 
-        // 步骤2：处理新版本的工作流。
+        if (newHandlers.isEmpty()) {
+            return
+        }
+
         if (newWorkflow.isEnabled) {
-            // 用户意图是启用此工作流，现在检查权限。
             val missingPermissions = PermissionManager.getMissingPermissions(this, newWorkflow)
 
             if (missingPermissions.isEmpty()) {
-                // 权限充足，可以安全地添加到处理器。
-                if (newHandler != null) {
-                    DebugLogger.d(TAG, "权限正常，正在向处理器添加/更新: ${newWorkflow.name}")
-                    newHandler.addWorkflow(this, newWorkflow)
+                DebugLogger.d(TAG, "权限正常，正在向处理器添加/更新: ${newWorkflow.name}")
+                newHandlers.forEach { (handler, trigger) ->
+                    handler.addTrigger(this, trigger)
                 }
-                // 如果这个工作流之前因为权限问题被禁用过，现在权限已恢复，
-                // 我们需要重置标记位并保存，以确保状态正确。
                 if (newWorkflow.wasEnabledBeforePermissionsLost) {
                     val fixedWorkflow = newWorkflow.copy(wasEnabledBeforePermissionsLost = false)
                     workflowManager.saveWorkflow(fixedWorkflow)
                 }
             } else {
-                // 权限不足！这是关键的保护点。
                 DebugLogger.w(TAG, "工作流 '${newWorkflow.name}' 因缺少权限 (${missingPermissions.joinToString { it.name }}) 将被自动禁用。")
-                // 创建一个被禁用的副本，并设置标志位。
                 val disabledWorkflow = newWorkflow.copy(
                     isEnabled = false,
-                    wasEnabledBeforePermissionsLost = true // 记录下用户原本是想启用它的
+                    wasEnabledBeforePermissionsLost = true
                 )
-                // 保存这个被禁用的版本。这会再次触发 handleWorkflowChanged，
-                // 但下一次调用时 isEnabled 为 false，流程会正确地将其从处理器中移除。
                 workflowManager.saveWorkflow(disabledWorkflow)
             }
         } else {
-            // 如果工作流本身就是禁用的，只需确保它已从处理器中移除即可。
-            if (newHandler != null) {
-                DebugLogger.d(TAG, "工作流 '${newWorkflow.name}' 已被禁用，正在从处理器中移除。")
-                newHandler.removeWorkflow(this, newWorkflow.id)
-            }
+            DebugLogger.d(TAG, "工作流 '${newWorkflow.name}' 已被禁用，正在从处理器中移除。")
+            newHandlers.forEach { (handler, trigger) -> handler.removeTrigger(this, trigger.triggerId) }
         }
     }
 
@@ -270,15 +262,19 @@ class TriggerService : Service() {
      */
     private fun handleWorkflowRemoved(removedWorkflow: Workflow) {
         DebugLogger.d(TAG, "处理器正在移除已删除的工作流: ${removedWorkflow.name}")
-        getHandlerForWorkflow(removedWorkflow)?.removeWorkflow(this, removedWorkflow.id)
+        getHandlersForWorkflow(removedWorkflow).forEach { (handler, trigger) ->
+            handler.removeTrigger(this, trigger.triggerId)
+        }
     }
 
     /**
      * 根据工作流的触发器类型查找对应的处理器。
      */
-    private fun getHandlerForWorkflow(workflow: Workflow): ITriggerHandler? {
-        val triggerType = workflow.triggerConfig?.get("type") as? String
-        return triggerHandlers[triggerType]
+    private fun getHandlersForWorkflow(workflow: Workflow): List<Pair<ITriggerHandler, TriggerSpec>> {
+        return workflow.toAutoTriggerSpecs().mapNotNull { trigger ->
+            val handler = triggerHandlers[trigger.type] ?: return@mapNotNull null
+            handler to trigger
+        }
     }
 
     override fun onDestroy() {

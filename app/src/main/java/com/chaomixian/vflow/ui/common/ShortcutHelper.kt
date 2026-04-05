@@ -10,7 +10,6 @@ import androidx.core.graphics.drawable.IconCompat
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.core.workflow.module.triggers.ManualTriggerModule
 
 /**
  * 辅助对象，用于管理应用的动态快捷方式和固定快捷方式。
@@ -27,7 +26,7 @@ object ShortcutHelper {
 
         // 1. 查找所有手动触发的工作流，并分为收藏和未收藏两组
         val allManualWorkflows = workflowManager.getAllWorkflows()
-            .filter { it.steps.firstOrNull()?.moduleId == ManualTriggerModule().id }
+            .filter { it.hasManualTrigger() }
 
         val favoriteWorkflows = allManualWorkflows.filter { it.isFavorite }
         val nonFavoriteWorkflows = allManualWorkflows.filter { !it.isFavorite }

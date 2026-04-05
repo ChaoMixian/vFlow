@@ -12,8 +12,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.module.triggers.LocationTriggerData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -54,8 +54,6 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
         NETWORK,   // 网络定位（WiFi + 基站，中等耗电）
         GPS        // GPS 精确定位（高耗电）
     }
-
-    override fun getTriggerModuleId(): String = "vflow.trigger.location"
 
     override fun startListening(context: Context) {
         DebugLogger.d(TAG, "启动位置监听...")
@@ -304,8 +302,8 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
     private fun findMinimumDistanceToAnyFence(location: Location): Double {
         var minDistance = Double.MAX_VALUE
 
-        listeningWorkflows.forEach { workflow ->
-            val config = workflow.triggerConfig ?: return@forEach
+        listeningTriggers.forEach { trigger ->
+            val config = trigger.parameters
             val fenceLat = config["latitude"] as? Double ?: return@forEach
             val fenceLon = config["longitude"] as? Double ?: return@forEach
             val fenceRadius = config["radius"] as? Double ?: return@forEach
@@ -360,8 +358,8 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
      * 检查所有围栏的进入/离开事件
      */
     private suspend fun checkGeofenceEvents(context: Context, location: Location) {
-        listeningWorkflows.forEach { workflow ->
-            val config = workflow.triggerConfig ?: return@forEach
+        listeningTriggers.forEach { trigger ->
+            val config = trigger.parameters
             val fenceLat = config["latitude"] as? Double ?: return@forEach
             val fenceLon = config["longitude"] as? Double ?: return@forEach
             val fenceRadius = config["radius"] as? Double ?: return@forEach
@@ -377,7 +375,7 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
             val isInFence = distance <= fenceRadius
 
             // 获取上次的状态
-            val fenceId = generateFenceId(workflow.id, fenceLat, fenceLon, fenceRadius)
+            val fenceId = generateFenceId(trigger.triggerId, fenceLat, fenceLon, fenceRadius)
             val wasInFence = stateStore.isInFence(fenceId)
 
             // 检查进入事件
@@ -388,8 +386,8 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
                 val enterEvent = context.getString(com.chaomixian.vflow.R.string.option_vflow_trigger_location_event_enter)
 
                 if (configEvent == enterEvent) {
-                    DebugLogger.i(TAG, "触发工作流 '${workflow.name}'：进入围栏")
-                    executeWorkflow(context, workflow, location)
+                    DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'：进入围栏")
+                    executeWorkflow(context, trigger, location)
                 }
             }
             // 检查离开事件
@@ -399,8 +397,8 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
                 val exitEvent = context.getString(com.chaomixian.vflow.R.string.option_vflow_trigger_location_event_exit)
 
                 if (configEvent == exitEvent) {
-                    DebugLogger.i(TAG, "触发工作流 '${workflow.name}'：离开围栏")
-                    executeWorkflow(context, workflow, location)
+                    DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'：离开围栏")
+                    executeWorkflow(context, trigger, location)
                 }
             }
         }
@@ -409,13 +407,13 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
     /**
      * 执行工作流
      */
-    private fun executeWorkflow(context: Context, workflow: com.chaomixian.vflow.core.workflow.model.Workflow, location: Location) {
+    private fun executeWorkflow(context: Context, trigger: TriggerSpec, location: Location) {
         val triggerData = LocationTriggerData(
             latitude = location.latitude,
             longitude = location.longitude,
             accuracy = location.accuracy
         )
-        WorkflowExecutor.execute(workflow, context.applicationContext, triggerData)
+        executeTrigger(context, trigger, triggerData)
     }
 
     /**
@@ -439,8 +437,8 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
     /**
      * 生成围栏唯一标识
      */
-    private fun generateFenceId(workflowId: String, lat: Double, lon: Double, radius: Double): String {
-        return "${workflowId}_${(lat * 10000).toInt()}_${(lon * 10000).toInt()}_${radius.toInt()}"
+    private fun generateFenceId(triggerId: String, lat: Double, lon: Double, radius: Double): String {
+        return "${triggerId}_${(lat * 10000).toInt()}_${(lon * 10000).toInt()}_${radius.toInt()}"
     }
 
     /**

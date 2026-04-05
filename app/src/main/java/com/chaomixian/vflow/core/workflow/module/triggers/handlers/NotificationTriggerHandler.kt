@@ -6,7 +6,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VString
@@ -51,8 +50,6 @@ class NotificationTriggerHandler : ListeningTriggerHandler() {
         private var instance: NotificationTriggerHandler? = null
     }
 
-    override fun getTriggerModuleId(): String = "vflow.trigger.notification"
-
     override fun startListening(context: Context) {
         instance = this
         DebugLogger.d(TAG, "开始监听通知事件。请确保通知使用权已授予。")
@@ -88,8 +85,8 @@ class NotificationTriggerHandler : ListeningTriggerHandler() {
         DebugLogger.d(TAG, "收到通知: [$packageName] $title: $content")
 
         triggerScope.launch {
-            listeningWorkflows.forEach { workflow ->
-                val config = workflow.triggerConfig ?: return@forEach
+            listeningTriggers.forEach { trigger ->
+                val config = trigger.parameters
                 val appFilter = config["app_filter"] as? String
                 val titleFilter = config["title_filter"] as? String
                 val contentFilter = config["content_filter"] as? String
@@ -99,16 +96,14 @@ class NotificationTriggerHandler : ListeningTriggerHandler() {
                 val contentMatches = contentFilter.isNullOrBlank() || content.contains(contentFilter, ignoreCase = true)
 
                 if (appMatches && titleMatches && contentMatches) {
-                    DebugLogger.i(TAG, "通知满足条件，触发工作流 '${workflow.name}'")
+                    DebugLogger.i(TAG, "通知满足条件，触发工作流 '${trigger.workflowName}'")
                     val triggerData = VDictionary(mapOf(
                         "package_name" to VString(packageName),
                         "title" to VString(title),
                         "content" to VString(content),
                         "id" to VString(sbn.key)
                     ))
-                    // 在这里获取 applicationContext
-                    val appContext = workflowManager.context.applicationContext
-                    WorkflowExecutor.execute(workflow, appContext, triggerData)
+                    executeTrigger(notificationListener?.applicationContext ?: return@forEach, trigger, triggerData)
                 }
             }
         }

@@ -4,7 +4,6 @@ package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
 import android.util.Log
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.Job
@@ -32,8 +31,6 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     companion object {
         private const val TAG = "AppStartTriggerHandler"
     }
-
-    override fun getTriggerModuleId(): String = "vflow.trigger.app_start"
 
     // 常见的桌面应用包名列表
     private val launcherPackages = setOf(
@@ -406,8 +403,8 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     }
 
     private fun checkForAppTrigger(context: Context, packageName: String, className: String, eventType: String) {
-        listeningWorkflows.forEach { workflow ->
-            val config = workflow.triggerConfig ?: return@forEach
+        listeningTriggers.forEach { trigger ->
+            val config = trigger.parameters
             val configEvent = config["event"] as? String
 
             if (configEvent == eventType) {
@@ -416,8 +413,8 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
 
                 if (targetPackages.contains(packageName)) {
                     triggerScope.launch {
-                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}', 事件: $packageName $eventType")
-                        WorkflowExecutor.execute(workflow, context)
+                        DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}', 事件: $packageName $eventType")
+                        executeTrigger(context, trigger)
                     }
                 }
             }

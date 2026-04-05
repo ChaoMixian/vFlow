@@ -227,7 +227,11 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
         val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
         if (missingPermissions.isEmpty()) {
             Toast.makeText(requireContext(), getString(R.string.toast_starting_workflow, workflow.name), Toast.LENGTH_SHORT).show()
-            com.chaomixian.vflow.core.execution.WorkflowExecutor.execute(workflow, requireContext())
+            com.chaomixian.vflow.core.execution.WorkflowExecutor.execute(
+                workflow = workflow,
+                context = requireContext(),
+                triggerStepId = workflow.manualTrigger()?.id
+            )
         } else {
             com.google.android.material.snackbar.Snackbar.make(
                 requireView(),

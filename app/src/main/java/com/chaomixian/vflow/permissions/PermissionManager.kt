@@ -665,7 +665,7 @@ object PermissionManager {
 
 
     fun getMissingPermissions(context: Context, workflow: Workflow): List<Permission> {
-        val requiredPermissions = workflow.steps
+        val requiredPermissions = workflow.allSteps
             .mapNotNull {
                 ModuleRegistry.getModule(it.moduleId)?.getRequiredPermissions(it)
             }

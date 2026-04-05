@@ -90,6 +90,8 @@
     <string name="common_confirm">确定</string>
     <string name="save">保存</string>
     <string name="workflow_editor_add_action">添加动作</string>
+    <string name="workflow_editor_add_trigger">添加触发器</string>
+    <string name="workflow_editor_trigger_group_title">#0 触发器</string>
     <string name="picker_select_trigger">选择一个触发器</string>
     <string name="picker_select_action">选择一个动作</string>
     <string name="picker_select_date">选择日期</string>

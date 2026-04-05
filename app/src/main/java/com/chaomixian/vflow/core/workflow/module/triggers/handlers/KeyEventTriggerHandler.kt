@@ -5,9 +5,8 @@ package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
 import android.content.Intent
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.core.utils.StorageManager
@@ -24,7 +23,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
 
     // 定义一个数据类来存储解析后的、规范化的触发器信息
     private data class ResolvedKeyEventTrigger(
-        val workflowId: String,
+        val trigger: TriggerSpec,
         val devicePath: String,
         val keyCode: String,
         val actionType: String,
@@ -33,9 +32,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
 
     private enum class KeyState { IDLE, WAIT_FOR_DOUBLE, PROCESSING }
 
-    // 线程安全的列表，用于存储当前正在监听的工作流
-    private val listeningWorkflows = CopyOnWriteArrayList<Workflow>()
-    // 存储当前所有已解析并激活的触发器配置
+    private val registeredTriggers = CopyOnWriteArrayList<TriggerSpec>()
     private val activeTriggers = CopyOnWriteArrayList<ResolvedKeyEventTrigger>()
     private var keyEventJob: Job? = null
     private val keyStates = ConcurrentHashMap<String, KeyState>()
@@ -81,17 +78,17 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         }
     }
 
-    override fun addWorkflow(context: Context, workflow: Workflow) {
-        listeningWorkflows.removeAll { it.id == workflow.id }
-        listeningWorkflows.add(workflow)
-        DebugLogger.d(TAG, "已添加/更新 '${workflow.name}'。准备重新加载按键监听。")
+    override fun addTrigger(context: Context, trigger: TriggerSpec) {
+        registeredTriggers.removeAll { it.triggerId == trigger.triggerId }
+        registeredTriggers.add(trigger)
+        DebugLogger.d(TAG, "已添加/更新触发器 '${trigger.triggerId}'。准备重新加载按键监听。")
         reloadKeyEventTriggers(context)
     }
 
-    override fun removeWorkflow(context: Context, workflowId: String) {
-        val removed = listeningWorkflows.removeAll { it.id == workflowId }
+    override fun removeTrigger(context: Context, triggerId: String) {
+        val removed = registeredTriggers.removeAll { it.triggerId == triggerId }
         if (removed) {
-            DebugLogger.d(TAG, "已从监听列表移除 workflowId: $workflowId。准备重新加载按键监听。")
+            DebugLogger.d(TAG, "已移除触发器: $triggerId。准备重新加载按键监听。")
             reloadKeyEventTriggers(context)
         }
     }
@@ -100,8 +97,8 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
      * 新增一个私有辅助函数，用于将工作流的 triggerConfig 解析为标准化的 ResolvedKeyEventTrigger。
      * 这个函数集中处理了预设和手动配置的逻辑，确保了数据的一致性。
      */
-    private fun resolveTriggerFromWorkflow(workflow: Workflow): ResolvedKeyEventTrigger? {
-        val config = workflow.triggerConfig ?: return null
+    private fun resolveTrigger(trigger: TriggerSpec): ResolvedKeyEventTrigger? {
+        val config = trigger.parameters
         val preset = config["device_preset"] as? String
         val actionType = config["action_type"] as? String ?: return null
         var devicePath: String?
@@ -128,7 +125,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             return null
         }
 
-        return ResolvedKeyEventTrigger(workflow.id, devicePath, keyCode, actionType, isSlider)
+        return ResolvedKeyEventTrigger(trigger, devicePath, keyCode, actionType, isSlider)
     }
 
     private fun reloadKeyEventTriggers(context: Context) {
@@ -158,9 +155,7 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
 
             // 2. 使用新的辅助函数来构建 activeTriggers 列表
             activeTriggers.clear()
-            val resolvedTriggers = listeningWorkflows.mapNotNull { resolveTriggerFromWorkflow(it) }
-            activeTriggers.addAll(resolvedTriggers)
-
+            activeTriggers.addAll(registeredTriggers.mapNotNull { resolveTrigger(it) })
             if (activeTriggers.isEmpty()) {
                 DebugLogger.d(TAG, "没有已启用的按键触发器，停止监听。")
                 return@launch
@@ -300,31 +295,25 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
      * executeMatchingWorkflows 现在直接查询已解析的 activeTriggers 列表。
      */
     private fun executeMatchingWorkflows(context: Context, devicePath: String, keyCode: String, actionType: String) {
-        val matchingWorkflowIds = activeTriggers.filter {
+        val matchingTriggers = activeTriggers.filter {
             it.devicePath == devicePath && it.keyCode == keyCode && it.actionType == actionType
-        }.map { it.workflowId }
+        }.distinctBy { it.trigger.workflowId }
 
-        if (matchingWorkflowIds.isNotEmpty()) {
-            val matchingWorkflows = listeningWorkflows.filter { it.id in matchingWorkflowIds }
-            if (matchingWorkflows.isNotEmpty()) {
-                triggerScope.launch {
-                    when {
-                        matchingWorkflows.size == 1 -> WorkflowExecutor.execute(matchingWorkflows.first(), context)
-                        else -> handleMultipleMatches(context, matchingWorkflows)
-                    }
+        if (matchingTriggers.isNotEmpty()) {
+            triggerScope.launch {
+                when {
+                    matchingTriggers.size == 1 -> executeTrigger(context, matchingTriggers.first().trigger)
+                    else -> handleMultipleMatches(context, matchingTriggers.map { it.trigger })
                 }
             }
         }
     }
 
-    private suspend fun handleMultipleMatches(context: Context, workflows: List<Workflow>) {
+    private suspend fun handleMultipleMatches(context: Context, triggers: List<TriggerSpec>) {
         val uiService = ExecutionUIService(context)
-        val selectedWorkflowId = uiService.showWorkflowChooser(workflows)
-        if (selectedWorkflowId != null) {
-            workflowManager.getWorkflow(selectedWorkflowId)?.let {
-                WorkflowExecutor.execute(it, context)
-            }
-        }
+        val workflows = triggers.map { it.workflow }
+        val selectedWorkflowId = uiService.showWorkflowChooser(workflows) ?: return
+        triggers.firstOrNull { it.workflowId == selectedWorkflowId }?.let { executeTrigger(context, it) }
     }
 
     private fun createSliderScriptForDevice(device: String, cacheDir: String, packageName: String): String {

@@ -66,7 +66,7 @@ object ExecutionLogger {
                                     timestamp = System.currentTimeMillis(),
                                     status = LogStatus.FAILURE,
                                     // 在日志消息中包含失败的步骤和模块名称
-                                    message = "在步骤 #${state.stepIndex} (${moduleName}) 执行失败",
+                                    message = "在步骤 #${state.stepIndex + 1} (${moduleName}) 执行失败",
                                     detailedLog = state.detailedLog
                                 )
                             )

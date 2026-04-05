@@ -87,16 +87,14 @@ class OnboardingActivity : BaseActivity() {
         val workflowManager = WorkflowManager(this)
         if (workflowManager.getAllWorkflows().any { it.name == getString(R.string.onboarding_hello_workflow) }) return
 
-        val steps = listOf(
-            ActionStep("vflow.trigger.manual", emptyMap()),
-            ActionStep("vflow.device.delay", mapOf("duration" to 1000.0)),
-            ActionStep("vflow.device.toast", mapOf("message" to getString(R.string.onboarding_hello_toast)))
-        )
-
         val workflow = Workflow(
             id = UUID.randomUUID().toString(),
             name = getString(R.string.onboarding_hello_workflow),
-            steps = steps,
+            triggers = listOf(ActionStep("vflow.trigger.manual", emptyMap())),
+            steps = listOf(
+            ActionStep("vflow.device.delay", mapOf("duration" to 1000.0)),
+            ActionStep("vflow.device.toast", mapOf("message" to getString(R.string.onboarding_hello_toast)))
+            ),
             isFavorite = true
         )
         workflowManager.saveWorkflow(workflow)

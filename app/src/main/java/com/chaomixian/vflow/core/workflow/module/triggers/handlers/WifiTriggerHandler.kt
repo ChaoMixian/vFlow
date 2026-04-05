@@ -11,8 +11,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.wifi.WifiManager
-import android.util.Log
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VString
 import kotlinx.coroutines.delay
@@ -30,8 +28,6 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
         private const val TAG = "WifiTriggerHandler"
         const val ANY_WIFI_TARGET = "ANY_WIFI"
     }
-
-    override fun getTriggerModuleId(): String = "vflow.trigger.wifi"
 
     override fun startListening(context: Context) {
         DebugLogger.d(TAG, "启动 Wi-Fi 监听...")
@@ -128,8 +124,8 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
 
     private fun findAndExecuteWorkflows(context: Context, triggerType: String, event: String, ssid: String?) {
         triggerScope.launch {
-            listeningWorkflows.forEach { workflow ->
-                val config = workflow.triggerConfig ?: return@forEach
+            listeningTriggers.forEach { trigger ->
+                val config = trigger.parameters
                 val configTriggerType = config["trigger_type"] as? String
                 if (configTriggerType != triggerType) return@forEach
 
@@ -138,18 +134,15 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                     val configTarget = config["network_target"] as? String
                     val targetMatches = (configTarget == ANY_WIFI_TARGET) || (configTarget.equals(ssid, ignoreCase = true))
                     if (configEvent == event && targetMatches) {
-                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: $event '$ssid'")
+                        DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: $event '$ssid'")
                         val triggerData = VString(ssid ?: "")
-                        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                        val bssid = if (event == "连接到") wifiManager.connectionInfo?.bssid else ""
-                        val variables = mapOf("bssid" to VString(bssid ?: ""))
-                        WorkflowExecutor.execute(workflow, context.applicationContext, triggerData)
+                        executeTrigger(context, trigger, triggerData)
                     }
                 } else { // Wi-Fi状态
                     val configEvent = config["state_event"] as? String
                     if (configEvent == event) {
-                        DebugLogger.i(TAG, "触发工作流 '${workflow.name}'，事件: Wi-Fi $event")
-                        WorkflowExecutor.execute(workflow, context.applicationContext)
+                        DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: Wi-Fi $event")
+                        executeTrigger(context, trigger)
                     }
                 }
             }
