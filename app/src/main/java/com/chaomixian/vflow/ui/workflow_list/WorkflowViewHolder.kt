@@ -22,6 +22,7 @@ import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.ui.common.ShortcutHelper
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -111,6 +112,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         favoriteButton.setOnClickListener {
             val updatedWorkflow = workflow.copy(isFavorite = !workflow.isFavorite)
             workflowManager.saveWorkflow(updatedWorkflow)
+            ShortcutHelper.updateShortcuts(itemView.context)
             updateWorkflowInList(workflowListRef, updatedWorkflow, callbacks.notifyItemChanged)
         }
 
