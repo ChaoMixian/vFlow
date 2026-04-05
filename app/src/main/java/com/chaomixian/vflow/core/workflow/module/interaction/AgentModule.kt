@@ -46,6 +46,13 @@ import kotlin.coroutines.resumeWithException
 import java.util.concurrent.CancellationException
 
 class AgentModule : BaseModule() {
+    companion object {
+        private const val PROVIDER_DASHSCOPE = "dashscope"
+        private const val PROVIDER_BIGMODEL = "bigmodel"
+        private const val PROVIDER_CUSTOM = "custom"
+        private const val DISPLAY_MODE_MAIN = "main_screen"
+        private const val DISPLAY_MODE_VIRTUAL = "virtual_screen"
+    }
 
     override val id = "vflow.ai.agent"
     override val metadata = ActionMetadata(
@@ -70,13 +77,51 @@ class AgentModule : BaseModule() {
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("provider", "服务商", ParameterType.ENUM, "智谱", options = listOf("阿里云百炼", "智谱", "自定义")),
+        InputDefinition(
+            "provider",
+            "服务商",
+            ParameterType.ENUM,
+            PROVIDER_BIGMODEL,
+            options = listOf(PROVIDER_DASHSCOPE, PROVIDER_BIGMODEL, PROVIDER_CUSTOM),
+            nameStringRes = R.string.param_vflow_ai_agent_provider_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_ai_agent_provider_dashscope,
+                R.string.option_vflow_ai_agent_provider_zhipu,
+                R.string.option_vflow_ai_completion_provider_custom
+            ),
+            legacyValueMap = mapOf(
+                "阿里云百炼" to PROVIDER_DASHSCOPE,
+                "DashScope" to PROVIDER_DASHSCOPE,
+                "智谱" to PROVIDER_BIGMODEL,
+                "Zhipu" to PROVIDER_BIGMODEL,
+                "自定义" to PROVIDER_CUSTOM,
+                "Custom" to PROVIDER_CUSTOM
+            )
+        ),
         InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://dashscope.aliyuncs.com/compatible-mode/v1"),
         InputDefinition("api_key", "API Key", ParameterType.STRING, ""),
         InputDefinition("model", "模型", ParameterType.STRING, "glm-4.6v-flash"),
-        InputDefinition("instruction", "指令", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 15.0),
-        InputDefinition("display_mode", "执行环境", ParameterType.ENUM, "主屏幕", options = listOf("主屏幕", "虚拟屏幕 (后台)"), isHidden = false),
+        InputDefinition("instruction", "指令", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.agent_instruction_label),
+        InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 15.0, nameStringRes = R.string.agent_max_steps_label),
+        InputDefinition(
+            "display_mode",
+            "执行环境",
+            ParameterType.ENUM,
+            DISPLAY_MODE_MAIN,
+            options = listOf(DISPLAY_MODE_MAIN, DISPLAY_MODE_VIRTUAL),
+            nameStringRes = R.string.param_vflow_ai_agent_display_mode_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_ai_agent_display_mode_main,
+                R.string.option_vflow_ai_agent_display_mode_virtual
+            ),
+            legacyValueMap = mapOf(
+                "主屏幕" to DISPLAY_MODE_MAIN,
+                "Main Screen" to DISPLAY_MODE_MAIN,
+                "虚拟屏幕 (后台)" to DISPLAY_MODE_VIRTUAL,
+                "Virtual Screen (Background)" to DISPLAY_MODE_VIRTUAL
+            ),
+            isHidden = false
+        ),
         InputDefinition("tools", "工具配置", ParameterType.ANY, isHidden = true)
     )
 
@@ -87,8 +132,8 @@ class AgentModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val rawInstruction = step.parameters["instruction"]?.toString() ?: ""
-        val displayMode = step.parameters["display_mode"] as? String ?: "主屏幕"
-        val prefix = if (displayMode == "虚拟屏幕 (后台)") context.getString(R.string.summary_vflow_agent_background_prefix) else ""
+        val displayMode = step.parameters["display_mode"] as? String ?: DISPLAY_MODE_MAIN
+        val prefix = if (displayMode == DISPLAY_MODE_VIRTUAL) context.getString(R.string.summary_vflow_agent_background_prefix) else ""
 
         // 如果指令复杂，只显示标题
         if (VariableResolver.isComplex(rawInstruction)) {
@@ -126,13 +171,13 @@ class AgentModule : BaseModule() {
         val instruction = VariableResolver.resolve(context.getVariableAsString("instruction", ""), context)
         // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
         val maxSteps = context.getVariableAsInt("max_steps") ?: 15
-        val displayMode = context.getVariableAsString("display_mode", "主屏幕")
+        val displayMode = context.getVariableAsString("display_mode", DISPLAY_MODE_MAIN)
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
 
         // 虚拟屏幕逻辑
         var targetDisplayId = 0
-        if (displayMode == "虚拟屏幕 (后台)") {
+        if (displayMode == DISPLAY_MODE_VIRTUAL) {
             if (!ShellManager.isShizukuActive(context.applicationContext)) {
                 return ExecutionResult.Failure("权限不足", "使用虚拟屏幕需要 Shizuku 权限。")
             }

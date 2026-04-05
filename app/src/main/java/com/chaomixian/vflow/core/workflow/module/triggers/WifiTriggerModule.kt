@@ -14,6 +14,14 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class WifiTriggerModule : BaseModule() {
+    companion object {
+        const val TRIGGER_TYPE_CONNECTION = "connection"
+        const val TRIGGER_TYPE_STATE = "state"
+        const val CONNECTION_EVENT_CONNECTED = "connected"
+        const val CONNECTION_EVENT_DISCONNECTED = "disconnected"
+        const val STATE_EVENT_ON = "on"
+        const val STATE_EVENT_OFF = "off"
+    }
     override val id = "vflow.trigger.wifi"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_trigger_wifi_name,
@@ -27,40 +35,70 @@ class WifiTriggerModule : BaseModule() {
     override val requiredPermissions = listOf(PermissionManager.LOCATION)
     override val uiProvider: ModuleUIProvider = WifiTriggerUIProvider()
 
-    private val triggerTypeOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_trigger_wifi_type_connection),
-            appContext.getString(R.string.option_vflow_trigger_wifi_type_state)
-        )
-    }
-    private val connectionEventOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_trigger_wifi_connection_connected),
-            appContext.getString(R.string.option_vflow_trigger_wifi_connection_disconnected)
-        )
-    }
-    private val stateEventOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_trigger_wifi_state_on),
-            appContext.getString(R.string.option_vflow_trigger_wifi_state_off)
-        )
-    }
+    private val triggerTypeOptions by lazy { listOf(TRIGGER_TYPE_CONNECTION, TRIGGER_TYPE_STATE) }
+    private val connectionEventOptions by lazy { listOf(CONNECTION_EVENT_CONNECTED, CONNECTION_EVENT_DISCONNECTED) }
+    private val stateEventOptions by lazy { listOf(STATE_EVENT_ON, STATE_EVENT_OFF) }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("trigger_type", "触发类型", ParameterType.ENUM, triggerTypeOptions[0], options = triggerTypeOptions, nameStringRes = R.string.param_vflow_trigger_wifi_trigger_type_name),
+        InputDefinition(
+            "trigger_type",
+            "触发类型",
+            ParameterType.ENUM,
+            TRIGGER_TYPE_CONNECTION,
+            options = triggerTypeOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_wifi_type_connection,
+                R.string.option_vflow_trigger_wifi_type_state
+            ),
+            legacyValueMap = mapOf(
+                appContext.getString(R.string.option_vflow_trigger_wifi_type_connection) to TRIGGER_TYPE_CONNECTION,
+                appContext.getString(R.string.option_vflow_trigger_wifi_type_state) to TRIGGER_TYPE_STATE
+            ),
+            nameStringRes = R.string.param_vflow_trigger_wifi_trigger_type_name
+        ),
         // 网络连接
-        InputDefinition("connection_event", "事件", ParameterType.ENUM, connectionEventOptions[0], options = connectionEventOptions, nameStringRes = R.string.param_vflow_trigger_wifi_connection_event_name),
+        InputDefinition(
+            "connection_event",
+            "事件",
+            ParameterType.ENUM,
+            CONNECTION_EVENT_CONNECTED,
+            options = connectionEventOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_wifi_connection_connected,
+                R.string.option_vflow_trigger_wifi_connection_disconnected
+            ),
+            legacyValueMap = mapOf(
+                appContext.getString(R.string.option_vflow_trigger_wifi_connection_connected) to CONNECTION_EVENT_CONNECTED,
+                appContext.getString(R.string.option_vflow_trigger_wifi_connection_disconnected) to CONNECTION_EVENT_DISCONNECTED
+            ),
+            nameStringRes = R.string.param_vflow_trigger_wifi_connection_event_name
+        ),
         InputDefinition("network_target", "网络", ParameterType.STRING, defaultValue = WifiTriggerHandler.ANY_WIFI_TARGET, isHidden = true, nameStringRes = R.string.param_vflow_trigger_wifi_network_target_name),
         // Wi-Fi状态
-        InputDefinition("state_event", "事件", ParameterType.ENUM, stateEventOptions[0], options = stateEventOptions, nameStringRes = R.string.param_vflow_trigger_wifi_state_event_name)
+        InputDefinition(
+            "state_event",
+            "事件",
+            ParameterType.ENUM,
+            STATE_EVENT_ON,
+            options = stateEventOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_wifi_state_on,
+                R.string.option_vflow_trigger_wifi_state_off
+            ),
+            legacyValueMap = mapOf(
+                appContext.getString(R.string.option_vflow_trigger_wifi_state_on) to STATE_EVENT_ON,
+                appContext.getString(R.string.option_vflow_trigger_wifi_state_off) to STATE_EVENT_OFF
+            ),
+            nameStringRes = R.string.param_vflow_trigger_wifi_state_event_name
+        )
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val all = getInputs()
-        val triggerType = step?.parameters?.get("trigger_type") as? String ?: triggerTypeOptions[0]
+        val triggerType = step?.parameters?.get("trigger_type") as? String ?: TRIGGER_TYPE_CONNECTION
         val dynamicInputs = mutableListOf(all.first { it.id == "trigger_type" })
 
-        if (triggerType == triggerTypeOptions[0]) { // 网络连接
+        if (triggerType == TRIGGER_TYPE_CONNECTION) {
             dynamicInputs.add(all.first { it.id == "connection_event" })
             dynamicInputs.add(all.first { it.id == "network_target" })
         } else {
@@ -76,21 +114,21 @@ class WifiTriggerModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val triggerType = step.parameters["trigger_type"] as? String ?: triggerTypeOptions[0]
+        val triggerType = step.parameters["trigger_type"] as? String ?: TRIGGER_TYPE_CONNECTION
         val anyWifi = context.getString(R.string.summary_vflow_trigger_wifi_any_wifi)
         val connectionPrefix = context.getString(R.string.summary_vflow_trigger_wifi_connection_prefix)
         val statePrefix = context.getString(R.string.summary_vflow_trigger_wifi_state_prefix)
 
-        return if (triggerType == triggerTypeOptions[0]) { // 网络连接
-            val event = step.parameters["connection_event"] as? String ?: connectionEventOptions[0]
+        return if (triggerType == TRIGGER_TYPE_CONNECTION) {
+            val event = step.parameters["connection_event"] as? String ?: CONNECTION_EVENT_CONNECTED
             val target = step.parameters["network_target"] as? String ?: WifiTriggerHandler.ANY_WIFI_TARGET
-            val eventPill = PillUtil.Pill(event, "connection_event", isModuleOption = true)
+            val eventPill = PillUtil.createPillFromParam(event, getInputs().find { it.id == "connection_event" }, isModuleOption = true)
             val targetDescription = if (target == WifiTriggerHandler.ANY_WIFI_TARGET) anyWifi else target
             val targetPill = PillUtil.Pill(targetDescription, "network_target")
             PillUtil.buildSpannable(context, "$connectionPrefix ", eventPill, " ", targetPill)
         } else {
-            val event = step.parameters["state_event"] as? String ?: stateEventOptions[0]
-            val eventPill = PillUtil.Pill(event, "state_event", isModuleOption = true)
+            val event = step.parameters["state_event"] as? String ?: STATE_EVENT_ON
+            val eventPill = PillUtil.createPillFromParam(event, getInputs().find { it.id == "state_event" }, isModuleOption = true)
             PillUtil.buildSpannable(context, "$statePrefix ", eventPill)
         }
     }
@@ -98,7 +136,7 @@ class WifiTriggerModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        onProgress(ProgressUpdate("Wi-Fi 事件已触发"))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_trigger_wifi_triggered)))
         val ssid = context.triggerData as? VString
         // 现在 variables 是 Map<String, VObject>，使用 getVariable 获取并检查类型
         val bssid = context.getVariable("bssid") as? VString

@@ -1,5 +1,5 @@
 // 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/AppStartTriggerUIProvider.kt
-// 描述: 为 AppStartTriggerModule 提供自定义UI交互逻辑。强制使用硬编码字符串以确保逻辑一致性。
+// 描述: 为 AppStartTriggerModule 提供自定义UI交互逻辑。
 package com.chaomixian.vflow.core.workflow.module.triggers
 
 import android.content.Context
@@ -77,7 +77,7 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
         if (hasEventParameter) {
             val currentEvent = currentParameters["event"] as? String
 
-            if (currentEvent == "关闭时") {
+            if (currentEvent == AppStartTriggerModule.EVENT_CLOSED) {
                 holder.eventToggleGroup.check(R.id.chip_app_close)
             } else {
                 holder.eventToggleGroup.check(R.id.chip_app_open)
@@ -139,8 +139,8 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
 
         if (h.eventSectionViews.first().isVisible) {
             val event = when (h.eventToggleGroup.checkedButtonId) {
-                R.id.chip_app_close -> "关闭时"
-                else -> "打开时" // 默认值
+                R.id.chip_app_close -> AppStartTriggerModule.EVENT_CLOSED
+                else -> AppStartTriggerModule.EVENT_OPENED
             }
             result["event"] = event
         }

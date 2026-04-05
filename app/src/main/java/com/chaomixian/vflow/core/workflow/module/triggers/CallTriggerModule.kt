@@ -11,6 +11,12 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class CallTriggerModule : BaseModule() {
+    companion object {
+        const val TYPE_ANY = "any"
+        const val TYPE_INCOMING = "incoming"
+        const val TYPE_ANSWERED = "answered"
+        const val TYPE_ENDED = "ended"
+    }
     override val id = "vflow.trigger.call"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_trigger_call_name,
@@ -23,21 +29,24 @@ class CallTriggerModule : BaseModule() {
 
     override val requiredPermissions = listOf(PermissionManager.READ_PHONE_STATE)
 
-    private val callTypeOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_trigger_call_type_any),
-            appContext.getString(R.string.option_vflow_trigger_call_type_incoming),
-            appContext.getString(R.string.option_vflow_trigger_call_type_answered),
-            appContext.getString(R.string.option_vflow_trigger_call_type_ended)
-        )
-    }
-
-    private val anyCallTypeOption get() = callTypeOptions[0]
+    private val callTypeOptions by lazy { listOf(TYPE_ANY, TYPE_INCOMING, TYPE_ANSWERED, TYPE_ENDED) }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("call_type", "触发类型", ParameterType.ENUM,
-            defaultValue = anyCallTypeOption,
+            defaultValue = TYPE_ANY,
             options = callTypeOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_call_type_any,
+                R.string.option_vflow_trigger_call_type_incoming,
+                R.string.option_vflow_trigger_call_type_answered,
+                R.string.option_vflow_trigger_call_type_ended
+            ),
+            legacyValueMap = mapOf(
+                appContext.getString(R.string.option_vflow_trigger_call_type_any) to TYPE_ANY,
+                appContext.getString(R.string.option_vflow_trigger_call_type_incoming) to TYPE_INCOMING,
+                appContext.getString(R.string.option_vflow_trigger_call_type_answered) to TYPE_ANSWERED,
+                appContext.getString(R.string.option_vflow_trigger_call_type_ended) to TYPE_ENDED
+            ),
             nameStringRes = R.string.param_vflow_trigger_call_type_name,
             inputStyle = InputStyle.CHIP_GROUP
         )
@@ -48,9 +57,8 @@ class CallTriggerModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val callType = step.parameters["call_type"] as? String ?: anyCallTypeOption
-
-        val callTypePill = PillUtil.Pill(callType, "call_type", isModuleOption = true)
+        val callType = step.parameters["call_type"] as? String ?: TYPE_ANY
+        val callTypePill = PillUtil.createPillFromParam(callType, getInputs().find { it.id == "call_type" }, isModuleOption = true)
 
         val prefix = context.getString(R.string.summary_vflow_trigger_call_prefix)
         val suffix = context.getString(R.string.summary_vflow_trigger_call_suffix)

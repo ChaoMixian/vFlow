@@ -14,6 +14,17 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class SmsTriggerModule : BaseModule() {
+    companion object {
+        const val SENDER_ANY = "sender_any"
+        const val SENDER_CONTAINS = "sender_contains"
+        const val SENDER_NOT_CONTAINS = "sender_not_contains"
+        const val SENDER_REGEX = "sender_regex"
+        const val CONTENT_ANY = "content_any"
+        const val CONTENT_CODE = "content_code"
+        const val CONTENT_CONTAINS = "content_contains"
+        const val CONTENT_NOT_CONTAINS = "content_not_contains"
+        const val CONTENT_REGEX = "content_regex"
+    }
     override val id = "vflow.trigger.sms"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_trigger_sms_name,
@@ -27,33 +38,26 @@ class SmsTriggerModule : BaseModule() {
     override val requiredPermissions = listOf(PermissionManager.SMS)
 
     // 定义所有过滤选项
-    private val senderFilterOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_trigger_sms_sender_any),
-            appContext.getString(R.string.option_vflow_trigger_sms_sender_contains),
-            appContext.getString(R.string.option_vflow_trigger_sms_sender_not_contains),
-            appContext.getString(R.string.option_vflow_trigger_sms_sender_regex)
-        )
-    }
+    private val senderFilterOptions by lazy { listOf(SENDER_ANY, SENDER_CONTAINS, SENDER_NOT_CONTAINS, SENDER_REGEX) }
     // 添加"识别验证码"预设
-    private val contentFilterOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_trigger_sms_content_any),
-            appContext.getString(R.string.option_vflow_trigger_sms_content_code),
-            appContext.getString(R.string.option_vflow_trigger_sms_content_contains),
-            appContext.getString(R.string.option_vflow_trigger_sms_content_not_contains),
-            appContext.getString(R.string.option_vflow_trigger_sms_content_regex)
-        )
-    }
-
-    private val anySenderOption get() = senderFilterOptions[0]
-    private val anyContentOption get() = contentFilterOptions[0]
-    private val codeContentOption get() = contentFilterOptions[1]
+    private val contentFilterOptions by lazy { listOf(CONTENT_ANY, CONTENT_CODE, CONTENT_CONTAINS, CONTENT_NOT_CONTAINS, CONTENT_REGEX) }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("sender_filter_type", "发件人条件", ParameterType.ENUM,
-            defaultValue = anySenderOption,
+            defaultValue = SENDER_ANY,
             options = senderFilterOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_sms_sender_any,
+                R.string.option_vflow_trigger_sms_sender_contains,
+                R.string.option_vflow_trigger_sms_sender_not_contains,
+                R.string.option_vflow_trigger_sms_sender_regex
+            ),
+            legacyValueMap = mapOf(
+                appContext.getString(R.string.option_vflow_trigger_sms_sender_any) to SENDER_ANY,
+                appContext.getString(R.string.option_vflow_trigger_sms_sender_contains) to SENDER_CONTAINS,
+                appContext.getString(R.string.option_vflow_trigger_sms_sender_not_contains) to SENDER_NOT_CONTAINS,
+                appContext.getString(R.string.option_vflow_trigger_sms_sender_regex) to SENDER_REGEX
+            ),
             nameStringRes = R.string.param_vflow_trigger_sms_sender_filter_type_name,
             inputStyle = InputStyle.CHIP_GROUP
         ),
@@ -61,11 +65,25 @@ class SmsTriggerModule : BaseModule() {
         InputDefinition("sender_filter_value", "发件人值", ParameterType.STRING,
             defaultValue = "",
             nameStringRes = R.string.param_vflow_trigger_sms_sender_filter_value_name,
-            visibility = InputVisibility.notEquals("sender_filter_type", anySenderOption)
+            visibility = InputVisibility.notEquals("sender_filter_type", SENDER_ANY)
         ),
         InputDefinition("content_filter_type", "内容条件", ParameterType.ENUM,
-            defaultValue = anyContentOption,
+            defaultValue = CONTENT_ANY,
             options = contentFilterOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_sms_content_any,
+                R.string.option_vflow_trigger_sms_content_code,
+                R.string.option_vflow_trigger_sms_content_contains,
+                R.string.option_vflow_trigger_sms_content_not_contains,
+                R.string.option_vflow_trigger_sms_content_regex
+            ),
+            legacyValueMap = mapOf(
+                appContext.getString(R.string.option_vflow_trigger_sms_content_any) to CONTENT_ANY,
+                appContext.getString(R.string.option_vflow_trigger_sms_content_code) to CONTENT_CODE,
+                appContext.getString(R.string.option_vflow_trigger_sms_content_contains) to CONTENT_CONTAINS,
+                appContext.getString(R.string.option_vflow_trigger_sms_content_not_contains) to CONTENT_NOT_CONTAINS,
+                appContext.getString(R.string.option_vflow_trigger_sms_content_regex) to CONTENT_REGEX
+            ),
             nameStringRes = R.string.param_vflow_trigger_sms_content_filter_type_name,
             inputStyle = InputStyle.CHIP_GROUP
         ),
@@ -73,7 +91,7 @@ class SmsTriggerModule : BaseModule() {
         InputDefinition("content_filter_value", "内容值", ParameterType.STRING,
             defaultValue = "",
             nameStringRes = R.string.param_vflow_trigger_sms_content_filter_value_name,
-            visibility = InputVisibility.notIn("content_filter_type", listOf(anyContentOption, codeContentOption))
+            visibility = InputVisibility.notIn("content_filter_type", listOf(CONTENT_ANY, CONTENT_CODE))
         )
     )
 
@@ -90,7 +108,7 @@ class SmsTriggerModule : BaseModule() {
 
         // 当切换内容条件时，清空不需要的值
         if (updatedParameterId == "content_filter_type") {
-            if (updatedValue == codeContentOption || updatedValue == anyContentOption) {
+            if (updatedValue == CONTENT_CODE || updatedValue == CONTENT_ANY) {
                 newParameters["content_filter_value"] = ""
             }
         }
@@ -106,24 +124,25 @@ class SmsTriggerModule : BaseModule() {
             OutputDefinition("message_content", "短信内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_sms_message_content_name)
         )
         val contentType = step?.parameters?.get("content_filter_type") as? String
-        if (contentType == codeContentOption) { // 识别验证码
+        if (contentType == CONTENT_CODE) {
             outputs.add(OutputDefinition("verification_code", "验证码", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_sms_verification_code_name))
         }
         return outputs
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val senderCondition = step.parameters["sender_filter_type"] as? String ?: anySenderOption
+        val senderCondition = step.parameters["sender_filter_type"] as? String ?: SENDER_ANY
         val senderValue = step.parameters["sender_filter_value"] as? String ?: ""
-        val contentCondition = step.parameters["content_filter_type"] as? String ?: anyContentOption
+        val contentCondition = step.parameters["content_filter_type"] as? String ?: CONTENT_ANY
         val contentValue = step.parameters["content_filter_value"] as? String ?: ""
 
         val isCodeText = context.getString(R.string.summary_vflow_trigger_sms_is_code)
-
-        val senderPillText = if (senderCondition == anySenderOption || senderValue.isBlank()) senderCondition else "$senderCondition \"$senderValue\""
+        val senderLabel = getOptionLabel("sender_filter_type", senderCondition)
+        val contentLabel = getOptionLabel("content_filter_type", contentCondition)
+        val senderPillText = if (senderCondition == SENDER_ANY || senderValue.isBlank()) senderLabel else "$senderLabel \"$senderValue\""
         val contentPillText = when {
-            contentCondition == codeContentOption -> isCodeText // 识别验证码
-            contentCondition == anyContentOption || contentValue.isBlank() -> contentCondition // 任意内容
+            contentCondition == CONTENT_CODE -> isCodeText
+            contentCondition == CONTENT_ANY || contentValue.isBlank() -> contentLabel
             else -> "$contentCondition \"$contentValue\""
         }
 
@@ -156,5 +175,12 @@ class SmsTriggerModule : BaseModule() {
                 "verification_code" to verificationCode
             )
         )
+    }
+
+    private fun getOptionLabel(inputId: String, value: String): String {
+        val input = getInputs().find { it.id == inputId } ?: return value
+        val index = input.options?.indexOf(value) ?: -1
+        val resId = input.optionsStringRes?.getOrNull(index) ?: return value
+        return appContext.getString(resId)
     }
 }

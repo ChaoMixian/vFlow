@@ -20,6 +20,12 @@ import java.util.*
 // 描述：定义了在工作流执行时请求用户输入的模块。
 
 class InputModule : BaseModule() {
+    companion object {
+        private const val TYPE_TEXT = "text"
+        private const val TYPE_NUMBER = "number"
+        private const val TYPE_TIME = "time"
+        private const val TYPE_DATE = "date"
+    }
 
     override val id = "vflow.data.input"
     override val metadata = ActionMetadata(
@@ -35,12 +41,7 @@ class InputModule : BaseModule() {
     override val requiredPermissions = listOf(PermissionManager.OVERLAY)
 
     private val typeOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_data_input_type_text),
-            appContext.getString(R.string.option_vflow_data_input_type_number),
-            appContext.getString(R.string.option_vflow_data_input_type_time),
-            appContext.getString(R.string.option_vflow_data_input_type_date)
-        )
+        listOf(TYPE_TEXT, TYPE_NUMBER, TYPE_TIME, TYPE_DATE)
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -49,8 +50,24 @@ class InputModule : BaseModule() {
             nameStringRes = R.string.param_vflow_data_input_inputType_name,
             name = "输入类型",
             staticType = ParameterType.ENUM,
-            defaultValue = appContext.getString(R.string.option_vflow_data_input_type_text),
+            defaultValue = TYPE_TEXT,
             options = typeOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_data_input_type_text,
+                R.string.option_vflow_data_input_type_number,
+                R.string.option_vflow_data_input_type_time,
+                R.string.option_vflow_data_input_type_date
+            ),
+            legacyValueMap = mapOf(
+                "文本" to TYPE_TEXT,
+                "Text" to TYPE_TEXT,
+                "数字" to TYPE_NUMBER,
+                "Number" to TYPE_NUMBER,
+                "时间" to TYPE_TIME,
+                "Time" to TYPE_TIME,
+                "日期" to TYPE_DATE,
+                "Date" to TYPE_DATE
+            ),
             acceptsMagicVariable = false
         ),
         InputDefinition(
@@ -65,21 +82,16 @@ class InputModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val textOption = R.string.option_vflow_data_input_type_text
-        val numberOption = R.string.option_vflow_data_input_type_number
-        val timeOption = R.string.option_vflow_data_input_type_time
-        val dateOption = R.string.option_vflow_data_input_type_date
-
-        val inputType = step?.parameters?.get("inputType") as? String ?: textOption
+        val inputType = step?.parameters?.get("inputType") as? String ?: TYPE_TEXT
         val outputTypeName = when (inputType) {
-            numberOption -> VTypeRegistry.NUMBER.id
-            timeOption -> VTypeRegistry.TIME.id
-            dateOption -> VTypeRegistry.DATE.id
+            TYPE_NUMBER -> VTypeRegistry.NUMBER.id
+            TYPE_TIME -> VTypeRegistry.TIME.id
+            TYPE_DATE -> VTypeRegistry.DATE.id
             else -> VTypeRegistry.STRING.id
         }
 
         val outputNameBase = appContext.getString(R.string.output_vflow_data_input_userInput_name)
-        return listOf(OutputDefinition("userInput", "$outputNameBase ($inputType)", outputTypeName))
+        return listOf(OutputDefinition("userInput", "$outputNameBase (${getInputTypeDisplayName(inputType)})", outputTypeName))
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -116,15 +128,10 @@ class InputModule : BaseModule() {
                 "无法获取UI服务来请求用户输入。"
             )
 
-        val textOption = appContext.getString(R.string.option_vflow_data_input_type_text)
-        val numberOption = appContext.getString(R.string.option_vflow_data_input_type_number)
-        val timeOption = appContext.getString(R.string.option_vflow_data_input_type_time)
-        val dateOption = appContext.getString(R.string.option_vflow_data_input_type_date)
-
-        val inputType = context.getVariableAsString("inputType", textOption)
+        val inputType = context.getVariableAsString("inputType", TYPE_TEXT)
         val prompt = context.getVariableAsString("prompt").ifBlank { appContext.getString(R.string.param_vflow_data_input_prompt_default) }
 
-        onProgress(ProgressUpdate("等待用户输入 ($inputType)..."))
+        onProgress(ProgressUpdate("等待用户输入 (${getInputTypeDisplayName(inputType)})..."))
 
         val userInput = uiService.requestInput(inputType, prompt)
             ?: return ExecutionResult.Failure(
@@ -133,9 +140,9 @@ class InputModule : BaseModule() {
             )
 
         val resultVariable = when (inputType) {
-            numberOption -> VNumber((userInput as? Double) ?: 0.0)
-            timeOption -> VTime(userInput.toString())
-            dateOption -> {
+            TYPE_NUMBER -> VNumber((userInput as? Double) ?: 0.0)
+            TYPE_TIME -> VTime(userInput.toString())
+            TYPE_DATE -> {
                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 // MaterialDatePicker 返回的是UTC毫秒，需要设置时区以保证日期正确
                 sdf.timeZone = TimeZone.getTimeZone("UTC")
@@ -147,5 +154,14 @@ class InputModule : BaseModule() {
 
         onProgress(ProgressUpdate("获取到用户输入"))
         return ExecutionResult.Success(mapOf("userInput" to resultVariable))
+    }
+
+    private fun getInputTypeDisplayName(type: String): String {
+        return when (type) {
+            TYPE_NUMBER -> appContext.getString(R.string.option_vflow_data_input_type_number)
+            TYPE_TIME -> appContext.getString(R.string.option_vflow_data_input_type_time)
+            TYPE_DATE -> appContext.getString(R.string.option_vflow_data_input_type_date)
+            else -> appContext.getString(R.string.option_vflow_data_input_type_text)
+        }
     }
 }

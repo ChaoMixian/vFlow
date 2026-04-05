@@ -261,6 +261,13 @@
     <string name="option_vflow_network_get_ip_type_external">External</string>
     <string name="option_vflow_network_get_ip_version_ipv4">IPv4</string>
     <string name="option_vflow_network_get_ip_version_ipv6">IPv6</string>
+    <string name="param_vflow_system_systeminfo_type_name">Info Type</string>
+    <string name="output_vflow_system_systeminfo_value_name">System Info</string>
+    <string name="option_vflow_system_systeminfo_model">Model</string>
+    <string name="option_vflow_system_systeminfo_brand">Brand</string>
+    <string name="option_vflow_system_systeminfo_android_version">Android Version</string>
+    <string name="option_vflow_system_systeminfo_sdk">SDK Version</string>
+    <string name="option_vflow_system_systeminfo_security_patch">Security Patch</string>
 
     <!-- vflow.trigger.manual - Manual Trigger -->
     <string name="module_vflow_trigger_manual_name">Manual Trigger</string>
@@ -1318,6 +1325,9 @@
     <string name="summary_vflow_device_swipe_from">Swipe from</string>
     <string name="summary_vflow_device_swipe_to">to</string>
     <string name="summary_vflow_device_long_press">Long press</string>
+    <string name="option_vflow_interaction_screen_operation_mode_auto">Auto</string>
+    <string name="option_vflow_interaction_screen_operation_mode_accessibility">Accessibility</string>
+    <string name="option_vflow_interaction_screen_operation_mode_shell">Shell</string>
     <string name="summary_vflow_device_send_key_event_prefix">Send key event</string>
     <string name="summary_vflow_interaction_ui_selector_prefix">Find using selector</string>
     <string name="summary_vflow_device_wait_for_prefix">Wait for</string>
@@ -1367,6 +1377,12 @@
     <string name="option_vflow_ai_completion_provider_openai">OpenAI</string>
     <string name="option_vflow_ai_completion_provider_deepseek">DeepSeek</string>
     <string name="option_vflow_ai_completion_provider_custom">Custom</string>
+    <string name="param_vflow_ai_agent_provider_name">Provider</string>
+    <string name="param_vflow_ai_agent_display_mode_name">Execution Environment</string>
+    <string name="option_vflow_ai_agent_provider_dashscope">Alibaba Cloud Bailian</string>
+    <string name="option_vflow_ai_agent_provider_zhipu">Zhipu</string>
+    <string name="option_vflow_ai_agent_display_mode_main">Main Screen</string>
+    <string name="option_vflow_ai_agent_display_mode_virtual">Virtual Screen (Background)</string>
 
     <!-- Notification Modules (通知模块) -->
     <!-- vflow.notification.find - Find Notification -->
@@ -1408,6 +1424,10 @@
     <string name="option_vflow_trigger_share_type_link">Link</string>
     <string name="option_vflow_trigger_share_type_image">Image</string>
     <string name="option_vflow_trigger_share_type_file">File</string>
+    <string name="param_vflow_trigger_share_accepted_type_name">Accepted Content Type</string>
+    <string name="output_vflow_trigger_share_text_name">Shared Text</string>
+    <string name="output_vflow_trigger_share_image_name">Shared Image</string>
+    <string name="output_vflow_trigger_share_content_name">Shared Content</string>
 
     <!-- Other Modules (其他模块) -->
     <!-- TextSplitModule -->
@@ -1857,6 +1877,9 @@
     <string name="param_vflow_ui_target_component">Target component</string>
     <string name="param_vflow_ui_new_text">New text</string>
     <string name="param_vflow_ui_visibility">Visibility</string>
+    <string name="option_vflow_ui_visibility_keep">Keep</string>
+    <string name="option_vflow_ui_visibility_show">Show</string>
+    <string name="option_vflow_ui_visibility_hide">Hide</string>
     <string name="param_vflow_ui_padding">Padding</string>
     <string name="param_vflow_ui_margin">Margin</string>
     <string name="param_vflow_ui_text_size">Text size</string>

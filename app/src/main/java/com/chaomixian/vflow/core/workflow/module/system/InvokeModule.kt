@@ -18,6 +18,12 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import androidx.core.net.toUri
 
 class InvokeModule : BaseModule() {
+    companion object {
+        private const val MODE_URI = "uri"
+        private const val MODE_ACTIVITY = "activity"
+        private const val MODE_BROADCAST = "broadcast"
+        private const val MODE_SERVICE = "service"
+    }
 
     override val id = "vflow.system.invoke"
     override val metadata = ActionMetadata(
@@ -32,37 +38,57 @@ class InvokeModule : BaseModule() {
     override val uiProvider: ModuleUIProvider = InvokeModuleUIProvider()
 
     // 定义支持的模式
-    private val modes = listOf("链接/Uri", "Activity", "Broadcast", "Service")
+    private val modes = listOf(MODE_URI, MODE_ACTIVITY, MODE_BROADCAST, MODE_SERVICE)
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return ShellManager.getRequiredPermissions(com.chaomixian.vflow.core.logging.LogManager.applicationContext)
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("mode", "调用方式", ParameterType.ENUM, "链接/Uri", options = modes),
-        InputDefinition("uri", "链接/Data", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("action", "Action", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("package", "Package", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("class", "Class", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("type", "MIME Type", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("flags", "Flags (Int)", ParameterType.STRING, "", acceptsMagicVariable = true),
-        InputDefinition("extras", "扩展参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true),
-        InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true)
+        InputDefinition(
+            "mode",
+            "调用方式",
+            ParameterType.ENUM,
+            MODE_URI,
+            options = modes,
+            nameStringRes = R.string.param_vflow_system_invoke_mode_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_system_invoke_mode_uri,
+                R.string.option_vflow_system_invoke_mode_activity,
+                R.string.option_vflow_system_invoke_mode_broadcast,
+                R.string.option_vflow_system_invoke_mode_service
+            ),
+            legacyValueMap = mapOf(
+                "链接/Uri" to MODE_URI,
+                "Link/Uri" to MODE_URI,
+                "Activity" to MODE_ACTIVITY,
+                "Broadcast" to MODE_BROADCAST,
+                "Service" to MODE_SERVICE
+            )
+        ),
+        InputDefinition("uri", "链接/Data", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_system_invoke_uri_name),
+        InputDefinition("action", "Action", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_action_name),
+        InputDefinition("package", "Package", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_package_name),
+        InputDefinition("class", "Class", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_class_name),
+        InputDefinition("type", "MIME Type", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_type_name),
+        InputDefinition("flags", "Flags (Int)", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_flags_name),
+        InputDefinition("extras", "扩展参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_extras_name),
+        InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true, nameStringRes = R.string.param_vflow_system_invoke_show_advanced_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_system_invoke_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val mode = step.parameters["mode"] as? String ?: "链接/Uri"
+        val mode = step.parameters["mode"] as? String ?: MODE_URI
 
         return when (mode) {
-            "链接/Uri" -> {
+            MODE_URI -> {
                 val uriPill = PillUtil.createPillFromParam(step.parameters["uri"], getInputs().find { it.id == "uri" })
                 PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_invoke_open_link), uriPill)
             }
-            "Activity" -> {
+            MODE_ACTIVITY -> {
                 // 如果有包名显示包名，否则显示Action，否则显示"Activity"
                 val pkg = step.parameters["package"] as? String
                 val action = step.parameters["action"] as? String
@@ -73,17 +99,17 @@ class InvokeModule : BaseModule() {
                 }
                 PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_invoke_start, desc))
             }
-            "Broadcast" -> {
+            MODE_BROADCAST -> {
                 val action = step.parameters["action"] as? String ?: context.getString(R.string.summary_vflow_system_invoke_broadcast)
                 val actionPill = PillUtil.createPillFromParam(action, getInputs().find { it.id == "action" })
                 PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_invoke_send_broadcast), actionPill)
             }
-            "Service" -> {
+            MODE_SERVICE -> {
                 val pkg = step.parameters["package"] as? String ?: context.getString(R.string.summary_vflow_system_invoke_service)
                 val pkgPill = PillUtil.createPillFromParam(pkg, getInputs().find { it.id == "package" })
                 PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_invoke_start_service), pkgPill)
             }
-            else -> metadata.name
+            else -> metadata.getLocalizedName(context)
         }
     }
 
@@ -91,7 +117,7 @@ class InvokeModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.getVariableAsString("mode", "链接/Uri")
+        val mode = context.getVariableAsString("mode", MODE_URI)
 
         // 解析所有参数
         val rawUri = context.getVariableAsString("uri", "")
@@ -143,7 +169,7 @@ class InvokeModule : BaseModule() {
         // Flags 处理
         if (flagsInt != null) {
             intent.flags = flagsInt
-        } else if (mode == "Activity" || mode == "链接/Uri") {
+        } else if (mode == MODE_ACTIVITY || mode == MODE_URI) {
             // 默认添加 NEW_TASK，否则从 Service context 启动 Activity 会崩溃
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -158,17 +184,17 @@ class InvokeModule : BaseModule() {
         try {
             val appContext = context.applicationContext
             when (mode) {
-                "链接/Uri" -> {
+                MODE_URI -> {
                     if (intent.action == null) intent.action = Intent.ACTION_VIEW
                     appContext.startActivity(intent)
                 }
-                "Activity" -> {
+                MODE_ACTIVITY -> {
                     appContext.startActivity(intent)
                 }
-                "Broadcast" -> {
+                MODE_BROADCAST -> {
                     appContext.sendBroadcast(intent)
                 }
-                "Service" -> {
+                MODE_SERVICE -> {
                     // 尝试启动服务 (兼容前台服务)
                     try {
                         appContext.startService(intent)

@@ -124,6 +124,11 @@ class EndOnUiEventModule : BaseModule() {
  * 注意：此模块必须在"显示界面"块内部使用。
  */
 class UpdateUiComponentModule : BaseModule() {
+    companion object {
+        private const val VISIBILITY_KEEP = "keep"
+        private const val VISIBILITY_SHOW = "show"
+        private const val VISIBILITY_HIDE = "hide"
+    }
     override val id = "vflow.ui.interaction.update"
     override val metadata = ActionMetadata(
         name = "更新组件",  // Fallback
@@ -137,7 +142,27 @@ class UpdateUiComponentModule : BaseModule() {
     override fun getInputs() = listOf(
         InputDefinition("target_id", "目标组件", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_target_component),
         InputDefinition("text", "新文本", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_new_text),
-        InputDefinition("visible", "可见性", ParameterType.ENUM, "保持不变", options = listOf("保持不变", "显示", "隐藏"), nameStringRes = R.string.param_vflow_ui_visibility),
+        InputDefinition(
+            "visible",
+            "可见性",
+            ParameterType.ENUM,
+            VISIBILITY_KEEP,
+            options = listOf(VISIBILITY_KEEP, VISIBILITY_SHOW, VISIBILITY_HIDE),
+            optionsStringRes = listOf(
+                R.string.option_vflow_ui_visibility_keep,
+                R.string.option_vflow_ui_visibility_show,
+                R.string.option_vflow_ui_visibility_hide
+            ),
+            legacyValueMap = mapOf(
+                "保持不变" to VISIBILITY_KEEP,
+                "Keep" to VISIBILITY_KEEP,
+                "显示" to VISIBILITY_SHOW,
+                "Show" to VISIBILITY_SHOW,
+                "隐藏" to VISIBILITY_HIDE,
+                "Hide" to VISIBILITY_HIDE
+            ),
+            nameStringRes = R.string.param_vflow_ui_visibility
+        ),
         InputDefinition("padding", "内边距", ParameterType.NUMBER, 0, nameStringRes = R.string.param_vflow_ui_padding),
         InputDefinition("margin", "外边距", ParameterType.NUMBER, 0, nameStringRes = R.string.param_vflow_ui_margin),
         InputDefinition("textSize", "文本大小(sp)", ParameterType.NUMBER, 0, nameStringRes = R.string.param_vflow_ui_text_size),
@@ -185,8 +210,8 @@ class UpdateUiComponentModule : BaseModule() {
 
         // 解析可见性参数
         val visible = context.getVariableAsString("visible", "")
-        if (visible == "显示") payload["visible"] = true
-        else if (visible == "隐藏") payload["visible"] = false
+        if (visible == VISIBILITY_SHOW) payload["visible"] = true
+        else if (visible == VISIBILITY_HIDE) payload["visible"] = false
 
         // 解析布局属性
         val padding = context.variables["padding"] as? Number

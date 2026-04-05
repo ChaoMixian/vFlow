@@ -63,18 +63,18 @@ class BluetoothTriggerUIProvider : ModuleUIProvider {
         val holder = ViewHolder(view)
 
         // Restore state
-        val triggerType = currentParameters["trigger_type"] as? String ?: "蓝牙状态"
-        if (triggerType == "蓝牙状态") {
+        val triggerType = currentParameters["trigger_type"] as? String ?: BluetoothTriggerModule.TRIGGER_TYPE_STATE
+        if (triggerType == BluetoothTriggerModule.TRIGGER_TYPE_STATE) {
             holder.stateChangeRb.isChecked = true
         } else {
             holder.deviceConnectionRb.isChecked = true
         }
 
-        val stateEvent = currentParameters["state_event"] as? String ?: "开启时"
-        if (stateEvent == "开启时") holder.stateOnChip.isChecked = true else holder.stateOffChip.isChecked = true
+        val stateEvent = currentParameters["state_event"] as? String ?: BluetoothTriggerModule.STATE_EVENT_ON
+        if (stateEvent == BluetoothTriggerModule.STATE_EVENT_ON) holder.stateOnChip.isChecked = true else holder.stateOffChip.isChecked = true
 
-        val deviceEvent = currentParameters["device_event"] as? String ?: "连接时"
-        if (deviceEvent == "连接时") holder.deviceConnectChip.isChecked = true else holder.deviceDisconnectChip.isChecked = true
+        val deviceEvent = currentParameters["device_event"] as? String ?: BluetoothTriggerModule.DEVICE_EVENT_CONNECTED
+        if (deviceEvent == BluetoothTriggerModule.DEVICE_EVENT_CONNECTED) holder.deviceConnectChip.isChecked = true else holder.deviceDisconnectChip.isChecked = true
 
         holder.selectedDeviceAddress = currentParameters["device_address"] as? String ?: "any"
         holder.selectedDeviceTv.text = currentParameters["device_name"] as? String ?: "任何设备"
@@ -98,12 +98,16 @@ class BluetoothTriggerUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
-        val triggerType = if (h.stateChangeRb.isChecked) "蓝牙状态" else "设备连接"
+        val triggerType = if (h.stateChangeRb.isChecked) {
+            BluetoothTriggerModule.TRIGGER_TYPE_STATE
+        } else {
+            BluetoothTriggerModule.TRIGGER_TYPE_DEVICE
+        }
 
         return mapOf(
             "trigger_type" to triggerType,
-            "state_event" to if(h.stateOnChip.isChecked) "开启时" else "关闭时",
-            "device_event" to if(h.deviceConnectChip.isChecked) "连接时" else "断开时",
+            "state_event" to if (h.stateOnChip.isChecked) BluetoothTriggerModule.STATE_EVENT_ON else BluetoothTriggerModule.STATE_EVENT_OFF,
+            "device_event" to if (h.deviceConnectChip.isChecked) BluetoothTriggerModule.DEVICE_EVENT_CONNECTED else BluetoothTriggerModule.DEVICE_EVENT_DISCONNECTED,
             "device_address" to h.selectedDeviceAddress,
             "device_name" to h.selectedDeviceTv.text.toString()
         )

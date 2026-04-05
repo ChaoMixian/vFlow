@@ -30,6 +30,14 @@ import java.util.regex.Pattern
  * 支持多种匹配模式和输出格式。
  */
 class FindTextModule : BaseModule() {
+    companion object {
+        private const val MATCH_EXACT = "exact"
+        private const val MATCH_CONTAINS = "contains"
+        private const val MATCH_REGEX = "regex"
+        private const val OUTPUT_ELEMENT = "element"
+        private const val OUTPUT_COORDINATE = "coordinate"
+        private const val OUTPUT_VIEW_ID = "view_id"
+    }
     // 模块的唯一ID
     override val id = "vflow.device.find.text"
     // 模块的元数据
@@ -45,9 +53,9 @@ class FindTextModule : BaseModule() {
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
     // 定义匹配模式的选项
-    private val matchModeOptions = listOf("完全匹配", "包含", "正则")
+    private val matchModeOptions = listOf(MATCH_EXACT, MATCH_CONTAINS, MATCH_REGEX)
     // 定义输出格式的选项
-    private val outputFormatOptions = listOf("元素", "坐标", "视图ID")
+    private val outputFormatOptions = listOf(OUTPUT_ELEMENT, OUTPUT_COORDINATE, OUTPUT_VIEW_ID)
 
     /**
      * 定义模块的输入参数。
@@ -56,14 +64,29 @@ class FindTextModule : BaseModule() {
         InputDefinition(
             id = "matchMode",
             name = "匹配模式",
+            nameStringRes = R.string.param_vflow_device_find_text_matchMode_name,
             staticType = ParameterType.ENUM,
-            defaultValue = "完全匹配",
+            defaultValue = MATCH_EXACT,
             options = matchModeOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_device_find_text_match_exact,
+                R.string.option_vflow_device_find_text_match_contains,
+                R.string.option_vflow_device_find_text_match_regex
+            ),
+            legacyValueMap = mapOf(
+                "完全匹配" to MATCH_EXACT,
+                "Exact Match" to MATCH_EXACT,
+                "包含" to MATCH_CONTAINS,
+                "Contains" to MATCH_CONTAINS,
+                "正则" to MATCH_REGEX,
+                "Regex" to MATCH_REGEX
+            ),
             acceptsMagicVariable = false // 匹配模式通常是静态选择
         ),
         InputDefinition(
             id = "targetText",
             name = "目标文本",
+            nameStringRes = R.string.param_vflow_device_find_text_targetText_name,
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true, // 目标文本可以来自魔法变量
@@ -72,9 +95,23 @@ class FindTextModule : BaseModule() {
         InputDefinition(
             id = "outputFormat",
             name = "输出格式",
+            nameStringRes = R.string.param_vflow_device_find_text_outputFormat_name,
             staticType = ParameterType.ENUM,
-            defaultValue = "元素",
+            defaultValue = OUTPUT_ELEMENT,
             options = outputFormatOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_device_find_text_output_element,
+                R.string.option_vflow_device_find_text_output_coordinate,
+                R.string.option_vflow_device_find_text_output_viewid
+            ),
+            legacyValueMap = mapOf(
+                "元素" to OUTPUT_ELEMENT,
+                "Element" to OUTPUT_ELEMENT,
+                "坐标" to OUTPUT_COORDINATE,
+                "Coordinate" to OUTPUT_COORDINATE,
+                "视图ID" to OUTPUT_VIEW_ID,
+                "View ID" to OUTPUT_VIEW_ID
+            ),
             acceptsMagicVariable = false // 输出格式通常是静态选择
         )
     )
@@ -84,7 +121,7 @@ class FindTextModule : BaseModule() {
      * 新增“数量”和“所有结果”输出，并将原始结果重命名为“第一个结果”。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val format = step?.parameters?.get("outputFormat") as? String ?: "元素"
+        val format = step?.parameters?.get("outputFormat") as? String ?: OUTPUT_ELEMENT
         // 定义通用的条件分支选项（存在/不存在）
         val conditions = listOf(
             ConditionalOption("存在", "存在"),
@@ -93,16 +130,16 @@ class FindTextModule : BaseModule() {
 
         // 根据输出格式确定主结果的类型
         val resultTypeName = when (format) {
-            "坐标" -> VTypeRegistry.COORDINATE.id  // 使用新的 VCoordinate 类型 ID
-            "视图ID" -> VTypeRegistry.STRING.id
+            OUTPUT_COORDINATE -> VTypeRegistry.COORDINATE.id
+            OUTPUT_VIEW_ID -> VTypeRegistry.STRING.id
             else -> VTypeRegistry.SCREEN_ELEMENT.id  // 使用新的 VScreenElement 类型 ID
         }
 
         // 定义所有输出
         return listOf(
-            OutputDefinition("first_result", "第一个结果", resultTypeName, conditions),
-            OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, conditions),
-            OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions)
+            OutputDefinition("first_result", "第一个结果", resultTypeName, conditions, nameStringRes = R.string.output_vflow_device_find_text_first_result_name),
+            OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, conditions, nameStringRes = R.string.output_vflow_device_find_text_all_results_name),
+            OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions, nameStringRes = R.string.output_vflow_device_find_text_count_name)
         )
     }
 
@@ -163,12 +200,12 @@ class FindTextModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务错误", "无法获取到当前窗口的根节点。")
 
         try {
-            val matchModeStr = context.getVariableAsString("matchMode", "完全匹配")
-            onProgress(ProgressUpdate("正在以 [${matchModeStr}] 模式查找文本: '$targetText'"))
+            val matchModeStr = context.getVariableAsString("matchMode", MATCH_EXACT)
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_device_find_text_searching, getMatchModeDisplayName(matchModeStr), targetText)))
 
             val nodes = findNodesByText(rootNode, targetText, matchModeStr)
             val count = nodes.size
-            val outputFormat = context.getVariableAsString("outputFormat", "元素")
+            val outputFormat = context.getVariableAsString("outputFormat", OUTPUT_ELEMENT)
             val outputs = mutableMapOf<String, Any?>()
 
             outputs["count"] = VNumber(count.toDouble())
@@ -191,12 +228,12 @@ class FindTextModule : BaseModule() {
             // 转换所有节点为所需的输出格式（使用新的 VObject 类型）
             val allResultsList = nodes.map { node ->
                 when (outputFormat) {
-                    "坐标" -> {
+                    OUTPUT_COORDINATE -> {
                         val bounds = Rect()
                         node.getBoundsInScreen(bounds)
                         VCoordinate(bounds.centerX(), bounds.centerY())
                     }
-                    "视图ID" -> VString(node.viewIdResourceName ?: "")
+                    OUTPUT_VIEW_ID -> VString(node.viewIdResourceName ?: "")
                     else -> VScreenElement.fromAccessibilityNode(node)
                 }
             }
@@ -239,8 +276,8 @@ class FindTextModule : BaseModule() {
             // 定义文本匹配检查的局部函数
             val checkMatch = { source: String ->
                 when (matchModeStr) {
-                    "包含" -> source.contains(text, ignoreCase = true)
-                    "正则" -> try { Pattern.compile(text).matcher(source).find() } catch (e: Exception) { false }
+                    MATCH_CONTAINS -> source.contains(text, ignoreCase = true)
+                    MATCH_REGEX -> try { Pattern.compile(text).matcher(source).find() } catch (e: Exception) { false }
                     else -> source == text // 默认为 \"完全匹配\"
                 }
             }
@@ -266,5 +303,13 @@ class FindTextModule : BaseModule() {
             node.recycle() // 回收当前处理的节点副本
         }
         return matchedNodes // 返回包含所有匹配节点副本的列表
+    }
+
+    private fun getMatchModeDisplayName(matchMode: String): String {
+        return when (matchMode) {
+            MATCH_CONTAINS -> appContext.getString(R.string.option_vflow_device_find_text_match_contains)
+            MATCH_REGEX -> appContext.getString(R.string.option_vflow_device_find_text_match_regex)
+            else -> appContext.getString(R.string.option_vflow_device_find_text_match_exact)
+        }
     }
 }

@@ -231,6 +231,13 @@
     <string name="option_vflow_network_get_ip_type_external">外部</string>
     <string name="option_vflow_network_get_ip_version_ipv4">IPv4</string>
     <string name="option_vflow_network_get_ip_version_ipv6">IPv6</string>
+    <string name="param_vflow_system_systeminfo_type_name">信息类型</string>
+    <string name="output_vflow_system_systeminfo_value_name">系统信息</string>
+    <string name="option_vflow_system_systeminfo_model">设备型号</string>
+    <string name="option_vflow_system_systeminfo_brand">设备厂商</string>
+    <string name="option_vflow_system_systeminfo_android_version">安卓版本</string>
+    <string name="option_vflow_system_systeminfo_sdk">SDK版本</string>
+    <string name="option_vflow_system_systeminfo_security_patch">安全补丁</string>
     <string name="module_vflow_trigger_manual_name">手动触发</string>
     <string name="module_vflow_trigger_manual_desc">通过点击按钮手动启动此工作流</string>
     <string name="output_vflow_trigger_manual_success_name">是否成功</string>
@@ -1007,6 +1014,12 @@
     <string name="option_vflow_ai_completion_provider_custom">自定义</string>
     <string name="option_vflow_ai_completion_provider_deepseek">DeepSeek</string>
     <string name="option_vflow_ai_completion_provider_openai">OpenAI</string>
+    <string name="param_vflow_ai_agent_provider_name">服务商</string>
+    <string name="param_vflow_ai_agent_display_mode_name">执行环境</string>
+    <string name="option_vflow_ai_agent_provider_dashscope">阿里云百炼</string>
+    <string name="option_vflow_ai_agent_provider_zhipu">智谱</string>
+    <string name="option_vflow_ai_agent_display_mode_main">主屏幕</string>
+    <string name="option_vflow_ai_agent_display_mode_virtual">虚拟屏幕 (后台)</string>
     <string name="option_vflow_device_find_text_match_contains">包含</string>
     <string name="option_vflow_device_find_text_match_exact">完全匹配</string>
     <string name="option_vflow_device_find_text_match_regex">正则</string>
@@ -1058,6 +1071,10 @@
     <string name="option_vflow_trigger_share_type_image">图片</string>
     <string name="option_vflow_trigger_share_type_link">链接</string>
     <string name="option_vflow_trigger_share_type_text">文本</string>
+    <string name="param_vflow_trigger_share_accepted_type_name">接收内容类型</string>
+    <string name="output_vflow_trigger_share_text_name">分享的文本</string>
+    <string name="output_vflow_trigger_share_image_name">分享的图片</string>
+    <string name="output_vflow_trigger_share_content_name">分享的内容</string>
     <string name="option_vflow_ui_interaction_update_visible_hide">隐藏</string>
     <string name="option_vflow_ui_interaction_update_visible_show">显示</string>
     <string name="option_vflow_ui_interaction_update_visible_unchanged">不变</string>
@@ -1286,6 +1303,9 @@
     <string name="summary_vflow_device_swipe_from">从</string>
     <string name="summary_vflow_device_swipe_to">滑动到</string>
     <string name="summary_vflow_device_long_press">长按</string>
+    <string name="option_vflow_interaction_screen_operation_mode_auto">自动</string>
+    <string name="option_vflow_interaction_screen_operation_mode_accessibility">无障碍</string>
+    <string name="option_vflow_interaction_screen_operation_mode_shell">Shell</string>
     <string name="summary_vflow_device_send_key_event_prefix">发送按键</string>
     <string name="summary_vflow_interaction_ui_selector_prefix">使用选择器查找</string>
     <string name="summary_vflow_device_wait_for_prefix">等待</string>
@@ -1702,6 +1722,9 @@
     <string name="param_vflow_ui_target_component">目标组件</string>
     <string name="param_vflow_ui_new_text">新文本</string>
     <string name="param_vflow_ui_visibility">可见性</string>
+    <string name="option_vflow_ui_visibility_keep">保持不变</string>
+    <string name="option_vflow_ui_visibility_show">显示</string>
+    <string name="option_vflow_ui_visibility_hide">隐藏</string>
     <string name="param_vflow_ui_padding">内边距</string>
     <string name="param_vflow_ui_margin">外边距</string>
     <string name="param_vflow_ui_text_size">文字大小</string>

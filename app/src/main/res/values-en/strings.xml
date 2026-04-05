@@ -104,6 +104,14 @@
     <string name="param_vflow_data_file_operation_directory_path_name">Directory Path</string>
     <string name="param_vflow_data_file_operation_file_name_name">File Name</string>
     <string name="param_vflow_data_file_operation_create_content_name">File Content</string>
+    <string name="option_vflow_data_get_current_time_format_timestamp_millis">Timestamp (Milliseconds)</string>
+    <string name="option_vflow_data_get_current_time_format_timestamp_seconds">Timestamp (Seconds)</string>
+    <string name="option_vflow_data_get_current_time_format_iso_8601">ISO 8601</string>
+    <string name="option_vflow_data_get_current_time_format_datetime">yyyy-MM-dd HH:mm:ss</string>
+    <string name="option_vflow_data_get_current_time_format_date">yyyy-MM-dd</string>
+    <string name="option_vflow_data_get_current_time_format_time">HH:mm:ss</string>
+    <string name="option_vflow_data_get_current_time_format_date_cn">yyyy MM dd</string>
+    <string name="option_vflow_data_get_current_time_format_month_day_time">MM dd HH:mm</string>
 
     <string name="workflow_editor_execute">Execute</string>
     <string name="workflow_editor_save">Save</string>

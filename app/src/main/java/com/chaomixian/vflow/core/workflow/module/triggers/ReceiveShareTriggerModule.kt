@@ -15,6 +15,13 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  * 当用户通过 Android 的分享菜单将内容分享给 vFlow 时，会触发此模块。
  */
 class ReceiveShareTriggerModule : BaseModule() {
+    companion object {
+        private const val TYPE_ANY = "any"
+        private const val TYPE_TEXT = "text"
+        private const val TYPE_LINK = "link"
+        private const val TYPE_IMAGE = "image"
+        private const val TYPE_FILE = "file"
+    }
 
     override val id = "vflow.trigger.share"
     override val metadata = ActionMetadata(
@@ -27,7 +34,7 @@ class ReceiveShareTriggerModule : BaseModule() {
     )
 
     // 定义此触发器接受的内容类型
-    private val acceptedTypes = listOf("任意", "文本", "链接", "图片", "文件")
+    private val acceptedTypes = listOf(TYPE_ANY, TYPE_TEXT, TYPE_LINK, TYPE_IMAGE, TYPE_FILE)
 
     /**
      * 定义输入参数：只保留接收类型，入口由系统自动分配
@@ -35,10 +42,30 @@ class ReceiveShareTriggerModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "acceptedType",
+            nameStringRes = R.string.param_vflow_trigger_share_accepted_type_name,
             name = "接收内容类型",
             staticType = ParameterType.ENUM,
-            defaultValue = "任意",
+            defaultValue = TYPE_ANY,
             options = acceptedTypes,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_share_type_any,
+                R.string.option_vflow_trigger_share_type_text,
+                R.string.option_vflow_trigger_share_type_link,
+                R.string.option_vflow_trigger_share_type_image,
+                R.string.option_vflow_trigger_share_type_file
+            ),
+            legacyValueMap = mapOf(
+                "任意" to TYPE_ANY,
+                "Any" to TYPE_ANY,
+                "文本" to TYPE_TEXT,
+                "Text" to TYPE_TEXT,
+                "链接" to TYPE_LINK,
+                "Link" to TYPE_LINK,
+                "图片" to TYPE_IMAGE,
+                "Image" to TYPE_IMAGE,
+                "文件" to TYPE_FILE,
+                "File" to TYPE_FILE
+            ),
             acceptsMagicVariable = false
         )
     )
@@ -47,12 +74,11 @@ class ReceiveShareTriggerModule : BaseModule() {
      * 根据接收类型，动态定义输出参数
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val type = step?.parameters?.get("acceptedType") as? String ?: "任意"
+        val type = step?.parameters?.get("acceptedType") as? String ?: TYPE_ANY
         return when (type) {
-            "文本", "链接" -> listOf(OutputDefinition("shared_content", "分享的文本", VTypeRegistry.STRING.id))
-            "图片" -> listOf(OutputDefinition("shared_content", "分享的图片", VTypeRegistry.IMAGE.id))
-            // "文件" 和 "任意" 类型暂时都输出为文本（URI），未来可以扩展为更具体的类型
-            else -> listOf(OutputDefinition("shared_content", "分享的内容", VTypeRegistry.STRING.id))
+            TYPE_TEXT, TYPE_LINK -> listOf(OutputDefinition("shared_content", "分享的文本", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_share_text_name))
+            TYPE_IMAGE -> listOf(OutputDefinition("shared_content", "分享的图片", VTypeRegistry.IMAGE.id, nameStringRes = R.string.output_vflow_trigger_share_image_name))
+            else -> listOf(OutputDefinition("shared_content", "分享的内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_share_content_name))
         }
     }
 

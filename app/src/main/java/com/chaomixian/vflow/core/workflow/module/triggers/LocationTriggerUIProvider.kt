@@ -68,14 +68,14 @@ class LocationTriggerUIProvider : ModuleUIProvider {
         val holder = EditorViewHolder(view)
 
         // 恢复已有参数
-        val event = currentParameters["event"] as? String ?: "进入时"
+        val event = currentParameters["event"] as? String ?: LocationTriggerModule.EVENT_ENTER
         val latitude = currentParameters["latitude"] as? Double ?: 39.9042
         val longitude = currentParameters["longitude"] as? Double ?: 116.4074
         val radius = currentParameters["radius"] as? Double ?: 500.0
         val locationName = currentParameters["location_name"] as? String ?: ""
 
         // 设置事件选择
-        if (event == "进入时") {
+        if (event == LocationTriggerModule.EVENT_ENTER) {
             holder.chipEnter.isChecked = true
         } else {
             holder.chipExit.isChecked = true
@@ -125,7 +125,11 @@ class LocationTriggerUIProvider : ModuleUIProvider {
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val editorHolder = holder as EditorViewHolder
 
-        val event = if (editorHolder.chipEnter.isChecked) "进入时" else "离开时"
+        val event = if (editorHolder.chipEnter.isChecked) {
+            LocationTriggerModule.EVENT_ENTER
+        } else {
+            LocationTriggerModule.EVENT_EXIT
+        }
         val latitude = editorHolder.latitudeInput.text.toString().toDoubleOrNull() ?: 39.9042
         val longitude = editorHolder.longitudeInput.text.toString().toDoubleOrNull() ?: 116.4074
         val radius = editorHolder.radiusSlider.value.toDouble()

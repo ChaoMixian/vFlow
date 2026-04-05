@@ -12,6 +12,10 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class AppStartTriggerModule : BaseModule() {
+    companion object {
+        const val EVENT_OPENED = "opened"
+        const val EVENT_CLOSED = "closed"
+    }
 
     override val id = "vflow.trigger.app_start"
     override val metadata = ActionMetadata(
@@ -23,9 +27,7 @@ class AppStartTriggerModule : BaseModule() {
         category = "触发器"
     )
 
-    private val eventOptions by lazy {
-        listOf("打开时", "关闭时")
-    }
+    private val eventOptions by lazy { listOf(EVENT_OPENED, EVENT_CLOSED) }
 
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
@@ -38,8 +40,18 @@ class AppStartTriggerModule : BaseModule() {
             name = "事件",
             nameStringRes = R.string.param_vflow_trigger_app_start_event_name,
             staticType = ParameterType.ENUM,
-            defaultValue = "打开时",
+            defaultValue = EVENT_OPENED,
             options = eventOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_app_start_event_opened,
+                R.string.option_vflow_trigger_app_start_event_closed
+            ),
+            legacyValueMap = mapOf(
+                "打开时" to EVENT_OPENED,
+                "Opened" to EVENT_OPENED,
+                "关闭时" to EVENT_CLOSED,
+                "Closed" to EVENT_CLOSED
+            ),
             acceptsMagicVariable = false
         ),
         InputDefinition(
@@ -55,8 +67,7 @@ class AppStartTriggerModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val defaultEvent = eventOptions[0]
-        val event = step.parameters["event"] as? String ?: defaultEvent
+        val event = step.parameters["event"] as? String ?: EVENT_OPENED
 
         @Suppress("UNCHECKED_CAST")
         val packageNames = step.parameters["packageNames"] as? List<String> ?: emptyList()
@@ -80,7 +91,11 @@ class AppStartTriggerModule : BaseModule() {
             else -> "${appNames[0]} 等 ${appNames.size} 个应用"
         }
 
-        val eventPill = PillUtil.Pill(event, "event", isModuleOption = true)
+        val eventPill = PillUtil.createPillFromParam(
+            event,
+            getInputs().find { it.id == "event" },
+            isModuleOption = true
+        )
         val appPill = PillUtil.Pill(displayText, "packageNames")
 
         val prefix = context.getString(R.string.summary_vflow_trigger_app_start_prefix)
@@ -91,7 +106,7 @@ class AppStartTriggerModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        onProgress(ProgressUpdate("应用事件已触发"))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_trigger_app_start_triggered)))
         return ExecutionResult.Success()
     }
 }

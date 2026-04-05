@@ -16,6 +16,16 @@ import java.util.*
  * 支持输出多种常用时间格式
  */
 class GetCurrentTimeModule : BaseModule() {
+    companion object {
+        private const val FORMAT_TIMESTAMP_MILLIS = "timestamp_millis"
+        private const val FORMAT_TIMESTAMP_SECONDS = "timestamp_seconds"
+        private const val FORMAT_ISO_8601 = "iso_8601"
+        private const val FORMAT_DATETIME = "datetime"
+        private const val FORMAT_DATE = "date"
+        private const val FORMAT_TIME = "time"
+        private const val FORMAT_DATE_CN = "date_cn"
+        private const val FORMAT_MONTH_DAY_TIME = "month_day_time"
+    }
 
     override val id = "vflow.data.get_current_time"
 
@@ -30,14 +40,14 @@ class GetCurrentTimeModule : BaseModule() {
 
     // 时间格式选项
     private val formatOptions = listOf(
-        "时间戳 (毫秒)",
-        "时间戳 (秒)",
-        "ISO 8601",
-        "yyyy-MM-dd HH:mm:ss",
-        "yyyy-MM-dd",
-        "HH:mm:ss",
-        "yyyy年MM月dd日",
-        "MM月dd日 HH:mm"
+        FORMAT_TIMESTAMP_MILLIS,
+        FORMAT_TIMESTAMP_SECONDS,
+        FORMAT_ISO_8601,
+        FORMAT_DATETIME,
+        FORMAT_DATE,
+        FORMAT_TIME,
+        FORMAT_DATE_CN,
+        FORMAT_MONTH_DAY_TIME
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -46,7 +56,29 @@ class GetCurrentTimeModule : BaseModule() {
             name = "时间格式",
             staticType = ParameterType.ENUM,
             options = formatOptions,
-            defaultValue = "yyyy-MM-dd HH:mm:ss",
+            defaultValue = FORMAT_DATETIME,
+            optionsStringRes = listOf(
+                R.string.option_vflow_data_get_current_time_format_timestamp_millis,
+                R.string.option_vflow_data_get_current_time_format_timestamp_seconds,
+                R.string.option_vflow_data_get_current_time_format_iso_8601,
+                R.string.option_vflow_data_get_current_time_format_datetime,
+                R.string.option_vflow_data_get_current_time_format_date,
+                R.string.option_vflow_data_get_current_time_format_time,
+                R.string.option_vflow_data_get_current_time_format_date_cn,
+                R.string.option_vflow_data_get_current_time_format_month_day_time
+            ),
+            legacyValueMap = mapOf(
+                "时间戳 (毫秒)" to FORMAT_TIMESTAMP_MILLIS,
+                "Timestamp (Milliseconds)" to FORMAT_TIMESTAMP_MILLIS,
+                "时间戳 (秒)" to FORMAT_TIMESTAMP_SECONDS,
+                "Timestamp (Seconds)" to FORMAT_TIMESTAMP_SECONDS,
+                "ISO 8601" to FORMAT_ISO_8601,
+                "yyyy-MM-dd HH:mm:ss" to FORMAT_DATETIME,
+                "yyyy-MM-dd" to FORMAT_DATE,
+                "HH:mm:ss" to FORMAT_TIME,
+                "yyyy年MM月dd日" to FORMAT_DATE_CN,
+                "MM月dd日 HH:mm" to FORMAT_MONTH_DAY_TIME
+            ),
             acceptsMagicVariable = false,
             acceptsNamedVariable = false
         ),
@@ -116,7 +148,7 @@ class GetCurrentTimeModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val format = context.getVariableAsString("format", "yyyy-MM-dd HH:mm:ss")
+        val format = context.getVariableAsString("format", FORMAT_DATETIME)
         val timezoneId = context.getVariableAsString("timezone", "")
 
         try {
@@ -138,9 +170,9 @@ class GetCurrentTimeModule : BaseModule() {
 
             // 根据格式获取时间字符串
             val timeString = when (format) {
-                "时间戳 (毫秒)" -> now.toString()
-                "时间戳 (秒)" -> (now / 1000).toString()
-                "ISO 8601" -> {
+                FORMAT_TIMESTAMP_MILLIS -> now.toString()
+                FORMAT_TIMESTAMP_SECONDS -> (now / 1000).toString()
+                FORMAT_ISO_8601 -> {
                     val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
                     if (timezoneId.isBlank()) {
                         sdf.timeZone = TimeZone.getDefault()
@@ -151,7 +183,14 @@ class GetCurrentTimeModule : BaseModule() {
                 }
                 else -> {
                     // 自定义格式
-                    val sdf = SimpleDateFormat(format, Locale.getDefault())
+                    val pattern = when (format) {
+                        FORMAT_DATE -> "yyyy-MM-dd"
+                        FORMAT_TIME -> "HH:mm:ss"
+                        FORMAT_DATE_CN -> "yyyy年MM月dd日"
+                        FORMAT_MONTH_DAY_TIME -> "MM月dd日 HH:mm"
+                        else -> "yyyy-MM-dd HH:mm:ss"
+                    }
+                    val sdf = SimpleDateFormat(pattern, Locale.getDefault())
                     if (timezoneId.isBlank()) {
                         sdf.timeZone = TimeZone.getDefault()
                     } else {
@@ -176,8 +215,7 @@ class GetCurrentTimeModule : BaseModule() {
                 else -> weekdayNumber - 1
             }
 
-            val weekdayNames = listOf("周日", "周一", "周二", "周三", "周四", "周五", "周六")
-            val weekdayName = weekdayNames[weekdayNumber - 1]
+            val weekdayName = SimpleDateFormat("EEEE", Locale.getDefault()).format(calendar.time)
 
             return ExecutionResult.Success(mapOf(
                 "time" to VString(timeString),
@@ -211,11 +249,7 @@ class GetCurrentTimeModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
-        val formatPill = PillUtil.createPillFromParam(
-            step.parameters["format"],
-            inputs.find { it.id == "format" },
-            isModuleOption = true
-        )
+        val formatPill = PillUtil.createPillFromParam(step.parameters["format"], inputs.find { it.id == "format" }, isModuleOption = true)
 
         val timezone = step.parameters["timezone"] as? String
         return if (timezone.isNullOrBlank()) {
@@ -228,7 +262,7 @@ class GetCurrentTimeModule : BaseModule() {
 
     override fun createSteps(): List<ActionStep> = listOf(
         ActionStep(moduleId = this.id, parameters = mapOf(
-            "format" to "yyyy-MM-dd HH:mm:ss",
+            "format" to FORMAT_DATETIME,
             "timezone" to ""
         ))
     )

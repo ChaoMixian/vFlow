@@ -13,6 +13,13 @@ import android.os.Build
 
 //获取系统信息模块
 class SystemInfoModule : BaseModule() {
+    companion object {
+        private const val INFO_MODEL = "model"
+        private const val INFO_BRAND = "brand"
+        private const val INFO_ANDROID_VERSION = "android_version"
+        private const val INFO_SDK = "sdk"
+        private const val INFO_SECURITY_PATCH = "security_patch"
+    }
 
     // 模块的唯一标识符
     override val id = "vflow.system.systeminfo"
@@ -34,9 +41,29 @@ class SystemInfoModule : BaseModule() {
         InputDefinition(
             id = "infotype",
             name = "信息类型",
+            nameStringRes = R.string.param_vflow_system_systeminfo_type_name,
             staticType = ParameterType.ENUM,
-            options = listOf("设备型号", "设备厂商", "安卓版本", "SDK版本","安全补丁"),
-            defaultValue = "设备型号",
+            options = listOf(INFO_MODEL, INFO_BRAND, INFO_ANDROID_VERSION, INFO_SDK, INFO_SECURITY_PATCH),
+            optionsStringRes = listOf(
+                R.string.option_vflow_system_systeminfo_model,
+                R.string.option_vflow_system_systeminfo_brand,
+                R.string.option_vflow_system_systeminfo_android_version,
+                R.string.option_vflow_system_systeminfo_sdk,
+                R.string.option_vflow_system_systeminfo_security_patch
+            ),
+            legacyValueMap = mapOf(
+                "设备型号" to INFO_MODEL,
+                "Model" to INFO_MODEL,
+                "设备厂商" to INFO_BRAND,
+                "Brand" to INFO_BRAND,
+                "安卓版本" to INFO_ANDROID_VERSION,
+                "Android Version" to INFO_ANDROID_VERSION,
+                "SDK版本" to INFO_SDK,
+                "SDK Version" to INFO_SDK,
+                "安全补丁" to INFO_SECURITY_PATCH,
+                "Security Patch" to INFO_SECURITY_PATCH
+            ),
+            defaultValue = INFO_MODEL,
             acceptsMagicVariable = false
         )
     )
@@ -48,7 +75,8 @@ class SystemInfoModule : BaseModule() {
         OutputDefinition(
             id = "sysinfo",
             name = "系统信息",
-            typeName = VTypeRegistry.STRING.id
+            typeName = VTypeRegistry.STRING.id,
+            nameStringRes = R.string.output_vflow_system_systeminfo_value_name
         )
     )
 
@@ -60,12 +88,12 @@ class SystemInfoModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
 
-        val resultValue: String = when (context.getVariableAsString("infotype", "")) {
-            "设备型号" -> Build.MODEL
-            "设备厂商" -> Build.BRAND
-            "安卓版本" -> Build.VERSION.RELEASE
-            "SDK版本" -> Build.VERSION.SDK_INT.toString()
-            "安全补丁" -> Build.VERSION.SECURITY_PATCH
+        val resultValue: String = when (context.getVariableAsString("infotype", INFO_MODEL)) {
+            INFO_MODEL -> Build.MODEL
+            INFO_BRAND -> Build.BRAND
+            INFO_ANDROID_VERSION -> Build.VERSION.RELEASE
+            INFO_SDK -> Build.VERSION.SDK_INT.toString()
+            INFO_SECURITY_PATCH -> Build.VERSION.SECURITY_PATCH
             else -> return ExecutionResult.Failure("获取失败", "无效的值")
         }
         return ExecutionResult.Success(mapOf("sysinfo" to VString(resultValue)))

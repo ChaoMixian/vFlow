@@ -52,14 +52,14 @@ class WifiTriggerUIProvider : ModuleUIProvider {
         val holder = EditorViewHolder(view)
 
         // Restore state
-        val triggerType = currentParameters["trigger_type"] as? String ?: "网络连接"
-        if (triggerType == "网络连接") holder.connectionRb.isChecked = true else holder.stateRb.isChecked = true
+        val triggerType = currentParameters["trigger_type"] as? String ?: WifiTriggerModule.TRIGGER_TYPE_CONNECTION
+        if (triggerType == WifiTriggerModule.TRIGGER_TYPE_CONNECTION) holder.connectionRb.isChecked = true else holder.stateRb.isChecked = true
 
-        val connectionEvent = currentParameters["connection_event"] as? String ?: "连接到"
-        if (connectionEvent == "连接到") holder.connectChip.isChecked = true else holder.disconnectChip.isChecked = true
+        val connectionEvent = currentParameters["connection_event"] as? String ?: WifiTriggerModule.CONNECTION_EVENT_CONNECTED
+        if (connectionEvent == WifiTriggerModule.CONNECTION_EVENT_CONNECTED) holder.connectChip.isChecked = true else holder.disconnectChip.isChecked = true
 
-        val stateEvent = currentParameters["state_event"] as? String ?: "开启时"
-        if (stateEvent == "开启时") holder.stateOnChip.isChecked = true else holder.stateOffChip.isChecked = true
+        val stateEvent = currentParameters["state_event"] as? String ?: WifiTriggerModule.STATE_EVENT_ON
+        if (stateEvent == WifiTriggerModule.STATE_EVENT_ON) holder.stateOnChip.isChecked = true else holder.stateOffChip.isChecked = true
 
         val currentTarget = currentParameters["network_target"] as? String ?: WifiTriggerHandler.ANY_WIFI_TARGET
         holder.networkTextView.text = if (currentTarget == WifiTriggerHandler.ANY_WIFI_TARGET) "任意 Wi-Fi" else currentTarget
@@ -82,13 +82,13 @@ class WifiTriggerUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as EditorViewHolder
-        val triggerType = if (h.connectionRb.isChecked) "网络连接" else "Wi-Fi状态"
+        val triggerType = if (h.connectionRb.isChecked) WifiTriggerModule.TRIGGER_TYPE_CONNECTION else WifiTriggerModule.TRIGGER_TYPE_STATE
         val selectedNetworkText = h.networkTextView.text.toString()
 
         return mapOf(
             "trigger_type" to triggerType,
-            "connection_event" to if (h.connectChip.isChecked) "连接到" else "断开连接",
-            "state_event" to if (h.stateOnChip.isChecked) "开启时" else "关闭时",
+            "connection_event" to if (h.connectChip.isChecked) WifiTriggerModule.CONNECTION_EVENT_CONNECTED else WifiTriggerModule.CONNECTION_EVENT_DISCONNECTED,
+            "state_event" to if (h.stateOnChip.isChecked) WifiTriggerModule.STATE_EVENT_ON else WifiTriggerModule.STATE_EVENT_OFF,
             "network_target" to if (selectedNetworkText == "任意 Wi-Fi") WifiTriggerHandler.ANY_WIFI_TARGET else selectedNetworkText
         )
     }

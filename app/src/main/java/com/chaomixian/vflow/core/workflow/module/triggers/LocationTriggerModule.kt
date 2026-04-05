@@ -15,6 +15,10 @@ import com.chaomixian.vflow.permissions.PermissionType
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class LocationTriggerModule : BaseModule() {
+    companion object {
+        const val EVENT_ENTER = "enter"
+        const val EVENT_EXIT = "exit"
+    }
     override val id = "vflow.trigger.location"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_trigger_location_name,
@@ -38,20 +42,23 @@ class LocationTriggerModule : BaseModule() {
     )
     override val uiProvider: ModuleUIProvider = LocationTriggerUIProvider()
 
-    private val triggerEventOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_trigger_location_event_enter),
-            appContext.getString(R.string.option_vflow_trigger_location_event_exit)
-        )
-    }
+    private val triggerEventOptions by lazy { listOf(EVENT_ENTER, EVENT_EXIT) }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "event",
             name = "事件",
             staticType = ParameterType.ENUM,
-            defaultValue = triggerEventOptions[0],
+            defaultValue = EVENT_ENTER,
             options = triggerEventOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_location_event_enter,
+                R.string.option_vflow_trigger_location_event_exit
+            ),
+            legacyValueMap = mapOf(
+                appContext.getString(R.string.option_vflow_trigger_location_event_enter) to EVENT_ENTER,
+                appContext.getString(R.string.option_vflow_trigger_location_event_exit) to EVENT_EXIT
+            ),
             nameStringRes = R.string.param_vflow_trigger_location_event_name
         ),
         InputDefinition(
@@ -106,13 +113,13 @@ class LocationTriggerModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val event = step.parameters["event"] as? String ?: triggerEventOptions[0]
+        val event = step.parameters["event"] as? String ?: EVENT_ENTER
         val latitude = step.parameters["latitude"] as? Double ?: 0.0
         val longitude = step.parameters["longitude"] as? Double ?: 0.0
         val radius = step.parameters["radius"] as? Double ?: 500.0
         val locationName = step.parameters["location_name"] as? String ?: ""
 
-        val eventPill = PillUtil.Pill(event, "event", isModuleOption = true)
+        val eventPill = PillUtil.createPillFromParam(event, getInputs().find { it.id == "event" }, isModuleOption = true)
 
         // 如果有位置名称，显示位置名称，否则显示坐标
         val locationText = if (locationName.isNotEmpty()) {
@@ -133,7 +140,7 @@ class LocationTriggerModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        onProgress(ProgressUpdate("位置事件已触发"))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_trigger_location_triggered)))
 
         // 从 triggerData 获取位置信息
         val triggerData = context.triggerData as? LocationTriggerData

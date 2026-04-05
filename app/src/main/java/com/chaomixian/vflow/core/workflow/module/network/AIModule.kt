@@ -26,6 +26,11 @@ import java.util.concurrent.TimeUnit
  * 支持 OpenAI、DeepSeek 等兼容 OpenAI 接口的大模型服务。
  */
 class AIModule : BaseModule() {
+    companion object {
+        private const val PROVIDER_OPENAI = "openai"
+        private const val PROVIDER_DEEPSEEK = "deepseek"
+        private const val PROVIDER_CUSTOM = "custom"
+    }
 
     override val id = "vflow.ai.completion"
     override val metadata = ActionMetadata(
@@ -42,7 +47,25 @@ class AIModule : BaseModule() {
     private val gson = Gson()
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("provider", "服务商", ParameterType.ENUM, "OpenAI", options = listOf("OpenAI", "DeepSeek", "自定义"), nameStringRes = R.string.param_vflow_network_ai_provider),
+        InputDefinition(
+            "provider",
+            "服务商",
+            ParameterType.ENUM,
+            PROVIDER_OPENAI,
+            options = listOf(PROVIDER_OPENAI, PROVIDER_DEEPSEEK, PROVIDER_CUSTOM),
+            nameStringRes = R.string.param_vflow_network_ai_provider,
+            optionsStringRes = listOf(
+                R.string.option_vflow_ai_completion_provider_openai,
+                R.string.option_vflow_ai_completion_provider_deepseek,
+                R.string.option_vflow_ai_completion_provider_custom
+            ),
+            legacyValueMap = mapOf(
+                "OpenAI" to PROVIDER_OPENAI,
+                "DeepSeek" to PROVIDER_DEEPSEEK,
+                "自定义" to PROVIDER_CUSTOM,
+                "Custom" to PROVIDER_CUSTOM
+            )
+        ),
         InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://api.openai.com/v1"),
         InputDefinition("api_key", "API Key", ParameterType.STRING, ""),
         InputDefinition("model", "模型", ParameterType.STRING, "gpt-3.5-turbo", nameStringRes = R.string.param_vflow_network_ai_model),
@@ -59,20 +82,21 @@ class AIModule : BaseModule() {
 
     // 摘要显示逻辑
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val provider = step.parameters["provider"] as? String ?: "OpenAI"
+        val provider = step.parameters["provider"] as? String ?: PROVIDER_OPENAI
         val promptText = step.parameters["prompt"] as? String ?: ""
+        val providerDisplay = getProviderDisplayName(context, provider)
 
         // 如果内容是"复杂"的（多变量或长文本），VariableResolver.isComplex 会返回 true
         // 此时我们由 createPreview 显示大预览框，摘要只显示简单标题
         if (VariableResolver.isComplex(promptText)) {
-            val providerPill = PillUtil.Pill(provider, "provider", isModuleOption = true)
+            val providerPill = PillUtil.createPillFromParam(step.parameters["provider"], getInputs().find { it.id == "provider" }, isModuleOption = true)
             val prefix = context.getString(R.string.summary_vflow_network_ai_prefix)
             val suffix = context.getString(R.string.summary_vflow_network_ai_middle)
             return PillUtil.buildSpannable(context, prefix, providerPill, suffix)
         } else {
             // 如果内容简单（单变量或短文本），显示完整的摘要（包含 Prompt 药丸）
             val promptPill = PillUtil.createPillFromParam(step.parameters["prompt"], getInputs().find { it.id == "prompt" })
-            val prefix = context.getString(R.string.summary_vflow_network_ai_with, provider)
+            val prefix = context.getString(R.string.summary_vflow_network_ai_with, providerDisplay)
             return PillUtil.buildSpannable(context, prefix, promptPill)
         }
     }
@@ -166,6 +190,14 @@ class AIModule : BaseModule() {
             } catch (e: Exception) {
                 ExecutionResult.Failure("网络异常", e.message ?: "未知错误")
             }
+        }
+    }
+
+    private fun getProviderDisplayName(context: Context, provider: String): String {
+        return when (provider) {
+            PROVIDER_DEEPSEEK -> context.getString(R.string.option_vflow_ai_completion_provider_deepseek)
+            PROVIDER_CUSTOM -> context.getString(R.string.option_vflow_ai_completion_provider_custom)
+            else -> context.getString(R.string.option_vflow_ai_completion_provider_openai)
         }
     }
 }

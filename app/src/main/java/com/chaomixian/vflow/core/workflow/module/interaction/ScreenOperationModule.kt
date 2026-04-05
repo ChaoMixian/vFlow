@@ -33,6 +33,12 @@ class ScreenOperationModule : BaseModule() {
 
     companion object {
         private const val TAG = "ScreenOperationModule"
+        private const val OP_TAP = "tap"
+        private const val OP_LONG_PRESS = "long_press"
+        private const val OP_SWIPE = "swipe"
+        private const val MODE_AUTO = "auto"
+        private const val MODE_ACCESSIBILITY = "accessibility"
+        private const val MODE_SHELL = "shell"
     }
 
     override val id = "vflow.interaction.screen_operation"
@@ -47,24 +53,62 @@ class ScreenOperationModule : BaseModule() {
 
     override val uiProvider: ModuleUIProvider = ScreenOperationModuleUIProvider()
 
-    val executionModeOptions = listOf("自动", "无障碍", "Shell")
+    val executionModeOptions = listOf(MODE_AUTO, MODE_ACCESSIBILITY, MODE_SHELL)
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
-        val mode = step?.parameters?.get("execution_mode") as? String ?: "自动"
+        val mode = step?.parameters?.get("execution_mode") as? String ?: MODE_AUTO
         return when (mode) {
-            "无障碍" -> listOf(PermissionManager.ACCESSIBILITY)
-            "Shell" -> ShellManager.getRequiredPermissions(LogManager.applicationContext)
+            MODE_ACCESSIBILITY -> listOf(PermissionManager.ACCESSIBILITY)
+            MODE_SHELL -> ShellManager.getRequiredPermissions(LogManager.applicationContext)
             // 自动模式下，如果无障碍不可用，可能会用到 Shell，所以都带上
             else -> listOf(PermissionManager.ACCESSIBILITY) + ShellManager.getRequiredPermissions(LogManager.applicationContext)
         }
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("operation_type", "类型", ParameterType.ENUM, "点击", options = listOf("点击", "长按", "滑动"), acceptsMagicVariable = false),
+        InputDefinition(
+            "operation_type",
+            "类型",
+            ParameterType.ENUM,
+            OP_TAP,
+            options = listOf(OP_TAP, OP_LONG_PRESS, OP_SWIPE),
+            optionsStringRes = listOf(R.string.screen_op_tap, R.string.screen_op_long_press, R.string.screen_op_swipe),
+            legacyValueMap = mapOf(
+                "点击" to OP_TAP,
+                "Tap" to OP_TAP,
+                "长按" to OP_LONG_PRESS,
+                "Long Press" to OP_LONG_PRESS,
+                "滑动" to OP_SWIPE,
+                "Swipe" to OP_SWIPE
+            ),
+            nameStringRes = R.string.screen_op_type_label,
+            acceptsMagicVariable = false
+        ),
         InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.SCREEN_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)),
         InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.SCREEN_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id), isHidden = false),
-        InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), isHidden = false),
-        InputDefinition("execution_mode", "执行方式", ParameterType.ENUM, "自动", options = executionModeOptions, acceptsMagicVariable = false, isHidden = false),
+        InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), isHidden = false, nameStringRes = R.string.screen_op_duration_label),
+        InputDefinition(
+            "execution_mode",
+            "执行方式",
+            ParameterType.ENUM,
+            MODE_AUTO,
+            options = executionModeOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_interaction_screen_operation_mode_auto,
+                R.string.option_vflow_interaction_screen_operation_mode_accessibility,
+                R.string.option_vflow_interaction_screen_operation_mode_shell
+            ),
+            legacyValueMap = mapOf(
+                "自动" to MODE_AUTO,
+                "Auto" to MODE_AUTO,
+                "无障碍" to MODE_ACCESSIBILITY,
+                "Accessibility" to MODE_ACCESSIBILITY,
+                "Shell" to MODE_SHELL
+            ),
+            nameStringRes = R.string.screen_op_execution_mode,
+            acceptsMagicVariable = false,
+            isHidden = false
+        ),
         InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
     )
 
@@ -74,15 +118,15 @@ class ScreenOperationModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
-        val type = step.parameters["operation_type"] as? String ?: "点击"
+        val type = step.parameters["operation_type"] as? String ?: OP_TAP
         val targetPill = PillUtil.createPillFromParam(step.parameters["target"], inputs.find { it.id == "target" })
 
         return when (type) {
-            "滑动" -> {
+            OP_SWIPE -> {
                 val endPill = PillUtil.createPillFromParam(step.parameters["target_end"], inputs.find { it.id == "target_end" })
                 PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_swipe_from), targetPill, context.getString(R.string.summary_vflow_device_swipe_to), endPill)
             }
-            "长按" -> {
+            OP_LONG_PRESS -> {
                 val duration = step.parameters["duration"]
                 PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_long_press), targetPill, " ($duration ms)")
             }
@@ -96,13 +140,13 @@ class ScreenOperationModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val opType = context.getVariableAsString("operation_type", "点击")
-        val mode = context.getVariableAsString("execution_mode", "自动")
+        val opType = context.getVariableAsString("operation_type", OP_TAP)
+        val mode = context.getVariableAsString("execution_mode", MODE_AUTO)
 
         val durationVal = context.getVariable("duration")
         val duration = (durationVal as? Number)?.toLong() ?:
         (durationVal as? String)?.toLongOrNull() ?:
-        (if (opType == "长按") 1000L else if (opType == "滑动") 500L else 50L)
+        (if (opType == OP_LONG_PRESS) 1000L else if (opType == OP_SWIPE) 500L else 50L)
 
         // 1. 解析坐标
         val targetObj = context.getVariable("target")
@@ -110,7 +154,7 @@ class ScreenOperationModule : BaseModule() {
             ?: return ExecutionResult.Failure("无效目标", "无法解析起点位置: $targetObj")
 
         var endPoint: Point? = null
-        if (opType == "滑动") {
+        if (opType == OP_SWIPE) {
             val endObj = context.getVariable("target_end")
             endPoint = resolveTargetToPoint(context, endObj)
                 ?: return ExecutionResult.Failure("无效目标", "无法解析终点位置: $endObj")
@@ -122,33 +166,33 @@ class ScreenOperationModule : BaseModule() {
         var success = false
 
         // 1. 无障碍模式
-        if (mode == "无障碍" || (mode == "自动" && accService != null)) {
+        if (mode == MODE_ACCESSIBILITY || (mode == MODE_AUTO && accService != null)) {
             if (accService != null) {
                 success = when (opType) {
-                    "点击" -> performGesture(accService, createClickPath(startPoint), 50L)
-                    "长按" -> performGesture(accService, createClickPath(startPoint), duration.coerceAtLeast(500L))
-                    "滑动" -> performGesture(accService, createSwipePath(startPoint, endPoint!!), duration)
+                    OP_TAP -> performGesture(accService, createClickPath(startPoint), 50L)
+                    OP_LONG_PRESS -> performGesture(accService, createClickPath(startPoint), duration.coerceAtLeast(500L))
+                    OP_SWIPE -> performGesture(accService, createSwipePath(startPoint, endPoint!!), duration)
                     else -> false
                 }
                 if (success) DebugLogger.d("ScreenOp", "无障碍执行成功")
-            } else if (mode == "无障碍") {
+            } else if (mode == MODE_ACCESSIBILITY) {
                 return ExecutionResult.Failure("服务未连接", "指定使用无障碍服务，但服务未运行。")
             }
         }
 
         // 2. Shell 模式 (自动回落或强制指定)
-        if (!success && (mode == "Shell" || mode == "自动")) {
+        if (!success && (mode == MODE_SHELL || mode == MODE_AUTO)) {
             val cmd = when (opType) {
-                "点击" -> "input tap ${startPoint.x} ${startPoint.y}"
-                "长按" -> "input swipe ${startPoint.x} ${startPoint.y} ${startPoint.x} ${startPoint.y} $duration"
-                "滑动" -> "input swipe ${startPoint.x} ${startPoint.y} ${endPoint!!.x} ${endPoint.y} $duration"
+                OP_TAP -> "input tap ${startPoint.x} ${startPoint.y}"
+                OP_LONG_PRESS -> "input swipe ${startPoint.x} ${startPoint.y} ${startPoint.x} ${startPoint.y} $duration"
+                OP_SWIPE -> "input swipe ${startPoint.x} ${startPoint.y} ${endPoint!!.x} ${endPoint.y} $duration"
                 else -> ""
             }
             if (cmd.isNotEmpty()) {
                 val result = ShellManager.execShellCommand(context.applicationContext, cmd, ShellManager.ShellMode.AUTO)
                 success = !result.startsWith("Error")
                 if (success) DebugLogger.d("ScreenOp", "Shell 执行成功")
-            } else if (mode == "Shell") {
+            } else if (mode == MODE_SHELL) {
                 // 如果命令生成失败但又指定了 Shell
                 return ExecutionResult.Failure("内部错误", "无法生成 Shell 命令")
             }

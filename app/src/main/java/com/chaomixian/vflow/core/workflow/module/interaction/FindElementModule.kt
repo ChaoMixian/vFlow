@@ -36,41 +36,50 @@ class FindElementModule : BaseModule() {
     )
 
     companion object {
-        val matchModeOptions = listOf("包含", "完全匹配", "开头是", "正则表达式")
-        val resultSelectionOptions = listOf("第一个", "最后一个", "最接近中心", "最接近顶部")
+        const val MATCH_CONTAINS = "contains"
+        const val MATCH_EXACT = "exact"
+        const val MATCH_STARTS_WITH = "starts_with"
+        const val MATCH_REGEX = "regex"
+        const val RESULT_FIRST = "first"
+        const val RESULT_LAST = "last"
+        const val RESULT_CENTER = "closest_center"
+        const val RESULT_TOP = "closest_top"
+
+        val matchModeOptions = listOf(MATCH_CONTAINS, MATCH_EXACT, MATCH_STARTS_WITH, MATCH_REGEX)
+        val resultSelectionOptions = listOf(RESULT_FIRST, RESULT_LAST, RESULT_CENTER, RESULT_TOP)
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         // === 文本匹配 ===
-        InputDefinition("text", "控件文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = false, hint = "如：设置"),
-        InputDefinition("text_match_mode", "文本匹配模式", ParameterType.ENUM, "包含", options = FindElementModule.matchModeOptions, acceptsMagicVariable = false, isFolded = true),
+        InputDefinition("text", "控件文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = false, hint = "如：设置", nameStringRes = R.string.param_vflow_interaction_find_element_text_name),
+        InputDefinition("text_match_mode", "文本匹配模式", ParameterType.ENUM, MATCH_CONTAINS, options = FindElementModule.matchModeOptions, optionsStringRes = listOf(R.string.option_vflow_interaction_find_element_match_contains, R.string.option_vflow_interaction_find_element_match_exact, R.string.option_vflow_interaction_find_element_match_start, R.string.option_vflow_interaction_find_element_match_regex), legacyValueMap = mapOf("包含" to MATCH_CONTAINS, "Contains" to MATCH_CONTAINS, "完全匹配" to MATCH_EXACT, "Exact Match" to MATCH_EXACT, "开头是" to MATCH_STARTS_WITH, "Starts With" to MATCH_STARTS_WITH, "正则表达式" to MATCH_REGEX, "Regex" to MATCH_REGEX), acceptsMagicVariable = false, isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_text_match_mode_name),
 
         // === ID 匹配 ===
-        InputDefinition("view_id", "控件ID", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = false, hint = "如：com.android:id/button"),
-        InputDefinition("id_match_mode", "ID匹配模式", ParameterType.ENUM, "包含", options = matchModeOptions, acceptsMagicVariable = false, isFolded = true),
+        InputDefinition("view_id", "控件ID", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = false, hint = "如：com.android:id/button", nameStringRes = R.string.param_vflow_interaction_find_element_view_id_name),
+        InputDefinition("id_match_mode", "ID匹配模式", ParameterType.ENUM, MATCH_CONTAINS, options = matchModeOptions, optionsStringRes = listOf(R.string.option_vflow_interaction_find_element_match_contains, R.string.option_vflow_interaction_find_element_match_exact, R.string.option_vflow_interaction_find_element_match_start, R.string.option_vflow_interaction_find_element_match_regex), legacyValueMap = mapOf("包含" to MATCH_CONTAINS, "Contains" to MATCH_CONTAINS, "完全匹配" to MATCH_EXACT, "Exact Match" to MATCH_EXACT, "开头是" to MATCH_STARTS_WITH, "Starts With" to MATCH_STARTS_WITH, "正则表达式" to MATCH_REGEX, "Regex" to MATCH_REGEX), acceptsMagicVariable = false, isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_id_match_mode_name),
 
         // === 类名匹配 ===
-        InputDefinition("class_name", "类名", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = false, hint = "如：android.widget.Button"),
-        InputDefinition("class_match_mode", "类名匹配模式", ParameterType.ENUM, "完全匹配", options = matchModeOptions, acceptsMagicVariable = false, isFolded = true),
+        InputDefinition("class_name", "类名", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = false, hint = "如：android.widget.Button", nameStringRes = R.string.param_vflow_interaction_find_element_class_name_name),
+        InputDefinition("class_match_mode", "类名匹配模式", ParameterType.ENUM, MATCH_EXACT, options = matchModeOptions, optionsStringRes = listOf(R.string.option_vflow_interaction_find_element_match_contains, R.string.option_vflow_interaction_find_element_match_exact, R.string.option_vflow_interaction_find_element_match_start, R.string.option_vflow_interaction_find_element_match_regex), legacyValueMap = mapOf("包含" to MATCH_CONTAINS, "Contains" to MATCH_CONTAINS, "完全匹配" to MATCH_EXACT, "Exact Match" to MATCH_EXACT, "开头是" to MATCH_STARTS_WITH, "Starts With" to MATCH_STARTS_WITH, "正则表达式" to MATCH_REGEX, "Regex" to MATCH_REGEX), acceptsMagicVariable = false, isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_class_match_mode_name),
 
         // === 区域限制 ===
-        InputDefinition("search_region", "搜索区域", ParameterType.ANY, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id), hint = "如：100,200,500,600 留空则搜索全屏"),
+        InputDefinition("search_region", "搜索区域", ParameterType.ANY, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.COORDINATE_REGION.id), hint = "如：100,200,500,600 留空则搜索全屏", nameStringRes = R.string.param_vflow_interaction_find_element_search_region_name),
 
         // === 输出过滤 ===
         InputDefinition("only_leaf_nodes", "仅保留叶子节点", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, hint = "只返回没有子节点匹配的控件"),
 
         // === 交互状态过滤 ===
-        InputDefinition("clickable", "可点击", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
-        InputDefinition("enabled", "已启用", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
-        InputDefinition("checkable", "可勾选", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
-        InputDefinition("checked", "已勾选", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
-        InputDefinition("editable", "可编辑", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
-        InputDefinition("focusable", "可聚焦", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
-        InputDefinition("scrollable", "可滚动", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true),
+        InputDefinition("clickable", "可点击", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_clickable_name),
+        InputDefinition("enabled", "已启用", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_enabled_name),
+        InputDefinition("checkable", "可勾选", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_checkable_name),
+        InputDefinition("checked", "已勾选", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_checked_name),
+        InputDefinition("editable", "可编辑", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_editable_name),
+        InputDefinition("focusable", "可聚焦", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_focusable_name),
+        InputDefinition("scrollable", "可滚动", ParameterType.STRING, "", acceptsMagicVariable = true, hint = "留空、true 或 false", isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_scrollable_name),
 
         // === 其他选项 ===
-        InputDefinition("depth_limit", "最大深度", ParameterType.NUMBER, 50, acceptsMagicVariable = true, hint = "默认 50，范围 1-200", isFolded = true),
-        InputDefinition("result_selection", "结果选择", ParameterType.ENUM, "第一个", options = resultSelectionOptions, acceptsMagicVariable = false, isFolded = true),
+        InputDefinition("depth_limit", "最大深度", ParameterType.NUMBER, 50, acceptsMagicVariable = true, hint = "默认 50，范围 1-200", isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_depth_limit_name),
+        InputDefinition("result_selection", "结果选择", ParameterType.ENUM, RESULT_FIRST, options = resultSelectionOptions, optionsStringRes = listOf(R.string.option_vflow_interaction_find_element_selection_first, R.string.option_vflow_interaction_find_element_selection_last, R.string.option_vflow_interaction_find_element_selection_center, R.string.option_vflow_interaction_find_element_selection_top), legacyValueMap = mapOf("第一个" to RESULT_FIRST, "First" to RESULT_FIRST, "最后一个" to RESULT_LAST, "Last" to RESULT_LAST, "最接近中心" to RESULT_CENTER, "Closest to Center" to RESULT_CENTER, "最接近顶部" to RESULT_TOP, "Closest to Top" to RESULT_TOP), acceptsMagicVariable = false, isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_element_result_selection_name),
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
@@ -151,13 +160,13 @@ class FindElementModule : BaseModule() {
 
         // === 解析参数 ===
         val text = context.getVariableAsString("text", "")
-        val textMatchMode = context.getVariableAsString("text_match_mode", "包含")
+        val textMatchMode = context.getVariableAsString("text_match_mode", MATCH_CONTAINS)
 
         val viewId = context.getVariableAsString("view_id", "")
-        val idMatchMode = context.getVariableAsString("id_match_mode", "包含")
+        val idMatchMode = context.getVariableAsString("id_match_mode", MATCH_CONTAINS)
 
         val className = context.getVariableAsString("class_name", "")
-        val classMatchMode = context.getVariableAsString("class_match_mode", "完全匹配")
+        val classMatchMode = context.getVariableAsString("class_match_mode", MATCH_EXACT)
 
         // 现在 variables 是 Map<String, VObject>，使用 getVariable 获取并检查类型
         val searchRegion = parseSearchRegion(context.getVariable("search_region"))
@@ -172,7 +181,7 @@ class FindElementModule : BaseModule() {
 
         // 使用 getVariableAsInt 获取数字类型
         val depthLimit = context.getVariableAsInt("depth_limit") ?: 50
-        val resultSelection = context.getVariableAsString("result_selection", "第一个")
+        val resultSelection = context.getVariableAsString("result_selection", RESULT_FIRST)
         val onlyLeafNodes = context.getVariableAsBoolean("only_leaf_nodes") ?: false
 
         // === 检查是否至少有一个查找条件 ===
@@ -198,7 +207,7 @@ class FindElementModule : BaseModule() {
         }
 
         // === 验证正则表达式 ===
-        if (textMatchMode == "正则表达式" && !text.isNullOrEmpty()) {
+        if (textMatchMode == MATCH_REGEX && !text.isNullOrEmpty()) {
             try {
                 Pattern.compile(text, Pattern.CASE_INSENSITIVE)
             } catch (e: Exception) {
@@ -217,7 +226,7 @@ class FindElementModule : BaseModule() {
             }
         }
 
-        if (idMatchMode == "正则表达式" && !viewId.isNullOrEmpty()) {
+        if (idMatchMode == MATCH_REGEX && !viewId.isNullOrEmpty()) {
             try {
                 Pattern.compile(viewId, Pattern.CASE_INSENSITIVE)
             } catch (e: Exception) {
@@ -236,7 +245,7 @@ class FindElementModule : BaseModule() {
             }
         }
 
-        if (classMatchMode == "正则表达式" && !className.isNullOrEmpty()) {
+        if (classMatchMode == MATCH_REGEX && !className.isNullOrEmpty()) {
             try {
                 Pattern.compile(className, Pattern.CASE_INSENSITIVE)
             } catch (e: Exception) {
@@ -323,8 +332,8 @@ class FindElementModule : BaseModule() {
 
             // === 选择结果 ===
             val selectedElement = when (resultSelection) {
-                "最后一个" -> finalElements.last()
-                "最接近中心" -> {
+                RESULT_LAST -> finalElements.last()
+                RESULT_CENTER -> {
                     val screenBounds = Rect()
                     rootNode.getBoundsInScreen(screenBounds)
                     val centerX = searchRegion?.centerX ?: screenBounds.centerX()
@@ -336,8 +345,8 @@ class FindElementModule : BaseModule() {
                         dx * dx + dy * dy
                     } ?: finalElements.first()
                 }
-                "最接近顶部" -> finalElements.minByOrNull { it.bounds.top } ?: finalElements.first()
-                else -> finalElements.first() // "第一个"
+                RESULT_TOP -> finalElements.minByOrNull { it.bounds.top } ?: finalElements.first()
+                else -> finalElements.first()
             }
 
             onProgress(ProgressUpdate("找到 ${finalElements.size} 个控件"))
@@ -429,10 +438,10 @@ class FindElementModule : BaseModule() {
      */
     private fun matchesString(text: String, pattern: String, mode: String): Boolean {
         return when (mode) {
-            "完全匹配" -> text == pattern
-            "包含" -> text.contains(pattern, ignoreCase = true)
-            "开头是" -> text.startsWith(pattern, ignoreCase = true)
-            "正则表达式" -> {
+            MATCH_EXACT -> text == pattern
+            MATCH_CONTAINS -> text.contains(pattern, ignoreCase = true)
+            MATCH_STARTS_WITH -> text.startsWith(pattern, ignoreCase = true)
+            MATCH_REGEX -> {
                 try {
                     Pattern.compile(pattern, Pattern.CASE_INSENSITIVE).matcher(text).find()
                 } catch (e: Exception) {
