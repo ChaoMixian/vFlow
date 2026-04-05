@@ -1,6 +1,7 @@
 package com.chaomixian.vflow.core.workflow
 
 import android.content.Context
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.serialization.VObjectGsonAdapter
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -10,7 +11,8 @@ import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerModule
 import com.chaomixian.vflow.services.TriggerServiceProxy
 import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
 import java.util.UUID
 
 class WorkflowManager(val context: Context) {
@@ -106,12 +108,31 @@ class WorkflowManager(val context: Context) {
 
     fun getAllWorkflows(): List<Workflow> {
         val json = prefs.getString("workflow_list", null) ?: return emptyList()
-        val type = object : TypeToken<List<WorkflowStorageRecord>>() {}.type
         return try {
-            val workflows: List<WorkflowStorageRecord> = gson.fromJson(json, type) ?: emptyList()
-            workflows.map { it.toWorkflow() }
+            val root = JsonParser.parseString(json)
+            if (!root.isJsonArray) {
+                DebugLogger.w("WorkflowManager", "workflow_list is not a JSON array")
+                return emptyList()
+            }
+
+            var skippedCount = 0
+            val workflows = root.asJsonArray.mapIndexedNotNull { index, element ->
+                try {
+                    parseWorkflowRecord(element)
+                } catch (e: Exception) {
+                    skippedCount++
+                    DebugLogger.w("WorkflowManager", "Failed to parse workflow record at index $index", e)
+                    null
+                }
+            }
+
+            if (skippedCount > 0) {
+                DebugLogger.w("WorkflowManager", "Skipped $skippedCount invalid workflow record(s) while loading")
+            }
+
+            workflows
         } catch (e: Exception) {
-            e.printStackTrace()
+            DebugLogger.e("WorkflowManager", "Failed to load workflow_list", e)
             emptyList()
         }
     }
@@ -157,6 +178,11 @@ class WorkflowManager(val context: Context) {
             triggers = normalizedContent.triggers,
             steps = normalizedContent.steps
         )
+    }
+
+    private fun parseWorkflowRecord(element: JsonElement): Workflow {
+        val record = gson.fromJson(element, WorkflowStorageRecord::class.java)
+        return record?.toWorkflow() ?: throw IllegalStateException("Workflow record is null")
     }
 
     private fun WorkflowStorageRecord.toWorkflow(): Workflow {

@@ -12,15 +12,15 @@ import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.utils.StorageManager
+import com.chaomixian.vflow.core.workflow.FolderManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.services.ExecutionUIService
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
-import com.google.gson.reflect.TypeToken
+import com.chaomixian.vflow.ui.workflow_list.WorkflowImportHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
@@ -38,10 +38,17 @@ class ShareReceiverActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val workflowManager = WorkflowManager(applicationContext)
+        val importHelper = WorkflowImportHelper(
+            context = this,
+            workflowManager = workflowManager,
+            folderManager = FolderManager(applicationContext)
+        ) {
+            finish()
+        }
 
         // 使用协程在后台处理可能耗时的文件操作和UI交互
         CoroutineScope(Dispatchers.IO).launch {
-            when (intent.action) {
+            val shouldFinishImmediately = when (intent.action) {
                 Intent.ACTION_SEND -> {
                     // 检查是否是 JSON 文件
                     val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -56,7 +63,7 @@ class ShareReceiverActivity : AppCompatActivity() {
 
                     if (isJsonFile && uri != null) {
                         // 处理 JSON 文件导入
-                        handleJsonFile(intent)
+                        handleJsonFile(intent, importHelper)
                     } else {
                         // 处理普通分享内容
                         val shareableWorkflows = workflowManager.findShareableWorkflows()
@@ -88,15 +95,21 @@ class ShareReceiverActivity : AppCompatActivity() {
                                 }
                             }
                         }
+                        true
                     }
                 }
                 Intent.ACTION_VIEW -> {
                     // 处理查看 JSON 文件，导入工作流
-                    handleJsonFile(intent)
+                    handleJsonFile(intent, importHelper)
+                }
+                else -> true
+            }
+
+            if (shouldFinishImmediately) {
+                withContext(Dispatchers.Main) {
+                    finish()
                 }
             }
-            // 无论结果如何，都关闭这个透明的 Activity
-            finish()
         }
     }
 
@@ -186,7 +199,10 @@ class ShareReceiverActivity : AppCompatActivity() {
      * 1. ACTION_VIEW + application/json (直接打开 JSON 文件)
      * 2. ACTION_SEND + application/json (分享 JSON 文件)
      */
-    private fun handleJsonFile(intent: Intent) {
+    private suspend fun handleJsonFile(
+        intent: Intent,
+        importHelper: WorkflowImportHelper
+    ): Boolean {
         val uri = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> {
@@ -201,10 +217,10 @@ class ShareReceiverActivity : AppCompatActivity() {
         }
 
         if (uri == null) {
-            CoroutineScope(Dispatchers.Main).launch {
+            withContext(Dispatchers.Main) {
                 Toast.makeText(applicationContext, getString(R.string.toast_import_failed, "无法获取文件"), Toast.LENGTH_LONG).show()
             }
-            return
+            return true
         }
 
         try {
@@ -213,7 +229,7 @@ class ShareReceiverActivity : AppCompatActivity() {
             if (mimeType != "application/json" && !uri.toString().endsWith(".json", ignoreCase = true)) {
                 // 如果不是 JSON 文件，尝试按普通分享处理
                 handleIncomingIntent(intent)
-                return
+                return true
             }
 
             // 读取 JSON 文件内容
@@ -222,87 +238,23 @@ class ShareReceiverActivity : AppCompatActivity() {
             }
 
             if (jsonString == null) {
-                CoroutineScope(Dispatchers.Main).launch {
+                withContext(Dispatchers.Main) {
                     Toast.makeText(applicationContext, getString(R.string.toast_import_failed, "无法读取文件"), Toast.LENGTH_LONG).show()
                 }
-                return
+                return true
             }
 
-            // 解析并导入工作流
-            importWorkflowsFromJson(jsonString)
+            val startedImport = withContext(Dispatchers.Main) {
+                importHelper.importFromJson(jsonString)
+            }
+            return !startedImport
 
         } catch (e: Exception) {
             e.printStackTrace()
-            CoroutineScope(Dispatchers.Main).launch {
+            withContext(Dispatchers.Main) {
                 Toast.makeText(applicationContext, getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
             }
-        }
-    }
-
-    /**
-     * 从 JSON 字符串导入工作流
-     */
-    private fun importWorkflowsFromJson(jsonString: String) {
-        val gson = Gson()
-        val workflowManager = WorkflowManager(applicationContext)
-
-        try {
-            val workflowsToImport = mutableListOf<Workflow>()
-
-            // 尝试解析为工作流列表
-            try {
-                val listType = object : TypeToken<List<Workflow>>() {}.type
-                val list: List<Workflow> = gson.fromJson(jsonString, listType) ?: emptyList()
-                workflowsToImport.addAll(list)
-            } catch (e: JsonSyntaxException) {
-                // 尝试解析为单个工作流
-                val singleWorkflow: Workflow = gson.fromJson(jsonString, Workflow::class.java)
-                workflowsToImport.add(singleWorkflow)
-            }
-
-            if (workflowsToImport.isEmpty()) {
-                CoroutineScope(Dispatchers.Main).launch {
-                    Toast.makeText(applicationContext, getString(R.string.toast_no_workflow_in_file), Toast.LENGTH_SHORT).show()
-                }
-                return
-            }
-
-            // 导入工作流（自动处理ID冲突）
-            var importedCount = 0
-            var replacedCount = 0
-
-            workflowsToImport.forEach { workflowToImport ->
-                val existingWorkflow = workflowManager.getWorkflow(workflowToImport.id)
-
-                if (existingWorkflow == null) {
-                    // 无冲突，直接保存
-                    workflowManager.saveWorkflow(workflowToImport)
-                    importedCount++
-                } else {
-                    // 存在冲突，重命名后作为副本导入
-                    val newWorkflow = workflowToImport.copy(
-                        id = UUID.randomUUID().toString(),
-                        name = "${workflowToImport.name} (导入)"
-                    )
-                    workflowManager.saveWorkflow(newWorkflow)
-                    importedCount++
-                }
-            }
-
-            CoroutineScope(Dispatchers.Main).launch {
-                val message = if (importedCount > 0) {
-                    "成功导入 $importedCount 个工作流"
-                } else {
-                    "没有导入任何工作流"
-                }
-                Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
-            }
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            CoroutineScope(Dispatchers.Main).launch {
-                Toast.makeText(applicationContext, getString(R.string.toast_import_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
-            }
+            return true
         }
     }
 }
