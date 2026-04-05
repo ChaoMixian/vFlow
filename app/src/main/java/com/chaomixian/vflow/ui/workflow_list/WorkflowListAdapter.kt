@@ -161,7 +161,7 @@ class WorkflowListAdapter(
             onFolderExport: (String) -> Unit
         ) {
             name.text = folder.name
-            workflowCount.text = "$count 个工作流"
+            workflowCount.text = itemView.context.getString(R.string.folder_workflow_count, count)
 
             clickableWrapper.setOnClickListener { onFolderClick(folder.id) }
 

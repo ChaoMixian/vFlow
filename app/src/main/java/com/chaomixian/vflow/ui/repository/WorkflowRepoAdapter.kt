@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.data.repository.model.RepoWorkflow
 import com.chaomixian.vflow.databinding.ItemWorkflowRepoBinding
 
@@ -36,15 +37,16 @@ class WorkflowRepoAdapter(
 
         fun bind(workflow: RepoWorkflow) {
             binding.apply {
+                val context = root.context
                 textWorkflowName.text = workflow.name
                 textWorkflowDescription.text = workflow.description
-                textWorkflowAuthor.text = "作者: ${workflow.author}"
+                textWorkflowAuthor.text = context.getString(R.string.repo_author, workflow.author)
                 textWorkflowVersion.text = "v${workflow.version}"
                 textWorkflowID.text = "ID: ${workflow.id}"
 
                 // 显示标签
                 if (workflow.tags.isNotEmpty()) {
-                    textWorkflowTags.text = "Tags: ${workflow.tags.joinToString(", ")}"
+                    textWorkflowTags.text = context.getString(R.string.repo_workflow_tags, workflow.tags.joinToString(", "))
                     textWorkflowTags.visibility = android.view.View.VISIBLE
                 } else {
                     textWorkflowTags.visibility = android.view.View.GONE

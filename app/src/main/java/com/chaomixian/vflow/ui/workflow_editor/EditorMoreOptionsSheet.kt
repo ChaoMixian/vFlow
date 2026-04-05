@@ -142,8 +142,8 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             }
         } ?: run {
             textWorkflowName.text = getString(R.string.workflow_not_exists)
-            textWorkflowId.text = "-"
-            textWorkflowModified.text = "-"
+            textWorkflowId.text = getString(R.string.text_placeholder_dash)
+            textWorkflowModified.text = getString(R.string.text_placeholder_dash)
 
             // 初始化默认配置
             switchMaxExecutionTime.isChecked = false
@@ -204,7 +204,7 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
     private fun saveMetadata() {
         val wf = workflow ?: return
 
-        val version = editVersion.text?.toString()?.trim() ?: "1.0.0"
+        val version = editVersion.text?.toString()?.trim() ?: getString(R.string.default_workflow_version)
         val vFlowLevel = editVFlowLevel.text?.toString()?.toIntOrNull() ?: 1
         val description = editDescription.text?.toString()?.trim() ?: ""
         val author = editAuthor.text?.toString()?.trim() ?: ""

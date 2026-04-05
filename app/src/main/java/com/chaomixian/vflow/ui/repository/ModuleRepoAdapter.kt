@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.data.repository.model.RepoModule
 import com.chaomixian.vflow.databinding.ItemModuleRepoBinding
 
@@ -36,16 +37,17 @@ class ModuleRepoAdapter(
 
         fun bind(module: RepoModule) {
             binding.apply {
+                val context = root.context
                 textModuleName.text = module.name
                 textModuleDescription.text = module.description
-                textModuleAuthor.text = "作者: ${module.author}"
+                textModuleAuthor.text = context.getString(R.string.repo_author, module.author)
                 textModuleVersion.text = "v${module.version}"
                 textModuleID.text = "ID: ${module.id}"
                 textModuleCategory.text = module.category
 
                 // 显示权限
                 if (module.permissions.isNotEmpty()) {
-                    textModulePermissions.text = "权限: ${module.permissions.size} 项"
+                    textModulePermissions.text = context.getString(R.string.repo_module_permissions_count, module.permissions.size)
                     textModulePermissions.visibility = android.view.View.VISIBLE
                 } else {
                     textModulePermissions.visibility = android.view.View.GONE

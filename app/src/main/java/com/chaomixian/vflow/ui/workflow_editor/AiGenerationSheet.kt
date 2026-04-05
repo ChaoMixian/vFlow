@@ -30,7 +30,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class AiGenerationSheet : BottomSheetDialogFragment() {
-
+    companion object {
+        private const val PROVIDER_BIGMODEL = "bigmodel"
+        private const val PROVIDER_DASHSCOPE = "dashscope"
+        private const val PROVIDER_CUSTOM = "custom"
+    }
     var onWorkflowGenerated: ((Workflow) -> Unit)? = null
 
     private lateinit var etRequirement: TextInputEditText
@@ -102,15 +106,15 @@ class AiGenerationSheet : BottomSheetDialogFragment() {
         btnGenerate.setOnClickListener {
             val requirement = etRequirement.text.toString()
             if (requirement.isBlank()) {
-                Toast.makeText(context, "请输入需求", Toast.LENGTH_SHORT).show()
-                DebugLogger.i(TAG, "请输入需求")
+                Toast.makeText(context, R.string.ai_generation_requirement_required, Toast.LENGTH_SHORT).show()
+                DebugLogger.i(TAG, getString(R.string.ai_generation_requirement_required))
                 return@setOnClickListener
             }
 
             val apiKey = etApiKey.text.toString()
             if (apiKey.isBlank()) {
-                Toast.makeText(context, "请在配置中输入 API Key", Toast.LENGTH_SHORT).show()
-                DebugLogger.i(TAG, "请在配置中输入 API Key")
+                Toast.makeText(context, R.string.ai_generation_api_key_required, Toast.LENGTH_SHORT).show()
+                DebugLogger.i(TAG, getString(R.string.ai_generation_api_key_required))
                 layoutSettingsContent.isVisible = true // 自动展开配置
                 etApiKey.requestFocus()
                 return@setOnClickListener
@@ -151,7 +155,7 @@ class AiGenerationSheet : BottomSheetDialogFragment() {
 
         // 更新界面状态
         btnGenerate.isEnabled = false
-        btnGenerate.text = "AI 正在思考并生成工作流..."
+        btnGenerate.text = getString(R.string.ai_generation_generating)
         etRequirement.isEnabled = false
 
         // 执行生成任务
@@ -165,9 +169,14 @@ class AiGenerationSheet : BottomSheetDialogFragment() {
                     dismiss()
                     onWorkflowGenerated?.invoke(workflow)
                 }.onFailure { e ->
-                    val msg = if (e.message?.contains("401") == true) "API Key 无效" else e.message
-                    Toast.makeText(context, "生成失败: $msg", Toast.LENGTH_LONG).show()
-                    DebugLogger.i(TAG, "生成失败: $msg")
+                    val msg = if (e.message?.contains("401") == true) {
+                        getString(R.string.ai_generation_invalid_api_key)
+                    } else {
+                        e.message.orEmpty()
+                    }
+                    val toastMessage = getString(R.string.ai_generation_failed, msg)
+                    Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show()
+                    DebugLogger.i(TAG, toastMessage)
                 }
             }
         }
@@ -175,10 +184,10 @@ class AiGenerationSheet : BottomSheetDialogFragment() {
 
     private fun showCancelConfirmation() {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("停止生成？")
-            .setMessage("AI 正在生成中，确定要中断吗？")
-            .setPositiveButton("继续等待", null)
-            .setNegativeButton("停止并关闭") { _, _ ->
+            .setTitle(R.string.ai_generation_stop_title)
+            .setMessage(R.string.ai_generation_stop_message)
+            .setPositiveButton(R.string.ai_generation_continue_waiting, null)
+            .setNegativeButton(R.string.ai_generation_stop_and_close) { _, _ ->
                 generatingJob?.cancel()
                 resetUiState()
                 dismiss()
@@ -194,25 +203,33 @@ class AiGenerationSheet : BottomSheetDialogFragment() {
         // 恢复点击外部关闭的默认行为（重新设置为 cancelable=true 应该会自动处理，但为了保险起见，不需要手动恢复 touch_outside 的 listener，因为 dismiss 后重建 Dialog 会重置）
 
         btnGenerate.isEnabled = true
-        btnGenerate.text = "生成工作流"
+        btnGenerate.text = getString(R.string.label_generate_workflow)
         etRequirement.isEnabled = true
     }
 
     private fun getSelectedProvider(): String {
         return when (cgProvider.checkedChipId) {
-            R.id.chip_dashscope -> "阿里云"
-            R.id.chip_custom -> "自定义"
-            else -> "智谱"
+            R.id.chip_dashscope -> PROVIDER_DASHSCOPE
+            R.id.chip_custom -> PROVIDER_CUSTOM
+            else -> PROVIDER_BIGMODEL
         }
     }
 
     private fun loadConfig() {
         val prefs = requireContext().getSharedPreferences("ai_config", Context.MODE_PRIVATE)
-        val provider = prefs.getString("provider", "智谱")
+        val provider = when (prefs.getString("provider", PROVIDER_BIGMODEL)) {
+            getString(R.string.text_alibaba_cloud) -> PROVIDER_DASHSCOPE
+            getString(R.string.text_custom) -> PROVIDER_CUSTOM
+            getString(R.string.text_zhipu) -> PROVIDER_BIGMODEL
+            "阿里云" -> PROVIDER_DASHSCOPE
+            "自定义" -> PROVIDER_CUSTOM
+            "智谱" -> PROVIDER_BIGMODEL
+            else -> prefs.getString("provider", PROVIDER_BIGMODEL)
+        }
 
         when (provider) {
-            "阿里云" -> view?.findViewById<Chip>(R.id.chip_dashscope)?.isChecked = true
-            "自定义" -> view?.findViewById<Chip>(R.id.chip_custom)?.isChecked = true
+            PROVIDER_DASHSCOPE -> view?.findViewById<Chip>(R.id.chip_dashscope)?.isChecked = true
+            PROVIDER_CUSTOM -> view?.findViewById<Chip>(R.id.chip_custom)?.isChecked = true
             else -> view?.findViewById<Chip>(R.id.chip_bigmodel)?.isChecked = true
         }
 

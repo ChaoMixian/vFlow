@@ -541,7 +541,7 @@ class WorkflowListFragment : Fragment() {
 
         Toast.makeText(
             requireContext(),
-            "已将 \"${workflow.name}\" 移动到 \"${folder.name}\"",
+            getString(R.string.toast_workflow_moved_to_folder, workflow.name, folder.name),
             Toast.LENGTH_SHORT
         ).show()
 
@@ -575,7 +575,7 @@ class WorkflowListFragment : Fragment() {
             5_000L -> getString(R.string.workflow_execute_delay_5s)
             15_000L -> getString(R.string.workflow_execute_delay_15s)
             60_000L -> getString(R.string.workflow_execute_delay_1min)
-            else -> "${delayMs / 1000} 秒"
+            else -> getString(R.string.workflow_execute_delay_seconds, delayMs / 1000)
         }
         Toast.makeText(
             requireContext(),
@@ -605,7 +605,7 @@ class WorkflowListFragment : Fragment() {
                     Toast.makeText(requireContext(), getString(R.string.toast_folder_created), Toast.LENGTH_SHORT).show()
                     loadData()
                 } else {
-                    Toast.makeText(requireContext(), "文件夹名称不能为空", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.toast_folder_name_empty), Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(R.string.common_cancel, null)

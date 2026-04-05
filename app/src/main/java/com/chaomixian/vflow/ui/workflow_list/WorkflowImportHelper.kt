@@ -90,7 +90,7 @@ class WorkflowImportHelper(
     private fun applyWorkflowDefaults(wf: Workflow): Workflow {
         return wf.copy(
             id = wf.id?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
-            name = wf.name?.takeIf { it.isNotBlank() } ?: "未命名工作流",
+            name = wf.name?.takeIf { it.isNotBlank() } ?: context.getString(R.string.workflow_name_untitled),
             version = wf.version?.takeIf { it.isNotEmpty() } ?: "1.0.0",
             vFlowLevel = if (wf.vFlowLevel == 0) 1 else wf.vFlowLevel,
             description = wf.description ?: "",
@@ -124,10 +124,10 @@ class WorkflowImportHelper(
         }
 
         var index = 1
-        var candidate = "$baseName (导入)"
+        var candidate = context.getString(R.string.workflow_import_name, baseName)
         while (candidate in existingNames) {
             index++
-            candidate = "$baseName (导入$index)"
+            candidate = context.getString(R.string.workflow_import_name_indexed, baseName, index)
         }
         return candidate
     }

@@ -156,6 +156,14 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         }
     }
 
+    private fun buildUseVariableSelfText(item: MagicVariableItem): String {
+        return getString(R.string.magic_variable_use_self, item.variableName)
+    }
+
+    private fun buildPropertyVariableName(item: MagicVariableItem, propertyName: String): String {
+        return getString(R.string.magic_variable_property_name, item.variableName, propertyName)
+    }
+
     /**
      * 显示字典选项对话框（内置属性 + 指定键）
      * @param acceptedTypes 接受的类型集合，用于判断是否显示"使用变量本身"选项
@@ -172,14 +180,14 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
         // 只有当类型本身被接受时，才显示"使用变量本身"选项
         if (!enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
-            options.add("使用 ${item.variableName} 本身")
+            options.add(buildUseVariableSelfText(item))
         }
 
         properties.forEach { prop -> options.add("${prop.getLocalizedName(requireContext())} (${prop.name})") }
-        options.add("选择指定键的值...")  // 添加选项
+        options.add(getString(R.string.magic_variable_select_dictionary_value))  // 添加选项
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("字典: ${item.variableName}")
+            .setTitle(getString(R.string.magic_variable_dictionary_title, item.variableName))
             .setItems(options.toTypedArray()) { _, which ->
                 val hasUseSelfOption = !enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
                 val offset = if (hasUseSelfOption) 1 else 0
@@ -204,7 +212,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                         }
                         val newItem = item.copy(
                             variableReference = newRef,
-                            variableName = "${item.variableName} 的 ${prop.getLocalizedName(requireContext())}"
+                            variableName = buildPropertyVariableName(item, prop.getLocalizedName(requireContext()))
                         )
                         onSelection?.invoke(newItem)
                         dismiss()
@@ -224,12 +232,12 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
     private fun showDictionaryKeyInput(item: MagicVariableItem) {
         val context = requireContext()
         val editText = android.widget.EditText(context)
-        editText.hint = "输入键名（区分大小写）"
+        editText.hint = getString(R.string.magic_variable_dictionary_key_hint)
 
         MaterialAlertDialogBuilder(context)
-            .setTitle("输入字典键名")
+            .setTitle(R.string.magic_variable_dictionary_key_title)
             .setView(editText)
-            .setPositiveButton("确定") { _, _ ->
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
                 val key = editText.text.toString().trim()
                 if (key.isNotEmpty()) {
                     val oldRef = item.variableReference
@@ -251,7 +259,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                     dismiss()
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(R.string.common_cancel, null)
             .show()
     }
 
@@ -271,14 +279,14 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
         // 只有当类型本身被接受时，才显示"使用变量本身"选项
         if (!enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
-            options.add("使用 ${item.variableName} 本身")
+            options.add(buildUseVariableSelfText(item))
         }
 
         properties.forEach { prop -> options.add("${prop.getLocalizedName(requireContext())} (${prop.name})") }
-        options.add("选择指定索引的值...")  // 添加选项
+        options.add(getString(R.string.magic_variable_select_list_index_value))  // 添加选项
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("列表: ${item.variableName}")
+            .setTitle(getString(R.string.magic_variable_list_title, item.variableName))
             .setItems(options.toTypedArray()) { _, which ->
                 val hasUseSelfOption = !enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
                 val offset = if (hasUseSelfOption) 1 else 0
@@ -303,7 +311,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                         }
                         val newItem = item.copy(
                             variableReference = newRef,
-                            variableName = "${item.variableName} 的 ${prop.getLocalizedName(requireContext())}"
+                            variableName = buildPropertyVariableName(item, prop.getLocalizedName(requireContext()))
                         )
                         onSelection?.invoke(newItem)
                         dismiss()
@@ -324,12 +332,12 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         val context = requireContext()
         val editText = android.widget.EditText(context)
         // 不设置 inputType，允许输入负号
-        editText.hint = "例如: 0, 1, 2, -1, -2"
+        editText.hint = getString(R.string.magic_variable_list_index_hint)
 
         MaterialAlertDialogBuilder(context)
-            .setTitle("输入列表索引")
+            .setTitle(R.string.magic_variable_list_index_title)
             .setView(editText)
-            .setPositiveButton("确定") { _, _ ->
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
                 val indexText = editText.text.toString().trim()
                 if (indexText.isNotEmpty()) {
                     val oldRef = item.variableReference
@@ -351,7 +359,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                     dismiss()
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(R.string.common_cancel, null)
             .show()
     }
 
@@ -371,14 +379,14 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
         // 只有当类型本身被接受时，才显示"使用变量本身"选项
         if (!enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
-            options.add("使用 ${item.variableName} 本身")
+            options.add(buildUseVariableSelfText(item))
         }
 
         properties.forEach { prop -> options.add("${prop.getLocalizedName(requireContext())} (${prop.name})") }
-        options.add("选择指定索引的值...")  // 添加索引选项
+        options.add(getString(R.string.magic_variable_select_string_index_value))  // 添加索引选项
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("文本: ${item.variableName}")
+            .setTitle(getString(R.string.magic_variable_text_title, item.variableName))
             .setItems(options.toTypedArray()) { _, which ->
                 val hasUseSelfOption = !enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
                 val offset = if (hasUseSelfOption) 1 else 0
@@ -403,7 +411,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                         }
                         val newItem = item.copy(
                             variableReference = newRef,
-                            variableName = "${item.variableName} 的 ${prop.getLocalizedName(requireContext())}"
+                            variableName = buildPropertyVariableName(item, prop.getLocalizedName(requireContext()))
                         )
                         onSelection?.invoke(newItem)
                         dismiss()
@@ -424,12 +432,12 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         val context = requireContext()
         val editText = android.widget.EditText(context)
         // 不设置 inputType，允许输入负号和冒号
-        editText.hint = "例如: 0, -1, 0:5, 1:-1, ::-1"
+        editText.hint = getString(R.string.magic_variable_string_index_hint)
 
         MaterialAlertDialogBuilder(context)
-            .setTitle("输入索引或切片")
+            .setTitle(R.string.magic_variable_string_index_title)
             .setView(editText)
-            .setPositiveButton("确定") { _, _ ->
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
                 val indexText = editText.text.toString().trim()
                 if (indexText.isNotEmpty()) {
                     val oldRef = item.variableReference
@@ -451,7 +459,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
                     dismiss()
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(R.string.common_cancel, null)
             .show()
     }
 
@@ -471,13 +479,13 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
         // 只有当类型本身被接受时，才显示"使用变量本身"选项
         if (!enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes) {
-            options.add("使用 ${item.variableName} 本身")
+            options.add(buildUseVariableSelfText(item))
         }
 
         properties.forEach { prop -> options.add("${prop.getLocalizedName(requireContext())} (${prop.name})") }
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("选择 ${item.variableName} 的属性")
+            .setTitle(getString(R.string.magic_variable_select_property_title, item.variableName))
             .setItems(options.toTypedArray()) { _, which ->
                 val hasUseSelfOption = !enableTypeFilter || acceptedTypes.isEmpty() || item.typeId in acceptedTypes
                 val offset = if (hasUseSelfOption) 1 else 0
@@ -500,7 +508,7 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
 
                     val newItem = item.copy(
                         variableReference = newRef,
-                        variableName = "${item.variableName} 的 ${prop.getLocalizedName(requireContext())}"
+                        variableName = buildPropertyVariableName(item, prop.getLocalizedName(requireContext()))
                     )
                     onSelection?.invoke(newItem)
                 }
@@ -518,10 +526,6 @@ class MagicVariableAdapter(private val items: List<PickerListItem>, private val 
     companion object { private const val TYPE_ACTION = 0; private const val TYPE_GROUP = 1 }
     override fun getItemViewType(position: Int) = if (items[position] is PickerListItem.ClearAction) TYPE_ACTION else TYPE_GROUP
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = if (viewType == TYPE_ACTION) ActionViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_magic_variable_action, parent, false)) else GroupViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_magic_variable_group_card, parent, false), onVariableClick)
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        if (holder is ActionViewHolder) { holder.bind("清除 / 使用静态值"); holder.itemView.setOnClickListener { onVariableClick(null) } }
-        else if (holder is GroupViewHolder) { holder.bind(items[position] as PickerListItem.VariableGroup) }
-    }
     override fun getItemCount() = items.size
     class GroupViewHolder(view: View, private val onVariableClick: (MagicVariableItem?) -> Unit) : RecyclerView.ViewHolder(view) {
         private val titleTextView: TextView = view.findViewById(R.id.group_title)
@@ -544,5 +548,14 @@ class MagicVariableAdapter(private val items: List<PickerListItem>, private val 
     class ActionViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val actionTextView: TextView = view.findViewById(R.id.action_text)
         fun bind(text: String) { actionTextView.text = text }
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is ActionViewHolder) {
+            holder.bind(holder.itemView.context.getString(R.string.magic_variable_clear_action))
+            holder.itemView.setOnClickListener { onVariableClick(null) }
+        } else if (holder is GroupViewHolder) {
+            holder.bind(items[position] as PickerListItem.VariableGroup)
+        }
     }
 }

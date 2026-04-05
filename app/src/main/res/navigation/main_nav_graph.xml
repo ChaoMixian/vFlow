@@ -20,13 +20,13 @@
     <fragment
         android:id="@+id/navigation_modules"
         android:name="com.chaomixian.vflow.ui.main.fragments.ModuleManagementFragment"
-        android:label="模块管理"
+        android:label="@string/title_modules"
         tools:layout="@layout/fragment_module_management" />
 
     <fragment
         android:id="@+id/navigation_repository"
         android:name="com.chaomixian.vflow.ui.repository.RepositoryFragment"
-        android:label="仓库"
+        android:label="@string/title_repository"
         tools:layout="@layout/fragment_repository" />
 
     <fragment

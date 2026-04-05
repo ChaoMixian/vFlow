@@ -129,7 +129,7 @@ class ListItemAdapter(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
-                hint = "项目 ${position + 1}"
+                hint = context.getString(R.string.list_item_hint, position + 1)
                 val editText = com.google.android.material.textfield.TextInputEditText(this.context)
                 editText.setText(itemValue)
                 addView(editText)

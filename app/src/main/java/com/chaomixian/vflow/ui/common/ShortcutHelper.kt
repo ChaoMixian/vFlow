@@ -69,7 +69,7 @@ object ShortcutHelper {
             // 提示用户请求已发送（具体的添加结果取决于Launcher的行为）
             // 注意：Android 8.0+ 通常会弹出一个系统对话框让用户确认
         } else {
-            Toast.makeText(context, "当前启动器不支持固定快捷方式", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.shortcut_pinning_not_supported, Toast.LENGTH_SHORT).show()
         }
     }
 

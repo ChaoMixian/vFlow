@@ -61,16 +61,16 @@ class LogViewerSheet : BottomSheetDialogFragment() {
             val tvFullLog = dialogView.findViewById<TextView>(R.id.tv_detail_full_log)
             val btnClose = dialogView.findViewById<Button>(R.id.btn_close_dialog)
 
-            tvTitle.text = "${log.workflowName} - 日志"
+            tvTitle.text = context.getString(R.string.log_details_title, log.workflowName)
 
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            tvTime.text = "执行时间: ${dateFormat.format(Date(log.timestamp))}"
+            tvTime.text = context.getString(R.string.log_execution_time, dateFormat.format(Date(log.timestamp)))
 
-            tvMessage.text = log.message ?: "无详细信息"
-            tvId.text = "工作流ID: ${log.workflowId}"
+            tvMessage.text = log.message ?: context.getString(R.string.log_no_detail_message)
+            tvId.text = context.getString(R.string.log_workflow_id, log.workflowId)
 
             // 使用 isNullOrEmpty() 安全检查，防止空指针异常
-            tvFullLog.text = if (!log.detailedLog.isNullOrEmpty()) log.detailedLog else "(无详细执行日志)"
+            tvFullLog.text = if (!log.detailedLog.isNullOrEmpty()) log.detailedLog else context.getString(R.string.text_no_detailed_logs)
 
             val dialog = MaterialAlertDialogBuilder(context)
                 .setView(dialogView)

@@ -295,7 +295,7 @@ object StandardControlFactory {
                 marginStart = (8 * context.resources.displayMetrics.density).toInt()
             }
             background = null
-            contentDescription = "选择"
+            contentDescription = context.getString(R.string.action_select)
             setOnClickListener {
                 onPickerClicked?.invoke()
             }
@@ -367,7 +367,7 @@ object StandardControlFactory {
         hint: String? = null
     ): TextInputLayout {
         return TextInputLayout(context).apply {
-            this.hint = hint ?: "值"
+            this.hint = hint ?: context.getString(R.string.label_value)
             val editText = TextInputEditText(context).apply {
                 val valueToDisplay = when (currentValue) {
                     is Number -> if (currentValue.toDouble() == currentValue.toLong().toDouble()) {

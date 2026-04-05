@@ -208,7 +208,7 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
         workflowManager.saveWorkflow(updatedWorkflow)
         Toast.makeText(
             requireContext(),
-            "已将 \"${workflow.name}\" 移出文件夹",
+            getString(R.string.toast_workflow_moved_out_of_folder, workflow.name),
             Toast.LENGTH_SHORT
         ).show()
         onWorkflowChanged?.invoke()
@@ -235,7 +235,7 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
         } else {
             com.google.android.material.snackbar.Snackbar.make(
                 requireView(),
-                "缺少权限，无法执行",
+                getString(R.string.toast_missing_permissions_cannot_execute),
                 com.google.android.material.snackbar.Snackbar.LENGTH_SHORT
             ).show()
         }
@@ -249,7 +249,7 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
             5_000L -> getString(R.string.workflow_execute_delay_5s)
             15_000L -> getString(R.string.workflow_execute_delay_15s)
             60_000L -> getString(R.string.workflow_execute_delay_1min)
-            else -> "${delayMs / 1000} 秒"
+            else -> getString(R.string.workflow_execute_delay_seconds, delayMs / 1000)
         }
         Toast.makeText(
             requireContext(),
@@ -326,7 +326,7 @@ class FolderContentDialogFragment : BottomSheetDialogFragment() {
                     showMoveOutFolder = true,
                     onDuplicate = { wf ->
                         workflowManager.duplicateWorkflow(wf.id)
-                        Toast.makeText(context, "工作流已复制", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.toast_workflow_duplicated, Toast.LENGTH_SHORT).show()
                         loadData()
                     },
                     onMoveOutFolder = onMoveOutFolder,

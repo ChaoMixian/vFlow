@@ -164,6 +164,20 @@
     <string name="workflow_execute_delay_15s">Execute in 15 seconds</string>
     <string name="workflow_execute_delay_1min">Execute in 1 minute</string>
     <string name="workflow_execute_delayed">Executing in %1$s: %2$s</string>
+    <string name="workflow_execute_delay_seconds">%d seconds</string>
+    <string name="workflow_name_untitled">Untitled Workflow</string>
+    <string name="workflow_import_name">%s (Imported)</string>
+    <string name="workflow_import_name_indexed">%1$s (Imported %2$d)</string>
+    <string name="workflow_copy_name">%s (Copy)</string>
+    <string name="workflow_list_menu_favorite_float">Favorite Workflow Quick Panel</string>
+    <string name="workflow_list_menu_sort_by_name">Sort by Name</string>
+    <string name="workflow_list_menu_backup_all">Back Up All Workflows</string>
+    <string name="workflow_list_menu_import_restore">Import/Restore Workflows</string>
+    <string name="toast_workflow_moved_to_folder">Moved \"%1$s\" to \"%2$s\"</string>
+    <string name="toast_workflow_moved_out_of_folder">Moved \"%s\" out of the folder</string>
+    <string name="toast_missing_permissions_cannot_execute">Missing permissions, cannot execute</string>
+    <string name="toast_workflow_duplicated">Workflow duplicated</string>
+    <string name="toast_folder_name_empty">Folder name cannot be empty</string>
 
     <!-- Settings Screen -->
     <string name="settings_update_download">Download Now</string>
@@ -337,6 +351,9 @@
     <string name="dialog_module_conflict_message" formatted="false">A module with ID \'%s\' already exists. How do you want to handle \'%s\' from the repository?</string>
     <string name="toast_module_replaced">\'%s\' has been replaced</string>
     <string name="label_no_permissions">None</string>
+    <string name="repo_author">Author: %s</string>
+    <string name="repo_module_permissions_count">%d permissions</string>
+    <string name="repo_workflow_tags">Tags: %s</string>
 
     <!-- WorkflowRepoFragment -->
     <string name="text_no_workflows">No workflows available</string>
@@ -423,6 +440,54 @@
     <string name="label_category">Category</string>
     <string name="text_module_description">This is the module description...</string>
     <string name="desc_view_module_info">View module details</string>
+    <string name="title_edit_target">Edit %1$s</string>
+    <string name="label_value">Value</string>
+    <string name="dictionary_key_required">Please enter a key name first</string>
+    <string name="list_item_hint">Item %1$d</string>
+    <string name="action_select">Select</string>
+    <string name="share_no_matching_workflow">No workflow can handle this shared content</string>
+    <string name="share_workflow_started">Started workflow via share: %1$s</string>
+    <string name="import_error_cannot_get_file">Cannot access file</string>
+    <string name="import_error_cannot_read_file">Cannot read file</string>
+    <string name="shortcut_workflow_not_found">Error: workflow not found for ID\nID: %1$s</string>
+    <string name="shortcut_workflow_id_missing">Error: missing parameter (workflow_id)</string>
+    <string name="shortcut_pinning_not_supported">The current launcher does not support pinned shortcuts</string>
+    <string name="dynamic_ui_default_title">User Interface</string>
+    <string name="home_auto_tasks_stats">%1$d / %2$d</string>
+    <string name="log_details_title">%1$s - Log</string>
+    <string name="log_execution_time">Execution time: %1$s</string>
+    <string name="log_no_detail_message">No detailed information</string>
+    <string name="log_workflow_id">Workflow ID: %1$s</string>
+    <string name="folder_workflow_count">%1$d workflows</string>
+    <string name="text_placeholder_dash">-</string>
+    <string name="default_workflow_version">1.0.0</string>
+    <string name="magic_variable_use_self">Use %1$s itself</string>
+    <string name="magic_variable_property_name">%1$s\'s %2$s</string>
+    <string name="magic_variable_select_dictionary_value">Select a value for a specific key...</string>
+    <string name="magic_variable_dictionary_title">Dictionary: %1$s</string>
+    <string name="magic_variable_dictionary_key_hint">Enter key name (case-sensitive)</string>
+    <string name="magic_variable_dictionary_key_title">Enter dictionary key</string>
+    <string name="magic_variable_select_list_index_value">Select a value at a specific index...</string>
+    <string name="magic_variable_list_title">List: %1$s</string>
+    <string name="magic_variable_list_index_hint">Example: 0, 1, 2, -1, -2</string>
+    <string name="magic_variable_list_index_title">Enter list index</string>
+    <string name="magic_variable_select_string_index_value">Select a value at a specific index...</string>
+    <string name="magic_variable_text_title">Text: %1$s</string>
+    <string name="magic_variable_string_index_hint">Example: 0, -1, 0:5, 1:-1, ::-1</string>
+    <string name="magic_variable_string_index_title">Enter index or slice</string>
+    <string name="magic_variable_select_property_title">Select a property of %1$s</string>
+    <string name="magic_variable_clear_action">Clear / Use static value</string>
+    <string name="ai_generation_requirement_required">Please enter your requirement</string>
+    <string name="ai_generation_api_key_required">Please enter an API key in settings</string>
+    <string name="ai_generation_generating">AI is thinking and generating the workflow...</string>
+    <string name="ai_generation_invalid_api_key">Invalid API key</string>
+    <string name="ai_generation_failed">Generation failed: %1$s</string>
+    <string name="ai_generation_stop_title">Stop generation?</string>
+    <string name="ai_generation_stop_message">AI is generating. Do you want to interrupt it?</string>
+    <string name="ai_generation_continue_waiting">Keep waiting</string>
+    <string name="ai_generation_stop_and_close">Stop and close</string>
+    <string name="hint_base_url">Base URL</string>
+    <string name="hint_api_key">API Key</string>
     <string name="text_ready">Ready</string>
     <string name="text_waiting_data">Waiting for data...</string>
     <string name="text_select_slot_1">Select Slot 1</string>

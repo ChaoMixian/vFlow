@@ -33,6 +33,13 @@ import java.util.*
  * - 对于 JSON 文件：解析并导入工作流到 vFlow。
  */
 class ShareReceiverActivity : AppCompatActivity() {
+    companion object {
+        private const val SHARE_TYPE_ANY = "any"
+        private const val SHARE_TYPE_TEXT = "text"
+        private const val SHARE_TYPE_LINK = "link"
+        private const val SHARE_TYPE_IMAGE = "image"
+        private const val SHARE_TYPE_FILE = "file"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,7 +84,7 @@ class ShareReceiverActivity : AppCompatActivity() {
                             matchingWorkflows.isEmpty() -> {
                                 // 在主线程显示 Toast
                                 CoroutineScope(Dispatchers.Main).launch {
-                                    Toast.makeText(applicationContext, "没有找到可处理分享的工作流", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(applicationContext, R.string.share_no_matching_workflow, Toast.LENGTH_SHORT).show()
                                 }
                             }
                             matchingWorkflows.size == 1 -> {
@@ -123,28 +130,52 @@ class ShareReceiverActivity : AppCompatActivity() {
         )
         // 在主线程显示 Toast
         CoroutineScope(Dispatchers.Main).launch {
-            Toast.makeText(applicationContext, "已通过分享启动工作流: ${workflow.name}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, getString(R.string.share_workflow_started, workflow.name), Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun resolveSharedType(intent: Intent): String {
         return when {
-            intent.type?.startsWith("image/") == true -> "图片"
+            intent.type?.startsWith("image/") == true -> SHARE_TYPE_IMAGE
             intent.type?.startsWith("text/") == true -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
-                if (text.startsWith("http://") || text.startsWith("https://")) "链接" else "文本"
+                if (text.startsWith("http://") || text.startsWith("https://")) SHARE_TYPE_LINK else SHARE_TYPE_TEXT
             }
-            else -> "文件"
+            else -> SHARE_TYPE_FILE
         }
     }
 
     private fun resolveMatchingShareTriggerId(workflow: Workflow, sharedType: String): String? {
         return workflow.triggerStepsByType("vflow.trigger.share")
             .firstOrNull { step ->
-                val acceptedType = step.parameters["acceptedType"] as? String ?: "任意"
-                acceptedType == "任意" || acceptedType == sharedType
+                when (normalizeAcceptedShareType(step.parameters["acceptedType"] as? String)) {
+                    SHARE_TYPE_ANY -> true
+                    else -> normalizeAcceptedShareType(step.parameters["acceptedType"] as? String) == sharedType
+                }
             }
             ?.id
+    }
+
+    private fun normalizeAcceptedShareType(value: String?): String {
+        return when (value) {
+            null,
+            "任意",
+            "Any",
+            getString(R.string.option_vflow_trigger_share_type_any) -> SHARE_TYPE_ANY
+            "文本",
+            "Text",
+            getString(R.string.option_vflow_trigger_share_type_text) -> SHARE_TYPE_TEXT
+            "链接",
+            "Link",
+            getString(R.string.option_vflow_trigger_share_type_link) -> SHARE_TYPE_LINK
+            "图片",
+            "Image",
+            getString(R.string.option_vflow_trigger_share_type_image) -> SHARE_TYPE_IMAGE
+            "文件",
+            "File",
+            getString(R.string.option_vflow_trigger_share_type_file) -> SHARE_TYPE_FILE
+            else -> value
+        }
     }
 
     /**
@@ -218,7 +249,7 @@ class ShareReceiverActivity : AppCompatActivity() {
 
         if (uri == null) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(applicationContext, getString(R.string.toast_import_failed, "无法获取文件"), Toast.LENGTH_LONG).show()
+                Toast.makeText(applicationContext, getString(R.string.toast_import_failed, getString(R.string.import_error_cannot_get_file)), Toast.LENGTH_LONG).show()
             }
             return true
         }
@@ -239,7 +270,7 @@ class ShareReceiverActivity : AppCompatActivity() {
 
             if (jsonString == null) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(applicationContext, getString(R.string.toast_import_failed, "无法读取文件"), Toast.LENGTH_LONG).show()
+                    Toast.makeText(applicationContext, getString(R.string.toast_import_failed, getString(R.string.import_error_cannot_read_file)), Toast.LENGTH_LONG).show()
                 }
                 return true
             }

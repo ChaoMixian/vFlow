@@ -121,7 +121,7 @@ class DictionaryKVAdapter(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 )
-                hint = "值"
+                hint = context.getString(R.string.label_value)
                 val editText = com.google.android.material.textfield.TextInputEditText(this.context)
                 editText.setText(item.second)
                 addView(editText)
@@ -168,7 +168,7 @@ class DictionaryKVAdapter(
                 if (currentKey.isNotBlank()) {
                     onMagicClick?.invoke(currentKey)
                 } else {
-                    Toast.makeText(holder.itemView.context, "请先填写键的名称", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(holder.itemView.context, R.string.dictionary_key_required, Toast.LENGTH_SHORT).show()
                 }
             }
         }

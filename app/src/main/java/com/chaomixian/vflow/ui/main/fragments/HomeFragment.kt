@@ -145,7 +145,7 @@ class HomeFragment : Fragment() {
 
         // 更新统计数字
         totalWorkflowsText.text = totalCount.toString()
-        autoWorkflowsText.text = "$enabledAutoCount / $autoCount"
+        autoWorkflowsText.text = getString(R.string.home_auto_tasks_stats, enabledAutoCount, autoCount)
     }
 
     /**

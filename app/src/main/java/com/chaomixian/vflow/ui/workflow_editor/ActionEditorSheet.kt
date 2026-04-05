@@ -136,10 +136,10 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         // 设置标题
         val focusedInputDef = module.getInputs().find { it.id == focusedInputId }
         titleTextView.text = if (focusedInputId != null && focusedInputDef != null) {
-            "编辑 ${focusedInputDef.name}"
+            getString(R.string.title_edit_target, focusedInputDef.name)
         } else {
             val localizedName = module.metadata.getLocalizedName(requireContext())
-            "编辑 $localizedName"
+            getString(R.string.title_edit_target, localizedName)
         }
         infoButton.setOnClickListener {
             ModuleDetailDialog.show(requireContext(), module)

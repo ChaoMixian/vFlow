@@ -19,6 +19,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import android.view.View
 import android.widget.TextView
+import com.chaomixian.vflow.R
 import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -42,7 +43,7 @@ class DynamicUiActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val title = intent.getStringExtra(EXTRA_TITLE) ?: "用户界面"
+        val title = intent.getStringExtra(EXTRA_TITLE) ?: getString(R.string.dynamic_ui_default_title)
         isInteractive = intent.getBooleanExtra(EXTRA_IS_INTERACTIVE, false)
         sessionId = intent.getStringExtra(EXTRA_SESSION_ID) ?: ""
 

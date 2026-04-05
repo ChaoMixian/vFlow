@@ -99,7 +99,7 @@ class ImportQueueProcessor(
         )
         val newWorkflow = workflowWithDefaults.copy(
             id = UUID.randomUUID().toString(),
-            name = "${toImport.name} (副本)"
+            name = context.getString(R.string.workflow_copy_name, toImport.name)
         )
         workflowManager.saveWorkflow(newWorkflow)
     }
