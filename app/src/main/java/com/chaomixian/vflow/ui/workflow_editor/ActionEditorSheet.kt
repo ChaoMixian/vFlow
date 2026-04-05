@@ -14,6 +14,7 @@ import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.common.ModuleDetailDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
@@ -111,6 +112,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.sheet_action_editor, container, false)
         val titleTextView = view.findViewById<TextView>(R.id.text_view_bottom_sheet_title)
+        val infoButton = view.findViewById<ImageButton>(R.id.button_module_info)
         val saveButton = view.findViewById<Button>(R.id.button_save)
 
         // 绑定视图容器
@@ -138,6 +140,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         } else {
             val localizedName = module.metadata.getLocalizedName(requireContext())
             "编辑 $localizedName"
+        }
+        infoButton.setOnClickListener {
+            ModuleDetailDialog.show(requireContext(), module)
         }
 
         buildUi()

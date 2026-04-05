@@ -28,6 +28,7 @@ import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
 import com.chaomixian.vflow.core.workflow.module.scripted.ScriptedModule
 import com.chaomixian.vflow.permissions.Permission
+import com.chaomixian.vflow.ui.common.ModuleDetailDialog
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -338,47 +339,6 @@ class ModuleManagementFragment : Fragment() {
     }
 
     private fun showModuleDetails(module: BaseModule) {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_module_detail, null)
-        val tvTitle = dialogView.findViewById<TextView>(R.id.tv_detail_title)
-        val tvId = dialogView.findViewById<TextView>(R.id.tv_detail_id)
-        val tvInputs = dialogView.findViewById<TextView>(R.id.tv_detail_inputs)
-        val tvOutputs = dialogView.findViewById<TextView>(R.id.tv_detail_outputs)
-        val btnClose = dialogView.findViewById<Button>(R.id.btn_close_dialog)
-
-        val localizedName = module.metadata.getLocalizedName(requireContext())
-        tvTitle.text = "$localizedName - ${getString(R.string.label_module_details)}"
-        tvId.text = "${getString(R.string.label_module_id)}: ${module.id}"
-
-        val inputs = module.getInputs()
-        if (inputs.isEmpty()) {
-            tvInputs.text = getString(R.string.label_no_input_params)
-        } else {
-            val sb = StringBuilder()
-            inputs.forEachIndexed { index, input ->
-                sb.append("${index + 1}. ${input.getLocalizedName(requireContext())} (${input.id})\n")
-                sb.append("   ${getString(R.string.label_param_type)}: ${input.staticType.name}")
-                if (index < inputs.size - 1) sb.append("\n")
-            }
-            tvInputs.text = sb.toString()
-        }
-
-        val outputs = try { module.getOutputs(null) } catch (e: Exception) { emptyList() }
-        if (outputs.isEmpty()) {
-            tvOutputs.text = getString(R.string.label_no_output_vars)
-        } else {
-            val sb = StringBuilder()
-            outputs.forEachIndexed { index, output ->
-                sb.append("${index + 1}. ${output.getLocalizedName(requireContext())} (${output.id})\n")
-                sb.append("   ${getString(R.string.label_param_type)}: ${output.typeName}")
-                if (index < outputs.size - 1) sb.append("\n")
-            }
-            tvOutputs.text = sb.toString()
-        }
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(dialogView)
-            .create()
-        btnClose.setOnClickListener { dialog.dismiss() }
-        dialog.show()
+        ModuleDetailDialog.show(requireContext(), module)
     }
 }

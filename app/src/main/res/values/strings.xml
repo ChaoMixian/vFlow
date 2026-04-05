@@ -407,6 +407,7 @@
     <string name="label_module_name">模块名称</string>
     <string name="label_category">分类</string>
     <string name="text_module_description">这里是模块的功能描述...</string>
+    <string name="desc_view_module_info">查看模块信息</string>
     <string name="text_ready">准备就绪</string>
     <string name="text_waiting_data">等待数据...</string>
     <string name="text_select_slot_1">选择插槽 1</string>

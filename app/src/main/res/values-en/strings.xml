@@ -422,6 +422,7 @@
     <string name="label_module_name">Module Name</string>
     <string name="label_category">Category</string>
     <string name="text_module_description">This is the module description...</string>
+    <string name="desc_view_module_info">View module details</string>
     <string name="text_ready">Ready</string>
     <string name="text_waiting_data">Waiting for data...</string>
     <string name="text_select_slot_1">Select Slot 1</string>

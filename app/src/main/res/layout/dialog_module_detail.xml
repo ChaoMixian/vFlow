@@ -33,6 +33,26 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:text="@string/workflow_description"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="?attr/colorPrimary" />
+
+        <TextView
+            android:id="@+id/tv_detail_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_widget_rounded"
+            android:backgroundTint="?attr/colorSurfaceVariant"
+            android:lineSpacingExtra="4dp"
+            android:padding="12dp"
+            android:text="@string/text_module_description"
+            android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:text="@string/label_inputs"
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:textColor="?attr/colorPrimary" />
