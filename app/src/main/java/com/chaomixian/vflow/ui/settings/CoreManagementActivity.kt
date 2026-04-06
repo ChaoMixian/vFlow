@@ -664,12 +664,12 @@ private fun CoreManagementScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "双进程保活",
+                                text = stringResource(R.string.core_mutual_keep_alive_title),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "App 与 Core 互相守护，任一进程被杀时自动重启",
+                                text = stringResource(R.string.core_mutual_keep_alive_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -681,7 +681,15 @@ private fun CoreManagementScreen(
                                 mutualKeepAliveEnabled = it
                                 val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
                                 prefs.edit { putBoolean("mutual_keep_alive_enabled", it) }
-                                showToast(if (it) "已启用双进程保活" else "已禁用双进程保活")
+                                showToast(
+                                    context.getString(
+                                        if (it) {
+                                            R.string.toast_core_mutual_keep_alive_enabled
+                                        } else {
+                                            R.string.toast_core_mutual_keep_alive_disabled
+                                        }
+                                    )
+                                )
                             }
                         )
                     }

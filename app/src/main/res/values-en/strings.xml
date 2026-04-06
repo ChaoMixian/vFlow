@@ -378,6 +378,10 @@
     <string name="permission_storage">Read/Write Storage</string>
     <string name="permission_usage_stats">Usage Stats</string>
     <string name="permission_notification_listener">Notification Listener</string>
+    <string name="core_mutual_keep_alive_title">Mutual Keep-Alive</string>
+    <string name="core_mutual_keep_alive_desc">The app and Core watch each other and restart automatically if either process is killed</string>
+    <string name="toast_core_mutual_keep_alive_enabled">Mutual keep-alive enabled</string>
+    <string name="toast_core_mutual_keep_alive_disabled">Mutual keep-alive disabled</string>
 
     <!-- AiGenerationSheet -->
     <string name="toast_please_enter_requirement">Please enter requirement</string>

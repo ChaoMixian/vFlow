@@ -328,14 +328,7 @@ class ModuleManagementFragment : Fragment() {
     }
 
     private fun getPermissionLabel(permission: Permission): String {
-        return when (permission.name) {
-            "ACCESSIBILITY" -> getString(R.string.permission_accessibility)
-            "OVERLAY" -> getString(R.string.permission_overlay)
-            "STORAGE" -> getString(R.string.permission_storage)
-            "USAGE_STATS" -> getString(R.string.permission_usage_stats)
-            "NOTIFICATION_LISTENER" -> getString(R.string.permission_notification_listener)
-            else -> permission.name
-        }
+        return permission.getLocalizedName(requireContext())
     }
 
     private fun showModuleDetails(module: BaseModule) {

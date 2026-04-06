@@ -363,6 +363,10 @@
     <string name="permission_storage">读写存储</string>
     <string name="permission_usage_stats">应用使用情况</string>
     <string name="permission_notification_listener">通知读取</string>
+    <string name="core_mutual_keep_alive_title">双进程保活</string>
+    <string name="core_mutual_keep_alive_desc">App 与 Core 互相守护，任一进程被杀时自动重启</string>
+    <string name="toast_core_mutual_keep_alive_enabled">已启用双进程保活</string>
+    <string name="toast_core_mutual_keep_alive_disabled">已禁用双进程保活</string>
 
     <!-- AiGenerationSheet -->
     <string name="toast_please_enter_requirement">请输入需求</string>
