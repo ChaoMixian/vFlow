@@ -30,6 +30,13 @@ import androidx.core.net.toUri
  * 支持文件的读取、写入、追加、删除操作
  */
 class FileOperationModule : BaseModule() {
+    companion object {
+        private const val OP_READ = "read"
+        private const val OP_WRITE = "write"
+        private const val OP_DELETE = "delete"
+        private const val OP_APPEND = "append"
+        private const val OP_CREATE = "create"
+    }
 
     override val id = "vflow.data.file_operation"
     override val metadata = com.chaomixian.vflow.core.module.ActionMetadata(
@@ -52,7 +59,7 @@ class FileOperationModule : BaseModule() {
             hint = "输入文件路径 或 点击右侧按钮选择",
             pickerType = PickerType.FILE,
             acceptsMagicVariable = false,
-            visibility = InputVisibility.notIn("operation", listOf("创建"))
+            visibility = InputVisibility.notIn("operation", listOf(OP_CREATE))
         ),
 
         // 2. 操作类型（使用 CHIP_GROUP）
@@ -61,8 +68,27 @@ class FileOperationModule : BaseModule() {
             nameStringRes = R.string.param_vflow_data_file_operation_operation_name,
             name = "操作",
             staticType = ParameterType.ENUM,
-            defaultValue = "读取",
-            options = listOf("读取", "写入", "删除", "追加", "创建"),
+            defaultValue = OP_READ,
+            options = listOf(OP_READ, OP_WRITE, OP_DELETE, OP_APPEND, OP_CREATE),
+            optionsStringRes = listOf(
+                R.string.option_vflow_data_file_operation_operation_read,
+                R.string.option_vflow_data_file_operation_operation_write,
+                R.string.option_vflow_data_file_operation_operation_delete,
+                R.string.option_vflow_data_file_operation_operation_append,
+                R.string.option_vflow_data_file_operation_operation_create
+            ),
+            legacyValueMap = mapOf(
+                "读取" to OP_READ,
+                "Read" to OP_READ,
+                "写入" to OP_WRITE,
+                "Write" to OP_WRITE,
+                "删除" to OP_DELETE,
+                "Delete" to OP_DELETE,
+                "追加" to OP_APPEND,
+                "Append" to OP_APPEND,
+                "创建" to OP_CREATE,
+                "Create" to OP_CREATE
+            ),
             inputStyle = InputStyle.CHIP_GROUP
         ),
 
@@ -76,7 +102,7 @@ class FileOperationModule : BaseModule() {
             hint = "输入目录路径 或 点击选择",
             pickerType = PickerType.DIRECTORY,
             acceptsMagicVariable = false,
-            visibility = InputVisibility.whenEquals("operation", "创建")
+            visibility = InputVisibility.whenEquals("operation", OP_CREATE)
         ),
 
         // 4. 创建操作 - 文件名（支持富文本、魔法变量、命名变量）
@@ -90,7 +116,7 @@ class FileOperationModule : BaseModule() {
             supportsRichText = true,
             acceptsMagicVariable = true,
             acceptsNamedVariable = true,
-            visibility = InputVisibility.whenEquals("operation", "创建")
+            visibility = InputVisibility.whenEquals("operation", OP_CREATE)
         ),
 
         // 5. 创建操作 - 编码格式
@@ -102,7 +128,7 @@ class FileOperationModule : BaseModule() {
             defaultValue = "UTF-8",
             options = listOf("UTF-8", "GBK", "GB2312", "ISO-8859-1"),
             inputStyle = InputStyle.CHIP_GROUP,
-            visibility = InputVisibility.whenEquals("operation", "创建")
+            visibility = InputVisibility.whenEquals("operation", OP_CREATE)
         ),
 
         // 6. 写入内容 - 当操作是"写入"或"追加"时显示
@@ -114,7 +140,7 @@ class FileOperationModule : BaseModule() {
             defaultValue = "",
             hint = "输入要写入的内容",
             supportsRichText = true,
-            visibility = InputVisibility.`in`("operation", listOf("写入", "追加"))
+            visibility = InputVisibility.`in`("operation", listOf(OP_WRITE, OP_APPEND))
         ),
 
         // 7. 创建操作 - 文件内容（可选）
@@ -126,7 +152,7 @@ class FileOperationModule : BaseModule() {
             defaultValue = "",
             hint = "输入文件内容（可选）",
             supportsRichText = true,
-            visibility = InputVisibility.whenEquals("operation", "创建")
+            visibility = InputVisibility.whenEquals("operation", OP_CREATE)
         ),
 
         // 8. 编码格式 - 当操作是"读取"时显示
@@ -138,7 +164,7 @@ class FileOperationModule : BaseModule() {
             defaultValue = "UTF-8",
             options = listOf("UTF-8", "GBK", "GB2312", "ISO-8859-1"),
             inputStyle = InputStyle.CHIP_GROUP,
-            visibility = InputVisibility.whenEquals("operation", "读取")
+            visibility = InputVisibility.whenEquals("operation", OP_READ)
         ),
 
         // 9. 高级设置（折叠区域）
@@ -150,7 +176,7 @@ class FileOperationModule : BaseModule() {
             defaultValue = true,
             inputStyle = InputStyle.SWITCH,
             isFolded = true,
-            visibility = InputVisibility.whenEquals("operation", "写入")
+            visibility = InputVisibility.whenEquals("operation", OP_WRITE)
         ),
 
         InputDefinition(
@@ -162,7 +188,7 @@ class FileOperationModule : BaseModule() {
             hint = "字节数",
             sliderConfig = InputDefinition.Companion.slider(1024f, 65536f, 1024f),
             isFolded = true,
-            visibility = InputVisibility.`in`("operation", listOf("读取", "写入", "追加"))
+            visibility = InputVisibility.`in`("operation", listOf(OP_READ, OP_WRITE, OP_APPEND))
         )
     )
 
@@ -170,36 +196,36 @@ class FileOperationModule : BaseModule() {
         val operation = step?.parameters?.get("operation") as? String
 
         return when (operation) {
-            "读取" -> listOf(
-                OutputDefinition("content", "文件内容", VTypeRegistry.STRING.id),
-                OutputDefinition("file_name", "文件名", VTypeRegistry.STRING.id),
-                OutputDefinition("mime_type", "MIME类型", VTypeRegistry.STRING.id),
-                OutputDefinition("size", "文件大小", VTypeRegistry.NUMBER.id)
+            OP_READ -> listOf(
+                OutputDefinition("content", "文件内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_file_operation_content_name),
+                OutputDefinition("file_name", "文件名", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_file_operation_file_name_name),
+                OutputDefinition("mime_type", "MIME类型", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_file_operation_mime_type_name),
+                OutputDefinition("size", "文件大小", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_data_file_operation_size_name)
             )
-            "创建" -> listOf(
-                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-                OutputDefinition("message", "操作信息", VTypeRegistry.STRING.id),
-                OutputDefinition("file_path", "文件路径", VTypeRegistry.STRING.id),
-                OutputDefinition("file_name", "文件名", VTypeRegistry.STRING.id)
+            OP_CREATE -> listOf(
+                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_data_file_operation_success_name),
+                OutputDefinition("message", "操作信息", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_file_operation_message_name),
+                OutputDefinition("file_path", "文件路径", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_file_operation_file_path_name),
+                OutputDefinition("file_name", "文件名", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_file_operation_file_name_name)
             )
             else -> listOf(
-                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-                OutputDefinition("message", "操作信息", VTypeRegistry.STRING.id)
+                OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_data_file_operation_success_name),
+                OutputDefinition("message", "操作信息", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_file_operation_message_name)
             )
         }
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val operation = step.parameters["operation"] as? String ?: "读取"
+        val operation = step.parameters["operation"] as? String ?: OP_READ
 
         return when (operation) {
-            "创建" -> {
-                val fileName = step.parameters["file_name"] as? String ?: "未指定文件名"
+            OP_CREATE -> {
+                val fileName = step.parameters["file_name"] as? String ?: context.getString(R.string.summary_vflow_data_file_operation_unspecified_file_name)
                 val fileNamePill = PillUtil.Pill(fileName, "file_name")
-                PillUtil.buildSpannable(context, "创建: ", fileNamePill)
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_file_operation_create_prefix), fileNamePill)
             }
             else -> {
-                val filePath = step.parameters["file_path"] as? String ?: "未选择文件"
+                val filePath = step.parameters["file_path"] as? String ?: context.getString(R.string.summary_vflow_data_file_operation_no_file_selected)
                 // 提取文件名
                 val fileName = try {
                     val uri = filePath.toUri()
@@ -208,7 +234,7 @@ class FileOperationModule : BaseModule() {
                     // 如果不是有效的 URI，尝试从路径中提取文件名
                     java.io.File(filePath).name.takeIf { it.isNotEmpty() } ?: filePath
                 }
-                "$operation: $fileName"
+                "${getOperationDisplayName(context, operation)}: $fileName"
             }
         }
     }
@@ -226,14 +252,14 @@ class FileOperationModule : BaseModule() {
 
         if (updatedParameterId == "operation") {
             when (updatedValue) {
-                "读取" -> {
+                OP_READ -> {
                     newParameters["content"] = ""
                     newParameters.remove("overwrite")
                     newParameters.remove("directory_path")
                     newParameters.remove("file_name")
                     newParameters.remove("create_content")
                 }
-                "删除" -> {
+                OP_DELETE -> {
                     newParameters["content"] = ""
                     newParameters.remove("overwrite")
                     newParameters.remove("encoding")
@@ -241,13 +267,13 @@ class FileOperationModule : BaseModule() {
                     newParameters.remove("file_name")
                     newParameters.remove("create_content")
                 }
-                "写入", "追加" -> {
+                OP_WRITE, OP_APPEND -> {
                     newParameters.remove("encoding")
                     newParameters.remove("directory_path")
                     newParameters.remove("file_name")
                     newParameters.remove("create_content")
                 }
-                "创建" -> {
+                OP_CREATE -> {
                     newParameters["file_path"] = ""
                     newParameters["content"] = ""
                     newParameters.remove("overwrite")
@@ -260,16 +286,19 @@ class FileOperationModule : BaseModule() {
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         val currentStep = context.allSteps.getOrNull(context.currentStepIndex)
-            ?: return ExecutionResult.Failure("执行错误", "无法获取当前步骤")
+            ?: return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_data_file_operation_execution_error),
+                appContext.getString(R.string.error_vflow_data_file_operation_current_step_missing)
+            )
 
-        val operation = currentStep.parameters["operation"] as? String ?: "读取"
+        val operation = currentStep.parameters["operation"] as? String ?: OP_READ
 
         return when (operation) {
-            "创建" -> {
+            OP_CREATE -> {
                 val directoryPath = currentStep.parameters["directory_path"] as? String
-                    ?: return ExecutionResult.Failure("执行错误", "未指定目录路径")
+                    ?: return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_file_operation_execution_error), appContext.getString(R.string.error_vflow_data_file_operation_directory_missing))
                 val rawFileName = currentStep.parameters["file_name"] as? String
-                    ?: return ExecutionResult.Failure("执行错误", "未指定文件名")
+                    ?: return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_file_operation_execution_error), appContext.getString(R.string.error_vflow_data_file_operation_file_name_missing))
                 val fileName = VariableResolver.resolve(rawFileName, context)
                 val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
                 val rawContent = currentStep.parameters["create_content"] as? String ?: ""
@@ -284,17 +313,17 @@ class FileOperationModule : BaseModule() {
                     onProgress = onProgress
                 )
             }
-            "读取" -> {
+            OP_READ -> {
                 val filePath = currentStep.parameters["file_path"] as? String
-                    ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
+                    ?: return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_file_operation_execution_error), appContext.getString(R.string.error_vflow_data_file_operation_file_path_missing))
                 val encoding = currentStep.parameters["encoding_read"] as? String ?: "UTF-8"
                 val bufferSize = (currentStep.parameters["buffer_size"] as? Number)?.toInt() ?: 8192
 
                 executeRead(context.applicationContext, filePath, encoding, bufferSize, onProgress)
             }
-            "写入" -> {
+            OP_WRITE -> {
                 val filePath = currentStep.parameters["file_path"] as? String
-                    ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
+                    ?: return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_file_operation_execution_error), appContext.getString(R.string.error_vflow_data_file_operation_file_path_missing))
                 val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
                 val rawContent = currentStep.parameters["content"] as? String ?: ""
                 val content = VariableResolver.resolve(rawContent, context)
@@ -302,22 +331,25 @@ class FileOperationModule : BaseModule() {
 
                 executeWrite(context.applicationContext, filePath, content, encoding, overwrite, onProgress)
             }
-            "追加" -> {
+            OP_APPEND -> {
                 val filePath = currentStep.parameters["file_path"] as? String
-                    ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
+                    ?: return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_file_operation_execution_error), appContext.getString(R.string.error_vflow_data_file_operation_file_path_missing))
                 val encoding = currentStep.parameters["encoding"] as? String ?: "UTF-8"
                 val rawContent = currentStep.parameters["content"] as? String ?: ""
                 val content = VariableResolver.resolve(rawContent, context)
 
                 executeAppend(context.applicationContext, filePath, content, encoding, onProgress)
             }
-            "删除" -> {
+            OP_DELETE -> {
                 val filePath = currentStep.parameters["file_path"] as? String
-                    ?: return ExecutionResult.Failure("执行错误", "未指定文件路径")
+                    ?: return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_file_operation_execution_error), appContext.getString(R.string.error_vflow_data_file_operation_file_path_missing))
 
                 executeDelete(context.applicationContext, filePath, onProgress)
             }
-            else -> ExecutionResult.Failure("执行错误", "未知的操作类型: $operation")
+            else -> ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_data_file_operation_execution_error),
+                appContext.getString(R.string.error_vflow_data_file_operation_unknown_operation, operation)
+            )
         }
     }
 
@@ -331,9 +363,9 @@ class FileOperationModule : BaseModule() {
         bufferSize: Int,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        onProgress(ProgressUpdate("正在读取文件..."))
+        onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_reading)))
 
-        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure("执行错误", "无效的文件路径")
+        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
 
         return try {
             // 提取文件名和MIME类型
@@ -351,7 +383,7 @@ class FileOperationModule : BaseModule() {
                     }
 
                     val size = content.length
-                    onProgress(ProgressUpdate("读取完成", 100))
+                    onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_read_complete), 100))
 
                     ExecutionResult.Success(mapOf(
                         "content" to content.toString(),
@@ -360,9 +392,9 @@ class FileOperationModule : BaseModule() {
                         "size" to size
                     ))
                 }
-            } ?: return ExecutionResult.Failure("执行错误", "无法打开文件")
+            } ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_open_failed))
         } catch (e: java.io.UnsupportedEncodingException) {
-            ExecutionResult.Failure("编码错误", "不支持的编码格式: $encoding")
+            ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_encoding_error), context.getString(R.string.error_vflow_data_file_operation_unsupported_encoding, encoding))
         }
     }
 
@@ -377,10 +409,10 @@ class FileOperationModule : BaseModule() {
         overwrite: Boolean,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val action = if (overwrite) "写入" else "追加"
-        onProgress(ProgressUpdate("正在${action}文件..."))
+        val action = if (overwrite) OP_WRITE else OP_APPEND
+        onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_writing, getOperationDisplayName(context, action))))
 
-        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure("执行错误", "无效的文件路径")
+        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
 
         // 如果是覆盖写入且文件存在，先删除
         if (overwrite) {
@@ -393,7 +425,7 @@ class FileOperationModule : BaseModule() {
 
         return try {
             val outputStream = context.contentResolver.openOutputStream(uri, if (overwrite) "wt" else "at")
-                ?: return ExecutionResult.Failure("执行错误", "无法打开文件进行写入")
+                ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_open_for_write_failed))
 
             outputStream.use { stream ->
                 OutputStreamWriter(stream, encoding).use { writer ->
@@ -401,7 +433,11 @@ class FileOperationModule : BaseModule() {
                 }
             }
 
-            val message = if (overwrite) "文件写入完成" else "内容已追加到文件"
+            val message = if (overwrite) {
+                context.getString(R.string.progress_vflow_data_file_operation_write_complete)
+            } else {
+                context.getString(R.string.progress_vflow_data_file_operation_append_complete)
+            }
             onProgress(ProgressUpdate(message, 100))
 
             ExecutionResult.Success(mapOf(
@@ -409,7 +445,17 @@ class FileOperationModule : BaseModule() {
                 "message" to "$message: $filePath"
             ))
         } catch (e: java.io.UnsupportedEncodingException) {
-            ExecutionResult.Failure("编码错误", "不支持的编码格式: $encoding")
+            ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_encoding_error), context.getString(R.string.error_vflow_data_file_operation_unsupported_encoding, encoding))
+        }
+    }
+
+    private fun getOperationDisplayName(context: Context, operation: String): String {
+        return when (operation) {
+            OP_WRITE -> context.getString(R.string.option_vflow_data_file_operation_operation_write)
+            OP_DELETE -> context.getString(R.string.option_vflow_data_file_operation_operation_delete)
+            OP_APPEND -> context.getString(R.string.option_vflow_data_file_operation_operation_append)
+            OP_CREATE -> context.getString(R.string.option_vflow_data_file_operation_operation_create)
+            else -> context.getString(R.string.option_vflow_data_file_operation_operation_read)
         }
     }
 
@@ -434,9 +480,9 @@ class FileOperationModule : BaseModule() {
         filePath: String,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        onProgress(ProgressUpdate("正在删除文件..."))
+        onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_deleting)))
 
-        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure("执行错误", "无效的文件路径")
+        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
 
         val deleted = try {
             deleteDocument(context, uri)
@@ -445,27 +491,27 @@ class FileOperationModule : BaseModule() {
         }
 
         return if (deleted) {
-            onProgress(ProgressUpdate("文件已删除", 100))
+            onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_delete_complete), 100))
             ExecutionResult.Success(mapOf(
                 "success" to true,
-                "message" to "文件已删除: $filePath"
+                "message" to context.getString(R.string.message_vflow_data_file_operation_deleted, filePath)
             ))
         } else {
             // 尝试使用普通删除
             try {
                 val file = java.io.File(filePath)
                 if (file.exists() && file.delete()) {
-                    onProgress(ProgressUpdate("文件已删除", 100))
+                    onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_delete_complete), 100))
                     return ExecutionResult.Success(mapOf(
                         "success" to true,
-                        "message" to "文件已删除: $filePath"
+                        "message" to context.getString(R.string.message_vflow_data_file_operation_deleted, filePath)
                     ))
                 }
             } catch (e: Exception) {
                 // 忽略
             }
 
-            ExecutionResult.Failure("删除失败", "无法删除文件: $filePath")
+            ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_delete_failed), context.getString(R.string.error_vflow_data_file_operation_cannot_delete, filePath))
         }
     }
 
@@ -480,7 +526,7 @@ class FileOperationModule : BaseModule() {
         content: String,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        onProgress(ProgressUpdate("正在创建文件: $fileName..."))
+        onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_creating, fileName)))
 
         return try {
             if (isFileUri(directoryPath)) {
@@ -489,14 +535,14 @@ class FileOperationModule : BaseModule() {
             } else {
                 // 使用 DocumentFile API 处理 content:// 路径
                 val directoryUri = parseDirectoryUri(context, directoryPath)
-                    ?: return ExecutionResult.Failure("执行错误", "无效的目录路径: $directoryPath")
+                    ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_directory_path, directoryPath))
 
                 executeCreateWithDocumentFile(context, directoryUri, fileName, encoding, content, onProgress)
             }
         } catch (e: java.io.UnsupportedEncodingException) {
-            ExecutionResult.Failure("编码错误", "不支持的编码格式: $encoding")
+            ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_encoding_error), context.getString(R.string.error_vflow_data_file_operation_unsupported_encoding, encoding))
         } catch (e: Exception) {
-            ExecutionResult.Failure("创建失败", "创建文件失败: ${e.message}")
+            ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_create_failed_with_reason, e.message ?: ""))
         }
     }
 
@@ -512,10 +558,10 @@ class FileOperationModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val directoryDoc = DocumentFile.fromTreeUri(context, directoryUri)
-            ?: return ExecutionResult.Failure("创建失败", "无法访问目录")
+            ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_cannot_access_directory))
 
         val newFile = directoryDoc.createFile("*/*", fileName)
-            ?: return ExecutionResult.Failure("创建失败", "无法创建文件，可能已存在或名称无效")
+            ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_cannot_create_file))
 
         // 写入内容
         if (content.isNotEmpty()) {
@@ -523,14 +569,14 @@ class FileOperationModule : BaseModule() {
                 OutputStreamWriter(outputStream, encoding).use { writer ->
                     writer.write(content)
                 }
-            } ?: return ExecutionResult.Failure("创建失败", "无法打开文件进行写入")
+            } ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_open_for_write_failed))
         }
 
-        onProgress(ProgressUpdate("文件创建成功: $fileName", 100))
+        onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_create_complete, fileName), 100))
 
         return ExecutionResult.Success(mapOf(
             "success" to true,
-            "message" to "文件创建成功: $fileName",
+            "message" to context.getString(R.string.message_vflow_data_file_operation_created, fileName),
             "file_path" to newFile.uri.toString(),
             "file_name" to fileName
         ))
@@ -552,18 +598,18 @@ class FileOperationModule : BaseModule() {
         val directory = java.io.File(dirPath)
 
         if (!directory.exists()) {
-            return ExecutionResult.Failure("创建失败", "目录不存在: $dirPath")
+            return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_directory_not_exists, dirPath))
         }
 
         if (!directory.isDirectory) {
-            return ExecutionResult.Failure("创建失败", "路径不是目录: $dirPath")
+            return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_path_not_directory, dirPath))
         }
 
         val newFile = java.io.File(directory, fileName)
 
         // 检查文件是否已存在
         if (newFile.exists()) {
-            return ExecutionResult.Failure("创建失败", "文件已存在: $fileName")
+            return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_file_exists, fileName))
         }
 
         // 创建文件并写入内容
@@ -573,11 +619,11 @@ class FileOperationModule : BaseModule() {
             newFile.createNewFile()
         }
 
-        onProgress(ProgressUpdate("文件创建成功: $fileName", 100))
+        onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_create_complete, fileName), 100))
 
         return ExecutionResult.Success(mapOf(
             "success" to true,
-            "message" to "文件创建成功: $fileName",
+            "message" to context.getString(R.string.message_vflow_data_file_operation_created, fileName),
             "file_path" to newFile.toURI().toString(),
             "file_name" to fileName
         ))

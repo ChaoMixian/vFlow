@@ -1153,6 +1153,7 @@
     <string name="output_vflow_shizuku_wechat_shortcuts_result_name">Command Output</string>
     <string name="option_vflow_shizuku_wechat_shortcuts_action_receive">Collection Code</string>
     <string name="option_vflow_shizuku_wechat_shortcuts_action_pay">Payment Code</string>
+    <string name="option_vflow_shizuku_wechat_shortcuts_action_scan">Scan</string>
 
     <!-- vflow.shizuku.coloros_shortcuts - ColorOS Shortcuts -->
     <string name="module_vflow_shizuku_coloros_shortcuts_name">ColorOS</string>
@@ -1552,6 +1553,27 @@
     <string name="module_vflow_interaction_find_image_name">Find Image</string>
     <string name="module_vflow_interaction_find_until_desc">Continuously find text on screen until it appears or timeout. Supports OCR fallback</string>
     <string name="module_vflow_interaction_find_until_name">Find Until</string>
+    <string name="param_vflow_interaction_find_until_target_text_name">Target Text</string>
+    <string name="param_vflow_interaction_find_until_match_mode_name">Match Mode</string>
+    <string name="param_vflow_interaction_find_until_timeout_name">Timeout (s)</string>
+    <string name="param_vflow_interaction_find_until_search_mode_name">Search Mode</string>
+    <string name="param_vflow_interaction_find_until_interval_name">Polling Interval (ms)</string>
+    <string name="output_vflow_interaction_find_until_success_name">Found</string>
+    <string name="output_vflow_interaction_find_until_element_name">Found Element</string>
+    <string name="output_vflow_interaction_find_until_coordinate_name">Center Coordinate</string>
+    <string name="option_vflow_interaction_find_until_match_contains">Contains</string>
+    <string name="option_vflow_interaction_find_until_match_exact">Exact Match</string>
+    <string name="option_vflow_interaction_find_until_match_regex">Regex</string>
+    <string name="option_vflow_interaction_find_until_search_auto">Auto</string>
+    <string name="option_vflow_interaction_find_until_search_accessibility">Accessibility</string>
+    <string name="option_vflow_interaction_find_until_search_ocr">OCR</string>
+    <string name="error_vflow_interaction_find_until_param_error">Parameter Error</string>
+    <string name="error_vflow_interaction_find_until_target_empty">Target text cannot be empty</string>
+    <string name="error_vflow_interaction_find_until_service_unavailable">Service Not Running</string>
+    <string name="error_vflow_interaction_find_until_accessibility_required">Accessibility service is not running and OCR mode was not forced.</string>
+    <string name="progress_vflow_interaction_find_until_start">Searching for %1$s (mode: %2$s, timeout %3$d s)...</string>
+    <string name="progress_vflow_interaction_find_until_found">Target found in %1$.1fs</string>
+    <string name="progress_vflow_interaction_find_until_timeout">Search timed out</string>
     <string name="module_vflow_interaction_ocr_desc">Recognize text in image, or find coordinates of specified text</string>
     <string name="module_vflow_interaction_ocr_name">OCR</string>
     <!-- OCR Parameters -->

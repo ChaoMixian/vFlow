@@ -35,6 +35,14 @@ import java.util.regex.Pattern
  * "查找直到出现"原子模块。
  */
 class FindTextUntilModule : BaseModule() {
+    companion object {
+        private const val MATCH_CONTAINS = "contains"
+        private const val MATCH_EXACT = "exact"
+        private const val MATCH_REGEX = "regex"
+        private const val SEARCH_AUTO = "auto"
+        private const val SEARCH_ACCESSIBILITY = "accessibility"
+        private const val SEARCH_OCR = "ocr"
+    }
     override val id = "vflow.interaction.find_until"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_interaction_find_until_name,
@@ -50,30 +58,30 @@ class FindTextUntilModule : BaseModule() {
                 ShellManager.getRequiredPermissions(com.chaomixian.vflow.core.logging.LogManager.applicationContext)
     }
 
-    private val matchModeOptions = listOf("包含", "完全匹配", "正则")
-    private val searchModeOptions = listOf("自动", "无障碍", "OCR")
+    private val matchModeOptions = listOf(MATCH_CONTAINS, MATCH_EXACT, MATCH_REGEX)
+    private val searchModeOptions = listOf(SEARCH_AUTO, SEARCH_ACCESSIBILITY, SEARCH_OCR)
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("targetText", "目标文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("matchMode", "匹配模式", ParameterType.ENUM, "包含", options = matchModeOptions, acceptsMagicVariable = false),
-        InputDefinition("timeout", "超时时间(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
+        InputDefinition("targetText", "目标文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_interaction_find_until_target_text_name),
+        InputDefinition("matchMode", "匹配模式", ParameterType.ENUM, MATCH_CONTAINS, options = matchModeOptions, optionsStringRes = listOf(R.string.option_vflow_interaction_find_until_match_contains, R.string.option_vflow_interaction_find_until_match_exact, R.string.option_vflow_interaction_find_until_match_regex), legacyValueMap = mapOf("包含" to MATCH_CONTAINS, "Contains" to MATCH_CONTAINS, "完全匹配" to MATCH_EXACT, "Exact Match" to MATCH_EXACT, "正则" to MATCH_REGEX, "Regex" to MATCH_REGEX), acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_interaction_find_until_match_mode_name),
+        InputDefinition("timeout", "超时时间(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_interaction_find_until_timeout_name),
 
-        InputDefinition("searchMode", "查找模式", ParameterType.ENUM, "自动", options = searchModeOptions, acceptsMagicVariable = false, isFolded = true),
-        InputDefinition("interval", "轮询间隔(ms)", ParameterType.NUMBER, 1000.0, acceptsMagicVariable = true, isFolded = true)
+        InputDefinition("searchMode", "查找模式", ParameterType.ENUM, SEARCH_AUTO, options = searchModeOptions, optionsStringRes = listOf(R.string.option_vflow_interaction_find_until_search_auto, R.string.option_vflow_interaction_find_until_search_accessibility, R.string.option_vflow_interaction_find_until_search_ocr), legacyValueMap = mapOf("自动" to SEARCH_AUTO, "Auto" to SEARCH_AUTO, "无障碍" to SEARCH_ACCESSIBILITY, "Accessibility" to SEARCH_ACCESSIBILITY, "OCR" to SEARCH_OCR), acceptsMagicVariable = false, isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_until_search_mode_name),
+        InputDefinition("interval", "轮询间隔(ms)", ParameterType.NUMBER, 1000.0, acceptsMagicVariable = true, isFolded = true, nameStringRes = R.string.param_vflow_interaction_find_until_interval_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否找到", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("element", "找到的元素", VTypeRegistry.SCREEN_ELEMENT.id),
-        OutputDefinition("coordinate", "中心坐标", VTypeRegistry.COORDINATE.id)
+        OutputDefinition("success", "是否找到", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_find_until_success_name),
+        OutputDefinition("element", "找到的元素", VTypeRegistry.SCREEN_ELEMENT.id, nameStringRes = R.string.output_vflow_interaction_find_until_element_name),
+        OutputDefinition("coordinate", "中心坐标", VTypeRegistry.COORDINATE.id, nameStringRes = R.string.output_vflow_interaction_find_until_coordinate_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
         val targetPill = PillUtil.createPillFromParam(step.parameters["targetText"], inputs.find { it.id == "targetText" })
         val timeoutPill = PillUtil.createPillFromParam(step.parameters["timeout"], inputs.find { it.id == "timeout" })
-        val searchMode = step.parameters["searchMode"] as? String ?: "自动"
-        val modeDesc = if (searchMode == "自动") "" else " ($searchMode)"
+        val searchMode = step.parameters["searchMode"] as? String ?: SEARCH_AUTO
+        val modeDesc = if (searchMode == SEARCH_AUTO) "" else " (${getSearchModeDisplayName(searchMode)})"
 
         return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_device_wait_for_prefix), targetPill, context.getString(R.string.summary_vflow_device_wait_for_suffix), modeDesc, context.getString(R.string.summary_vflow_device_timeout_prefix), timeoutPill, context.getString(R.string.summary_vflow_device_timeout_suffix))
     }
@@ -86,21 +94,36 @@ class FindTextUntilModule : BaseModule() {
     ): ExecutionResult {
         val rawTarget = context.getVariableAsString("targetText", "")
         val targetText = VariableResolver.resolve(rawTarget, context)
-        val matchMode = context.getVariableAsString("matchMode", "包含")
-        val searchMode = context.getVariableAsString("searchMode", "自动")
+        val matchMode = context.getVariableAsString("matchMode", MATCH_CONTAINS)
+        val searchMode = context.getVariableAsString("searchMode", SEARCH_AUTO)
 
         val timeoutSec = context.getVariableAsLong("timeout") ?: 10
         val interval = (context.getVariableAsLong("interval") ?: 1000).coerceAtLeast(100)
 
-        if (targetText.isEmpty()) return ExecutionResult.Failure("参数错误", "查找文本不能为空")
-
-        val service = ServiceStateBus.getAccessibilityService()
-        if (service == null && searchMode != "OCR") {
-            return ExecutionResult.Failure("服务未运行", "无障碍服务未运行，且未强制使用 OCR 模式。")
+        if (targetText.isEmpty()) {
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_interaction_find_until_param_error),
+                appContext.getString(R.string.error_vflow_interaction_find_until_target_empty)
+            )
         }
 
-        onProgress(ProgressUpdate("开始查找 '$targetText' (模式: $searchMode, 超时 ${timeoutSec}s)..."))
-        DebugLogger.d(TAG, "开始查找 '$targetText' (模式: $searchMode, 超时 ${timeoutSec}s)...")
+        val service = ServiceStateBus.getAccessibilityService()
+        if (service == null && searchMode != SEARCH_OCR) {
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_interaction_find_until_service_unavailable),
+                appContext.getString(R.string.error_vflow_interaction_find_until_accessibility_required)
+            )
+        }
+
+        val searchModeLabel = getSearchModeDisplayName(searchMode)
+        val searchStartMessage = appContext.getString(
+            R.string.progress_vflow_interaction_find_until_start,
+            targetText,
+            searchModeLabel,
+            timeoutSec
+        )
+        onProgress(ProgressUpdate(searchStartMessage))
+        DebugLogger.d(TAG, searchStartMessage)
 
         val startTime = System.currentTimeMillis()
         val timeoutMs = timeoutSec * 1000
@@ -108,7 +131,7 @@ class FindTextUntilModule : BaseModule() {
         while (System.currentTimeMillis() - startTime < timeoutMs) {
             var foundElement: VScreenElement? = null
 
-            if (searchMode == "自动" || searchMode == "无障碍") {
+            if (searchMode == SEARCH_AUTO || searchMode == SEARCH_ACCESSIBILITY) {
                 val root = service?.rootInActiveWindow
                 if (root != null) {
                     val node = findNode(root, targetText, matchMode)
@@ -119,14 +142,19 @@ class FindTextUntilModule : BaseModule() {
                 }
             }
 
-            if (foundElement == null && (searchMode == "自动" || searchMode == "OCR")) {
+            if (foundElement == null && (searchMode == SEARCH_AUTO || searchMode == SEARCH_OCR)) {
                 foundElement = performOCR(context, targetText, matchMode)
             }
 
             if (foundElement != null) {
                 val coordinate = VCoordinate(foundElement.bounds.centerX(), foundElement.bounds.centerY())
-                onProgress(ProgressUpdate("已找到目标，耗时 ${(System.currentTimeMillis() - startTime)/1000.0}s"))
-                DebugLogger.d(TAG, "已找到目标，耗时 ${(System.currentTimeMillis() - startTime)/1000.0}s")
+                val elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0
+                val foundMessage = appContext.getString(
+                    R.string.progress_vflow_interaction_find_until_found,
+                    elapsedSeconds
+                )
+                onProgress(ProgressUpdate(foundMessage))
+                DebugLogger.d(TAG, foundMessage)
 
                 return ExecutionResult.Success(mapOf(
                     "success" to VBoolean(true),
@@ -138,7 +166,7 @@ class FindTextUntilModule : BaseModule() {
             delay(interval)
         }
 
-        onProgress(ProgressUpdate("查找超时"))
+        onProgress(ProgressUpdate(appContext.getString(R.string.progress_vflow_interaction_find_until_timeout)))
         return ExecutionResult.Success(mapOf(
             "success" to VBoolean(false)
         ))
@@ -155,9 +183,9 @@ class FindTextUntilModule : BaseModule() {
             var isMatch = false
             if (!nodeText.isNullOrEmpty()) {
                 isMatch = when (mode) {
-                    "完全匹配" -> nodeText == text
-                    "包含" -> nodeText.contains(text, ignoreCase = true)
-                    "正则" -> try { Pattern.compile(text).matcher(nodeText).find() } catch (e: Exception) { false }
+                    MATCH_EXACT -> nodeText == text
+                    MATCH_CONTAINS -> nodeText.contains(text, ignoreCase = true)
+                    MATCH_REGEX -> try { Pattern.compile(text).matcher(nodeText).find() } catch (e: Exception) { false }
                     else -> nodeText.contains(text, ignoreCase = true)
                 }
             }
@@ -192,9 +220,9 @@ class FindTextUntilModule : BaseModule() {
                     for (line in block.lines) {
                         val lineText = line.text
                         val isMatch = when (matchMode) {
-                            "完全匹配" -> lineText == targetText
-                            "包含" -> lineText.contains(targetText, ignoreCase = true)
-                            "正则" -> try { Pattern.compile(targetText).matcher(lineText).find() } catch (e: Exception) { false }
+                            MATCH_EXACT -> lineText == targetText
+                            MATCH_CONTAINS -> lineText.contains(targetText, ignoreCase = true)
+                            MATCH_REGEX -> try { Pattern.compile(targetText).matcher(lineText).find() } catch (e: Exception) { false }
                             else -> lineText.contains(targetText, ignoreCase = true)
                         }
 
@@ -231,5 +259,13 @@ class FindTextUntilModule : BaseModule() {
             }
         }
         return null
+    }
+
+    private fun getSearchModeDisplayName(mode: String): String {
+        return when (mode) {
+            SEARCH_ACCESSIBILITY -> appContext.getString(R.string.option_vflow_interaction_find_until_search_accessibility)
+            SEARCH_OCR -> appContext.getString(R.string.option_vflow_interaction_find_until_search_ocr)
+            else -> appContext.getString(R.string.option_vflow_interaction_find_until_search_auto)
+        }
     }
 }

@@ -15,6 +15,12 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.util.regex.Pattern
 
 class TextProcessingModule : BaseModule() {
+    companion object {
+        const val OP_JOIN = "join"
+        const val OP_SPLIT = "split"
+        const val OP_REPLACE = "replace"
+        const val OP_REGEX = "regex_extract"
+    }
 
     override val id = "vflow.data.text_processing"
     override val metadata = ActionMetadata(
@@ -29,25 +35,25 @@ class TextProcessingModule : BaseModule() {
     override val uiProvider: ModuleUIProvider? = TextProcessingModuleUIProvider()
 
     // 定义所有支持的操作
-    private val operationOptions = listOf("拼接", "分割", "替换", "正则提取")
+    private val operationOptions = listOf(OP_JOIN, OP_SPLIT, OP_REPLACE, OP_REGEX)
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("operation", "操作", ParameterType.ENUM, "拼接", options = operationOptions, acceptsMagicVariable = false),
+        InputDefinition("operation", "操作", ParameterType.ENUM, OP_JOIN, options = operationOptions, optionsStringRes = listOf(R.string.option_vflow_data_text_processing_operation_join, R.string.option_vflow_data_text_processing_operation_split, R.string.option_vflow_data_text_processing_operation_replace, R.string.option_vflow_data_text_processing_operation_regex), legacyValueMap = mapOf("拼接" to OP_JOIN, "Join" to OP_JOIN, "分割" to OP_SPLIT, "Split" to OP_SPLIT, "替换" to OP_REPLACE, "Replace" to OP_REPLACE, "正则提取" to OP_REGEX, "Regex Extract" to OP_REGEX), acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_data_text_processing_operation_name),
         // --- 拼接 ---
-        InputDefinition("join_prefix", "前缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("join_list", "列表", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.LIST.id)),
-        InputDefinition("join_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("join_suffix", "后缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("join_prefix", "前缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_join_prefix_name),
+        InputDefinition("join_list", "列表", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.LIST.id), nameStringRes = R.string.param_vflow_data_text_processing_join_list_name),
+        InputDefinition("join_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_join_delimiter_name),
+        InputDefinition("join_suffix", "后缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_join_suffix_name),
         // --- 通用文本输入 ---
-        InputDefinition("source_text", "源文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("source_text", "源文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_source_text_name),
         // --- 分割 ---
-        InputDefinition("split_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("split_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_split_delimiter_name),
         // --- 替换 ---
-        InputDefinition("replace_from", "查找", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("replace_to", "替换为", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
+        InputDefinition("replace_from", "查找", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_replace_from_name),
+        InputDefinition("replace_to", "替换为", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_replace_to_name),
         // --- 正则 ---
-        InputDefinition("regex_pattern", "正则表达式", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("regex_group", "匹配组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
+        InputDefinition("regex_pattern", "正则表达式", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_regex_pattern_name),
+        InputDefinition("regex_group", "匹配组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_data_text_processing_regex_group_name)
     )
 
     /**
@@ -57,10 +63,10 @@ class TextProcessingModule : BaseModule() {
         step: ActionStep?,
         allSteps: List<ActionStep>?
     ): List<OutputDefinition> {
-        val operation = step?.parameters?.get("operation") as? String ?: "拼接"
+        val operation = step?.parameters?.get("operation") as? String ?: OP_JOIN
         return when (operation) {
-            "拼接", "替换" -> listOf(OutputDefinition("result_text", "结果文本", VTypeRegistry.STRING.id))
-            "分割", "正则提取" -> listOf(OutputDefinition("result_list", "结果列表", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.STRING.id))
+            OP_JOIN, OP_REPLACE -> listOf(OutputDefinition("result_text", "结果文本", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_text_processing_result_text_name))
+            OP_SPLIT, OP_REGEX -> listOf(OutputDefinition("result_list", "结果列表", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_text_processing_result_list_name))
             else -> emptyList()
         }
     }
@@ -70,10 +76,10 @@ class TextProcessingModule : BaseModule() {
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
-        val operation = step.parameters["operation"]?.toString() ?: "拼接"
+        val operation = step.parameters["operation"]?.toString() ?: OP_JOIN
 
         return when (operation) {
-            "拼接" -> {
+            OP_JOIN -> {
                 val listPill = PillUtil.createPillFromParam(step.parameters["join_list"], inputs.find { it.id == "join_list" })
                 val delimiterPill = PillUtil.createPillFromParam(step.parameters["join_delimiter"], inputs.find { it.id == "join_delimiter" })
                 val prefix = context.getString(R.string.summary_vflow_data_text_processing_join_prefix)
@@ -81,7 +87,7 @@ class TextProcessingModule : BaseModule() {
                 val suffix = context.getString(R.string.summary_vflow_data_text_processing_join_suffix)
                 PillUtil.buildSpannable(context, prefix, listPill, middle, delimiterPill, suffix)
             }
-            "分割" -> {
+            OP_SPLIT -> {
                 val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
                 val delimiterPill = PillUtil.createPillFromParam(step.parameters["split_delimiter"], inputs.find { it.id == "split_delimiter" })
                 val prefix = context.getString(R.string.summary_vflow_data_text_processing_split_prefix)
@@ -89,7 +95,7 @@ class TextProcessingModule : BaseModule() {
                 val suffix = context.getString(R.string.summary_vflow_data_text_processing_split_suffix)
                 PillUtil.buildSpannable(context, prefix, sourcePill, middle, delimiterPill, suffix)
             }
-            "替换" -> {
+            OP_REPLACE -> {
                 val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
                 val fromPill = PillUtil.createPillFromParam(step.parameters["replace_from"], inputs.find { it.id == "replace_from" })
                 val toPill = PillUtil.createPillFromParam(step.parameters["replace_to"], inputs.find { it.id == "replace_to" })
@@ -98,7 +104,7 @@ class TextProcessingModule : BaseModule() {
                 val middle2 = context.getString(R.string.summary_vflow_data_text_processing_replace_middle2)
                 PillUtil.buildSpannable(context, prefix, sourcePill, middle1, fromPill, middle2, toPill)
             }
-            "正则提取" -> {
+            OP_REGEX -> {
                 val sourcePill = PillUtil.createPillFromParam(step.parameters["source_text"], inputs.find { it.id == "source_text" })
                 val patternPill = PillUtil.createPillFromParam(step.parameters["regex_pattern"], inputs.find { it.id == "regex_pattern" })
                 val prefix = context.getString(R.string.summary_vflow_data_text_processing_regex_prefix)
@@ -118,15 +124,15 @@ class TextProcessingModule : BaseModule() {
     ): ExecutionResult {
         val operation = context.getVariableAsString("operation", "")
         if (operation.isEmpty()) {
-            return ExecutionResult.Failure("参数错误", "未指定操作类型")
+            return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_param_error), appContext.getString(R.string.error_vflow_data_text_processing_no_operation))
         }
 
         return when (operation) {
-            "拼接" -> executeJoin(context)
-            "分割" -> executeSplit(context)
-            "替换" -> executeReplace(context)
-            "正则提取" -> executeRegex(context)
-            else -> ExecutionResult.Failure("操作无效", "不支持的操作: $operation")
+            OP_JOIN -> executeJoin(context)
+            OP_SPLIT -> executeSplit(context)
+            OP_REPLACE -> executeReplace(context)
+            OP_REGEX -> executeRegex(context)
+            else -> ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_param_error), appContext.getString(R.string.error_vflow_data_text_processing_invalid_operation, operation))
         }
     }
 
@@ -145,7 +151,7 @@ class TextProcessingModule : BaseModule() {
         }
 
         if (listToJoin == null) {
-            return ExecutionResult.Failure("输入错误", "需要一个列表变量来进行拼接。")
+            return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_input_error), appContext.getString(R.string.error_vflow_data_text_processing_need_list))
         }
 
         val joinedString = listToJoin.joinToString(separator = delimiter, prefix = prefix, postfix = suffix)
@@ -164,7 +170,7 @@ class TextProcessingModule : BaseModule() {
                         else VariableResolver.resolve(context.getVariableAsString("split_delimiter", ","), context)
 
         if (source.isEmpty()) {
-            return ExecutionResult.Failure("输入错误", "源文本不能为空。")
+            return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_input_error), appContext.getString(R.string.error_vflow_data_text_processing_source_empty))
         }
 
         val resultList = source.split(delimiter).map { VString(it) }
@@ -186,7 +192,7 @@ class TextProcessingModule : BaseModule() {
                  else VariableResolver.resolve(context.getVariableAsString("replace_to", ""), context)
 
         if (source.isEmpty() || from.isEmpty()) {
-            return ExecutionResult.Failure("输入错误", "源文本和查找内容不能为空。")
+            return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_input_error), appContext.getString(R.string.error_vflow_data_text_processing_source_and_from_empty))
         }
 
         val resultText = source.replace(from, to)
@@ -213,7 +219,7 @@ class TextProcessingModule : BaseModule() {
         }
 
         if (source.isEmpty() || patternStr.isEmpty()) {
-            return ExecutionResult.Failure("输入错误", "源文本和正则表达式不能为空。")
+            return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_input_error), appContext.getString(R.string.error_vflow_data_text_processing_pattern_empty))
         }
 
         try {
@@ -227,7 +233,7 @@ class TextProcessingModule : BaseModule() {
             }
             return ExecutionResult.Success(mapOf("result_list" to VList(results.map { VString(it) })))
         } catch (e: Exception) {
-            return ExecutionResult.Failure("正则错误", e.localizedMessage ?: "无效的正则表达式")
+            return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_regex_error), e.localizedMessage ?: appContext.getString(R.string.error_vflow_data_text_processing_regex_error))
         }
     }
 }

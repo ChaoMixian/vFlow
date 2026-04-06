@@ -84,10 +84,11 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
 
         val allInputs = TextProcessingModule().getInputs()
         val operationOptions = allInputs.find { it.id == "operation" }?.options ?: emptyList()
+        val operationLabels = allInputs.find { it.id == "operation" }?.optionsStringRes?.map { context.getString(it) } ?: operationOptions
 
         // 创建操作类型选择 Spinner
         val operationSpinner = Spinner(context).apply {
-            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, operationOptions).also {
+            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, operationLabels).also {
                 it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             }
         }
@@ -136,10 +137,10 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         holder.inputViews.clear()
 
         val inputsToShow = when (operation) {
-            "拼接" -> allInputs.filter { it.id.startsWith("join_") }
-            "分割" -> allInputs.filter { it.id == "source_text" || it.id == "split_delimiter" }
-            "替换" -> allInputs.filter { it.id == "source_text" || it.id.startsWith("replace_") }
-            "正则提取" -> allInputs.filter { it.id == "source_text" || it.id.startsWith("regex_") }
+            TextProcessingModule.OP_JOIN -> allInputs.filter { it.id.startsWith("join_") }
+            TextProcessingModule.OP_SPLIT -> allInputs.filter { it.id == "source_text" || it.id == "split_delimiter" }
+            TextProcessingModule.OP_REPLACE -> allInputs.filter { it.id == "source_text" || it.id.startsWith("replace_") }
+            TextProcessingModule.OP_REGEX -> allInputs.filter { it.id == "source_text" || it.id.startsWith("regex_") }
             else -> emptyList()
         }
 
@@ -162,7 +163,8 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
     ): View {
         // 复用通用的 row_editor_input 布局以保持UI一致性
         val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null, false)
-        row.findViewById<TextView>(R.id.input_name).text = inputDef.name
+        val displayName = inputDef.nameStringRes?.let(context::getString) ?: inputDef.name
+        row.findViewById<TextView>(R.id.input_name).text = displayName
         val valueContainer = row.findViewById<ViewGroup>(R.id.input_value_container)
         val magicButton = row.findViewById<ImageButton>(R.id.button_magic_variable)
 
@@ -176,7 +178,7 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         // 如果已连接魔法变量，显示药丸
         if (inputDef.acceptsMagicVariable && (currentValue as? String).isMagicVariable()) {
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
-            pill.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
+            pill.findViewById<TextView>(R.id.pill_text).text = context.getString(R.string.magic_variable_connected)
             pill.setOnClickListener {
                 onMagicVariableRequested?.invoke(inputDef.id)
             }
@@ -184,7 +186,7 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         } else {
             // 否则，显示标准的输入框
             val textInputLayout = TextInputLayout(context).apply {
-                hint = inputDef.name
+                hint = displayName
                 val editText = TextInputEditText(context).apply {
                     setText(currentValue?.toString() ?: inputDef.defaultValue?.toString() ?: "")
                     inputType = if (inputDef.staticType == ParameterType.NUMBER) {
@@ -207,7 +209,8 @@ class TextProcessingModuleUIProvider : ModuleUIProvider {
         val h = holder as TextProcessingViewHolder
         val parameters = mutableMapOf<String, Any?>()
 
-        parameters["operation"] = h.operationSpinner.selectedItem.toString()
+        val operationOptions = TextProcessingModule().getInputs().find { it.id == "operation" }?.options ?: emptyList()
+        parameters["operation"] = operationOptions.getOrNull(h.operationSpinner.selectedItemPosition)
 
         h.inputViews.forEach { (id, view) ->
             val valueContainer = view.findViewById<ViewGroup>(R.id.input_value_container)
