@@ -27,7 +27,8 @@ class CoreVolumeStateModule : BaseModule() {
         description = "使用 vFlow Core 读取不同音频流的当前音量。",
         descriptionStringRes = R.string.module_vflow_core_volume_state_desc,
         iconRes = R.drawable.rounded_volume_up_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

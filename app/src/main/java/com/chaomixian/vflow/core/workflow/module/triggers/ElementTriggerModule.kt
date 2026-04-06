@@ -31,7 +31,8 @@ class ElementTriggerModule : BaseModule() {
         name = "元素触发",  // Fallback
         description = "当页面上出现匹配选择器的控件时触发工作流",  // Fallback
         iconRes = R.drawable.rounded_ads_click_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

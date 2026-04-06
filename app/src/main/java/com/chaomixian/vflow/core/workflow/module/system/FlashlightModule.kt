@@ -31,7 +31,8 @@ class FlashlightModule : BaseModule() {
         description = "控制设备手电筒，支持切换、开启、关闭三种模式",
         descriptionStringRes = R.string.module_vflow_device_flashlight_desc,
         iconRes = R.drawable.rounded_flashlight_on_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 操作模式常量

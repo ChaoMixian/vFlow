@@ -34,7 +34,8 @@ class SetClipboardModule : BaseModule() {
         name = "写入剪贴板",  // Fallback
         description = "将指定的文本或图片内容写入系统剪贴板",  // Fallback
         iconRes = R.drawable.rounded_content_copy_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 定义输入参数，现在可以接受文本或图片

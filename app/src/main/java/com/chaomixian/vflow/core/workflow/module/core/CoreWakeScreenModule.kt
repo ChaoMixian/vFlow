@@ -26,7 +26,8 @@ class CoreWakeScreenModule : BaseModule() {
         description = "使用 vFlow Core 唤醒设备屏幕。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_wake_screen_desc,
         iconRes = R.drawable.rounded_fullscreen_portrait_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

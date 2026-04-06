@@ -35,7 +35,8 @@ class GetCurrentTimeModule : BaseModule() {
         description = "获取当前时间，支持多种格式输出",
         descriptionStringRes = R.string.module_vflow_data_get_current_time_desc,
         iconRes = R.drawable.rounded_avg_time_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     // 时间格式选项

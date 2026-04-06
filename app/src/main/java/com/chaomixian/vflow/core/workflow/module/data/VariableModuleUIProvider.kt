@@ -54,6 +54,12 @@ class VariableModuleUIProvider(
     private val richTextUIProvider = RichTextUIProvider("value")
     private val variableValueUIProvider = VariableValueUIProvider()
 
+    private fun getTypeLabels(context: Context): List<String> {
+        return typeOptions.map { CreateVariableModule.getTypeLabel(context, it) }
+    }
+
+    private fun normalizeType(value: String?): String = CreateVariableModule.normalizeType(value)
+
     override fun getHandledInputIds(): Set<String> {
         return setOf("type", "value")
     }
@@ -69,11 +75,11 @@ class VariableModuleUIProvider(
         allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): View? {
-        val type = step.parameters["type"] as? String
+        val type = normalizeType(step.parameters["type"] as? String)
         // 根据变量类型，委托给相应的 UIProvider 来创建预览
         return when (type) {
-            "文本" -> richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
-            "字典", "列表" -> variableValueUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
+            CreateVariableModule.TYPE_STRING -> richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
+            CreateVariableModule.TYPE_DICTIONARY, CreateVariableModule.TYPE_LIST -> variableValueUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
             else -> null // 其他类型（如数字、布尔）不需要自定义预览，返回null即可
         }
     }
@@ -109,11 +115,11 @@ class VariableModuleUIProvider(
         holder.onMagicVariableRequested = onMagicVariableRequested
         holder.allSteps = allSteps
 
-        val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, typeOptions)
+        val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, getTypeLabels(context))
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         typeSpinner.adapter = adapter
 
-        val currentType = currentParameters["type"] as? String ?: typeOptions.first()
+        val currentType = normalizeType(currentParameters["type"] as? String ?: typeOptions.first())
         val selectionIndex = typeOptions.indexOf(currentType)
         if (selectionIndex != -1) typeSpinner.setSelection(selectionIndex)
 
@@ -142,7 +148,7 @@ class VariableModuleUIProvider(
     // readFromEditor 的代码保持不变
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as VariableEditorViewHolder
-        val selectedType = h.typeSpinner.selectedItem.toString()
+        val selectedType = typeOptions.getOrElse(h.typeSpinner.selectedItemPosition) { typeOptions.first() }
 
         // 检查 valueContainer 的 tag，如果是变量引用字符串，直接返回该变量
         val variableRef = h.valueContainer.tag as? String
@@ -151,13 +157,13 @@ class VariableModuleUIProvider(
         }
 
         val value: Any? = when(selectedType) {
-            "文本" -> {
+            CreateVariableModule.TYPE_STRING -> {
                 val row = h.valueInputView as? ViewGroup
                 row?.findViewById<RichTextView>(R.id.rich_text_view)?.getRawText()
             }
-            "字典" -> h.dictionaryAdapter?.getItemsAsMap()
-            "列表" -> h.listAdapter?.getItems()
-            "坐标" -> {
+            CreateVariableModule.TYPE_DICTIONARY -> h.dictionaryAdapter?.getItemsAsMap()
+            CreateVariableModule.TYPE_LIST -> h.listAdapter?.getItems()
+            CreateVariableModule.TYPE_COORDINATE -> {
                 // 优先使用 coordXVariable/coordYVariable（当显示变量药丸时）
                 val xText = h.coordXVariable ?: h.coordXInput?.text?.toString()?.trim() ?: ""
                 val yText = h.coordYVariable ?: h.coordYInput?.text?.toString()?.trim() ?: ""
@@ -184,8 +190,8 @@ class VariableModuleUIProvider(
 
                 mapOf("x" to x, "y" to y)
             }
-            "布尔" -> (h.valueInputView as? SwitchCompat)?.isChecked ?: false
-            "数字" -> {
+            CreateVariableModule.TYPE_BOOLEAN -> (h.valueInputView as? SwitchCompat)?.isChecked ?: false
+            CreateVariableModule.TYPE_NUMBER -> {
                 // 检查是否是变量引用（通过容器 tag）
                 val variableRef = h.valueContainer.tag as? String
                 if (!variableRef.isNullOrBlank()) {
@@ -197,7 +203,7 @@ class VariableModuleUIProvider(
                     textInputLayout?.editText?.text?.toString() ?: ""
                 }
             }
-            "图像" -> {
+            CreateVariableModule.TYPE_IMAGE -> {
                 // 检查是否是变量引用（通过容器 tag）
                 val variableRef = h.valueContainer.tag as? String
                 if (!variableRef.isNullOrBlank()) {
@@ -229,7 +235,7 @@ class VariableModuleUIProvider(
         holder.coordYVariable = null
 
         // 检查是否为整个列表/字典/坐标赋值了变量
-        if (type != "文本" && currentValue is String && (currentValue.isMagicVariable() || currentValue.isNamedVariable())) {
+        if (type != CreateVariableModule.TYPE_STRING && currentValue is String && (currentValue.isMagicVariable() || currentValue.isNamedVariable())) {
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
             val pillText = pill.findViewById<TextView>(R.id.pill_text)
             pillText.text = PillRenderer.getDisplayNameForVariableReference(currentValue, holder.allSteps ?: emptyList(), context)
@@ -245,7 +251,7 @@ class VariableModuleUIProvider(
         }
 
         val valueView: View = when (type) {
-            "文本" -> {
+            CreateVariableModule.TYPE_STRING -> {
                 val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, holder.valueContainer, false)
                 row.findViewById<TextView>(R.id.input_name).text = "值"
 
@@ -264,7 +270,7 @@ class VariableModuleUIProvider(
                 valueContainer.addView(richEditorLayout)
                 row
             }
-            "字典" -> {
+            CreateVariableModule.TYPE_DICTIONARY -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.valueContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_dictionary)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_kv_pair)
@@ -293,7 +299,7 @@ class VariableModuleUIProvider(
                 addButton.setOnClickListener { dictAdapter.addItem() }
                 editorView
             }
-            "列表" -> {
+            CreateVariableModule.TYPE_LIST -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_list_editor, holder.valueContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_list)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_list_item)
@@ -312,7 +318,7 @@ class VariableModuleUIProvider(
                 addButton.setOnClickListener { listAdapter.addItem() }
                 editorView
             }
-            "坐标" -> {
+            CreateVariableModule.TYPE_COORDINATE -> {
                 val coordContainer = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(0, (8 * context.resources.displayMetrics.density).toInt(), 0, 0)
@@ -409,11 +415,11 @@ class VariableModuleUIProvider(
                 coordContainer.addView(yRow)
                 coordContainer
             }
-            "布尔" -> SwitchCompat(context).apply {
+            CreateVariableModule.TYPE_BOOLEAN -> SwitchCompat(context).apply {
                 text = "值"
                 isChecked = (currentValue as? Boolean) ?: false
             }
-            "数字" -> {
+            CreateVariableModule.TYPE_NUMBER -> {
                 // 数字类型也使用 row_editor_input 布局，支持变量选择
                 val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, holder.valueContainer, false)
                 row.findViewById<TextView>(R.id.input_name).text = "值"
@@ -437,7 +443,7 @@ class VariableModuleUIProvider(
                 valueContainer.addView(inputLayout)
                 row
             }
-            "图像" -> {
+            CreateVariableModule.TYPE_IMAGE -> {
                 // 图像类型使用 row_editor_input 布局，支持变量选择
                 val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, holder.valueContainer, false)
                 row.findViewById<TextView>(R.id.input_name).text = "值"

@@ -20,7 +20,8 @@ class RemoveNotificationModule : BaseModule() {
         description = "从状态栏移除一个或多个通知。",  // Fallback
         descriptionStringRes = R.string.module_vflow_notification_remove_desc,
         iconRes = R.drawable.rounded_close_small_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATION_LISTENER_SERVICE)

@@ -31,7 +31,8 @@ class SystemInfoModule : BaseModule() {
         description = "获取当前系统的信息。",  // Fallback
         descriptionStringRes = R.string.module_vflow_system_systeminfo_desc,
         iconRes = R.drawable.baseline_perm_device_information_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     /**

@@ -28,7 +28,8 @@ class CoreInputTextModule : BaseModule() {
         description = "使用 vFlow Core 输入文本，比无障碍服务更快速稳定。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_input_text_desc,
         iconRes = R.drawable.rounded_keyboard_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

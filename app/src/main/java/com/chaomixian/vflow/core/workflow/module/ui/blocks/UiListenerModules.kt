@@ -32,7 +32,8 @@ class OnUiEventModule : BaseBlockModule() {
         description = "监听指定组件的点击或修改事件。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_interaction_on_event_desc,
         iconRes = R.drawable.rounded_earbuds_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     override val stepIdsInBlock = listOf(ON_EVENT_START_ID, ON_EVENT_END_ID)
     override val pairingId = ON_EVENT_PAIRING
@@ -87,7 +88,8 @@ class EndOnUiEventModule : BaseModule() {
         description = "",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_interaction_on_event_end_desc,
         iconRes = R.drawable.rounded_earbuds_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, ON_EVENT_PAIRING)
     override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_on_event_end)
@@ -136,7 +138,8 @@ class UpdateUiComponentModule : BaseModule() {
         description = "修改组件属性（如文本、可见性、布局）。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_interaction_update_desc,
         iconRes = R.drawable.rounded_dashboard_2_edit_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
 
     override fun getInputs() = listOf(
@@ -273,7 +276,8 @@ class GetComponentValueModule : BaseModule() {
         description = "获取UI组件对象或其值。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_interaction_get_value_desc,
         iconRes = R.drawable.rounded_earbuds_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
 
     override fun getInputs() = listOf(
@@ -357,7 +361,8 @@ class ExitActivityModule : BaseModule() {
         description = "主动退出并销毁当前界面。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_interaction_exit_desc,
         iconRes = R.drawable.rounded_close_small_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
 
     override fun getSummary(context: Context, step: ActionStep) = context.getString(R.string.summary_vflow_ui_exit)

@@ -24,7 +24,8 @@ class BrightnessModule : BaseModule() {
         name = "屏幕亮度设置",  // Fallback
         description = "设置屏幕的亮度值",  // Fallback
         iconRes = R.drawable.rounded_brightness_5_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val requiredPermissions = listOf(PermissionManager.WRITE_SETTINGS)

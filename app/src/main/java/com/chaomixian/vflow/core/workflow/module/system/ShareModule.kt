@@ -29,7 +29,8 @@ class ShareModule : BaseModule() {
         name = "分享",  // Fallback
         description = "调用系统分享功能来分享文本或图片。",  // Fallback
         iconRes = R.drawable.rounded_ios_share_24, // 使用新图标
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 定义输入参数

@@ -61,7 +61,8 @@ class AgentModule : BaseModule() {
         name = "AI 智能体",
         description = "全自动 AI 助手。基于视觉和UI结构理解屏幕，自动完成任务。",
         iconRes = R.drawable.rounded_hexagon_nodes_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     override val uiProvider: ModuleUIProvider = AgentModuleUIProvider()

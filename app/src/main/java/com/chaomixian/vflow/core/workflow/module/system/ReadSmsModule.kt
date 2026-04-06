@@ -23,7 +23,8 @@ class ReadSmsModule : BaseModule() {
         description = "从收件箱中按条件查找短信，并支持提取验证码。",  // Fallback
         descriptionStringRes = R.string.module_vflow_system_read_sms_desc,
         iconRes = R.drawable.rounded_sms_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val requiredPermissions = listOf(PermissionManager.SMS)

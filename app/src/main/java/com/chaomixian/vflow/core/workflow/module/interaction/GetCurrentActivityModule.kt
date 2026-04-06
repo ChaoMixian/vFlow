@@ -28,7 +28,8 @@ class GetCurrentActivityModule : BaseModule() {
         description = "获取当前前台 Activity 的信息",
         descriptionStringRes = R.string.module_vflow_interaction_get_current_activity_desc,
         iconRes = R.drawable.rounded_preview_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)

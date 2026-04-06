@@ -21,7 +21,8 @@ class ContinueLoopModule : BaseModule() {
         name = "继续循环",  // Fallback
         description = "跳过当前循环的剩余步骤，直接进入下一次迭代",  // Fallback
         iconRes = R.drawable.rounded_skip_next_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
 
     override fun getInputs(): List<InputDefinition> = emptyList()

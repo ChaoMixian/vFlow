@@ -34,7 +34,8 @@ class GetAppUsageStatsModule : BaseModule() {
         description = "获取设备上应用的屏幕使用时间统计。",  // Fallback
         descriptionStringRes = R.string.module_vflow_system_get_usage_stats_desc,
         iconRes = R.drawable.rounded_data_object_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val requiredPermissions = listOf(PermissionManager.USAGE_STATS)

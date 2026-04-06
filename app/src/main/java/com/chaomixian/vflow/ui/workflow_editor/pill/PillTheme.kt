@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.module.ModuleCategories
 
 /**
  * Pill主题管理器
@@ -24,25 +25,13 @@ object PillTheme {
      * @param category 模块的分类字符串（如"触发器"、"逻辑控制"等）
      * @return 对应的颜色资源ID
      */
-    fun getCategoryColor(category: String): Int = when (category) {
-        "触发器" -> R.color.category_trigger
-        "界面交互" -> R.color.category_ui_interaction
-        "逻辑控制" -> R.color.category_logic
-        "数据" -> R.color.category_data
-        "文件" -> R.color.category_file
-        "网络" -> R.color.category_network
-        "飞书" -> R.color.category_feishu
-        "应用与系统" -> R.color.category_system
-        "Shizuku" -> R.color.category_shizuku
-        "用户模块" -> R.color.category_user_module
-        else -> {
-            // 动态颜色仅在 Android 12 (S) 及以上可用
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                com.google.android.material.R.color.material_dynamic_neutral30
-            } else {
-                // 低版本回退到 colors.xml 中定义的静态颜色
-                R.color.static_pill_color
-            }
+    fun getCategoryColor(category: String): Int {
+        val colorRes = ModuleCategories.getSpec(category)?.colorRes
+        if (colorRes != null) return colorRes
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            com.google.android.material.R.color.material_dynamic_neutral30
+        } else {
+            R.color.static_pill_color
         }
     }
 

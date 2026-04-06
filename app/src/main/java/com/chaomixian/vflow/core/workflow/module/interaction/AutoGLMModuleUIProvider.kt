@@ -28,6 +28,10 @@ import com.google.android.material.textfield.TextInputEditText
  * AutoGLM 专用 UI 提供者
  */
 class AutoGLMModuleUIProvider : ModuleUIProvider {
+    companion object {
+        private const val PROVIDER_BIGMODEL = "bigmodel"
+        private const val PROVIDER_CUSTOM = "custom"
+    }
 
     private val richTextUIProvider = RichTextUIProvider("instruction")
 
@@ -82,10 +86,10 @@ class AutoGLMModuleUIProvider : ModuleUIProvider {
         holder.chipDashScope.visibility = View.GONE
 
         // 恢复服务商配置
-        val provider = currentParameters["provider"] as? String ?: "智谱"
+        val provider = currentParameters["provider"] as? String ?: PROVIDER_BIGMODEL
         when (provider) {
-            "智谱" -> holder.chipBigModel.isChecked = true
-            "自定义" -> holder.chipCustom.isChecked = true
+            PROVIDER_BIGMODEL -> holder.chipBigModel.isChecked = true
+            PROVIDER_CUSTOM -> holder.chipCustom.isChecked = true
             else -> holder.chipBigModel.isChecked = true // 默认 fallback
         }
 
@@ -157,8 +161,8 @@ class AutoGLMModuleUIProvider : ModuleUIProvider {
         val h = holder as ViewHolder
 
         val provider = when {
-            h.chipCustom.isChecked -> "自定义"
-            else -> "智谱"
+            h.chipCustom.isChecked -> PROVIDER_CUSTOM
+            else -> PROVIDER_BIGMODEL
         }
 
         return mapOf(

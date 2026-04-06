@@ -34,7 +34,8 @@ class TextToSpeechModule : BaseModule() {
         description = "使用Android系统自带的TTS引擎将文本转换为语音并朗读",
         descriptionStringRes = R.string.module_vflow_device_text_to_speech_desc,
         iconRes = R.drawable.rounded_text_to_speech_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

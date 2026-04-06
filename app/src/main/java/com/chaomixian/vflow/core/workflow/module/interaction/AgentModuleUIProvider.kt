@@ -26,6 +26,11 @@ import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
 
 class AgentModuleUIProvider : ModuleUIProvider {
+    companion object {
+        private const val PROVIDER_DASHSCOPE = "dashscope"
+        private const val PROVIDER_BIGMODEL = "bigmodel"
+        private const val PROVIDER_CUSTOM = "custom"
+    }
 
     private val richTextUIProvider = RichTextUIProvider("instruction")
 
@@ -77,10 +82,10 @@ class AgentModuleUIProvider : ModuleUIProvider {
         view.findViewById<View>(R.id.tv_selected_tools)?.isVisible = false
 
         // 恢复服务商配置
-        val provider = currentParameters["provider"] as? String ?: "阿里云百炼"
+        val provider = currentParameters["provider"] as? String ?: PROVIDER_DASHSCOPE
         when (provider) {
-            "阿里云百炼" -> holder.chipDashScope.isChecked = true
-            "智谱" -> holder.chipBigModel.isChecked = true
+            PROVIDER_DASHSCOPE -> holder.chipDashScope.isChecked = true
+            PROVIDER_BIGMODEL -> holder.chipBigModel.isChecked = true
             else -> holder.chipCustom.isChecked = true
         }
 
@@ -154,9 +159,9 @@ class AgentModuleUIProvider : ModuleUIProvider {
         val h = holder as ViewHolder
 
         val provider = when {
-            h.chipDashScope.isChecked -> "阿里云百炼"
-            h.chipCustom.isChecked -> "自定义"
-            else -> "智谱"
+            h.chipDashScope.isChecked -> PROVIDER_DASHSCOPE
+            h.chipCustom.isChecked -> PROVIDER_CUSTOM
+            else -> PROVIDER_BIGMODEL
         }
 
         return mapOf(

@@ -20,7 +20,8 @@ class CommentModule : BaseModule() {
         name = "注释",
         description = "添加注释说明，用于记录工作流的设计思路和目的。执行时会被跳过。",
         iconRes = R.drawable.rounded_add_comment_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     override val uiProvider: ModuleUIProvider? = CommentUIProvider()

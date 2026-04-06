@@ -21,7 +21,8 @@ class BreakLoopModule : BaseModule() {
         name = "跳出循环",  // Fallback
         description = "立即终止当前循环的执行，并跳转到循环体之后的步骤",  // Fallback
         iconRes = R.drawable.rounded_logout_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
 
     // 跳出循环模块没有输入和输出，它只影响控制流

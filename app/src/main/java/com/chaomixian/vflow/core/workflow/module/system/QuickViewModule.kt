@@ -36,7 +36,8 @@ class QuickViewModule : BaseModule() {
         name = "快速查看",  // Fallback
         description = "在悬浮窗中显示文本、数字、图片等各种类型的内容。",  // Fallback
         iconRes = R.drawable.rounded_preview_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 此模块需要悬浮窗权限才能显示UI

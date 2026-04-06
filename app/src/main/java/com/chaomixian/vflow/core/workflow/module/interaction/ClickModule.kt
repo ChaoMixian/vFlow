@@ -42,7 +42,8 @@ class ClickModule : BaseModule() {
         name = "点击",                                // Fallback
         description = "点击一个屏幕元素、坐标或视图ID", // Fallback
         iconRes = R.drawable.rounded_ads_click_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
     // 此模块需要的权限列表
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)

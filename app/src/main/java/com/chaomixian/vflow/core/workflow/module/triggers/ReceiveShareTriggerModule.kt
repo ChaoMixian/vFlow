@@ -30,7 +30,8 @@ class ReceiveShareTriggerModule : BaseModule() {
         description = "当有内容（如文本、图片、文件）分享到vFlow时启动工作流。",  // Fallback
         descriptionStringRes = R.string.module_vflow_trigger_share_desc,
         iconRes = R.drawable.rounded_inbox_text_share_24, // 使用新创建的图标
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     // 定义此触发器接受的内容类型

@@ -33,7 +33,8 @@ class WifiModule : BaseModule() {
         name = "Wi-Fi 设置",  // Fallback
         description = "开启、关闭或切换Wi-Fi状态。",  // Fallback
         iconRes = R.drawable.rounded_android_wifi_3_bar_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     private val stateOptions = listOf(STATE_ON, STATE_OFF, STATE_TOGGLE)

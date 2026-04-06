@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.ActionModule
 import com.chaomixian.vflow.core.module.BaseModule
+import com.chaomixian.vflow.core.module.ModuleCategories
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.module.RecentModulesManager
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -90,11 +91,10 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
         lifecycleScope.launch(Dispatchers.IO) {
             val isTriggerPicker = arguments?.getBoolean("is_trigger_picker", false) ?: false
 
-            // 使用固定的中文 key 进行过滤（ModuleRegistry 内部使用中文）
             val categorizedModules = if (isTriggerPicker) {
-                ModuleRegistry.getModulesByCategory().filterKeys { it == "触发器" }
+                ModuleRegistry.getModulesByCategory().filterKeys { it == ModuleCategories.TRIGGER }
             } else {
-                ModuleRegistry.getModulesByCategory().filterKeys { it != "触发器" }
+                ModuleRegistry.getModulesByCategory().filterKeys { it != ModuleCategories.TRIGGER }
             }
 
             // 使用 LinkedHashMap 保持插入顺序
@@ -110,7 +110,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
 
             // 将其他分类名转换为本地化名称并添加
             categorizedModules.forEach { (category, modules) ->
-                localizedModules[localizeCategoryName(category)] = modules
+                localizedModules[ModuleCategories.getLocalizedLabel(requireContext(), category)] = modules
             }
 
             allModuleGroups = localizedModules
@@ -123,23 +123,6 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
                 recyclerView.visibility = View.VISIBLE
                 updateAdapterData()
             }
-        }
-    }
-
-    private fun localizeCategoryName(chineseCategory: String): String {
-        return when (chineseCategory) {
-            "触发器" -> getString(R.string.category_trigger)
-            "界面交互" -> getString(R.string.category_interaction)
-            "逻辑控制" -> getString(R.string.category_logic)
-            "数据" -> getString(R.string.category_data)
-            "文件" -> getString(R.string.category_file)
-            "网络" -> getString(R.string.category_network)
-            "飞书" -> getString(R.string.category_feishu)
-            "应用与系统" -> getString(R.string.category_device)
-            "Core (Beta)" -> "Core (Beta)"
-            "Shizuku" -> "Shizuku"
-            "模板" -> getString(R.string.category_template)
-            else -> chineseCategory
         }
     }
 

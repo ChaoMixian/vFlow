@@ -49,7 +49,8 @@ class HttpRequestModule : BaseModule() {
         name = "HTTP 请求",  // Fallback
         description = "发送 HTTP 请求并获取响应",  // Fallback
         iconRes = R.drawable.rounded_public_24,
-        category = "网络"
+        category = "网络",
+        categoryId = "network"
     )
 
     // 为该模块提供自定义的编辑器UI

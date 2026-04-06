@@ -36,7 +36,8 @@ class SendKeyEventModule : BaseModule() {
         name = "执行全局操作",
         description = "执行系统级操作，如返回、回到主屏幕、打开通知等。",
         iconRes = R.drawable.rounded_keyboard_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     // 需要无障碍服务权限来发送全局按键事件

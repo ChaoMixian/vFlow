@@ -18,7 +18,8 @@ class TimeTriggerModule : BaseModule() {
         name = "定时触发",  // Fallback
         description = "在指定的时间和日期触发工作流，类似闹钟",  // Fallback
         iconRes = R.drawable.rounded_avg_time_24,  // 复用一个时间图标
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     override val requiredPermissions = listOf(PermissionManager.EXACT_ALARM)

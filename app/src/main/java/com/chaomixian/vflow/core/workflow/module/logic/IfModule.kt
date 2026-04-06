@@ -64,7 +64,8 @@ class IfModule : BaseBlockModule() {
         name = "如果",
         description = "根据条件执行不同的操作",
         iconRes = R.drawable.rounded_alt_route_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val pairingId = IF_PAIRING_ID
     override val stepIdsInBlock = listOf(IF_START_ID, ELSE_ID, IF_END_ID)
@@ -291,7 +292,8 @@ class ElseModule : BaseModule() {
         name = "否则",
         description = "如果条件不满足，则执行这里的操作",
         iconRes = R.drawable.rounded_alt_route_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, IF_PAIRING_ID, isIndividuallyDeletable = true)
     override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_else)
@@ -361,7 +363,8 @@ class EndIfModule : BaseModule() {
         name = "结束如果",
         description = "",
         iconRes = R.drawable.rounded_alt_route_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, IF_PAIRING_ID)
     override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_end_if)

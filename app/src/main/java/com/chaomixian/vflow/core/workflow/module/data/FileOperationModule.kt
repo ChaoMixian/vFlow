@@ -45,7 +45,8 @@ class FileOperationModule : BaseModule() {
         name = "文件操作",
         description = "对文件进行读取、写入等操作",
         iconRes = R.drawable.rounded_inbox_text_share_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

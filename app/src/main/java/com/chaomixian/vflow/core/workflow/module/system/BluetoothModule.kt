@@ -32,7 +32,8 @@ class BluetoothModule : BaseModule() {
         description = "开启、关闭或切换蓝牙状态。",  // Fallback
         descriptionStringRes = R.string.module_vflow_system_bluetooth_desc,
         iconRes = R.drawable.rounded_bluetooth_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 动态获取 Shell 权限 + 蓝牙权限

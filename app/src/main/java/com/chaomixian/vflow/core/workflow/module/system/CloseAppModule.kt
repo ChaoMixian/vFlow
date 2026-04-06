@@ -28,7 +28,8 @@ class CloseAppModule : BaseModule() {
         name = "关闭应用",  // Fallback
         description = "强制停止指定的应用程序 (需要 Shizuku 或 Root)",  // Fallback
         iconRes = R.drawable.rounded_close_small_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 使用专门的 LaunchAppUIProvider（只需要选择单个应用）

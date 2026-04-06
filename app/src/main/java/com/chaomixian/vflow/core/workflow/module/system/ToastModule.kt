@@ -28,7 +28,8 @@ class ToastModule : BaseModule() {
         name = "显示Toast",                              // Fallback
         description = "在屏幕底部弹出一个简短的提示消息", // Fallback
         iconRes = R.drawable.rounded_call_to_action_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("message")

@@ -20,7 +20,8 @@ class StopAndReturnModule : BaseModule() {
         name = "停止并返回",
         description = "停止当前工作流的执行并返回一个值。",
         iconRes = R.drawable.rounded_output_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

@@ -31,7 +31,8 @@ class FindTextUntilSnippet : BaseModule() {
         name = "查找直到",
         description = "在屏幕上循环查找指定的文本，直到找到为止。",
         iconRes = R.drawable.rounded_search_24,
-        category = "模板"
+        category = "模板",
+        categoryId = "template"
     )
 
     // 这些输入目前仅用于显示，createSteps 中使用的是默认值

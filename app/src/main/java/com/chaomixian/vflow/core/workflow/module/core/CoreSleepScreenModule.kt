@@ -26,7 +26,8 @@ class CoreSleepScreenModule : BaseModule() {
         description = "使用 vFlow Core 关闭设备屏幕。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_sleep_screen_desc,
         iconRes = R.drawable.rounded_brightness_5_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

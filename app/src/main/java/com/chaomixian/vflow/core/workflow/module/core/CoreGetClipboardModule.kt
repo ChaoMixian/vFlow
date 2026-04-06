@@ -28,7 +28,8 @@ class CoreGetClipboardModule : BaseModule() {
         description = "使用 vFlow Core 读取剪贴板内容。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_get_clipboard_desc,
         iconRes = R.drawable.rounded_content_paste_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

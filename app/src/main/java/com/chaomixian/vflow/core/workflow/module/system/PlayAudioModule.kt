@@ -29,7 +29,8 @@ class PlayAudioModule : BaseModule() {
         description = "播放系统自带的音频或本地音频文件，支持设置音量。",
         descriptionStringRes = R.string.module_vflow_device_play_audio_desc,
         iconRes = R.drawable.rounded_volume_up_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val uiProvider: ModuleUIProvider = PlayAudioUIProvider()

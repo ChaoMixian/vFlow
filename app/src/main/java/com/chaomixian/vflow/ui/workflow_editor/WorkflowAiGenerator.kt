@@ -3,6 +3,7 @@ package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.ContentValues.TAG
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.module.ModuleCategories
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -86,7 +87,12 @@ object WorkflowAiGenerator {
 
         // 动态遍历注册表
         val allModules = ModuleRegistry.getAllModules()
-            .sortedBy { it.metadata.category }
+            .sortedWith(
+                compareBy(
+                    { ModuleCategories.getSortOrder(it.metadata.getResolvedCategoryId()) },
+                    { it.metadata.name }
+                )
+            )
 
         var currentCategory = ""
 
@@ -94,10 +100,11 @@ object WorkflowAiGenerator {
             // if (module.id.startsWith("vflow.ai")) continue
 
             // 阻止 AI 使用模板/Snippet，因为它们不是原子操作
-            if (module.metadata.category == "模板" || module.id.contains("snippet")) continue
+            if (module.metadata.getResolvedCategoryId() == ModuleCategories.TEMPLATE || module.id.contains("snippet")) continue
 
-            if (module.metadata.category != currentCategory) {
-                currentCategory = module.metadata.category
+            val categoryName = ModuleCategories.getDisplayName(module.metadata.getResolvedCategoryId())
+            if (categoryName != currentCategory) {
+                currentCategory = categoryName
                 sb.append("\n--- Category: $currentCategory ---\n")
             }
 

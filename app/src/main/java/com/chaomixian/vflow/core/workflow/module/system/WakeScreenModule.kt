@@ -29,7 +29,8 @@ class WakeScreenModule : BaseModule() {
         name = "唤醒屏幕（无密码）",  // Fallback
         description = "点亮息屏状态的屏幕并解除滑动锁屏。仅适用于未设置密码的设备，需要 Shizuku 或 Root 权限。",  // Fallback
         iconRes = R.drawable.rounded_brightness_5_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

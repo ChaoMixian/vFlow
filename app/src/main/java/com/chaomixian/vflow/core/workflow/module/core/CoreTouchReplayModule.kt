@@ -30,7 +30,8 @@ class CoreTouchReplayModule : BaseModule() {
         description = "回放录制的触摸操作序列，可调节回放速度",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_touch_replay_desc,
         iconRes = R.drawable.rounded_all_out_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override val uiProvider = CoreTouchReplayModuleUIProvider()

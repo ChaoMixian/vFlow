@@ -36,7 +36,8 @@ class UiSwitchModule : BaseUiComponentModule() {
         description = "布尔值开关。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_component_switch_desc,
         iconRes = R.drawable.rounded_change_circle_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
 
     override fun getInputs() = listOf(

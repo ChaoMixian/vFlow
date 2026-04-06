@@ -34,7 +34,8 @@ class InputTextModule : BaseModule() {
         name = "输入文本",  // Fallback
         description = "在当前聚焦的输入框中输入文本 (支持无障碍和Shell)",  // Fallback
         iconRes = R.drawable.rounded_keyboard_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     private val modeOptions by lazy {

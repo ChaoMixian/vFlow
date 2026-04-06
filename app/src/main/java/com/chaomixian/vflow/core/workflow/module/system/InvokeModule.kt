@@ -32,7 +32,8 @@ class InvokeModule : BaseModule() {
         description = "执行 Intent、打开链接、发送广播或启动服务。",  // Fallback
         descriptionStringRes = R.string.module_vflow_system_invoke_desc,
         iconRes = R.drawable.rounded_call_to_action_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val uiProvider: ModuleUIProvider = InvokeModuleUIProvider()

@@ -25,6 +25,7 @@ class CoreBluetoothStateModule : BaseModule() {
         description = "使用 vFlow Core 读取当前蓝牙开关状态。",
         iconRes = R.drawable.rounded_bluetooth_24,
         category = "Core (Beta)",
+        categoryId = "core",
         nameStringRes = R.string.module_vflow_core_bluetooth_state_name,
         descriptionStringRes = R.string.module_vflow_core_bluetooth_state_desc
     )

@@ -33,7 +33,8 @@ class LoopModule : BaseBlockModule() {
         name = "循环",
         description = "重复执行一组操作固定的次数",
         iconRes = R.drawable.rounded_cached_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val pairingId = LOOP_PAIRING_ID
     override val stepIdsInBlock = listOf(LOOP_START_ID, LOOP_END_ID) // 定义Loop块包含的模块ID
@@ -126,7 +127,8 @@ class EndLoopModule : BaseModule() {
         name = "结束循环",
         description = "",
         iconRes = R.drawable.rounded_cached_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, LOOP_PAIRING_ID) // 标记为块结束
 

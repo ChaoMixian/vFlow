@@ -30,7 +30,8 @@ class GetClipboardModule : BaseModule() {
         name = "读取剪贴板",  // Fallback
         description = "获取系统剪贴板的当前内容（文本或图片）",  // Fallback
         iconRes = R.drawable.rounded_content_paste_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 此模块没有输入参数

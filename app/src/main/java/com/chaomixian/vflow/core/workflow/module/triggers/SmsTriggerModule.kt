@@ -32,7 +32,8 @@ class SmsTriggerModule : BaseModule() {
         name = "短信触发",  // Fallback
         description = "当收到满足特定条件的短信时触发工作流",  // Fallback
         iconRes = R.drawable.rounded_sms_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     override val requiredPermissions = listOf(PermissionManager.SMS)

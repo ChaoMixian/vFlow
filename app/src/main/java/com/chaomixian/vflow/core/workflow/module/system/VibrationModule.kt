@@ -31,7 +31,8 @@ class VibrationModule : BaseModule() {
         description = "触发设备振动，支持设置持续时间和振动模式",
         descriptionStringRes = R.string.module_vflow_device_vibration_desc,
         iconRes = R.drawable.rounded_mobile_vibrate_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 振动模式常量

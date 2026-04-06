@@ -40,7 +40,8 @@ class OCRModule : BaseModule() {
         name = "文字识别 (OCR)",
         description = "识别图片中的文字，或查找指定文字的坐标。",
         iconRes = R.drawable.rounded_feature_search_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     override val uiProvider: ModuleUIProvider? = null

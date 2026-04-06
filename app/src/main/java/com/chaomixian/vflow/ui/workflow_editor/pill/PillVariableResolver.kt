@@ -72,7 +72,7 @@ object PillVariableResolver {
 
         // 获取颜色
         val color = if (sourceModule != null) {
-            PillTheme.getColor(context, PillTheme.getCategoryColor(sourceModule.metadata.category))
+            PillTheme.getColor(context, PillTheme.getCategoryColor(sourceModule.metadata.getResolvedCategoryId()))
         } else {
             PillTheme.getColor(context, R.color.variable_pill_color)
         }

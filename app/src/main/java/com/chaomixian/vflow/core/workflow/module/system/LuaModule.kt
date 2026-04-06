@@ -26,7 +26,8 @@ class LuaModule : BaseModule() {
         description = "执行一段Lua脚本，可调用其他模块功能。",  // Fallback
         descriptionStringRes = R.string.module_vflow_system_lua_desc,
         iconRes = R.drawable.rounded_lua_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val uiProvider: ModuleUIProvider? = LuaModuleUIProvider()

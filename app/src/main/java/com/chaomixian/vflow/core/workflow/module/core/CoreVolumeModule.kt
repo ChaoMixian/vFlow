@@ -31,7 +31,8 @@ class CoreVolumeModule : BaseModule() {
         description = "使用 vFlow Core 控制不同音频流的音量（音乐/通知/铃声等）。",
         descriptionStringRes = R.string.module_vflow_core_volume_desc,
         iconRes = R.drawable.rounded_volume_up_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override val uiProvider: ModuleUIProvider = CoreVolumeModuleUIProvider()

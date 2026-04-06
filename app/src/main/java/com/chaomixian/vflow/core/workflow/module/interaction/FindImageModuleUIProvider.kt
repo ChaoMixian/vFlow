@@ -38,6 +38,13 @@ import java.util.*
 import android.util.Base64
 
 class FindImageModuleUIProvider : ModuleUIProvider {
+    companion object {
+        private const val THRESHOLD_90 = "threshold_90"
+        private const val THRESHOLD_80 = "threshold_80"
+        private const val THRESHOLD_70 = "threshold_70"
+        private const val THRESHOLD_60 = "threshold_60"
+        private const val OUTPUT_FORMAT_COORDINATE = "coordinate"
+    }
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val cardImagePreview: MaterialCardView = view.findViewById(R.id.card_image_preview)
@@ -90,14 +97,17 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         updateImagePreview(context, holder, templateUri)
 
         // 恢复相似度设置
-        val threshold = currentParameters["threshold"] as? String ?: "80% (推荐)"
+        val threshold = normalizeThreshold(currentParameters["threshold"] as? String)
         when {
-            threshold.startsWith("90") -> holder.chipThreshold90.isChecked = true
-            threshold.startsWith("80") -> holder.chipThreshold80.isChecked = true
-            threshold.startsWith("70") -> holder.chipThreshold70.isChecked = true
-            threshold.startsWith("60") -> holder.chipThreshold60.isChecked = true
+            threshold == THRESHOLD_90 -> holder.chipThreshold90.isChecked = true
+            threshold == THRESHOLD_80 -> holder.chipThreshold80.isChecked = true
+            threshold == THRESHOLD_70 -> holder.chipThreshold70.isChecked = true
+            threshold == THRESHOLD_60 -> holder.chipThreshold60.isChecked = true
             else -> holder.chipThreshold80.isChecked = true
         }
+
+        val outputFormat = normalizeOutputFormat(currentParameters["output_format"] as? String)
+        holder.chipOutputCoordinate.isChecked = outputFormat == OUTPUT_FORMAT_COORDINATE
 
         // 点击图片预览区域也可以选择图片
         holder.cardImagePreview.setOnClickListener {
@@ -131,16 +141,16 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         val h = holder as ViewHolder
 
         val threshold = when {
-            h.chipThreshold90.isChecked -> "90% (精确)"
-            h.chipThreshold80.isChecked -> "80% (推荐)"
-            h.chipThreshold70.isChecked -> "70% (宽松)"
-            h.chipThreshold60.isChecked -> "60% (模糊)"
-            else -> "80% (推荐)"
+            h.chipThreshold90.isChecked -> THRESHOLD_90
+            h.chipThreshold80.isChecked -> THRESHOLD_80
+            h.chipThreshold70.isChecked -> THRESHOLD_70
+            h.chipThreshold60.isChecked -> THRESHOLD_60
+            else -> THRESHOLD_80
         }
 
         val outputFormat = when {
-            h.chipOutputCoordinate.isChecked -> "坐标"
-            else -> "坐标"
+            h.chipOutputCoordinate.isChecked -> OUTPUT_FORMAT_COORDINATE
+            else -> OUTPUT_FORMAT_COORDINATE
         }
 
         return mapOf(
@@ -148,6 +158,22 @@ class FindImageModuleUIProvider : ModuleUIProvider {
             "threshold" to threshold,
             "output_format" to outputFormat
         )
+    }
+
+    private fun normalizeThreshold(value: String?): String {
+        return when (value) {
+            THRESHOLD_90, "90% (精确)", "90% (Precise)" -> THRESHOLD_90
+            THRESHOLD_70, "70% (宽松)", "70% (Loose)" -> THRESHOLD_70
+            THRESHOLD_60, "60% (模糊)", "60% (Fuzzy)" -> THRESHOLD_60
+            else -> THRESHOLD_80
+        }
+    }
+
+    private fun normalizeOutputFormat(value: String?): String {
+        return when (value) {
+            OUTPUT_FORMAT_COORDINATE, "坐标", "Coordinate" -> OUTPUT_FORMAT_COORDINATE
+            else -> OUTPUT_FORMAT_COORDINATE
+        }
     }
 
     private fun showImageSourceDialog(

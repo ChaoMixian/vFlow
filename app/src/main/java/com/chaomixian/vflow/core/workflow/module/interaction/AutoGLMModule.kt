@@ -58,7 +58,8 @@ class AutoGLMModule : BaseModule() {
         name = "AutoGLM 智能体",
         description = "复刻 AutoGLM 项目。基于思维链(CoT)和自定义指令协议，执行复杂的手机操作任务。",
         iconRes = R.drawable.rounded_hexagon_nodes_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     override val uiProvider: ModuleUIProvider = AutoGLMModuleUIProvider()

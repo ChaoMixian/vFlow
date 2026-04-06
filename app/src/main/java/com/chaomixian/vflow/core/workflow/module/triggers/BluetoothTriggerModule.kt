@@ -28,7 +28,8 @@ class BluetoothTriggerModule : BaseModule() {
         name = "蓝牙触发器",  // Fallback
         description = "当蓝牙状态或设备连接变化时触发",  // Fallback
         iconRes = R.drawable.rounded_bluetooth_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     override val requiredPermissions = listOf(PermissionManager.BLUETOOTH)

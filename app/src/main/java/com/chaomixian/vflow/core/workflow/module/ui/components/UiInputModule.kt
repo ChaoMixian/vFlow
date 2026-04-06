@@ -37,7 +37,8 @@ class UiInputModule : BaseUiComponentModule() {
         description = "文本输入框。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_component_input_desc,
         iconRes = R.drawable.rounded_keyboard_external_input_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
 
     override fun getInputs() = listOf(

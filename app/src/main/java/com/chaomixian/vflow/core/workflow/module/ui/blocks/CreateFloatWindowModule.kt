@@ -60,7 +60,8 @@ class CreateFloatWindowModule : BaseBlockModule() {
         description = "开始定义悬浮窗布局。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_float_start_desc,
         iconRes = R.drawable.rounded_activity_zone_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     override val stepIdsInBlock = listOf(FLOAT_WIN_START_ID, FLOAT_WIN_SHOW_ID, FLOAT_WIN_END_ID)
     override val pairingId = FLOAT_WIN_PAIRING
@@ -119,7 +120,8 @@ class ShowFloatWindowModule : BaseModule() {
         description = "悬浮窗定义结束，启动悬浮窗并开始监听事件。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_float_show_desc,
         iconRes = R.drawable.rounded_play_arrow_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, FLOAT_WIN_PAIRING, isIndividuallyDeletable = false)
 
@@ -253,7 +255,8 @@ class EndFloatWindowModule : BaseModule() {
         description = "悬浮窗生命周期结束。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_float_end_desc,
         iconRes = R.drawable.rounded_stop_circle_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, FLOAT_WIN_PAIRING)
 

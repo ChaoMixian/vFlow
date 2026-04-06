@@ -47,6 +47,7 @@ class CaptureScreenModule : BaseModule() {
         description = "捕获当前屏幕内容。",
         iconRes = R.drawable.rounded_fullscreen_portrait_24,
         category = "界面交互",
+        categoryId = "interaction",
         nameStringRes = R.string.module_vflow_system_capture_screen_name,
         descriptionStringRes = R.string.module_vflow_system_capture_screen_desc
     )

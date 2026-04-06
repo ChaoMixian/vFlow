@@ -31,7 +31,8 @@ class GKDTriggerModule : BaseModule() {
         name = "GKD订阅触发",  // Fallback
         description = "解析 gkd 订阅规则并触发工作流",  // Fallback
         iconRes = R.drawable.rounded_ads_click_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     // 为该模块提供自定义的UI交互逻辑

@@ -29,7 +29,8 @@ class RotateImageModule : BaseModule() {
         description = "将图片按指定角度旋转。",  // Fallback
         descriptionStringRes = R.string.module_vflow_file_rotate_image_desc,
         iconRes = R.drawable.rounded_rotate_90_degrees_cw_24,
-        category = "文件"
+        category = "文件",
+        categoryId = "file"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

@@ -34,7 +34,8 @@ class InputModule : BaseModule() {
         name = "请求输入",
         description = "弹出一个窗口，请求用户输入文本、数字、时间或日期。",
         iconRes = R.drawable.rounded_keyboard_external_input_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 声明此模块需要悬浮窗权限

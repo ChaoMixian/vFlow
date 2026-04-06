@@ -28,7 +28,8 @@ class DarkModeModule : BaseModule() {
         description = "切换系统的深色/浅色模式（自动/深色/浅色）",
         descriptionStringRes = R.string.module_vflow_system_darkmode_desc,
         iconRes = R.drawable.rounded_contrast_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

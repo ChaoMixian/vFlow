@@ -30,7 +30,8 @@ class CallPhoneModule : BaseModule() {
         name = "拨打电话",
         description = "直接拨打指定的电话号码",
         iconRes = R.drawable.rounded_call_to_action_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 定义通话权限

@@ -21,7 +21,8 @@ class GetVariableModule : BaseModule() {
         name = "读取变量",  // Fallback
         description = "读取一个命名变量或魔法变量的值，使其可用于后续步骤",  // Fallback
         iconRes = R.drawable.rounded_dataset_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

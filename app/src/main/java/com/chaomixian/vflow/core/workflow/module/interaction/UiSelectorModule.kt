@@ -48,7 +48,8 @@ class UiSelectorModule : BaseModule() {
         description = "使用 GKD selector 语法查找屏幕控件。" +
                 "支持复杂的选择器表达式，包括属性匹配、连接操作符、逻辑运算等",
         iconRes = R.drawable.rounded_feature_search_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

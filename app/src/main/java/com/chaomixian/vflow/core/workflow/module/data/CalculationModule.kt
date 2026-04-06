@@ -29,7 +29,8 @@ class CalculationModule : BaseModule() {
         name = "计算",  // Fallback
         description = "执行两个数字之间的数学运算",  // Fallback
         iconRes = R.drawable.rounded_calculate_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     /**

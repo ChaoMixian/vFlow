@@ -52,7 +52,8 @@ class FindImageModule : BaseModule() {
         name = "查找图片",
         description = "在屏幕上查找与模板图片相似的区域，返回匹配位置的中心坐标。",
         iconRes = R.drawable.rounded_image_search_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     override val uiProvider: ModuleUIProvider = FindImageModuleUIProvider()

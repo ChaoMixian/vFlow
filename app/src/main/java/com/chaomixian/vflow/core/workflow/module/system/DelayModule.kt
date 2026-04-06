@@ -31,7 +31,8 @@ class DelayModule : BaseModule() {
         name = "延迟",                      // Fallback
         description = "暂停工作流一段时间", // Fallback
         iconRes = R.drawable.rounded_avg_time_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     /**

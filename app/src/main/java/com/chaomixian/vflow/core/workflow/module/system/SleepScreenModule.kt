@@ -27,7 +27,8 @@ class SleepScreenModule : BaseModule() {
         name = "息屏",  // Fallback
         description = "关闭屏幕，使设备进入息屏状态。需要 Shizuku 或 Root 权限。",  // Fallback
         iconRes = R.drawable.rounded_brightness_5_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

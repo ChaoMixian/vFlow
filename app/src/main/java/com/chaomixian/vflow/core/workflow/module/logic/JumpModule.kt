@@ -27,7 +27,8 @@ class JumpModule : BaseModule() {
         name = "跳转步骤",
         description = "跳转到工作流中指定的步骤继续执行。",
         iconRes = R.drawable.rounded_turn_slight_right_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

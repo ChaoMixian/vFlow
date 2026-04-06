@@ -31,7 +31,8 @@ class ApplyMaskModule : BaseModule() {
         name = "应用蒙版",
         description = "为图片应用 Material You 风格圆角矩形蒙版。",
         iconRes = R.drawable.rounded_image_inset_24,
-        category = "文件"
+        category = "文件",
+        categoryId = "file"
     )
 
     private val maskOptions = listOf("圆角矩形")

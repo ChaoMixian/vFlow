@@ -144,7 +144,7 @@ class ActionStepAdapter(
         val deleteButton: ImageButton = cardView.findViewById(R.id.button_delete_action)
 
         indentSpace.layoutParams.width = (indentLevel * 24 * context.resources.displayMetrics.density).toInt()
-        val categoryColor = ContextCompat.getColor(context, PillTheme.getCategoryColor(module.metadata.category))
+        val categoryColor = ContextCompat.getColor(context, PillTheme.getCategoryColor(module.metadata.getResolvedCategoryId()))
         val drawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = (4 * context.resources.displayMetrics.density)

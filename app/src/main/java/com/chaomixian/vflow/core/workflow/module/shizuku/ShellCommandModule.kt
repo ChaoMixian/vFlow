@@ -32,7 +32,8 @@ class ShellCommandModule : BaseModule() {
         description = "通过 Shell 执行命令 (支持 Root/Shizuku)。",  // Fallback
         descriptionStringRes = R.string.module_vflow_shizuku_shell_command_desc,
         iconRes = R.drawable.rounded_terminal_24,
-        category = "Shizuku"
+        category = "Shizuku",
+        categoryId = "shizuku"
     )
 
     private val modeOptions = listOf(MODE_AUTO, MODE_SHIZUKU, MODE_ROOT)

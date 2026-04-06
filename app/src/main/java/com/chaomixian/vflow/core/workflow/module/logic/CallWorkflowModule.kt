@@ -19,7 +19,8 @@ class CallWorkflowModule : BaseModule() {
         name = "调用工作流",
         description = "执行另一个工作流作为子程序。",
         iconRes = R.drawable.rounded_swap_calls_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
 
     override val uiProvider: ModuleUIProvider = CallWorkflowModuleUIProvider()

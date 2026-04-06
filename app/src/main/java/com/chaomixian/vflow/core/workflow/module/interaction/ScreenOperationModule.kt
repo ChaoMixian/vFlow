@@ -48,7 +48,8 @@ class ScreenOperationModule : BaseModule() {
         name = "屏幕操作",
         description = "在屏幕上执行点击、长按或滑动操作。",
         iconRes = R.drawable.rounded_ads_click_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     override val uiProvider: ModuleUIProvider = ScreenOperationModuleUIProvider()

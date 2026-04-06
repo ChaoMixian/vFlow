@@ -30,7 +30,8 @@ class ScriptedModule(
         name = manifest.name,
         description = manifest.description,
         iconRes = R.drawable.rounded_lua_24,
-        category = manifest.category
+        category = manifest.category,
+        categoryId = ModuleCategories.resolveId(manifest.category) ?: ModuleCategories.USER_MODULE
     )
 
     // 公开元数据供 UI 使用

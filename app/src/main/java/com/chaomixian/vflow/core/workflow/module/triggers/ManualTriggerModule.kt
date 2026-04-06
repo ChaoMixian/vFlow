@@ -23,7 +23,8 @@ class ManualTriggerModule : BaseModule() {
         name = "手动触发",  // Fallback
         description = "通过点击按钮手动启动此工作流",  // Fallback
         iconRes = R.drawable.rounded_play_arrow_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     /** 输出参数：触发是否成功 (始终为 true)。 */

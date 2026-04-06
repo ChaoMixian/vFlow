@@ -57,6 +57,13 @@ class HttpRequestViewHolder(view: View) : CustomEditorViewHolder(view) {
 }
 
 class HttpRequestModuleUIProvider : ModuleUIProvider {
+    companion object {
+        private const val BODY_TYPE_NONE = "none"
+        private const val BODY_TYPE_JSON = "json"
+        private const val BODY_TYPE_FORM = "form"
+        private const val BODY_TYPE_RAW = "raw"
+        private const val BODY_TYPE_FILE = "file"
+    }
 
     // URL 不在这里处理，让它使用标准控件
     override fun getHandledInputIds(): Set<String> = setOf("method", "headers", "query_params", "body_type", "body", "show_advanced")
@@ -101,7 +108,14 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
         // 初始化 Method Spinner
         holder.methodSpinner.adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, module.methodOptions).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        holder.bodyTypeSpinner.adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, module.bodyTypeOptions).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        val bodyTypeLabels = listOf(
+            context.getString(R.string.option_vflow_network_http_request_body_none),
+            context.getString(R.string.option_vflow_network_http_request_body_json),
+            context.getString(R.string.option_vflow_network_http_request_body_form),
+            context.getString(R.string.option_vflow_network_http_request_body_raw),
+            context.getString(R.string.option_vflow_network_http_request_body_file)
+        )
+        holder.bodyTypeSpinner.adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, bodyTypeLabels).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
 
         // 初始化 Query Params Adapter
         val currentQueryParams = (currentParameters["query_params"] as? Map<*, *>)
@@ -178,16 +192,17 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
         // URL 由标准控件处理，不在这里读取
 
-        val body = when(h.bodyTypeSpinner.selectedItem.toString()) {
-            "表单" -> h.bodyAdapter?.getItemsAsMap()
-            "JSON", "原始文本", "文件" -> h.rawBodyRichTextView?.getRawText()
+        val selectedBodyType = HttpRequestModule().bodyTypeOptions.getOrElse(h.bodyTypeSpinner.selectedItemPosition) { BODY_TYPE_NONE }
+        val body = when(selectedBodyType) {
+            BODY_TYPE_FORM -> h.bodyAdapter?.getItemsAsMap()
+            BODY_TYPE_JSON, BODY_TYPE_RAW, BODY_TYPE_FILE -> h.rawBodyRichTextView?.getRawText()
             else -> null
         }
         return mapOf(
             "method" to h.methodSpinner.selectedItem.toString(),
             "headers" to (h.headersAdapter?.getItemsAsMap() ?: emptyMap<String, String>()),
             "query_params" to (h.queryParamsAdapter?.getItemsAsMap() ?: emptyMap<String, String>()),
-            "body_type" to h.bodyTypeSpinner.selectedItem.toString(),
+            "body_type" to selectedBodyType,
             "body" to body,
             "show_advanced" to h.advancedContainer.isVisible
         )
@@ -205,7 +220,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
         holder.rawBodyRichTextView = null
 
         when (bodyType) {
-            "表单" -> {
+            BODY_TYPE_FORM -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.bodyEditorContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_dictionary)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_kv_pair)
@@ -222,7 +237,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                 addButton.setOnClickListener { holder.bodyAdapter?.addItem() }
                 holder.bodyEditorContainer.addView(editorView)
             }
-            "JSON", "原始文本", "文件" -> {
+            BODY_TYPE_JSON, BODY_TYPE_RAW, BODY_TYPE_FILE -> {
                 val row = LayoutInflater.from(context).inflate(R.layout.row_editor_input, null)
                 row.findViewById<TextView>(R.id.input_name).visibility = View.GONE
 
@@ -237,7 +252,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                 richTextView.setRichText(currentValue?.toString() ?: "", holder.allSteps ?: emptyList())
 
                 // 为"文件"类型添加类型过滤，只允许图片类型变量
-                if (bodyType == "文件") {
+                if (bodyType == BODY_TYPE_FILE) {
                     richTextView.setVariableTypeFilter(setOf("vflow.type.image"))
                 }
 

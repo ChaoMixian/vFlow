@@ -50,7 +50,8 @@ class FindTextUntilModule : BaseModule() {
         name = "查找直到出现",
         description = "持续查找屏幕上的文本，直到出现或超时。支持 OCR 兜底。",
         iconRes = R.drawable.rounded_search_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

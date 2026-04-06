@@ -40,24 +40,8 @@ object ModuleRegistry {
     fun getModulesByCategory(): Map<String, List<ActionModule>> {
         return modules.values
             .filter { it.blockBehavior.type != BlockType.BLOCK_END && it.blockBehavior.type != BlockType.BLOCK_MIDDLE }
-            .groupBy { it.metadata.category }
-            .toSortedMap(compareBy {
-                when (it) {
-                    "触发器" -> 0
-                    "界面交互" -> 1
-                    "逻辑控制" -> 2
-                    "数据" -> 3
-                    "文件" -> 4
-                    "网络" -> 5
-                    "应用与系统" -> 6
-                    "Core (Beta)" -> 7
-                    "Shizuku" -> 8
-                    "模板" -> 9
-                    "UI 组件" -> 10
-                    "飞书" -> 11
-                    else -> 99
-                }
-            })
+            .groupBy { it.metadata.getResolvedCategoryId() }
+            .toSortedMap(compareBy { ModuleCategories.getSortOrder(it) })
     }
 
     /**

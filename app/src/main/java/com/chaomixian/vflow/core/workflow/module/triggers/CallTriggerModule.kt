@@ -24,7 +24,8 @@ class CallTriggerModule : BaseModule() {
         name = "电话触发",
         description = "当有来电、通话接通或挂断时触发工作流",
         iconRes = R.drawable.rounded_call_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     override val requiredPermissions = listOf(PermissionManager.READ_PHONE_STATE)

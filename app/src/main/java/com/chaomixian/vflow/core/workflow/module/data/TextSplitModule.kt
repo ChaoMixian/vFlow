@@ -24,7 +24,8 @@ class TextSplitModule : BaseModule() {
         name = "文本分割",
         description = "将文本按分隔符分割成列表。如果分隔符为空，则逐字符分割。",
         iconRes = R.drawable.rounded_convert_to_text_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     // 使用默认 UI，无需自定义 UIProvider

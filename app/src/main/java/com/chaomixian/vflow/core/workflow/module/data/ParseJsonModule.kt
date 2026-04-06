@@ -29,7 +29,8 @@ class ParseJsonModule : BaseModule() {
         name = "解析 JSON",
         description = "从 JSON 文本中提取数据，支持路径语法（如 user.name、users.0.name）",
         iconRes = R.drawable.rounded_file_json_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

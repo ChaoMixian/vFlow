@@ -1369,7 +1369,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun isTriggerStep(step: ActionStep): Boolean {
-        return ModuleRegistry.getModule(step.moduleId)?.metadata?.category == "触发器"
+        return ModuleRegistry.getModule(step.moduleId)?.metadata?.getResolvedCategoryId() == ModuleCategories.TRIGGER
     }
 
     private fun getTriggerSteps(): List<ActionStep> = triggerSteps.toList()
@@ -1390,7 +1390,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         picker.onActionSelected = { module ->
-            if (module.metadata.category == getString(R.string.category_template)) {
+            if (module.metadata.getResolvedCategoryId() == ModuleCategories.TEMPLATE) {
                 val newSteps = module.createSteps()
                 actionSteps.addAll(newSteps)
                 recalculateAndNotify()
@@ -1434,7 +1434,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         picker.onActionSelected = { module ->
-            if (module.metadata.category == getString(R.string.category_template)) {
+            if (module.metadata.getResolvedCategoryId() == ModuleCategories.TEMPLATE) {
                 val newSteps = module.createSteps()
                 actionSteps.addAll(insertPosition, newSteps)
                 recalculateAndNotify()

@@ -39,7 +39,8 @@ class AIModule : BaseModule() {
         description = "调用大模型 API (OpenAI/DeepSeek) 进行智能对话。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ai_completion_desc,
         iconRes = R.drawable.rounded_hexagon_nodes_24,
-        category = "网络"
+        category = "网络",
+        categoryId = "network"
     )
 
     override val uiProvider: ModuleUIProvider = AIModuleUIProvider()

@@ -25,7 +25,8 @@ class TextExtractModule : BaseModule() {
         name = "提取文本",
         description = "从文本中提取指定部分",
         iconRes = R.drawable.rounded_convert_to_text_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     override val uiProvider: ModuleUIProvider? = null

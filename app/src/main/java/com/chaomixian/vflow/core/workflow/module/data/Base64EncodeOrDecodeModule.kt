@@ -25,7 +25,8 @@ class Base64EncodeOrDecodeModule : BaseModule() {
         name = "Base64 编解码",
         description = "对文本进行 Base64 编码或解码操作。",
         iconRes = R.drawable.rounded_convert_to_text_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     private val operations = listOf("编码", "解码")

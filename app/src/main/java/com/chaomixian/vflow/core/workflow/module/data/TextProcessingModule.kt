@@ -29,7 +29,8 @@ class TextProcessingModule : BaseModule() {
         name = "文本处理",  // Fallback
         description = "执行文本的拼接、分割、替换、正则匹配等操作",  // Fallback
         iconRes = R.drawable.rounded_convert_to_text_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     override val uiProvider: ModuleUIProvider? = TextProcessingModuleUIProvider()

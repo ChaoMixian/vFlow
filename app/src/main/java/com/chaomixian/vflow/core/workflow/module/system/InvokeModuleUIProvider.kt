@@ -24,6 +24,12 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
 class InvokeModuleUIProvider : ModuleUIProvider {
+    companion object {
+        private const val MODE_URI = "uri"
+        private const val MODE_ACTIVITY = "activity"
+        private const val MODE_BROADCAST = "broadcast"
+        private const val MODE_SERVICE = "service"
+    }
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val typeGroup: ChipGroup = view.findViewById(R.id.cg_invoke_type)
@@ -72,11 +78,11 @@ class InvokeModuleUIProvider : ModuleUIProvider {
         val holder = ViewHolder(view)
 
         // --- 恢复状态 ---
-        val mode = currentParameters["mode"] as? String ?: "链接/Uri"
+        val mode = currentParameters["mode"] as? String ?: MODE_URI
         when (mode) {
-            "Activity" -> holder.chipActivity.isChecked = true
-            "Broadcast" -> holder.chipBroadcast.isChecked = true
-            "Service" -> holder.chipService.isChecked = true
+            MODE_ACTIVITY -> holder.chipActivity.isChecked = true
+            MODE_BROADCAST -> holder.chipBroadcast.isChecked = true
+            MODE_SERVICE -> holder.chipService.isChecked = true
             else -> holder.chipUri.isChecked = true
         }
 
@@ -107,12 +113,12 @@ class InvokeModuleUIProvider : ModuleUIProvider {
         // --- UI 逻辑更新 ---
         fun updateUiVisibility() {
             val currentMode = when {
-                holder.chipActivity.isChecked -> "Activity"
-                holder.chipBroadcast.isChecked -> "Broadcast"
-                holder.chipService.isChecked -> "Service"
-                else -> "链接/Uri"
+                holder.chipActivity.isChecked -> MODE_ACTIVITY
+                holder.chipBroadcast.isChecked -> MODE_BROADCAST
+                holder.chipService.isChecked -> MODE_SERVICE
+                else -> MODE_URI
             }
-            if (currentMode == "链接/Uri") {
+            if (currentMode == MODE_URI) {
                 holder.uriLayout.isVisible = true
                 holder.actionLayout.isVisible = false
             } else {
@@ -152,10 +158,10 @@ class InvokeModuleUIProvider : ModuleUIProvider {
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
         val mode = when {
-            h.chipActivity.isChecked -> "Activity"
-            h.chipBroadcast.isChecked -> "Broadcast"
-            h.chipService.isChecked -> "Service"
-            else -> "链接/Uri"
+            h.chipActivity.isChecked -> MODE_ACTIVITY
+            h.chipBroadcast.isChecked -> MODE_BROADCAST
+            h.chipService.isChecked -> MODE_SERVICE
+            else -> MODE_URI
         }
 
         return mapOf(

@@ -31,7 +31,8 @@ class CoreShellCommandModule : BaseModule() {
         description = "通过 vFlow Core 执行Shell命令（支持Shell/Root权限）。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_shell_command_desc,
         iconRes = R.drawable.rounded_terminal_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     private val modeOptions = listOf("Shell权限", "Root权限", "自动")

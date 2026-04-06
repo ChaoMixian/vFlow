@@ -34,7 +34,8 @@ class AdjustImageModule : BaseModule() {
         description = "调整图像的曝光、对比度、饱和度等参数。",  // Fallback
         descriptionStringRes = R.string.module_vflow_file_adjust_image_desc,
         iconRes = R.drawable.rounded_photo_prints_24,
-        category = "文件"
+        category = "文件",
+        categoryId = "file"
     )
 
     override val uiProvider: ModuleUIProvider? = AdjustImageModuleUIProvider()

@@ -24,6 +24,7 @@ data class ActionMetadata(
     val description: String,
     val iconRes: Int,
     val category: String,
+    val categoryId: String? = null,
     val nameStringRes: Int? = null,
     val descriptionStringRes: Int? = null
 ) {
@@ -43,6 +44,14 @@ data class ActionMetadata(
      */
     fun getLocalizedDescription(context: Context): String {
         return if (descriptionStringRes != null) context.getString(descriptionStringRes) else description
+    }
+
+    fun getResolvedCategoryId(): String {
+        return ModuleCategories.resolveId(categoryId ?: category) ?: category
+    }
+
+    fun getLocalizedCategory(context: Context): String {
+        return ModuleCategories.getLocalizedLabel(context, getResolvedCategoryId())
     }
 }
 

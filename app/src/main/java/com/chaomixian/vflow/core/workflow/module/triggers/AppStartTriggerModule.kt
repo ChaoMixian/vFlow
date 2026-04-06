@@ -24,7 +24,8 @@ class AppStartTriggerModule : BaseModule() {
         name = "应用事件",  // Fallback
         description = "当指定的应用程序打开或关闭时，触发此工作流",  // Fallback
         iconRes = R.drawable.rounded_activity_zone_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     private val eventOptions by lazy { listOf(EVENT_OPENED, EVENT_CLOSED) }

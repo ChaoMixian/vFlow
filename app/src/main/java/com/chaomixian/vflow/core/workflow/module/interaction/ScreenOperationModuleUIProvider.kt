@@ -25,6 +25,14 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
 class ScreenOperationModuleUIProvider : ModuleUIProvider {
+    companion object {
+        private const val OP_TAP = "tap"
+        private const val OP_LONG_PRESS = "long_press"
+        private const val OP_SWIPE = "swipe"
+        private const val MODE_AUTO = "auto"
+        private const val MODE_ACCESSIBILITY = "accessibility"
+        private const val MODE_SHELL = "shell"
+    }
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val typeGroup: ChipGroup = view.findViewById(R.id.cg_operation_type)
@@ -74,10 +82,10 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         val inputs = module.getInputs()
 
         // 恢复操作类型
-        val opType = currentParameters["operation_type"] as? String ?: "点击"
+        val opType = currentParameters["operation_type"] as? String ?: OP_TAP
         when (opType) {
-            "长按" -> holder.chipLongPress.isChecked = true
-            "滑动" -> holder.chipSwipe.isChecked = true
+            OP_LONG_PRESS -> holder.chipLongPress.isChecked = true
+            OP_SWIPE -> holder.chipSwipe.isChecked = true
             else -> holder.chipTap.isChecked = true
         }
 
@@ -95,7 +103,7 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
 
         // 恢复持续时间
         val duration = (currentParameters["duration"] as? Number)?.toFloat()
-            ?: (if (opType == "滑动") 500f else if (opType == "长按") 1000f else 0f)
+            ?: (if (opType == OP_SWIPE) 500f else if (opType == OP_LONG_PRESS) 1000f else 0f)
         holder.durationSlider.value = duration.coerceIn(0f, 5000f)
         holder.durationText.text = "${duration.toInt()} ms"
 
@@ -104,29 +112,35 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         holder.advancedContainer.isVisible = showAdvanced
         holder.expandArrow.rotation = if (showAdvanced) 180f else 0f
 
-        val executionMode = currentParameters["execution_mode"] as? String ?: "自动"
-        val modeAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, module.executionModeOptions)
+        val executionModeOptions = module.executionModeOptions
+        val executionModeLabels = module.getInputs()
+            .find { it.id == "execution_mode" }
+            ?.optionsStringRes
+            ?.map(context::getString)
+            ?: executionModeOptions
+        val executionMode = normalizeExecutionMode(currentParameters["execution_mode"] as? String)
+        val modeAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, executionModeLabels)
         modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         holder.modeSpinner.adapter = modeAdapter
-        holder.modeSpinner.setSelection(module.executionModeOptions.indexOf(executionMode).coerceAtLeast(0))
+        holder.modeSpinner.setSelection(executionModeOptions.indexOf(executionMode).coerceAtLeast(0))
 
         // 更新 UI 状态
         fun updateUiState() {
             val type = when {
-                holder.chipLongPress.isChecked -> "长按"
-                holder.chipSwipe.isChecked -> "滑动"
-                else -> "点击"
+                holder.chipLongPress.isChecked -> OP_LONG_PRESS
+                holder.chipSwipe.isChecked -> OP_SWIPE
+                else -> OP_TAP
             }
 
-            holder.endContainer.isVisible = (type == "滑动")
-            holder.durationContainer.isVisible = (type == "滑动" || type == "长按")
+            holder.endContainer.isVisible = (type == OP_SWIPE)
+            holder.durationContainer.isVisible = (type == OP_SWIPE || type == OP_LONG_PRESS)
 
-            val startLabel = if (type == "滑动") "滑动起点" else "目标位置"
+            val startLabel = if (type == OP_SWIPE) "滑动起点" else "目标位置"
             holder.startInputView?.findViewById<TextView>(R.id.input_name)?.text = startLabel
 
             // 智能设置默认时间
-            if (type != "点击" && holder.durationSlider.value == 0f) {
-                val newDuration = if (type == "滑动") 500f else 1000f
+            if (type != OP_TAP && holder.durationSlider.value == 0f) {
+                val newDuration = if (type == OP_SWIPE) 500f else 1000f
                 holder.durationSlider.value = newDuration
                 holder.durationText.text = "${newDuration.toInt()} ms"
             }
@@ -167,23 +181,32 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
+        val executionModeOptions = ScreenOperationModule().executionModeOptions
         val type = when {
-            h.chipLongPress.isChecked -> "长按"
-            h.chipSwipe.isChecked -> "滑动"
-            else -> "点击"
+            h.chipLongPress.isChecked -> OP_LONG_PRESS
+            h.chipSwipe.isChecked -> OP_SWIPE
+            else -> OP_TAP
         }
 
         val params = mutableMapOf<String, Any?>()
         params["operation_type"] = type
         params["duration"] = h.durationSlider.value.toDouble()
-        params["execution_mode"] = h.modeSpinner.selectedItem.toString()
+        params["execution_mode"] = executionModeOptions.getOrElse(h.modeSpinner.selectedItemPosition) { MODE_AUTO }
         params["show_advanced"] = h.advancedContainer.isVisible
         readInputValue(h.startInputView)?.let { params["target"] = it }
-        if (type == "滑动") {
+        if (type == OP_SWIPE) {
             readInputValue(h.endInputView)?.let { params["target_end"] = it }
         }
 
         return params
+    }
+
+    private fun normalizeExecutionMode(value: String?): String {
+        return when (value) {
+            MODE_ACCESSIBILITY, "无障碍", "Accessibility" -> MODE_ACCESSIBILITY
+            MODE_SHELL, "Shell" -> MODE_SHELL
+            else -> MODE_AUTO
+        }
     }
 
     // 创建普通输入行

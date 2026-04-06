@@ -29,6 +29,11 @@ import com.google.android.material.textfield.TextInputLayout
  * 复用 screen_operation 的 UI，但简化为仅支持坐标输入和 vFlow Core 执行。
  */
 class CoreScreenOperationModuleUIProvider : ModuleUIProvider {
+    companion object {
+        private const val OP_CLICK = "click"
+        private const val OP_LONG_PRESS = "long_press"
+        private const val OP_SWIPE = "swipe"
+    }
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val typeGroup: ChipGroup = view.findViewById(R.id.cg_operation_type)
@@ -80,13 +85,10 @@ class CoreScreenOperationModuleUIProvider : ModuleUIProvider {
         holder.advancedContainer.isVisible = false
 
         // 恢复操作类型
-        val tapOption = context.getString(R.string.option_vflow_core_screen_operation_click)
-        val longPressOption = context.getString(R.string.option_vflow_core_screen_operation_long_press)
-        val swipeOption = context.getString(R.string.option_vflow_core_screen_operation_swipe)
-        val opType = currentParameters["operation_type"] as? String ?: tapOption
+        val opType = currentParameters["operation_type"] as? String ?: OP_CLICK
         when (opType) {
-            longPressOption -> holder.chipLongPress.isChecked = true
-            swipeOption -> holder.chipSwipe.isChecked = true
+            OP_LONG_PRESS -> holder.chipLongPress.isChecked = true
+            OP_SWIPE -> holder.chipSwipe.isChecked = true
             else -> holder.chipTap.isChecked = true
         }
 
@@ -104,27 +106,27 @@ class CoreScreenOperationModuleUIProvider : ModuleUIProvider {
 
         // 恢复持续时间
         val duration = (currentParameters["duration"] as? Number)?.toFloat()
-            ?: (if (opType == swipeOption) 500f else if (opType == longPressOption) 1000f else 0f)
+            ?: (if (opType == OP_SWIPE) 500f else if (opType == OP_LONG_PRESS) 1000f else 0f)
         holder.durationSlider.value = duration.coerceIn(0f, 5000f)
         holder.durationText.text = "${duration.toInt()} ms"
 
         // 更新 UI 状态
         fun updateUiState() {
             val type = when {
-                holder.chipLongPress.isChecked -> longPressOption
-                holder.chipSwipe.isChecked -> swipeOption
-                else -> tapOption
+                holder.chipLongPress.isChecked -> OP_LONG_PRESS
+                holder.chipSwipe.isChecked -> OP_SWIPE
+                else -> OP_CLICK
             }
 
-            holder.endContainer.isVisible = (type == swipeOption)
-            holder.durationContainer.isVisible = (type == swipeOption || type == longPressOption)
+            holder.endContainer.isVisible = (type == OP_SWIPE)
+            holder.durationContainer.isVisible = (type == OP_SWIPE || type == OP_LONG_PRESS)
 
-            val startLabel = if (type == swipeOption) context.getString(R.string.label_vflow_core_screen_operation_swipe_start) else context.getString(R.string.label_vflow_core_screen_operation_target)
+            val startLabel = if (type == OP_SWIPE) context.getString(R.string.label_vflow_core_screen_operation_swipe_start) else context.getString(R.string.label_vflow_core_screen_operation_target)
             holder.startInputView?.findViewById<TextView>(R.id.input_name)?.text = startLabel
 
             // 智能设置默认时间
-            if (type != tapOption && holder.durationSlider.value == 0f) {
-                val newDuration = if (type == swipeOption) 500f else 1000f
+            if (type != OP_CLICK && holder.durationSlider.value == 0f) {
+                val newDuration = if (type == OP_SWIPE) 500f else 1000f
                 holder.durationSlider.value = newDuration
                 holder.durationText.text = "${newDuration.toInt()} ms"
             }
@@ -146,18 +148,17 @@ class CoreScreenOperationModuleUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
-        // 使用硬编码字符串进行内部比较，因为 readFromEditor 无法访问 context
         val type = when {
-            h.chipLongPress.isChecked -> "长按"
-            h.chipSwipe.isChecked -> "滑动"
-            else -> "点击"
+            h.chipLongPress.isChecked -> OP_LONG_PRESS
+            h.chipSwipe.isChecked -> OP_SWIPE
+            else -> OP_CLICK
         }
 
         val params = mutableMapOf<String, Any?>()
         params["operation_type"] = type
         params["duration"] = h.durationSlider.value.toDouble()
         readInputValue(h.startInputView)?.let { params["target"] = it }
-        if (type == "滑动") {
+        if (type == OP_SWIPE) {
             readInputValue(h.endInputView)?.let { params["target_end"] = it }
         }
 

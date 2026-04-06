@@ -22,7 +22,8 @@ class MobileDataModule : BaseModule() {
         name = "移动数据",
         description = "开启或关闭移动数据",
         iconRes = R.drawable.rounded_signal_cellular_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 动态声明权限：需要 Root 或 Shizuku 权限执行 shell 命令

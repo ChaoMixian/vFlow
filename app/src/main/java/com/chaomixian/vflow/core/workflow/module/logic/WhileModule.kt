@@ -23,7 +23,8 @@ class WhileModule : BaseBlockModule() {
         name = "循环直到",
         description = "当条件为真时重复执行直到条件不满足",
         iconRes = R.drawable.rounded_repeat_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val pairingId = WHILE_PAIRING_ID
     override val stepIdsInBlock = listOf(WHILE_START_ID, WHILE_END_ID)
@@ -244,7 +245,8 @@ class EndWhileModule : BaseModule() {
         name = "结束循环",
         description = "",
         iconRes = R.drawable.ic_control_flow,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, WHILE_PAIRING_ID) // 标记为块结束
 

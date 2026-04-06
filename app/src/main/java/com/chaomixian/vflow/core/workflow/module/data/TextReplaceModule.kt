@@ -23,7 +23,8 @@ class TextReplaceModule : BaseModule() {
         name = "文本替换",
         description = "将文本中的指定内容替换为新内容",
         iconRes = R.drawable.rounded_convert_to_text_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     // 使用默认 UI，无需自定义 UIProvider

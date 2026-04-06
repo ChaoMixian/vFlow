@@ -29,7 +29,8 @@ class WifiTriggerModule : BaseModule() {
         name = "Wi-Fi触发器",  // Fallback
         description = "当Wi-Fi状态或网络连接变化时触发工作流",  // Fallback
         iconRes = R.drawable.rounded_android_wifi_3_bar_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     override val requiredPermissions = listOf(PermissionManager.LOCATION)

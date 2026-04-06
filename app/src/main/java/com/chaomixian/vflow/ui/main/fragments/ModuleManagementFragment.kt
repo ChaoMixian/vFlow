@@ -282,7 +282,7 @@ class ModuleManagementFragment : Fragment() {
                 tvDesc.text = meta.getLocalizedDescription(context)
                 ivIcon.setImageResource(if (meta.iconRes != 0) meta.iconRes else R.drawable.rounded_circles_ext_24)
 
-                tvCategory.text = meta.category
+                tvCategory.text = meta.getLocalizedCategory(context)
                 tvCategory.visibility = View.VISIBLE
 
                 if (module is ScriptedModule) {

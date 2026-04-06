@@ -33,7 +33,8 @@ class UiTextModule : BaseUiComponentModule() {
         description = "显示一段静态文字。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_component_text_desc,
         iconRes = R.drawable.rounded_convert_to_text_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("content")
 

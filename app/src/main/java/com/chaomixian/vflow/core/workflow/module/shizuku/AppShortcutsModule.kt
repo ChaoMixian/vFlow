@@ -52,7 +52,8 @@ class AlipayShortcutsModule : BaseShortcutModule() {
         description = "快速打开支付宝的扫一扫、付款码、收款码等。",  // Fallback
         descriptionStringRes = R.string.module_vflow_shizuku_alipay_shortcuts_desc,
         iconRes = R.drawable.rounded_adb_24,
-        category = "Shizuku"
+        category = "Shizuku",
+        categoryId = "shizuku"
     )
 
     private val actions = mapOf(
@@ -96,7 +97,8 @@ class WeChatShortcutsModule : BaseShortcutModule() {
         description = "快速打开微信的扫一扫、付款码等。",  // Fallback
         descriptionStringRes = R.string.module_vflow_shizuku_wechat_shortcuts_desc,
         iconRes = R.drawable.rounded_adb_24,
-        category = "Shizuku"
+        category = "Shizuku",
+        categoryId = "shizuku"
     )
 
     private val actions = mapOf(
@@ -140,7 +142,8 @@ class ColorOSShortcutsModule : BaseShortcutModule() {
         description = "执行ColorOS系统相关的一些快捷操作。",  // Fallback
         descriptionStringRes = R.string.module_vflow_shizuku_coloros_shortcuts_desc,
         iconRes = R.drawable.rounded_adb_24,
-        category = "Shizuku"
+        category = "Shizuku",
+        categoryId = "shizuku"
     )
 
     private val actions = mapOf(
@@ -179,7 +182,8 @@ class GeminiAssistantModule : BaseShortcutModule() {
         description = "启动 Google Gemini 语音助理。",  // Fallback
         descriptionStringRes = R.string.module_vflow_shizuku_gemini_shortcut_desc,
         iconRes = R.drawable.rounded_adb_24,
-        category = "Shizuku"
+        category = "Shizuku",
+        categoryId = "shizuku"
     )
 
     override fun getInputs(): List<InputDefinition> = emptyList()

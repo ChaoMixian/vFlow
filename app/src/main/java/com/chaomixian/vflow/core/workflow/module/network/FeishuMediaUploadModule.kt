@@ -33,7 +33,8 @@ class FeishuMediaUploadModule : BaseModule() {
         name = "飞书上传素材",
         description = "上传文件到飞书云文档",
         iconRes = R.drawable.rounded_cloud_24,
-        category = "飞书"
+        category = "飞书",
+        categoryId = "feishu"
     )
 
     private val parentTypeOptions = listOf(

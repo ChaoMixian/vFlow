@@ -5,6 +5,7 @@ import com.chaomixian.vflow.api.model.*
 import com.chaomixian.vflow.api.server.ApiDependencies
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ActionModule
+import com.chaomixian.vflow.core.module.ModuleCategories
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.module.ParameterType
 import com.google.gson.Gson
@@ -60,16 +61,17 @@ class ModuleHandler(
         }
         if (rateLimitResponse != null) return rateLimitResponse
 
-        val categories = listOf(
-            ModuleCategory("trigger", "触发器", "Triggers", "ic_trigger", "工作流触发条件", "Workflow trigger conditions", 0),
-            ModuleCategory("ui_interaction", "界面交互", "UI Interaction", "ic_ui", "UI自动化操作", "UI automation operations", 1),
-            ModuleCategory("logic", "逻辑控制", "Logic Control", "ic_logic", "条件判断与循环", "Conditions and loops", 2),
-            ModuleCategory("data", "数据", "Data", "ic_data", "变量与数据处理", "Variables and data processing", 3),
-            ModuleCategory("file", "文件", "File", "ic_file", "文件操作", "File operations", 4),
-            ModuleCategory("network", "网络", "Network", "ic_network", "网络请求", "Network requests", 5),
-            ModuleCategory("system", "应用与系统", "App & System", "ic_system", "系统控制与应用管理", "System control and app management", 6),
-            ModuleCategory("shizuku", "Shizuku", "Shizuku", "ic_shizuku", "高级系统操作", "Advanced system operations", 7)
-        )
+        val categories = ModuleCategories.allSpecs().map { spec ->
+            ModuleCategory(
+                id = spec.id,
+                name = spec.labelRes?.let(deps.context::getString) ?: spec.defaultLabel,
+                nameEn = resolveCategoryEnglishName(spec.id),
+                icon = "ic_${spec.id}",
+                description = resolveCategoryDescription(spec.id, false),
+                descriptionEn = resolveCategoryDescription(spec.id, true),
+                order = spec.sortOrder
+            )
+        }
 
         return successResponse(mapOf("categories" to categories))
     }
@@ -98,7 +100,7 @@ class ModuleHandler(
                     name = module.metadata.name,
                     nameEn = module.metadata.name,
                     icon = module.metadata.iconRes.toString(),
-                    category = module.metadata.category,
+                    category = module.metadata.getResolvedCategoryId(),
                     description = module.metadata.description,
                     descriptionEn = module.metadata.description,
                     helpUrl = null
@@ -119,7 +121,8 @@ class ModuleHandler(
 
         // 按分类过滤
         if (category != null) {
-            filteredModules = filteredModules.filter { it.metadata.category == category }
+            val normalizedCategory = ModuleCategories.resolveId(category) ?: category
+            filteredModules = filteredModules.filter { it.metadata.category == normalizedCategory }
         }
 
         // 按搜索关键词过滤
@@ -156,7 +159,7 @@ class ModuleHandler(
                 name = module.metadata.name,
                 nameEn = module.metadata.name,
                 icon = module.metadata.iconRes.toString(),
-                category = module.metadata.category,
+                category = module.metadata.getResolvedCategoryId(),
                 description = module.metadata.description,
                 descriptionEn = module.metadata.description,
                 helpUrl = null
@@ -254,5 +257,39 @@ class ModuleHandler(
             input.inputStyle == com.chaomixian.vflow.core.module.InputStyle.DROPDOWN -> "dropdown"
             else -> "text_field"
         }
+    }
+
+    private fun resolveCategoryEnglishName(categoryId: String): String = when (categoryId) {
+        ModuleCategories.TRIGGER -> "Triggers"
+        ModuleCategories.INTERACTION -> "Screen Interaction"
+        ModuleCategories.LOGIC -> "Logic"
+        ModuleCategories.DATA -> "Data Processing"
+        ModuleCategories.FILE -> "File"
+        ModuleCategories.NETWORK -> "Network"
+        ModuleCategories.DEVICE -> "Device & System"
+        ModuleCategories.CORE -> "Core (Beta)"
+        ModuleCategories.SHIZUKU -> "Shizuku"
+        ModuleCategories.TEMPLATE -> "Templates"
+        ModuleCategories.UI -> "UI Control"
+        ModuleCategories.FEISHU -> "Feishu"
+        ModuleCategories.USER_MODULE -> "User Modules"
+        else -> categoryId
+    }
+
+    private fun resolveCategoryDescription(categoryId: String, english: Boolean): String = when (categoryId) {
+        ModuleCategories.TRIGGER -> if (english) "Workflow trigger conditions" else "工作流触发条件"
+        ModuleCategories.INTERACTION -> if (english) "UI automation operations" else "界面自动化操作"
+        ModuleCategories.LOGIC -> if (english) "Conditions and loops" else "条件判断与循环"
+        ModuleCategories.DATA -> if (english) "Variables and data processing" else "变量与数据处理"
+        ModuleCategories.FILE -> if (english) "File operations" else "文件操作"
+        ModuleCategories.NETWORK -> if (english) "Network requests and integrations" else "网络请求与集成"
+        ModuleCategories.DEVICE -> if (english) "System control and app management" else "系统控制与应用管理"
+        ModuleCategories.CORE -> if (english) "Low-level core capabilities" else "底层核心能力"
+        ModuleCategories.SHIZUKU -> if (english) "Advanced system operations" else "高级系统操作"
+        ModuleCategories.TEMPLATE -> if (english) "Reusable workflow templates" else "可复用工作流模板"
+        ModuleCategories.UI -> if (english) "UI construction and control" else "界面构建与控制"
+        ModuleCategories.FEISHU -> if (english) "Feishu integrations" else "飞书集成"
+        ModuleCategories.USER_MODULE -> if (english) "User-installed modules" else "用户安装的模块"
+        else -> categoryId
     }
 }

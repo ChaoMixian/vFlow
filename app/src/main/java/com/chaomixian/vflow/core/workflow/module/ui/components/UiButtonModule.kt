@@ -40,7 +40,8 @@ class UiButtonModule : BaseUiComponentModule() {
         description = "点击后提交表单或触发事件。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_component_button_desc,
         iconRes = R.drawable.rounded_ads_click_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
 
     override fun getInputs() = listOf(

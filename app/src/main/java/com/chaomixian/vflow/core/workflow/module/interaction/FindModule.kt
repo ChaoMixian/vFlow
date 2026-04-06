@@ -47,7 +47,8 @@ class FindTextModule : BaseModule() {
         nameStringRes = R.string.module_vflow_device_find_text_name,
         descriptionStringRes = R.string.module_vflow_device_find_text_desc,
         iconRes = R.drawable.rounded_feature_search_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     ) // 更新分类
     // 此模块需要的权限
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)

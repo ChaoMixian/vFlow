@@ -31,7 +31,8 @@ class CoreCaptureScreenModule : BaseModule() {
         description = "使用 vFlow Core 捕获屏幕截图，基于scrcpy原理实现。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_capture_screen_desc,
         iconRes = R.drawable.rounded_fullscreen_portrait_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     private val outputFormatOptions = listOf("PNG", "JPEG")

@@ -17,13 +17,39 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class CreateVariableModule : BaseModule() {
     companion object {
-        private const val TYPE_STRING = "string"
-        private const val TYPE_NUMBER = "number"
-        private const val TYPE_BOOLEAN = "boolean"
-        private const val TYPE_DICTIONARY = "dictionary"
-        private const val TYPE_LIST = "list"
-        private const val TYPE_IMAGE = "image"
-        private const val TYPE_COORDINATE = "coordinate"
+        const val TYPE_STRING = "string"
+        const val TYPE_NUMBER = "number"
+        const val TYPE_BOOLEAN = "boolean"
+        const val TYPE_DICTIONARY = "dictionary"
+        const val TYPE_LIST = "list"
+        const val TYPE_IMAGE = "image"
+        const val TYPE_COORDINATE = "coordinate"
+
+        fun normalizeType(value: String?): String {
+            return when (value) {
+                "文本", "Text", TYPE_STRING -> TYPE_STRING
+                "数字", "Number", TYPE_NUMBER -> TYPE_NUMBER
+                "布尔", "Boolean", TYPE_BOOLEAN -> TYPE_BOOLEAN
+                "字典", "Dictionary", TYPE_DICTIONARY -> TYPE_DICTIONARY
+                "列表", "List", TYPE_LIST -> TYPE_LIST
+                "图像", "Image", TYPE_IMAGE -> TYPE_IMAGE
+                "坐标", "Coordinate", TYPE_COORDINATE -> TYPE_COORDINATE
+                else -> TYPE_STRING
+            }
+        }
+
+        fun getTypeLabel(context: Context, value: String?): String {
+            return when (normalizeType(value)) {
+                TYPE_STRING -> context.getString(R.string.option_vflow_variable_create_type_string)
+                TYPE_NUMBER -> context.getString(R.string.option_vflow_variable_create_type_number)
+                TYPE_BOOLEAN -> context.getString(R.string.option_vflow_variable_create_type_boolean)
+                TYPE_DICTIONARY -> context.getString(R.string.option_vflow_variable_create_type_dictionary)
+                TYPE_LIST -> context.getString(R.string.option_vflow_variable_create_type_list)
+                TYPE_IMAGE -> context.getString(R.string.option_vflow_variable_create_type_image)
+                TYPE_COORDINATE -> context.getString(R.string.option_vflow_variable_create_type_coordinate)
+                else -> context.getString(R.string.option_vflow_variable_create_type_string)
+            }
+        }
     }
     override val id = "vflow.variable.create"
     override val metadata = ActionMetadata(
@@ -32,7 +58,8 @@ class CreateVariableModule : BaseModule() {
         name = "创建变量",
         description = "创建一个新的变量，可选择为其命名以便后续修改或读取。",
         iconRes = R.drawable.rounded_add_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
     private val typeOptions = listOf(TYPE_STRING, TYPE_NUMBER, TYPE_BOOLEAN, TYPE_DICTIONARY, TYPE_LIST, TYPE_IMAGE, TYPE_COORDINATE)
 
@@ -87,7 +114,7 @@ class CreateVariableModule : BaseModule() {
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         if (step == null) return emptyList()
-        val selectedType = step.parameters["type"] as? String
+        val selectedType = normalizeType(step.parameters["type"] as? String)
         val outputTypeName = when (selectedType) {
             TYPE_STRING -> VTypeRegistry.STRING.id
             TYPE_NUMBER -> VTypeRegistry.NUMBER.id
@@ -110,7 +137,8 @@ class CreateVariableModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val name = step.parameters["variableName"] as? String
-        val type = step.parameters["type"]?.toString() ?: TYPE_STRING
+        val type = normalizeType(step.parameters["type"]?.toString())
+        val typeLabel = getTypeLabel(context, type)
         val value = step.parameters["value"]
         val rawText = value?.toString() ?: ""
 
@@ -119,10 +147,10 @@ class CreateVariableModule : BaseModule() {
         // RichTextUIProvider 会负责渲染预览视图。
         if (type == TYPE_STRING && VariableResolver.isComplex(rawText)) {
             return if (name.isNullOrBlank()) {
-                context.getString(R.string.summary_vflow_data_create_anon, type, "")
+                context.getString(R.string.summary_vflow_data_create_anon, typeLabel, "")
             } else {
                 val namePill = PillUtil.Pill("[[$name]]", "variableName")
-                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", type), namePill)
+                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", typeLabel), namePill)
             }
         }
 
@@ -135,19 +163,20 @@ class CreateVariableModule : BaseModule() {
         // 其他情况（简单文本、数字、布尔、或直接引用变量的字典/列表），摘要中显示完整值
         val valuePill = PillUtil.createPillFromParam(value, getInputs().find { it.id == "value" })
         return if (name.isNullOrBlank()) {
-            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_anon, type, ""), valuePill)
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_anon, typeLabel, ""), valuePill)
         } else {
             val namePill = PillUtil.Pill("[[$name]]", "variableName")
-            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", type), namePill, context.getString(R.string.summary_vflow_data_create_value_separator), valuePill)
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", typeLabel), namePill, context.getString(R.string.summary_vflow_data_create_value_separator), valuePill)
         }
     }
 
     private fun buildSimpleSummary(context: Context, name: String?, type: String): CharSequence {
+        val typeLabel = getTypeLabel(context, type)
         return if (name.isNullOrBlank()) {
-            context.getString(R.string.summary_vflow_data_create_anon, type, "")
+            context.getString(R.string.summary_vflow_data_create_anon, typeLabel, "")
         } else {
             val namePill = PillUtil.Pill("[[$name]]", "variableName")
-            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", type), namePill)
+            PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", typeLabel), namePill)
         }
     }
 
@@ -166,7 +195,7 @@ class CreateVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = context.getVariableAsString("type", TYPE_STRING)
+        val type = normalizeType(context.getVariableAsString("type", TYPE_STRING))
         val rawValue = context.getVariable("value")  // 现在直接返回 VObject
         val variableName = context.getVariableAsString("variableName", "")
 

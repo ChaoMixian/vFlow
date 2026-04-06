@@ -28,7 +28,8 @@ class LaunchAppModule : BaseModule() {
         name = "启动应用/活动",  // Fallback
         description = "启动一个指定的应用程序或其内部的某个页面(Activity)",  // Fallback
         iconRes = R.drawable.rounded_activity_zone_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 使用专门的 LaunchAppUIProvider

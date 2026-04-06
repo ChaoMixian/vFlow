@@ -40,7 +40,8 @@ class CoreScreenOperationModule : BaseModule() {
         description = "使用 vFlow Core 执行点击、长按或滑动操作，比无障碍服务更快速稳定。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_screen_operation_desc,
         iconRes = R.drawable.rounded_ads_click_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

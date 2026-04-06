@@ -24,7 +24,8 @@ class StopWorkflowModule : BaseModule() {
         name = "停止工作流",  // Fallback
         description = "停止当前工作流或其他指定工作流的执行",  // Fallback
         iconRes = R.drawable.rounded_stop_circle_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
 
     override val uiProvider: ModuleUIProvider = StopWorkflowModuleUIProvider()

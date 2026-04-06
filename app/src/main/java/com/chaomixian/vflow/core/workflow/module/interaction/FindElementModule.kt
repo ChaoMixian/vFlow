@@ -32,7 +32,8 @@ class FindElementModule : BaseModule() {
         description = "通过文本、ID、区域等属性查找屏幕控件，支持多属性组合过滤",  // Fallback
         descriptionStringRes = R.string.module_vflow_interaction_find_element_desc,
         iconRes = R.drawable.rounded_search_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     companion object {

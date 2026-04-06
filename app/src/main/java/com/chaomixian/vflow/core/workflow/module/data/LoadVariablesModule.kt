@@ -16,7 +16,8 @@ class LoadVariablesModule : BaseModule() {
         name = "载入变量",
         description = "从另一个工作流获取命名变量的使用权。",
         iconRes = R.drawable.rounded_system_update_alt_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     override val uiProvider: ModuleUIProvider = LoadVariablesModuleUIProvider()

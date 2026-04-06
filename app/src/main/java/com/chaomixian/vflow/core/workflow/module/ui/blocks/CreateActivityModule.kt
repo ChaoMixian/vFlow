@@ -58,7 +58,8 @@ class CreateActivityModule : BaseBlockModule() {
         description = "开始定义界面布局。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_activity_start_desc,
         iconRes = R.drawable.rounded_activity_zone_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     override val stepIdsInBlock = listOf(ACTIVITY_START_ID, ACTIVITY_SHOW_ID, ACTIVITY_END_ID) // 定义三段结构
     override val pairingId = ACTIVITY_PAIRING
@@ -100,7 +101,8 @@ class ShowActivityModule : BaseModule() {
         description = "界面定义结束，启动界面并开始监听事件。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_activity_show_desc,
         iconRes = R.drawable.rounded_play_arrow_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     // 标记为 Middle 块，且不可独立删除
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, ACTIVITY_PAIRING, isIndividuallyDeletable = false)
@@ -231,7 +233,8 @@ class EndActivityModule : BaseModule() {
         description = "界面生命周期结束。",  // Fallback
         descriptionStringRes = R.string.module_vflow_ui_activity_end_desc,
         iconRes = R.drawable.rounded_stop_circle_24,
-        category = "UI 组件"
+        category = "UI 组件",
+        categoryId = "ui"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, ACTIVITY_PAIRING)
 

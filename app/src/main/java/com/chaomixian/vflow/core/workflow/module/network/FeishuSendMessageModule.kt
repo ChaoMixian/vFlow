@@ -38,7 +38,8 @@ class FeishuSendMessageModule : BaseModule() {
         name = "发送飞书消息",
         description = "通过共享飞书令牌向用户或群聊发送消息",
         iconRes = R.drawable.rounded_sms_24,
-        category = "飞书"
+        category = "飞书",
+        categoryId = "feishu"
     )
 
     private val receiveIdTypeOptions = listOf("open_id", "union_id", "user_id", "email", "chat_id")

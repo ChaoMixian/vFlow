@@ -30,7 +30,8 @@ class ForEachModule : BaseBlockModule() {
         name = "重复每一项",
         description = "遍历列表中的每一个项目，并分别执行操作。",
         iconRes = R.drawable.rounded_repeat_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val pairingId = FOREACH_PAIRING_ID
     override val stepIdsInBlock = listOf(FOREACH_START_ID, FOREACH_END_ID)
@@ -164,7 +165,8 @@ class EndForEachModule : BaseModule() {
         name = "结束重复",
         description = "",
         iconRes = R.drawable.rounded_repeat_24,
-        category = "逻辑控制"
+        category = "逻辑控制",
+        categoryId = "logic"
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, FOREACH_PAIRING_ID)
 

@@ -22,7 +22,8 @@ class FindNotificationModule : BaseModule() {
         description = "查找当前状态栏中所有可见的通知。",  // Fallback
         descriptionStringRes = R.string.module_vflow_notification_find_desc,
         iconRes = R.drawable.rounded_search_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATION_LISTENER_SERVICE)

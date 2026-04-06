@@ -42,7 +42,8 @@ class OperitModule : BaseModule() {
         description = "与 Operit AI 助手交互：发送消息或触发工作流。",  // Fallback
         descriptionStringRes = R.string.module_vflow_interaction_operit_desc,
         iconRes = R.drawable.rounded_smart_toy_24,
-        category = "界面交互"
+        category = "界面交互",
+        categoryId = "interaction"
     )
 
     private val modes = listOf(MODE_CHAT, MODE_WORKFLOW)

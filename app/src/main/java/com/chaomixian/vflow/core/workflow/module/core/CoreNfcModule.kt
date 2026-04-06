@@ -32,7 +32,8 @@ class CoreNfcModule : BaseModule() {
         description = "使用 vFlow Core 控制NFC开关状态（开启/关闭/切换）。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_nfc_desc,
         iconRes = R.drawable.rounded_nfc_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

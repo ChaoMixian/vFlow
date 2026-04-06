@@ -27,7 +27,8 @@ class SendNotificationModule : BaseModule() {
         name = "发送通知",  // Fallback
         description = "在系统通知栏中创建一个自定义通知",  // Fallback
         iconRes = R.drawable.rounded_notifications_unread_24,
-        category = "应用与系统"
+        category = "应用与系统",
+        categoryId = "device"
     )
 
     // 需要通知权限

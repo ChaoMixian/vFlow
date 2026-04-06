@@ -18,7 +18,8 @@ class BackTapTriggerModule : BaseModule() {
         name = "轻敲背面触发",  // Fallback
         description = "通过敲击手机背面触发工作流（双击/三击）",  // Fallback
         iconRes = R.drawable.rounded_horizontal_align_bottom_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     companion object {

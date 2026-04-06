@@ -36,7 +36,8 @@ class GetIpAddressModule : BaseModule() {
         name = "获取IP地址",  // Fallback
         description = "获取设备的本地或外部IP地址",  // Fallback
         iconRes = R.drawable.rounded_public_24,
-        category = "网络"
+        category = "网络",
+        categoryId = "network"
     )
 
     private val typeOptions by lazy {

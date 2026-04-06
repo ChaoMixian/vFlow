@@ -20,7 +20,8 @@ class ModifyVariableModule : BaseModule() {
         name = "修改变量",  // Fallback
         description = "修改一个已存在的命名变量的值",  // Fallback
         iconRes = R.drawable.ic_variable_type,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("newValue")

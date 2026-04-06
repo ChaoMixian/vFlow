@@ -21,7 +21,8 @@ class NotificationTriggerModule : BaseModule() {
         name = "通知触发",  // Fallback
         description = "当收到符合条件的通知时触发工作流",  // Fallback
         iconRes = R.drawable.rounded_notifications_unread_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATION_LISTENER_SERVICE)

@@ -21,7 +21,8 @@ class RandomVariableModule : BaseModule() {
         name = "创建随机变量",  // Fallback
         description = "创建新的随机变量，可选择为其命名以便后续修改或读取",  // Fallback
         iconRes = R.drawable.rounded_add_24,
-        category = "数据"
+        category = "数据",
+        categoryId = "data"
     )
 
     private val typeOptions by lazy {

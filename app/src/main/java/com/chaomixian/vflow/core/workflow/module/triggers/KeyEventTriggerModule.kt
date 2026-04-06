@@ -32,7 +32,8 @@ class KeyEventTriggerModule : BaseModule() {
         name = "按键触发",  // Fallback
         description = "当指定的物理按键被按下时，触发此工作流（需要Shizuku或Root）",  // Fallback
         iconRes = R.drawable.rounded_horizontal_align_bottom_24,
-        category = "触发器"
+        category = "触发器",
+        categoryId = "trigger"
     )
 
     override val requiredPermissions: List<Permission>

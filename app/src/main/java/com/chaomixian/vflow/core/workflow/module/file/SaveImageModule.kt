@@ -39,7 +39,8 @@ class SaveImageModule : BaseModule() {
         name = "保存图片",  // Fallback
         description = "将图片保存到相册",  // Fallback
         iconRes = R.drawable.rounded_save_24,
-        category = "文件"
+        category = "文件",
+        categoryId = "file"
     )
 
     // 此模块需要存储权限

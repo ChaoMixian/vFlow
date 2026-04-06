@@ -32,7 +32,8 @@ class CoreBluetoothModule : BaseModule() {
         description = "使用 vFlow Core 控制蓝牙开关状态（开启/关闭/切换）。",  // Fallback
         descriptionStringRes = R.string.module_vflow_core_bluetooth_desc,
         iconRes = R.drawable.rounded_bluetooth_24,
-        category = "Core (Beta)"
+        category = "Core (Beta)",
+        categoryId = "core"
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
