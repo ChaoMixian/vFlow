@@ -16,6 +16,15 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class CreateVariableModule : BaseModule() {
+    companion object {
+        private const val TYPE_STRING = "string"
+        private const val TYPE_NUMBER = "number"
+        private const val TYPE_BOOLEAN = "boolean"
+        private const val TYPE_DICTIONARY = "dictionary"
+        private const val TYPE_LIST = "list"
+        private const val TYPE_IMAGE = "image"
+        private const val TYPE_COORDINATE = "coordinate"
+    }
     override val id = "vflow.variable.create"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_variable_create_name,
@@ -25,20 +34,45 @@ class CreateVariableModule : BaseModule() {
         iconRes = R.drawable.rounded_add_24,
         category = "数据"
     )
-    private val typeOptions = listOf("文本", "数字", "布尔", "字典", "列表", "图像", "坐标")
+    private val typeOptions = listOf(TYPE_STRING, TYPE_NUMBER, TYPE_BOOLEAN, TYPE_DICTIONARY, TYPE_LIST, TYPE_IMAGE, TYPE_COORDINATE)
 
     override val uiProvider: ModuleUIProvider? = VariableModuleUIProvider(typeOptions)
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("variableName", "变量名称 (可选)", ParameterType.STRING, defaultValue = "", acceptsMagicVariable = false),
+        InputDefinition("variableName", "变量名称 (可选)", ParameterType.STRING, defaultValue = "", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_variable_create_variableName_name),
         InputDefinition(
             id = "type",
             nameStringRes = R.string.param_vflow_variable_create_type_name,
             name = "变量类型",
             staticType = ParameterType.ENUM,
-            defaultValue = "文本",
+            defaultValue = TYPE_STRING,
             options = typeOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            optionsStringRes = listOf(
+                R.string.option_vflow_variable_create_type_string,
+                R.string.option_vflow_variable_create_type_number,
+                R.string.option_vflow_variable_create_type_boolean,
+                R.string.option_vflow_variable_create_type_dictionary,
+                R.string.option_vflow_variable_create_type_list,
+                R.string.option_vflow_variable_create_type_image,
+                R.string.option_vflow_variable_create_type_coordinate
+            ),
+            legacyValueMap = mapOf(
+                "文本" to TYPE_STRING,
+                "Text" to TYPE_STRING,
+                "数字" to TYPE_NUMBER,
+                "Number" to TYPE_NUMBER,
+                "布尔" to TYPE_BOOLEAN,
+                "Boolean" to TYPE_BOOLEAN,
+                "字典" to TYPE_DICTIONARY,
+                "Dictionary" to TYPE_DICTIONARY,
+                "列表" to TYPE_LIST,
+                "List" to TYPE_LIST,
+                "图像" to TYPE_IMAGE,
+                "Image" to TYPE_IMAGE,
+                "坐标" to TYPE_COORDINATE,
+                "Coordinate" to TYPE_COORDINATE
+            )
         ),
         InputDefinition(
             id = "value",
@@ -55,13 +89,13 @@ class CreateVariableModule : BaseModule() {
         if (step == null) return emptyList()
         val selectedType = step.parameters["type"] as? String
         val outputTypeName = when (selectedType) {
-            "文本" -> VTypeRegistry.STRING.id
-            "数字" -> VTypeRegistry.NUMBER.id
-            "布尔" -> VTypeRegistry.BOOLEAN.id
-            "字典" -> VTypeRegistry.DICTIONARY.id
-            "列表" -> VTypeRegistry.LIST.id
-            "图像" -> VTypeRegistry.IMAGE.id
-            "坐标" -> VTypeRegistry.COORDINATE.id
+            TYPE_STRING -> VTypeRegistry.STRING.id
+            TYPE_NUMBER -> VTypeRegistry.NUMBER.id
+            TYPE_BOOLEAN -> VTypeRegistry.BOOLEAN.id
+            TYPE_DICTIONARY -> VTypeRegistry.DICTIONARY.id
+            TYPE_LIST -> VTypeRegistry.LIST.id
+            TYPE_IMAGE -> VTypeRegistry.IMAGE.id
+            TYPE_COORDINATE -> VTypeRegistry.COORDINATE.id
             else -> VTypeRegistry.STRING.id
         }
         return listOf(
@@ -76,14 +110,14 @@ class CreateVariableModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val name = step.parameters["variableName"] as? String
-        val type = step.parameters["type"]?.toString() ?: "文本"
+        val type = step.parameters["type"]?.toString() ?: TYPE_STRING
         val value = step.parameters["value"]
         val rawText = value?.toString() ?: ""
 
         // 优先检查是否为"复杂内容"。
         // 如果是复杂的（包含多个变量或混合文本），则只返回简单标题。
         // RichTextUIProvider 会负责渲染预览视图。
-        if (type == "文本" && VariableResolver.isComplex(rawText)) {
+        if (type == TYPE_STRING && VariableResolver.isComplex(rawText)) {
             return if (name.isNullOrBlank()) {
                 context.getString(R.string.summary_vflow_data_create_anon, type, "")
             } else {
@@ -94,7 +128,7 @@ class CreateVariableModule : BaseModule() {
 
         // 如果是字典、列表或坐标，且不是单纯的变量引用
         // 此时 VariableValueUIProvider 会显示详细预览列表，摘要中隐藏 value pill 以防重复
-        if ((type == "字典" || type == "列表" || type == "坐标") && !rawText.isMagicVariable() && !rawText.isNamedVariable()) {
+        if ((type == TYPE_DICTIONARY || type == TYPE_LIST || type == TYPE_COORDINATE) && !rawText.isMagicVariable() && !rawText.isNamedVariable()) {
             return buildSimpleSummary(context, name, type)
         }
 
@@ -132,13 +166,13 @@ class CreateVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = context.getVariableAsString("type", "文本")
+        val type = context.getVariableAsString("type", TYPE_STRING)
         val rawValue = context.getVariable("value")  // 现在直接返回 VObject
         val variableName = context.getVariableAsString("variableName", "")
 
         // 使用 VObjectFactory 统一包装值，简化类型转换逻辑
         val variable: VObject = when (type) {
-            "文本" -> {
+            TYPE_STRING -> {
                 // 如果是 VString，直接使用；否则解析并创建
                 if (rawValue is VString) {
                     rawValue
@@ -147,14 +181,14 @@ class CreateVariableModule : BaseModule() {
                     VString(resolvedText)
                 }
             }
-            "数字" -> {
+            TYPE_NUMBER -> {
                 val numValue = rawValue.asNumber() ?: 0.0
                 VNumber(numValue)
             }
-            "布尔" -> {
+            TYPE_BOOLEAN -> {
                 VBoolean(rawValue.asBoolean())
             }
-            "字典" -> {
+            TYPE_DICTIONARY -> {
                 // 如果已经是 VDictionary，直接使用
                 if (rawValue is VDictionary) {
                     rawValue
@@ -167,7 +201,7 @@ class CreateVariableModule : BaseModule() {
                     VDictionary(vMap)
                 }
             }
-            "列表" -> {
+            TYPE_LIST -> {
                 // 如果已经是 VList，直接使用
                 if (rawValue is VList) {
                     rawValue
@@ -176,10 +210,10 @@ class CreateVariableModule : BaseModule() {
                     VList(listValue.map { VObjectFactory.from(it) })
                 }
             }
-            "图像" -> {
+            TYPE_IMAGE -> {
                 VImage(rawValue.asString())
             }
-            "坐标" -> {
+            TYPE_COORDINATE -> {
                 // 如果已经是 VCoordinate，直接使用
                 if (rawValue is VCoordinate) {
                     rawValue

@@ -31,6 +31,14 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  * 使用 GKD selector 语法查找屏幕控件
  */
 class UiSelectorModule : BaseModule() {
+    companion object {
+        private const val RESULT_FIRST = "first"
+        private const val RESULT_LAST = "last"
+        private const val RESULT_CENTER = "center"
+        private const val RESULT_TOP = "top"
+
+        val resultSelectionOptions = listOf(RESULT_FIRST, RESULT_LAST, RESULT_CENTER, RESULT_TOP)
+    }
 
     override val id = "vflow.interaction.ui_selector"
     override val metadata = ActionMetadata(
@@ -43,10 +51,6 @@ class UiSelectorModule : BaseModule() {
         category = "界面交互"
     )
 
-    companion object {
-        val resultSelectionOptions = listOf("第一个", "最后一个", "最接近中心", "最接近顶部")
-    }
-
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             "selector",
@@ -55,16 +59,35 @@ class UiSelectorModule : BaseModule() {
             "",
             acceptsMagicVariable = true,
             supportsRichText = false,
-            hint = "如: @TextView[text='设置']"
+            hint = "如: @TextView[text='设置']",
+            nameStringRes = R.string.param_vflow_interaction_ui_selector_selector_name,
+            hintStringRes = R.string.hint_vflow_interaction_ui_selector_selector
         ),
         InputDefinition(
             "result_selection",
             "结果选择",
             ParameterType.ENUM,
-            "第一个",
+            RESULT_FIRST,
             options = resultSelectionOptions,
             acceptsMagicVariable = false,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_ui_selector_result_selection_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_interaction_ui_selector_result_first,
+                R.string.option_vflow_interaction_ui_selector_result_last,
+                R.string.option_vflow_interaction_ui_selector_result_center,
+                R.string.option_vflow_interaction_ui_selector_result_top
+            ),
+            legacyValueMap = mapOf(
+                "第一个" to RESULT_FIRST,
+                "First" to RESULT_FIRST,
+                "最后一个" to RESULT_LAST,
+                "Last" to RESULT_LAST,
+                "最接近中心" to RESULT_CENTER,
+                "Closest to Center" to RESULT_CENTER,
+                "最接近顶部" to RESULT_TOP,
+                "Closest to Top" to RESULT_TOP
+            )
         ),
         InputDefinition(
             "depth_limit",
@@ -73,16 +96,18 @@ class UiSelectorModule : BaseModule() {
             50,
             acceptsMagicVariable = true,
             hint = "默认 50，范围 1-200",
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_ui_selector_depth_limit_name,
+            hintStringRes = R.string.hint_vflow_interaction_ui_selector_depth_limit
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("element", "选中的控件", VTypeRegistry.SCREEN_ELEMENT.id),
-        OutputDefinition("all_elements", "所有控件", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.SCREEN_ELEMENT.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_success_name),
+        OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_found_name),
+        OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_count_name),
+        OutputDefinition("element", "选中的控件", VTypeRegistry.SCREEN_ELEMENT.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_element_name),
+        OutputDefinition("all_elements", "所有控件", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.SCREEN_ELEMENT.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_all_elements_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -120,7 +145,7 @@ class UiSelectorModule : BaseModule() {
 
         // 2. 解析参数
         val selectorString = context.getVariableAsString("selector", "")
-        val resultSelection = context.getVariableAsString("result_selection", "第一个")
+        val resultSelection = context.getVariableAsString("result_selection", RESULT_FIRST)
         // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
         val depthLimit = context.getVariableAsInt("depth_limit") ?: 50
 
@@ -478,8 +503,8 @@ class UiSelectorModule : BaseModule() {
         rootNode: AccessibilityNodeInfo
     ): VScreenElement {
         return when (strategy) {
-            "最后一个" -> elements.last()
-            "最接近中心" -> {
+            RESULT_LAST -> elements.last()
+            RESULT_CENTER -> {
                 val bounds = Rect()
                 rootNode.getBoundsInScreen(bounds)
                 val centerX = bounds.centerX()
@@ -490,7 +515,7 @@ class UiSelectorModule : BaseModule() {
                     dx * dx + dy * dy
                 } ?: elements.first()
             }
-            "最接近顶部" -> elements.minByOrNull { it.bounds.top } ?: elements.first()
+            RESULT_TOP -> elements.minByOrNull { it.bounds.top } ?: elements.first()
             else -> elements.first()
         }
     }

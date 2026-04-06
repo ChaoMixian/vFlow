@@ -19,6 +19,13 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.util.Calendar
 
 class GetAppUsageStatsModule : BaseModule() {
+    companion object {
+        private const val INTERVAL_TODAY = "today"
+        private const val INTERVAL_24H = "last_24_hours"
+        private const val INTERVAL_WEEK = "this_week"
+        private const val INTERVAL_MONTH = "this_month"
+        private const val INTERVAL_YEAR = "this_year"
+    }
 
     override val id = "vflow.system.get_usage_stats"
     override val metadata = ActionMetadata(
@@ -32,16 +39,38 @@ class GetAppUsageStatsModule : BaseModule() {
 
     override val requiredPermissions = listOf(PermissionManager.USAGE_STATS)
 
-    private val intervalOptions = listOf("今天", "过去24小时", "本周", "本月", "本年")
+    private val intervalOptions = listOf(INTERVAL_TODAY, INTERVAL_24H, INTERVAL_WEEK, INTERVAL_MONTH, INTERVAL_YEAR)
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "interval",
             name = "时间范围",
             staticType = ParameterType.ENUM,
-            defaultValue = "今天",
+            defaultValue = INTERVAL_TODAY,
             options = intervalOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_system_get_usage_stats_interval_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_system_get_usage_stats_interval_today,
+                R.string.option_vflow_system_get_usage_stats_interval_24h,
+                R.string.option_vflow_system_get_usage_stats_interval_week,
+                R.string.option_vflow_system_get_usage_stats_interval_month,
+                R.string.option_vflow_system_get_usage_stats_interval_year
+            ),
+            legacyValueMap = mapOf(
+                "今天" to INTERVAL_TODAY,
+                "Today" to INTERVAL_TODAY,
+                "过去24小时" to INTERVAL_24H,
+                "最近24小时" to INTERVAL_24H,
+                "Last 24 Hours" to INTERVAL_24H,
+                "本周" to INTERVAL_WEEK,
+                "This Week" to INTERVAL_WEEK,
+                "本月" to INTERVAL_MONTH,
+                "This Month" to INTERVAL_MONTH,
+                "本年" to INTERVAL_YEAR,
+                "今年" to INTERVAL_YEAR,
+                "This Year" to INTERVAL_YEAR
+            )
         ),
         InputDefinition(
             id = "max_results",
@@ -49,14 +78,15 @@ class GetAppUsageStatsModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 10.0, // 默认前10个
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
+            nameStringRes = R.string.param_vflow_system_get_usage_stats_max_results_name
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("stats_list", "统计列表", VTypeRegistry.LIST.id),
-        OutputDefinition("most_used_app", "最常使用的应用", VTypeRegistry.STRING.id), // 包名
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("stats_list", "统计列表", VTypeRegistry.LIST.id, nameStringRes = R.string.output_vflow_system_get_usage_stats_stats_list_name),
+        OutputDefinition("most_used_app", "最常使用的应用", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_system_get_usage_stats_most_used_app_name),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_system_get_usage_stats_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -72,7 +102,7 @@ class GetAppUsageStatsModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val intervalStr = context.getVariableAsString("interval", "今天")
+        val intervalStr = context.getVariableAsString("interval", INTERVAL_TODAY)
         // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
         val maxResults = context.getVariableAsInt("max_results") ?: 10
 
@@ -83,25 +113,25 @@ class GetAppUsageStatsModule : BaseModule() {
         val calendar = Calendar.getInstance()
         val endTime = calendar.timeInMillis
         val startTime = when (intervalStr) {
-            "今天" -> {
+            INTERVAL_TODAY -> {
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.set(Calendar.MINUTE, 0)
                 calendar.set(Calendar.SECOND, 0)
                 calendar.set(Calendar.MILLISECOND, 0)
                 calendar.timeInMillis
             }
-            "过去24小时" -> endTime - 24 * 60 * 60 * 1000
-            "本周" -> {
+            INTERVAL_24H -> endTime - 24 * 60 * 60 * 1000
+            INTERVAL_WEEK -> {
                 calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.timeInMillis
             }
-            "本月" -> {
+            INTERVAL_MONTH -> {
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.timeInMillis
             }
-            "本年" -> {
+            INTERVAL_YEAR -> {
                 calendar.set(Calendar.DAY_OF_YEAR, 1)
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.timeInMillis

@@ -50,7 +50,7 @@ class ShareModule : BaseModule() {
      * 增加 success 输出以保持统一。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_system_share_success_name)
     )
 
 

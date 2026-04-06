@@ -38,6 +38,12 @@ import kotlin.math.min
  * 在当前屏幕上查找与模板图片相似的区域，返回匹配位置的中心坐标。
  */
 class FindImageModule : BaseModule() {
+    companion object {
+        private const val THRESHOLD_90 = "threshold_90"
+        private const val THRESHOLD_80 = "threshold_80"
+        private const val THRESHOLD_70 = "threshold_70"
+        private const val THRESHOLD_60 = "threshold_60"
+    }
 
     override val id = "vflow.interaction.find_image"
     override val metadata = ActionMetadata(
@@ -51,7 +57,7 @@ class FindImageModule : BaseModule() {
 
     override val uiProvider: ModuleUIProvider = FindImageModuleUIProvider()
 
-    val thresholdOptions = listOf("90% (精确)", "80% (推荐)", "70% (宽松)", "60% (模糊)")
+    val thresholdOptions = listOf(THRESHOLD_90, THRESHOLD_80, THRESHOLD_70, THRESHOLD_60)
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return ShellManager.getRequiredPermissions(LogManager.applicationContext)
@@ -63,15 +69,33 @@ class FindImageModule : BaseModule() {
             name = "模板图片",
             staticType = ParameterType.STRING,
             defaultValue = "",
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_interaction_find_image_template_uri_name
         ),
         InputDefinition(
             id = "threshold",
             name = "匹配相似度",
             staticType = ParameterType.ENUM,
-            defaultValue = "80% (推荐)",
+            defaultValue = THRESHOLD_80,
             options = thresholdOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_interaction_find_image_threshold_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_interaction_find_image_threshold_90,
+                R.string.option_vflow_interaction_find_image_threshold_80,
+                R.string.option_vflow_interaction_find_image_threshold_70,
+                R.string.option_vflow_interaction_find_image_threshold_60
+            ),
+            legacyValueMap = mapOf(
+                "90% (精确)" to THRESHOLD_90,
+                "90% (Precise)" to THRESHOLD_90,
+                "80% (推荐)" to THRESHOLD_80,
+                "80% (Recommended)" to THRESHOLD_80,
+                "70% (宽松)" to THRESHOLD_70,
+                "70% (Loose)" to THRESHOLD_70,
+                "60% (模糊)" to THRESHOLD_60,
+                "60% (Fuzzy)" to THRESHOLD_60
+            )
         ),
         InputDefinition(
             id = "screenshot_uri",
@@ -81,7 +105,9 @@ class FindImageModule : BaseModule() {
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(VTypeRegistry.IMAGE.id),
             hint = "留空则使用自动截图，或连接图片变量",
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_find_image_screenshot_uri_name,
+            hintStringRes = R.string.hint_vflow_interaction_find_image_screenshot_uri
         )
     )
 
@@ -92,11 +118,12 @@ class FindImageModule : BaseModule() {
         )
 
         return listOf(
-            OutputDefinition("first_result", "最相似坐标", VTypeRegistry.COORDINATE.id, conditions),
+            OutputDefinition("first_result", "最相似坐标", VTypeRegistry.COORDINATE.id, conditions, nameStringRes = R.string.output_vflow_interaction_find_image_first_result_name),
             OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.COORDINATE.id,
-                conditionalOptions = conditions
+                conditionalOptions = conditions,
+                nameStringRes = R.string.output_vflow_interaction_find_image_all_results_name
             ),
-            OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions)
+            OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions, nameStringRes = R.string.output_vflow_interaction_find_image_count_name)
         )
     }
 
@@ -137,13 +164,13 @@ class FindImageModule : BaseModule() {
             return ExecutionResult.Failure("参数错误", "请先设置模板图片。")
         }
 
-        val thresholdStr = context.getVariableAsString("threshold", "80% (推荐)")
+        val thresholdStr = context.getVariableAsString("threshold", THRESHOLD_80)
         // 将用户阈值转换为内部阈值（允许的最大差异百分比）
         val maxDiffPercent = when {
-            thresholdStr.startsWith("90") -> 0.10  // 90%相似 = 最多10%差异
-            thresholdStr.startsWith("80") -> 0.20  // 80%相似 = 最多20%差异
-            thresholdStr.startsWith("70") -> 0.30  // 70%相似 = 最多30%差异
-            thresholdStr.startsWith("60") -> 0.40  // 60%相似 = 最多40%差异
+            thresholdStr == THRESHOLD_90 -> 0.10  // 90%相似 = 最多10%差异
+            thresholdStr == THRESHOLD_80 -> 0.20  // 80%相似 = 最多20%差异
+            thresholdStr == THRESHOLD_70 -> 0.30  // 70%相似 = 最多30%差异
+            thresholdStr == THRESHOLD_60 -> 0.40  // 60%相似 = 最多40%差异
             else -> 0.20
         }
 

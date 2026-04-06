@@ -98,9 +98,9 @@ class AgentModule : BaseModule() {
                 "Custom" to PROVIDER_CUSTOM
             )
         ),
-        InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-        InputDefinition("api_key", "API Key", ParameterType.STRING, ""),
-        InputDefinition("model", "模型", ParameterType.STRING, "glm-4.6v-flash"),
+        InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://dashscope.aliyuncs.com/compatible-mode/v1", nameStringRes = R.string.param_vflow_ai_agent_base_url_name),
+        InputDefinition("api_key", "API Key", ParameterType.STRING, "", nameStringRes = R.string.param_vflow_ai_agent_api_key_name),
+        InputDefinition("model", "模型", ParameterType.STRING, "glm-4.6v-flash", nameStringRes = R.string.param_vflow_ai_agent_model_name),
         InputDefinition("instruction", "指令", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.agent_instruction_label),
         InputDefinition("max_steps", "最大步数", ParameterType.NUMBER, 15.0, nameStringRes = R.string.agent_max_steps_label),
         InputDefinition(
@@ -122,12 +122,12 @@ class AgentModule : BaseModule() {
             ),
             isHidden = false
         ),
-        InputDefinition("tools", "工具配置", ParameterType.ANY, isHidden = true)
+        InputDefinition("tools", "工具配置", ParameterType.ANY, isHidden = true, nameStringRes = R.string.param_vflow_ai_agent_tools_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "最终结果", VTypeRegistry.STRING.id),
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("result", "最终结果", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_ai_agent_result_name),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_ai_agent_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

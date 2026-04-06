@@ -19,6 +19,11 @@ import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class BluetoothModule : BaseModule() {
+    companion object {
+        private const val STATE_ON = "on"
+        private const val STATE_OFF = "off"
+        private const val STATE_TOGGLE = "toggle"
+    }
 
     override val id = "vflow.system.bluetooth"
     override val metadata = ActionMetadata(
@@ -35,21 +40,35 @@ class BluetoothModule : BaseModule() {
         return listOf(PermissionManager.BLUETOOTH) + ShellManager.getRequiredPermissions(LogManager.applicationContext)
     }
 
-    private val stateOptions = listOf("开启", "关闭", "切换")
+    private val stateOptions = listOf(STATE_ON, STATE_OFF, STATE_TOGGLE)
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "state",
             name = "状态",
             staticType = ParameterType.ENUM,
-            defaultValue = "切换",
+            defaultValue = STATE_TOGGLE,
             options = stateOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_system_bluetooth_state_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_system_bluetooth_state_on,
+                R.string.option_vflow_system_bluetooth_state_off,
+                R.string.option_vflow_system_bluetooth_state_toggle
+            ),
+            legacyValueMap = mapOf(
+                "开启" to STATE_ON,
+                "On" to STATE_ON,
+                "关闭" to STATE_OFF,
+                "Off" to STATE_OFF,
+                "切换" to STATE_TOGGLE,
+                "Toggle" to STATE_TOGGLE
+            )
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_system_bluetooth_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -67,7 +86,7 @@ class BluetoothModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val appContext = context.applicationContext
-        val state = context.getVariableAsString("state", "切换")
+        val state = context.getVariableAsString("state", STATE_TOGGLE)
 
         val bluetoothManager = appContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
@@ -80,9 +99,9 @@ class BluetoothModule : BaseModule() {
 
         // 计算出目标状态
         val targetState = when (state) {
-            "开启" -> true
-            "关闭" -> false
-            "切换" -> !bluetoothAdapter.isEnabled
+            STATE_ON -> true
+            STATE_OFF -> false
+            STATE_TOGGLE -> !bluetoothAdapter.isEnabled
             else -> return ExecutionResult.Failure("参数错误", "无效的状态: $state")
         }
 

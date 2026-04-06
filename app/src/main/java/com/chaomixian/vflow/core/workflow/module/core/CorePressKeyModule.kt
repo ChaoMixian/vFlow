@@ -51,7 +51,7 @@ class CorePressKeyModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_press_key_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -72,8 +72,8 @@ class CorePressKeyModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
@@ -88,21 +88,27 @@ class CorePressKeyModule : BaseModule() {
                 is VNumber -> rawValue.raw.toString()
                 else -> rawValue?.toString() ?: "未知"
             }
-            return ExecutionResult.Failure("参数错误", "无法将 '$rawValueStr' 解析为有效的按键代码。")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_interaction_operit_param_error),
+                appContext.getString(R.string.error_vflow_core_press_key_invalid_code_detail, rawValueStr)
+            )
         }
 
         val keyName = KeyEvent.keyCodeToString(keyCodeInt)
 
-        onProgress(ProgressUpdate("正在使用 vFlow Core 发送按键: $keyName..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_press_key_sending, keyName)))
 
         // 3. 执行操作
         val success = VFlowCoreBridge.pressKey(keyCodeInt)
 
         return if (success) {
-            onProgress(ProgressUpdate("按键发送成功"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_press_key_success)))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 按键操作失败")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_shizuku_shell_command_failed),
+                appContext.getString(R.string.error_vflow_core_press_key_failed)
+            )
         }
     }
 }

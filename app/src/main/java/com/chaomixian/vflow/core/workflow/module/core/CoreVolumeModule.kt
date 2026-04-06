@@ -91,41 +91,41 @@ class CoreVolumeModule : BaseModule() {
         // 音乐音量
         InputDefinition("music_action", "音乐操作", ParameterType.ENUM, "keep",
             options = listOf("keep", "set", "mute", "unmute"),
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_music_action_name),
         InputDefinition("music_value", "音乐音量", ParameterType.NUMBER, 50,
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_music_value_name),
 
         // 通知音量
         InputDefinition("notification_action", "通知操作", ParameterType.ENUM, "keep",
             options = listOf("keep", "set", "mute", "unmute"),
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_notification_action_name),
         InputDefinition("notification_value", "通知音量", ParameterType.NUMBER, 50,
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_notification_value_name),
 
         // 铃声音量
         InputDefinition("ring_action", "铃声操作", ParameterType.ENUM, "keep",
             options = listOf("keep", "set", "mute", "unmute"),
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_ring_action_name),
         InputDefinition("ring_value", "铃声音量", ParameterType.NUMBER, 50,
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_ring_value_name),
 
         // 系统音量
         InputDefinition("system_action", "系统操作", ParameterType.ENUM, "keep",
             options = listOf("keep", "set", "mute", "unmute"),
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_system_action_name),
         InputDefinition("system_value", "系统音量", ParameterType.NUMBER, 50,
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_system_value_name),
 
         // 闹钟音量
         InputDefinition("alarm_action", "闹钟操作", ParameterType.ENUM, "keep",
             options = listOf("keep", "set", "mute", "unmute"),
-            acceptsMagicVariable = false, isHidden = true),
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_alarm_action_name),
         InputDefinition("alarm_value", "闹钟音量", ParameterType.NUMBER, 50,
-            acceptsMagicVariable = false, isHidden = true)
+            acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_core_volume_alarm_value_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_volume_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -166,8 +166,8 @@ class CoreVolumeModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
@@ -189,17 +189,17 @@ class CoreVolumeModule : BaseModule() {
                 "set" -> {
                     val percent = step.parameters["${stream}_value"] as? Number ?: 50
                     val actualVolume = percentToActualVolume(stream, percent.toInt())
-                    onProgress(ProgressUpdate("正在设置${streamName}音量为 $percent%..."))
+                    onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_volume_setting, streamName, percent.toInt())))
                     val result = VFlowCoreBridge.setVolume(streamType, actualVolume)
                     result.first
                 }
                 "mute" -> {
-                    onProgress(ProgressUpdate("正在静音${streamName}..."))
+                    onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_volume_muting, streamName)))
                     val result = VFlowCoreBridge.muteVolume(streamType, true)
                     result.first
                 }
                 "unmute" -> {
-                    onProgress(ProgressUpdate("正在取消静音${streamName}..."))
+                    onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_volume_unmuting, streamName)))
                     val result = VFlowCoreBridge.muteVolume(streamType, false)
                     result.first
                 }
@@ -223,16 +223,13 @@ class CoreVolumeModule : BaseModule() {
         }
 
         return if (allSuccess) {
-            val summary = if (results.isEmpty()) "音量控制" else results.joinToString("、")
+            val summary = if (results.isEmpty()) appContext.getString(R.string.module_vflow_core_volume_name) else results.joinToString("、")
             onProgress(ProgressUpdate(summary))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
             ExecutionResult.Failure(
-                "执行失败",
-                "部分音量操作失败。请检查：\n" +
-                "1. 是否开启了勿扰模式（DND）？\n" +
-                "2. 是否授予了 Shizuku 或 Root 权限？\n" +
-                "3. vFlow Core 是否正常运行？"
+                appContext.getString(R.string.error_vflow_shizuku_shell_command_failed),
+                appContext.getString(R.string.error_vflow_core_volume_partial_failed)
             )
         }
     }

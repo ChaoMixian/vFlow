@@ -48,8 +48,8 @@ class CoreSetClipboardModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("text", "设置的文本内容", VTypeRegistry.STRING.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_set_clipboard_success_name),
+        OutputDefinition("text", "设置的文本内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_core_set_clipboard_text_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -75,31 +75,36 @@ class CoreSetClipboardModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
         // 2. 获取参数
-        val step = context.allSteps[context.currentStepIndex]
         val text = context.getVariableAsString("text")
 
         if (text == null) {
-            return ExecutionResult.Failure("参数错误", "文本内容不能为空")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_interaction_input_text_param_error),
+                appContext.getString(R.string.error_vflow_core_input_text_empty)
+            )
         }
 
         // 3. 执行操作
-        onProgress(ProgressUpdate("正在使用 vFlow Core 设置剪贴板..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_set_clipboard_setting)))
         val success = VFlowCoreBridge.setClipboard(text)
 
         return if (success) {
-            onProgress(ProgressUpdate("剪贴板设置成功"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_set_clipboard_success)))
             ExecutionResult.Success(mapOf(
                 "success" to VBoolean(true),
                 "text" to VString(text)
             ))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 剪贴板设置失败")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_shizuku_shell_command_failed),
+                appContext.getString(R.string.error_vflow_core_set_clipboard_failed)
+            )
         }
     }
 }

@@ -84,8 +84,8 @@ class ScreenOperationModule : BaseModule() {
             nameStringRes = R.string.screen_op_type_label,
             acceptsMagicVariable = false
         ),
-        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.SCREEN_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id)),
-        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.SCREEN_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id), isHidden = false),
+        InputDefinition("target", "目标/起点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.SCREEN_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id), nameStringRes = R.string.param_vflow_interaction_screen_operation_target_name),
+        InputDefinition("target_end", "滑动终点", ParameterType.STRING, "", acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.SCREEN_ELEMENT.id, VTypeRegistry.COORDINATE.id, VTypeRegistry.STRING.id), isHidden = false, nameStringRes = R.string.param_vflow_interaction_screen_operation_target_end_name),
         InputDefinition("duration", "持续时间(ms)", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), isHidden = false, nameStringRes = R.string.screen_op_duration_label),
         InputDefinition(
             "execution_mode",
@@ -109,11 +109,11 @@ class ScreenOperationModule : BaseModule() {
             acceptsMagicVariable = false,
             isHidden = false
         ),
-        InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true)
+        InputDefinition("show_advanced", "显示高级选项", ParameterType.BOOLEAN, false, acceptsMagicVariable = false, isHidden = true, nameStringRes = R.string.param_vflow_interaction_screen_operation_show_advanced_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_screen_operation_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

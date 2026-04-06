@@ -55,18 +55,18 @@ class CoreVolumeStateModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("musicLevel", "音乐音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("notificationLevel", "通知音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("ringLevel", "铃声音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("systemLevel", "系统音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("alarmLevel", "闹钟音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("callLevel", "通话音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("musicMax", "音乐最大音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("notificationMax", "通知最大音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("ringMax", "铃声最大音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("systemMax", "系统最大音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("alarmMax", "闹钟最大音量", VTypeRegistry.NUMBER.id),
-        OutputDefinition("callMax", "通话最大音量", VTypeRegistry.NUMBER.id)
+        OutputDefinition("musicLevel", "音乐音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_music_level_name),
+        OutputDefinition("notificationLevel", "通知音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_notification_level_name),
+        OutputDefinition("ringLevel", "铃声音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_ring_level_name),
+        OutputDefinition("systemLevel", "系统音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_system_level_name),
+        OutputDefinition("alarmLevel", "闹钟音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_alarm_level_name),
+        OutputDefinition("callLevel", "通话音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_call_level_name),
+        OutputDefinition("musicMax", "音乐最大音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_music_max_name),
+        OutputDefinition("notificationMax", "通知最大音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_notification_max_name),
+        OutputDefinition("ringMax", "铃声最大音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_ring_max_name),
+        OutputDefinition("systemMax", "系统最大音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_system_max_name),
+        OutputDefinition("alarmMax", "闹钟最大音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_alarm_max_name),
+        OutputDefinition("callMax", "通话最大音量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_volume_call_max_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -83,17 +83,17 @@ class CoreVolumeStateModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
         // 2. 读取所有音量
-        onProgress(ProgressUpdate("正在读取音量状态..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_volume_state_reading)))
         val volumes = VFlowCoreBridge.getAllVolumes()
 
         return if (volumes != null) {
-            onProgress(ProgressUpdate("成功读取音量状态"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_volume_state_success)))
             ExecutionResult.Success(mapOf(
                 "success" to VBoolean(true),
                 "musicLevel" to VNumber(actualVolumeToPercent("music", volumes.musicCurrent).toLong()),
@@ -110,7 +110,7 @@ class CoreVolumeStateModule : BaseModule() {
                 "callMax" to VNumber(100)
             ))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 读取音量失败")
+            ExecutionResult.Failure(appContext.getString(R.string.error_vflow_shizuku_shell_command_failed), appContext.getString(R.string.error_vflow_core_volume_state_failed))
         }
     }
 }

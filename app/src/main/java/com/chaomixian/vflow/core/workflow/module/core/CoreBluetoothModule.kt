@@ -19,6 +19,11 @@ import com.chaomixian.vflow.permissions.PermissionManager
  * 使用 vFlow Core 控制蓝牙开关状态（开启/关闭/切换）。
  */
 class CoreBluetoothModule : BaseModule() {
+    companion object {
+        private const val ACTION_ENABLE = "enable"
+        private const val ACTION_DISABLE = "disable"
+        private const val ACTION_TOGGLE = "toggle"
+    }
 
     override val id = "vflow.core.bluetooth"
     override val metadata = ActionMetadata(
@@ -34,23 +39,36 @@ class CoreBluetoothModule : BaseModule() {
         return listOf(PermissionManager.CORE)
     }
 
-    private val actionOptions = listOf("开启", "关闭", "切换")
+    private val actionOptions = listOf(ACTION_ENABLE, ACTION_DISABLE, ACTION_TOGGLE)
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "action",
             name = "操作",
             staticType = ParameterType.ENUM,
-            defaultValue = "切换",
+            defaultValue = ACTION_TOGGLE,
             options = actionOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_core_bluetooth_enable,
+                R.string.option_vflow_core_bluetooth_disable,
+                R.string.option_vflow_core_bluetooth_toggle
+            ),
+            legacyValueMap = mapOf(
+                "开启" to ACTION_ENABLE,
+                "Enable" to ACTION_ENABLE,
+                "关闭" to ACTION_DISABLE,
+                "Disable" to ACTION_DISABLE,
+                "切换" to ACTION_TOGGLE,
+                "Toggle" to ACTION_TOGGLE
+            ),
             acceptsMagicVariable = false,
             nameStringRes = R.string.param_vflow_core_bluetooth_action_name
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("enabled", "切换后的状态", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_bluetooth_success_name),
+        OutputDefinition("enabled", "切换后的状态", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_bluetooth_enabled_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -72,46 +90,55 @@ class CoreBluetoothModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
         // 2. 获取参数
-        val step = context.allSteps[context.currentStepIndex]
-        val action = step.parameters["action"]?.toString() ?: "切换"
+        val action = context.getVariableAsString("action", ACTION_TOGGLE)
 
         // 3. 执行操作
         val (success, newState) = when (action) {
-            "开启" -> {
-                onProgress(ProgressUpdate("正在使用 vFlow Core 开启蓝牙..."))
+            ACTION_ENABLE -> {
+                onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_bluetooth_enabling)))
                 val result = VFlowCoreBridge.setBluetoothEnabled(true)
                 Pair(result, result)
             }
-            "关闭" -> {
-                onProgress(ProgressUpdate("正在使用 vFlow Core 关闭蓝牙..."))
+            ACTION_DISABLE -> {
+                onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_bluetooth_disabling)))
                 val result = VFlowCoreBridge.setBluetoothEnabled(false)
                 Pair(result, !result) // 如果关闭成功，状态为false
             }
-            "切换" -> {
-                onProgress(ProgressUpdate("正在使用 vFlow Core 切换蓝牙..."))
+            ACTION_TOGGLE -> {
+                onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_bluetooth_toggling)))
                 val newState = VFlowCoreBridge.toggleBluetooth()
                 Pair(true, newState)
             }
             else -> {
-                return ExecutionResult.Failure("参数错误", "未知的操作类型: $action")
+                return ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_interaction_operit_param_error),
+                    appContext.getString(R.string.error_vflow_core_bluetooth_invalid_action, action)
+                )
             }
         }
 
         return if (success) {
-            val stateText = if (newState) "已开启" else "已关闭"
-            onProgress(ProgressUpdate("蓝牙$stateText"))
+            val stateText = if (newState) {
+                appContext.getString(R.string.msg_vflow_core_bluetooth_state_enabled)
+            } else {
+                appContext.getString(R.string.msg_vflow_core_bluetooth_state_disabled)
+            }
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_bluetooth_state_changed, stateText)))
             ExecutionResult.Success(mapOf(
                 "success" to VBoolean(true),
                 "enabled" to VBoolean(newState)
             ))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 蓝牙操作失败")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_shizuku_shell_command_failed),
+                appContext.getString(R.string.error_vflow_core_bluetooth_failed)
+            )
         }
     }
 }

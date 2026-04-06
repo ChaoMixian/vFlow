@@ -44,9 +44,9 @@ class UiButtonModule : BaseUiComponentModule() {
     )
 
     override fun getInputs() = listOf(
-        InputDefinition("key", "ID (事件源)", ParameterType.STRING, "btn1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_key_event_source),
-        InputDefinition("text", "按钮文字", ParameterType.STRING, "确定", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_button_text),
-        InputDefinition("trigger_event", "仅触发事件 (不关闭窗口)", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_trigger_event)
+        InputDefinition("key", "ID (事件源)", ParameterType.STRING, "btn1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_component_button_key_name),
+        InputDefinition("text", "按钮文字", ParameterType.STRING, "确定", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_component_button_text_name),
+        InputDefinition("trigger_event", "仅触发事件 (不关闭窗口)", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_component_button_trigger_event_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =

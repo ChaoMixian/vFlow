@@ -48,7 +48,7 @@ class CoreInputTextModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_input_text_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -69,8 +69,8 @@ class CoreInputTextModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
@@ -78,19 +78,25 @@ class CoreInputTextModule : BaseModule() {
         val text = context.getVariableAsString("text")
 
         if (text == null) {
-            return ExecutionResult.Failure("参数错误", "文本内容不能为空")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_interaction_input_text_param_error),
+                appContext.getString(R.string.error_vflow_core_input_text_empty)
+            )
         }
 
-        onProgress(ProgressUpdate("正在使用 vFlow Core 输入文本..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_input_text_inputting)))
 
         // 3. 执行操作
         val success = VFlowCoreBridge.inputText(text)
 
         return if (success) {
-            onProgress(ProgressUpdate("文本输入成功"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_input_text_success)))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 文本输入失败")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_shizuku_shell_command_failed),
+                appContext.getString(R.string.error_vflow_core_input_text_failed)
+            )
         }
     }
 }

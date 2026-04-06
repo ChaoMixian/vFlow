@@ -34,6 +34,14 @@ import java.io.IOException
  * 允许用户发送 GET, POST 等网络请求，并处理响应。
  */
 class HttpRequestModule : BaseModule() {
+    companion object {
+        private const val BODY_TYPE_NONE = "none"
+        private const val BODY_TYPE_JSON = "json"
+        private const val BODY_TYPE_FORM = "form"
+        private const val BODY_TYPE_RAW = "raw"
+        private const val BODY_TYPE_FILE = "file"
+    }
+
     override val id = "vflow.network.http_request"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_network_http_request_name,
@@ -49,17 +57,17 @@ class HttpRequestModule : BaseModule() {
 
     // 定义支持的HTTP方法和请求体类型
     val methodOptions = listOf("GET", "POST", "PUT", "DELETE", "PATCH")
-    val bodyTypeOptions = listOf("无", "JSON", "表单", "原始文本", "文件")
+    val bodyTypeOptions = listOf(BODY_TYPE_NONE, BODY_TYPE_JSON, BODY_TYPE_FORM, BODY_TYPE_RAW, BODY_TYPE_FILE)
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("url", "URL", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("method", "方法", ParameterType.ENUM, "GET", options = methodOptions, acceptsMagicVariable = false),
-        InputDefinition("headers", "请求头", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true),
-        InputDefinition("query_params", "查询参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true),
-        InputDefinition("body_type", "请求体类型", ParameterType.ENUM, "无", options = bodyTypeOptions, acceptsMagicVariable = false),
-        InputDefinition("body", "请求体", ParameterType.ANY, acceptsMagicVariable = true, supportsRichText = true),
-        InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)),
-        InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true)
+        InputDefinition("url", "URL", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_network_http_request_url_name),
+        InputDefinition("method", "方法", ParameterType.ENUM, "GET", options = methodOptions, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_network_http_request_method_name),
+        InputDefinition("headers", "请求头", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_network_http_request_headers_name),
+        InputDefinition("query_params", "查询参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_network_http_request_query_params_name),
+        InputDefinition("body_type", "请求体类型", ParameterType.ENUM, BODY_TYPE_NONE, options = bodyTypeOptions, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_network_http_request_body_type_name, optionsStringRes = listOf(R.string.option_vflow_network_http_request_body_none, R.string.option_vflow_network_http_request_body_json, R.string.option_vflow_network_http_request_body_form, R.string.option_vflow_network_http_request_body_raw, R.string.option_vflow_network_http_request_body_file), legacyValueMap = mapOf("无" to BODY_TYPE_NONE, "None" to BODY_TYPE_NONE, "JSON" to BODY_TYPE_JSON, "表单" to BODY_TYPE_FORM, "Form" to BODY_TYPE_FORM, "原始文本" to BODY_TYPE_RAW, "Raw Text" to BODY_TYPE_RAW, "文件" to BODY_TYPE_FILE, "File" to BODY_TYPE_FILE)),
+        InputDefinition("body", "请求体", ParameterType.ANY, acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_network_http_request_body_name),
+        InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_network_http_request_timeout_name),
+        InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true, nameStringRes = R.string.param_vflow_network_http_request_show_advanced_name)
     )
 
     /**
@@ -69,13 +77,13 @@ class HttpRequestModule : BaseModule() {
      */
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val baseInputs = getInputs()
-        val bodyType = step?.parameters?.get("body_type") as? String ?: "无"
+        val bodyType = step?.parameters?.get("body_type") as? String ?: BODY_TYPE_NONE
 
         return baseInputs.map { inputDef ->
             if (inputDef.id == "body") {
                 // 根据请求体类型动态设置接受的变量类型
                 val acceptedTypes = when (bodyType) {
-                    "文件" -> setOf(VTypeRegistry.IMAGE.id)  // 只允许图片
+                    BODY_TYPE_FILE -> setOf(VTypeRegistry.IMAGE.id)  // 只允许图片
                     else -> emptySet()  // 允许任何类型
                 }
                 inputDef.copy(acceptedMagicVariableTypes = acceptedTypes)
@@ -86,10 +94,10 @@ class HttpRequestModule : BaseModule() {
     }
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("response_body", "响应内容", VTypeRegistry.STRING.id),
-        OutputDefinition("status_code", "状态码", VTypeRegistry.NUMBER.id),
-        OutputDefinition("response_headers", "响应头", VTypeRegistry.DICTIONARY.id),
-        OutputDefinition("error", "错误信息", VTypeRegistry.STRING.id)
+        OutputDefinition("response_body", "响应内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_network_http_request_response_body_name),
+        OutputDefinition("status_code", "状态码", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_network_http_request_status_code_name),
+        OutputDefinition("response_headers", "响应头", VTypeRegistry.DICTIONARY.id, nameStringRes = R.string.output_vflow_network_http_request_response_headers_name),
+        OutputDefinition("error", "错误信息", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_network_http_request_error_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -139,15 +147,15 @@ class HttpRequestModule : BaseModule() {
                 val queryParams = resolveMap(rawQueryParams, context)
 
                 // 解析 Body
-                val bodyType = context.getVariableAsString("body_type", "无")
+                val bodyType = context.getVariableAsString("body_type", BODY_TYPE_NONE)
                 val bodyDataRaw = context.getVariable("body")
 
                 val bodyData: Any? = when (bodyType) {
-                    "原始文本" -> {
+                    BODY_TYPE_RAW -> {
                         // 原始文本：直接解析富文本字符串
                         VariableResolver.resolve(bodyDataRaw?.asString() ?: "", context)
                     }
-                    "表单" -> {
+                    BODY_TYPE_FORM -> {
                         // 表单：必须使用字符串转换（表单编码要求）
                         val mapData = (bodyDataRaw as? VDictionary)?.raw
                             ?: (bodyDataRaw as? Map<*, *>)
@@ -158,7 +166,7 @@ class HttpRequestModule : BaseModule() {
                             mapData
                         }
                     }
-                    "JSON" -> {
+                    BODY_TYPE_JSON -> {
                         // JSON：支持三种输入：
                         // 1. Map 输入（来自变量引用）- 递归解析保留类型
                         // 2. VObject 输入（直接插入的魔法变量）- 提取raw值并递归解析
@@ -185,7 +193,7 @@ class HttpRequestModule : BaseModule() {
                             }
                         }
                     }
-                    "文件" -> {
+                    BODY_TYPE_FILE -> {
                         // 文件：不解析变量，直接传递原始文本（稍后在 createRequestBody 中处理）
                         // 这样可以保留 {{step1.image}}{{step2.image}} 格式的变量引用
                         bodyDataRaw?.asString() ?: ""

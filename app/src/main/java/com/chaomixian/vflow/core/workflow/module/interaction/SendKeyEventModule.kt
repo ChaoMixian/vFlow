@@ -20,6 +20,14 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  * 模拟物理或虚拟按键的按下事件，如回车、返回、删除等。
  */
 class SendKeyEventModule : BaseModule() {
+    companion object {
+        private const val ACTION_BACK = "back"
+        private const val ACTION_HOME = "home"
+        private const val ACTION_RECENTS = "recents"
+        private const val ACTION_NOTIFICATIONS = "notifications"
+        private const val ACTION_QUICK_SETTINGS = "quick_settings"
+        private const val ACTION_POWER_DIALOG = "power_dialog"
+    }
 
     override val id = "vflow.device.send_key_event"
     override val metadata = ActionMetadata(
@@ -36,12 +44,12 @@ class SendKeyEventModule : BaseModule() {
 
     // 定义支持的按键及其对应的系统常量
     private val keyOptions = mapOf(
-        "返回" to AccessibilityService.GLOBAL_ACTION_BACK,
-        "主屏幕" to AccessibilityService.GLOBAL_ACTION_HOME,
-        "最近任务" to AccessibilityService.GLOBAL_ACTION_RECENTS,
-        "通知中心" to AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS,
-        "快速设置" to AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS,
-        "电源菜单" to AccessibilityService.GLOBAL_ACTION_POWER_DIALOG
+        ACTION_BACK to AccessibilityService.GLOBAL_ACTION_BACK,
+        ACTION_HOME to AccessibilityService.GLOBAL_ACTION_HOME,
+        ACTION_RECENTS to AccessibilityService.GLOBAL_ACTION_RECENTS,
+        ACTION_NOTIFICATIONS to AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS,
+        ACTION_QUICK_SETTINGS to AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS,
+        ACTION_POWER_DIALOG to AccessibilityService.GLOBAL_ACTION_POWER_DIALOG
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -49,14 +57,37 @@ class SendKeyEventModule : BaseModule() {
             id = "key_action",
             name = "全局操作", // 名称更新
             staticType = ParameterType.ENUM,
-            defaultValue = "返回",
+            defaultValue = ACTION_BACK,
             options = keyOptions.keys.toList(),
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_device_send_key_event_action_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_device_send_key_event_back,
+                R.string.option_vflow_device_send_key_event_home,
+                R.string.option_vflow_device_send_key_event_recents,
+                R.string.option_vflow_device_send_key_event_notifications,
+                R.string.option_vflow_device_send_key_event_quick_settings,
+                R.string.option_vflow_device_send_key_event_power_dialog
+            ),
+            legacyValueMap = mapOf(
+                "返回" to ACTION_BACK,
+                "Back" to ACTION_BACK,
+                "主屏幕" to ACTION_HOME,
+                "Home" to ACTION_HOME,
+                "最近任务" to ACTION_RECENTS,
+                "Recents" to ACTION_RECENTS,
+                "通知中心" to ACTION_NOTIFICATIONS,
+                "Notifications" to ACTION_NOTIFICATIONS,
+                "快速设置" to ACTION_QUICK_SETTINGS,
+                "Quick Settings" to ACTION_QUICK_SETTINGS,
+                "电源菜单" to ACTION_POWER_DIALOG,
+                "Power Dialog" to ACTION_POWER_DIALOG
+            )
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_device_send_key_event_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -78,7 +109,7 @@ class SendKeyEventModule : BaseModule() {
         val service = context.services.get(VFlowAccessibilityService::class)
             ?: return ExecutionResult.Failure("服务未连接", "执行此操作需要无障碍服务。")
 
-        val keyName = context.getVariableAsString("key_action", "返回")
+        val keyName = context.getVariableAsString("key_action", ACTION_BACK)
         val action = keyOptions[keyName]
             ?: return ExecutionResult.Failure("参数错误", "无效的操作名称: $keyName")
 

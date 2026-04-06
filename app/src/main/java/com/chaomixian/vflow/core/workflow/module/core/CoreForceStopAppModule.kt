@@ -48,7 +48,7 @@ class CoreForceStopAppModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_force_stop_app_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -69,8 +69,8 @@ class CoreForceStopAppModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
@@ -78,19 +78,25 @@ class CoreForceStopAppModule : BaseModule() {
         val packageName = context.getVariableAsString("package_name")
 
         if (packageName.isNullOrBlank()) {
-            return ExecutionResult.Failure("参数错误", "应用包名不能为空")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_core_force_stop_app_param_error),
+                appContext.getString(R.string.error_vflow_system_close_app_empty_package)
+            )
         }
 
-        onProgress(ProgressUpdate("正在使用 vFlow Core 强制停止应用: $packageName..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_force_stop_app_stopping)))
 
         // 3. 执行操作
         val success = VFlowCoreBridge.forceStopPackage(packageName)
 
         return if (success) {
-            onProgress(ProgressUpdate("应用已强制停止"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_force_stop_app_stopped)))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 强制停止应用失败")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_shizuku_shell_command_failed),
+                appContext.getString(R.string.error_vflow_core_force_stop_app_execution_failed, packageName)
+            )
         }
     }
 }

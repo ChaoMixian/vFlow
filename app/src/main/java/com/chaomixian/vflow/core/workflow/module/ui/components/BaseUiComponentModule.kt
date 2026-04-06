@@ -40,8 +40,8 @@ abstract class BaseUiComponentModule : BaseModule() {
     abstract fun createUiElement(context: ExecutionContext, step: ActionStep): UiElement
 
     override fun getOutputs(step: ActionStep?) = listOf(
-        OutputDefinition("component", "组件对象", "vflow.type.uicomponent"),
-        OutputDefinition("id", "组件ID", VTypeRegistry.STRING.id)
+        OutputDefinition("component", "组件对象", "vflow.type.uicomponent", nameStringRes = R.string.output_vflow_ui_component_base_component_name),
+        OutputDefinition("id", "组件ID", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_ui_component_base_id_name)
     )
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {

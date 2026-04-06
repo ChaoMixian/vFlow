@@ -28,6 +28,9 @@ class CoreScreenOperationModule : BaseModule() {
 
     companion object {
         private const val TAG = "CoreScreenOperationModule"
+        private const val OP_CLICK = "click"
+        private const val OP_LONG_PRESS = "long_press"
+        private const val OP_SWIPE = "swipe"
     }
 
     override val id = "vflow.core.screen_operation"
@@ -46,15 +49,28 @@ class CoreScreenOperationModule : BaseModule() {
 
     override val uiProvider: ModuleUIProvider = CoreScreenOperationModuleUIProvider()
 
-    private val operationTypeOptions = listOf("点击", "长按", "滑动")
+    private val operationTypeOptions = listOf(OP_CLICK, OP_LONG_PRESS, OP_SWIPE)
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "operation_type",
             name = "操作类型",  // Fallback
             staticType = ParameterType.ENUM,
-            defaultValue = "点击",
+            defaultValue = OP_CLICK,
             options = operationTypeOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_core_screen_operation_click,
+                R.string.option_vflow_core_screen_operation_long_press,
+                R.string.option_vflow_core_screen_operation_swipe
+            ),
+            legacyValueMap = mapOf(
+                "点击" to OP_CLICK,
+                "Tap" to OP_CLICK,
+                "长按" to OP_LONG_PRESS,
+                "Long Press" to OP_LONG_PRESS,
+                "滑动" to OP_SWIPE,
+                "Swipe" to OP_SWIPE
+            ),
             acceptsMagicVariable = false,
             nameStringRes = R.string.param_vflow_core_operation_type
         ),
@@ -88,12 +104,12 @@ class CoreScreenOperationModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_screen_operation_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
-        val type = step.parameters["operation_type"] as? String ?: "点击"
+        val type = step.parameters["operation_type"] as? String ?: OP_CLICK
 
         val targetPill = PillUtil.createPillFromParam(
             step.parameters["target"],
@@ -101,7 +117,7 @@ class CoreScreenOperationModule : BaseModule() {
         )
 
         return when (type) {
-            "滑动" -> {
+            OP_SWIPE -> {
                 val endPill = PillUtil.createPillFromParam(
                     step.parameters["target_end"],
                     inputs.find { it.id == "target_end" }
@@ -121,7 +137,7 @@ class CoreScreenOperationModule : BaseModule() {
                     "ms"
                 )
             }
-            "长按" -> {
+            OP_LONG_PRESS -> {
                 val durPill = PillUtil.createPillFromParam(
                     step.parameters["duration"],
                     inputs.find { it.id == "duration" }
@@ -155,19 +171,18 @@ class CoreScreenOperationModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
-        val step = context.allSteps[context.currentStepIndex]
-        val opType = step.parameters["operation_type"]?.toString() ?: "点击"
+        val opType = context.getVariableAsString("operation_type", OP_CLICK)
 
         return when (opType) {
-            "点击" -> executeClick(context, onProgress)
-            "长按" -> executeLongPress(context, onProgress)
-            "滑动" -> executeSwipe(context, onProgress)
-            else -> ExecutionResult.Failure("参数错误", "未知的操作类型: $opType")
+            OP_CLICK -> executeClick(context, onProgress)
+            OP_LONG_PRESS -> executeLongPress(context, onProgress)
+            OP_SWIPE -> executeSwipe(context, onProgress)
+            else -> ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_invalid_type, opType))
         }
     }
 
@@ -179,21 +194,21 @@ class CoreScreenOperationModule : BaseModule() {
         if (target == null) {
             val value = context.getVariable("target")
             return if (value is VNull) {
-                ExecutionResult.Failure("参数错误", "目标位置为空。请确保已设置坐标或连接了上游模块的坐标输出。")
+                ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_target_empty))
             } else {
-                ExecutionResult.Failure("参数错误", "目标位置格式错误。需要 Coordinate 类型的坐标或 \"x,y\" 格式的字符串。实际类型: ${value.javaClass.simpleName}")
+                ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_target_invalid))
             }
         }
 
-        onProgress(ProgressUpdate("正在使用 vFlow Core 点击坐标 (${target.x}, ${target.y})..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_screen_operation_clicking, target.x, target.y)))
 
         val success = VFlowCoreBridge.performClick(target.x, target.y)
 
         return if (success) {
-            onProgress(ProgressUpdate("点击成功"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_screen_operation_click_success)))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 点击操作失败")
+            ExecutionResult.Failure(appContext.getString(R.string.error_vflow_shizuku_shell_command_failed), appContext.getString(R.string.error_vflow_core_screen_operation_click_failed))
         }
     }
 
@@ -205,15 +220,15 @@ class CoreScreenOperationModule : BaseModule() {
         if (target == null) {
             val value = context.getVariable("target")
             return if (value is VNull) {
-                ExecutionResult.Failure("参数错误", "目标位置为空。请确保已设置坐标或连接了上游模块的坐标输出。")
+                ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_target_empty))
             } else {
-                ExecutionResult.Failure("参数错误", "目标位置格式错误。需要 Coordinate 类型的坐标或 \"x,y\" 格式的字符串。实际类型: ${value.javaClass.simpleName}")
+                ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_target_invalid))
             }
         }
 
         val duration = getDuration(context, 1000L)
 
-        onProgress(ProgressUpdate("正在使用 vFlow Core 长按坐标 (${target.x}, ${target.y}) ${duration}ms..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_screen_operation_long_pressing, target.x, target.y, duration)))
 
         // 使用 swipe 实现长按：起点=终点
         val success = VFlowCoreBridge.performSwipe(
@@ -223,10 +238,10 @@ class CoreScreenOperationModule : BaseModule() {
         )
 
         return if (success) {
-            onProgress(ProgressUpdate("长按成功"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_screen_operation_long_press_success)))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 长按操作失败")
+            ExecutionResult.Failure(appContext.getString(R.string.error_vflow_shizuku_shell_command_failed), appContext.getString(R.string.error_vflow_core_screen_operation_long_press_failed))
         }
     }
 
@@ -238,9 +253,9 @@ class CoreScreenOperationModule : BaseModule() {
         if (start == null) {
             val value = context.getVariable("target")
             return if (value is VNull) {
-                ExecutionResult.Failure("参数错误", "起点坐标为空。请确保已设置坐标或连接了上游模块的坐标输出。")
+                ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_target_empty))
             } else {
-                ExecutionResult.Failure("参数错误", "起点坐标格式错误。需要 Coordinate 类型的坐标或 \"x,y\" 格式的字符串。实际类型: ${value.javaClass.simpleName}")
+                ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_target_invalid))
             }
         }
 
@@ -248,15 +263,15 @@ class CoreScreenOperationModule : BaseModule() {
         if (end == null) {
             val value = context.getVariable("target_end")
             return if (value is VNull) {
-                ExecutionResult.Failure("参数错误", "终点坐标为空。请确保已设置坐标或连接了上游模块的坐标输出。")
+                ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_target_empty))
             } else {
-                ExecutionResult.Failure("参数错误", "终点坐标格式错误。需要 Coordinate 类型的坐标或 \"x,y\" 格式的字符串。实际类型: ${value.javaClass.simpleName}")
+                ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_core_screen_operation_target_invalid))
             }
         }
 
         val duration = getDuration(context, 500L)
 
-        onProgress(ProgressUpdate("正在使用 vFlow Core 执行滑动: (${start.x}, ${start.y}) → (${end.x}, ${end.y}) ${duration}ms..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_screen_operation_swiping, start.x, start.y, end.x, end.y, duration)))
 
         val success = VFlowCoreBridge.performSwipe(
             start.x, start.y,
@@ -265,10 +280,10 @@ class CoreScreenOperationModule : BaseModule() {
         )
 
         return if (success) {
-            onProgress(ProgressUpdate("滑动成功"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_screen_operation_swipe_success)))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
-            ExecutionResult.Failure("执行失败", "vFlow Core 滑动操作失败")
+            ExecutionResult.Failure(appContext.getString(R.string.error_vflow_shizuku_shell_command_failed), appContext.getString(R.string.error_vflow_core_screen_operation_swipe_failed))
         }
     }
 

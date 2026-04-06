@@ -38,8 +38,8 @@ class UiTextModule : BaseUiComponentModule() {
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("content")
 
     override fun getInputs() = listOf(
-        InputDefinition("content", "内容", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_ui_content),
-        InputDefinition("key", "ID (可选)", ParameterType.STRING, "", isHidden = true, nameStringRes = R.string.param_vflow_ui_content_optional)
+        InputDefinition("content", "内容", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_ui_component_text_content_name),
+        InputDefinition("key", "ID (可选)", ParameterType.STRING, "", isHidden = true, nameStringRes = R.string.param_vflow_ui_component_text_key_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

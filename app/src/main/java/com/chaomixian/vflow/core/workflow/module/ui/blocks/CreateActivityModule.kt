@@ -64,8 +64,8 @@ class CreateActivityModule : BaseBlockModule() {
     override val pairingId = ACTIVITY_PAIRING
 
     override fun getInputs() = listOf(
-        InputDefinition("title", "标题", ParameterType.STRING, "用户界面", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_title),
-        InputDefinition("destroy_on_exit", "退出随即销毁页面", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_destroy_on_exit)
+        InputDefinition("title", "标题", ParameterType.STRING, "用户界面", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_activity_start_title_name),
+        InputDefinition("destroy_on_exit", "退出随即销毁页面", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_activity_start_destroy_on_exit_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =

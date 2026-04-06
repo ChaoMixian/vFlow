@@ -28,13 +28,13 @@ class FindNotificationModule : BaseModule() {
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATION_LISTENER_SERVICE)
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("app_filter", "应用包名", ParameterType.STRING),
-        InputDefinition("title_filter", "标题包含", ParameterType.STRING),
-        InputDefinition("content_filter", "内容包含", ParameterType.STRING)
+        InputDefinition("app_filter", "应用包名", ParameterType.STRING, nameStringRes = R.string.param_vflow_notification_find_app_filter_name),
+        InputDefinition("title_filter", "标题包含", ParameterType.STRING, nameStringRes = R.string.param_vflow_notification_find_title_filter_name),
+        InputDefinition("content_filter", "内容包含", ParameterType.STRING, nameStringRes = R.string.param_vflow_notification_find_content_filter_name)
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("notifications", "找到的通知", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.NOTIFICATION.id)
+        OutputDefinition("notifications", "找到的通知", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.NOTIFICATION.id, nameStringRes = R.string.output_vflow_notification_find_notifications_name)
     )
 
     /**

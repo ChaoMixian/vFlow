@@ -66,11 +66,11 @@ class CreateFloatWindowModule : BaseBlockModule() {
     override val pairingId = FLOAT_WIN_PAIRING
 
     override fun getInputs() = listOf(
-        InputDefinition("title", "标题", ParameterType.STRING, "", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_title),
-        InputDefinition("width", "宽度 (dp)", ParameterType.NUMBER, 300, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_width),
-        InputDefinition("height", "高度 (dp)", ParameterType.NUMBER, 400, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_height),
-        InputDefinition("alpha", "透明度 (0.0-1.0)", ParameterType.NUMBER, 0.95, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_alpha),
-        InputDefinition("destroy_on_exit", "退出随即销毁页面", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_destroy_on_exit)
+        InputDefinition("title", "标题", ParameterType.STRING, "", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_float_start_title_name),
+        InputDefinition("width", "宽度 (dp)", ParameterType.NUMBER, 300, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_float_start_width_name),
+        InputDefinition("height", "高度 (dp)", ParameterType.NUMBER, 400, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_float_start_height_name),
+        InputDefinition("alpha", "透明度 (0.0-1.0)", ParameterType.NUMBER, 0.95, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_float_start_alpha_name),
+        InputDefinition("destroy_on_exit", "退出随即销毁页面", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_float_start_destroy_on_exit_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =

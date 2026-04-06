@@ -66,8 +66,8 @@ class AIModule : BaseModule() {
                 "Custom" to PROVIDER_CUSTOM
             )
         ),
-        InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://api.openai.com/v1"),
-        InputDefinition("api_key", "API Key", ParameterType.STRING, ""),
+        InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://api.openai.com/v1", nameStringRes = R.string.param_vflow_network_ai_base_url),
+        InputDefinition("api_key", "API Key", ParameterType.STRING, "", nameStringRes = R.string.param_vflow_network_ai_api_key),
         InputDefinition("model", "模型", ParameterType.STRING, "gpt-3.5-turbo", nameStringRes = R.string.param_vflow_network_ai_model),
         InputDefinition("prompt", "提示词", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_network_ai_prompt),
         InputDefinition("system_prompt", "系统提示词", ParameterType.STRING, "You are a helpful assistant.", nameStringRes = R.string.param_vflow_network_ai_system_prompt),
@@ -76,8 +76,8 @@ class AIModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", "回答内容", VTypeRegistry.STRING.id),
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("result", "回答内容", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_ai_completion_result_name),
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_ai_completion_success_name)
     )
 
     // 摘要显示逻辑

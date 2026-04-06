@@ -40,10 +40,10 @@ class UiSwitchModule : BaseUiComponentModule() {
     )
 
     override fun getInputs() = listOf(
-        InputDefinition("key", "ID (变量名)", ParameterType.STRING, "switch1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_key_variable),
-        InputDefinition("label", "标签", ParameterType.STRING, "选项", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_label),
-        InputDefinition("default_value", "默认开启", ParameterType.BOOLEAN, false, nameStringRes = R.string.param_vflow_ui_switch_default),
-        InputDefinition("trigger_event", "切换时触发事件", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_switch_trigger)
+        InputDefinition("key", "ID (变量名)", ParameterType.STRING, "switch1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_component_switch_key_name),
+        InputDefinition("label", "标签", ParameterType.STRING, "选项", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_component_switch_label_name),
+        InputDefinition("default_value", "默认开启", ParameterType.BOOLEAN, false, nameStringRes = R.string.param_vflow_ui_component_switch_default_value_name),
+        InputDefinition("trigger_event", "切换时触发事件", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_component_switch_trigger_event_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =

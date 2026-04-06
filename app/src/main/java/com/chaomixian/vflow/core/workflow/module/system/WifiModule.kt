@@ -20,6 +20,11 @@ import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class WifiModule : BaseModule() {
+    companion object {
+        private const val STATE_ON = "on"
+        private const val STATE_OFF = "off"
+        private const val STATE_TOGGLE = "toggle"
+    }
 
     override val id = "vflow.system.wifi"
     override val metadata = ActionMetadata(
@@ -31,7 +36,7 @@ class WifiModule : BaseModule() {
         category = "应用与系统"
     )
 
-    private val stateOptions = listOf("开启", "关闭", "切换")
+    private val stateOptions = listOf(STATE_ON, STATE_OFF, STATE_TOGGLE)
 
     // 动态声明权限：如果使用 Shell (Root/Shizuku) 则需要相应权限
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
@@ -45,14 +50,27 @@ class WifiModule : BaseModule() {
             nameStringRes = R.string.param_vflow_system_wifi_state_name,
             name = "状态",  // Fallback
             staticType = ParameterType.ENUM,
-            defaultValue = "切换",
+            defaultValue = STATE_TOGGLE,
             options = stateOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            optionsStringRes = listOf(
+                R.string.option_vflow_system_wifi_state_on,
+                R.string.option_vflow_system_wifi_state_off,
+                R.string.option_vflow_system_wifi_state_toggle
+            ),
+            legacyValueMap = mapOf(
+                "开启" to STATE_ON,
+                "On" to STATE_ON,
+                "关闭" to STATE_OFF,
+                "Off" to STATE_OFF,
+                "切换" to STATE_TOGGLE,
+                "Toggle" to STATE_TOGGLE
+            )
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_system_wifi_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -71,16 +89,16 @@ class WifiModule : BaseModule() {
     ): ExecutionResult {
         val appContext = context.applicationContext
         // 现在 variables 是 Map<String, VObject>，使用 getVariableAsString 获取
-        val state = context.getVariableAsString("state", "切换")
+        val state = context.getVariableAsString("state", STATE_TOGGLE)
         onProgress(ProgressUpdate("正在尝试 $state Wi-Fi..."))
 
         // 1. 优先尝试 Shell (Root 或 Shizuku)
         // 这样即使在 Android 10+ 也能静默操作
         val wifiManager = appContext.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val targetState = when (state) {
-            "开启" -> true
-            "关闭" -> false
-            "切换" -> !wifiManager.isWifiEnabled
+            STATE_ON -> true
+            STATE_OFF -> false
+            STATE_TOGGLE -> !wifiManager.isWifiEnabled
             else -> return ExecutionResult.Failure("参数错误", "无效的状态: $state")
         }
         val command = if (targetState) "svc wifi enable" else "svc wifi disable"

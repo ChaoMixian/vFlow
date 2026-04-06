@@ -31,12 +31,13 @@ class RemoveNotificationModule : BaseModule() {
             name = "目标通知",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NotificationObject.TYPE_NAME, VTypeRegistry.LIST.id)
+            acceptedMagicVariableTypes = setOf(NotificationObject.TYPE_NAME, VTypeRegistry.LIST.id),
+            nameStringRes = R.string.param_vflow_notification_remove_target_name
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_notification_remove_success_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

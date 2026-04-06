@@ -25,6 +25,15 @@ import kotlin.coroutines.resumeWithException
  * 2. 触发 Operit 工作流 (WORKFLOW_TRIGGER)
  */
 class OperitModule : BaseModule() {
+    companion object {
+        private const val MODE_CHAT = "chat"
+        private const val MODE_WORKFLOW = "workflow"
+        const val OPERIT_PACKAGE = "com.ai.assistance.operit"
+        const val ACTION_EXTERNAL_CHAT = "com.ai.assistance.operit.EXTERNAL_CHAT"
+        const val ACTION_EXTERNAL_CHAT_RESULT = "com.ai.assistance.operit.EXTERNAL_CHAT_RESULT"
+        const val ACTION_TRIGGER_WORKFLOW = "com.ai.assistance.operit.TRIGGER_WORKFLOW"
+        const val WORKFLOW_TASKER_RECEIVER = "$OPERIT_PACKAGE/.integrations.tasker.WorkflowTaskerReceiver"
+    }
 
     override val id = "vflow.interaction.operit"
     override val metadata = ActionMetadata(
@@ -36,18 +45,9 @@ class OperitModule : BaseModule() {
         category = "界面交互"
     )
 
-    private val modes = listOf("发送消息", "触发工作流")
+    private val modes = listOf(MODE_CHAT, MODE_WORKFLOW)
 
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("message")
-
-    // Operit 包名常量
-    companion object {
-        const val OPERIT_PACKAGE = "com.ai.assistance.operit"
-        const val ACTION_EXTERNAL_CHAT = "com.ai.assistance.operit.EXTERNAL_CHAT"
-        const val ACTION_EXTERNAL_CHAT_RESULT = "com.ai.assistance.operit.EXTERNAL_CHAT_RESULT"
-        const val ACTION_TRIGGER_WORKFLOW = "com.ai.assistance.operit.TRIGGER_WORKFLOW"
-        const val WORKFLOW_TASKER_RECEIVER = "$OPERIT_PACKAGE/.integrations.tasker.WorkflowTaskerReceiver"
-    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         // 通用参数
@@ -55,9 +55,20 @@ class OperitModule : BaseModule() {
             id = "mode",
             name = "交互模式",
             staticType = ParameterType.ENUM,
-            defaultValue = "发送消息",
+            defaultValue = MODE_CHAT,
             options = modes,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_interaction_operit_mode_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_interaction_operit_mode_chat,
+                R.string.option_vflow_interaction_operit_mode_workflow
+            ),
+            legacyValueMap = mapOf(
+                "发送消息" to MODE_CHAT,
+                "Send Message" to MODE_CHAT,
+                "触发工作流" to MODE_WORKFLOW,
+                "Trigger Workflow" to MODE_WORKFLOW
+            )
         ),
 
         // EXTERNAL_CHAT 模式参数
@@ -67,7 +78,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            supportsRichText = true
+            supportsRichText = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_message_name
         ),
         InputDefinition(
             id = "request_id",
@@ -75,7 +87,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_request_id_name
         ),
         InputDefinition(
             id = "create_new_chat",
@@ -83,7 +96,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.BOOLEAN,
             defaultValue = false,
             acceptsMagicVariable = false,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_create_new_chat_name
         ),
         InputDefinition(
             id = "group",
@@ -91,7 +105,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_group_name
         ),
         InputDefinition(
             id = "chat_id",
@@ -99,7 +114,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = "",
             acceptsMagicVariable = true,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_chat_id_name
         ),
         InputDefinition(
             id = "show_floating",
@@ -107,7 +123,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.BOOLEAN,
             defaultValue = true,
             acceptsMagicVariable = false,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_show_floating_name
         ),
         InputDefinition(
             id = "auto_exit_after_ms",
@@ -115,7 +132,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = -1.0,
             acceptsMagicVariable = false,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_auto_exit_after_ms_name
         ),
         InputDefinition(
             id = "stop_after",
@@ -123,7 +141,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.BOOLEAN,
             defaultValue = false,
             acceptsMagicVariable = false,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_stop_after_name
         ),
 
         // WORKFLOW_TRIGGER 模式参数
@@ -133,7 +152,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.STRING,
             defaultValue = ACTION_TRIGGER_WORKFLOW,
             acceptsMagicVariable = true,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_workflow_action_name
         ),
         InputDefinition(
             id = "workflow_extras",
@@ -141,7 +161,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.ANY,
             defaultValue = emptyMap<String, Any?>(),
             acceptsMagicVariable = true,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_workflow_extras_name
         ),
 
         // 回传配置
@@ -151,7 +172,8 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.BOOLEAN,
             defaultValue = true,
             acceptsMagicVariable = false,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_wait_for_result_name
         ),
         InputDefinition(
             id = "timeout_ms",
@@ -159,25 +181,26 @@ class OperitModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 30000.0,
             acceptsMagicVariable = false,
-            isFolded = true
+            isFolded = true,
+            nameStringRes = R.string.param_vflow_interaction_operit_timeout_ms_name
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("ai_response", "AI回复", VTypeRegistry.STRING.id),
-        OutputDefinition("chat_id", "对话ID", VTypeRegistry.STRING.id),
-        OutputDefinition("error", "错误信息", VTypeRegistry.STRING.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_operit_success_name),
+        OutputDefinition("ai_response", "AI回复", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_operit_ai_response_name),
+        OutputDefinition("chat_id", "对话ID", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_operit_chat_id_name),
+        OutputDefinition("error", "错误信息", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_operit_error_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val mode = step.parameters["mode"] as? String ?: "发送消息"
+        val mode = step.parameters["mode"] as? String ?: MODE_CHAT
 
         // 使用 RichTextUIProvider 时，getSummary 只返回简单标题
         // 富文本预览会自动显示在下方
         return when (mode) {
-            "发送消息" -> context.getString(R.string.summary_vflow_interaction_operit_send)
-            "触发工作流" -> {
+            MODE_CHAT -> context.getString(R.string.summary_vflow_interaction_operit_send)
+            MODE_WORKFLOW -> {
                 val action = step.parameters["workflow_action"] as? String ?: ACTION_TRIGGER_WORKFLOW
                 val actionPill = PillUtil.createPillFromParam(action, getInputs().find { it.id == "workflow_action" })
                 PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_interaction_operit_trigger), actionPill)
@@ -190,11 +213,11 @@ class OperitModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.getVariableAsString("mode", "发送消息")
+        val mode = context.getVariableAsString("mode", MODE_CHAT)
 
         return when (mode) {
-            "发送消息" -> executeExternalChat(context, onProgress)
-            "触发工作流" -> executeWorkflowTrigger(context, onProgress)
+            MODE_CHAT -> executeExternalChat(context, onProgress)
+            MODE_WORKFLOW -> executeWorkflowTrigger(context, onProgress)
             else -> ExecutionResult.Failure("参数错误", "不支持的交互模式: $mode")
         }
     }

@@ -41,11 +41,11 @@ class UiInputModule : BaseUiComponentModule() {
     )
 
     override fun getInputs() = listOf(
-        InputDefinition("key", "ID (变量名)", ParameterType.STRING, "input1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_key_variable),
-        InputDefinition("label", "标签", ParameterType.STRING, "请输入", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_label),
-        InputDefinition("hint", "提示词", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_hint),
-        InputDefinition("default_value", "默认值", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_default_value),
-        InputDefinition("trigger_event", "输入时触发事件", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_input_trigger)
+        InputDefinition("key", "ID (变量名)", ParameterType.STRING, "input1", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_ui_component_input_key_name),
+        InputDefinition("label", "标签", ParameterType.STRING, "请输入", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_component_input_label_name),
+        InputDefinition("hint", "提示词", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_component_input_hint_name),
+        InputDefinition("default_value", "默认值", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_ui_component_input_default_value_name),
+        InputDefinition("trigger_event", "输入时触发事件", ParameterType.BOOLEAN, true, nameStringRes = R.string.param_vflow_ui_component_input_trigger_event_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =

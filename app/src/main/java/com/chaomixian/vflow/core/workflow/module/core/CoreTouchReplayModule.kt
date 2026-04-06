@@ -45,13 +45,14 @@ class CoreTouchReplayModule : BaseModule() {
             name = "回放速度",
             staticType = ParameterType.NUMBER,
             defaultValue = 1.0,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            nameStringRes = R.string.param_vflow_core_touch_replay_speed_name
         )
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id),
-        OutputDefinition("event_count", "事件数量", VTypeRegistry.NUMBER.id)
+        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_core_touch_replay_success_name),
+        OutputDefinition("event_count", "事件数量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_core_touch_replay_event_count_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -81,35 +82,44 @@ class CoreTouchReplayModule : BaseModule() {
         }
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。"
+                appContext.getString(R.string.error_vflow_core_touch_replay_not_connected),
+                appContext.getString(R.string.error_vflow_core_touch_replay_service_not_running)
             )
         }
 
         // 2. 获取参数
         val recordingData = context.getVariableAsString("recording_data", "")
         if (recordingData.isNullOrEmpty()) {
-            return ExecutionResult.Failure("未录制", "请先在编辑器中录制触摸操作")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_core_touch_replay_not_recorded),
+                appContext.getString(R.string.error_vflow_core_touch_replay_no_data)
+            )
         }
 
         // 现在 variables 是 Map<String, VObject>，使用 getVariableAsNumber 获取
         val speed = context.getVariableAsNumber("speed")?.toFloat() ?: 1.0f
         val data = TouchRecordingData.fromJson(recordingData)
-            ?: return ExecutionResult.Failure("数据错误", "录制数据已损坏")
+            ?: return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_core_touch_replay_data_error),
+                appContext.getString(R.string.error_vflow_core_touch_replay_corrupted)
+            )
 
-        onProgress(ProgressUpdate("正在回放 ${data.events.size} 个触摸事件..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_touch_replay_replaying, data.events.size)))
 
         // 3. 调用 VFlowCoreBridge 回放
         val success = VFlowCoreBridge.replayTouchSequence(recordingData, speed)
 
         return if (success) {
-            onProgress(ProgressUpdate("回放完成"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_touch_replay_completed)))
             ExecutionResult.Success(mapOf(
                 "success" to VBoolean(true),
                 "event_count" to VNumber(data.events.size.toDouble())
             ))
         } else {
-            ExecutionResult.Failure("回放失败", "触摸回放执行失败")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_core_touch_replay_failed),
+                appContext.getString(R.string.error_vflow_core_touch_replay_execution_failed)
+            )
         }
     }
 }
