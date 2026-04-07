@@ -1529,7 +1529,10 @@
     <string name="error_vflow_core_screen_operation_target_empty">Target position is empty. Please ensure coordinates are set or connected to upstream module\'s coordinate output.</string>
     <string name="error_vflow_core_screen_operation_target_invalid">Target position format is invalid. Requires Coordinate type or \"x,y\" format string.</string>
     <string name="error_vflow_core_service_not_running">vFlow Core service is not running. Please ensure Shizuku or Root permissions are granted.</string>
+    <string name="error_vflow_core_shell_command_invalid_param_title">Invalid Parameter</string>
     <string name="error_vflow_core_shell_command_empty">Command to execute cannot be empty.</string>
+    <string name="error_vflow_core_shell_command_permission_denied">Insufficient Privileges</string>
+    <string name="error_vflow_core_shell_command_root_required">This action requires Root permission, but vFlow Core is currently running with Shell privileges.</string>
     <string name="error_vflow_core_set_clipboard_failed">vFlow Core failed to set clipboard</string>
     <string name="error_vflow_core_press_key_failed">vFlow Core key operation failed</string>
     <string name="error_vflow_core_bluetooth_failed">vFlow Core Bluetooth operation failed</string>
@@ -1741,7 +1744,8 @@
     <string name="summary_vflow_core_set_clipboard">vFlow Core Set Clipboard: %s</string>
     <string name="summary_vflow_core_set_clipboard_suffix">Set clipboard</string>
 
-    <string name="summary_vflow_core_shell_command">Execute command </string>
+    <string name="summary_vflow_core_shell_command">Use </string>
+    <string name="summary_vflow_core_shell_command_connector"> to run </string>
     <string name="summary_vflow_core_shell_command_suffix">Execute command</string>
 
     <string name="summary_vflow_core_sleep_screen">Turn Off Screen</string>

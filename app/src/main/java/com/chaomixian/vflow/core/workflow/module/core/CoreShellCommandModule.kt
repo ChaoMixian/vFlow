@@ -21,6 +21,19 @@ import kotlinx.coroutines.withContext
  * 完全基于vFlow Core实现，支持Shell和Root权限级别。
  */
 class CoreShellCommandModule : BaseModule() {
+    companion object {
+        private const val MODE_AUTO = "auto"
+        private const val MODE_SHELL = "shell"
+        private const val MODE_ROOT = "root"
+
+        private fun normalizeMode(value: String?): String {
+            return when (value) {
+                MODE_ROOT, "Root权限", "Root Permission", "Root" -> MODE_ROOT
+                MODE_SHELL, "Shell权限", "Shell Permission", "Shell" -> MODE_SHELL
+                else -> MODE_AUTO
+            }
+        }
+    }
 
     override val id = "vflow.core.shell_command"
     override val metadata = ActionMetadata(
@@ -33,13 +46,13 @@ class CoreShellCommandModule : BaseModule() {
         categoryId = "core"
     )
 
-    private val modeOptions = listOf("Shell权限", "Root权限", "自动")
+    private val modeOptions = listOf(MODE_SHELL, MODE_ROOT, MODE_AUTO)
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
-        val mode = step?.parameters?.get("mode") as? String ?: "自动"
+        val mode = normalizeMode(step?.parameters?.get("mode") as? String)
         return when (mode) {
-            "Root权限" -> listOf(PermissionManager.CORE_ROOT)
-            "Shell权限" -> listOf(PermissionManager.CORE)
+            MODE_ROOT -> listOf(PermissionManager.CORE_ROOT)
+            MODE_SHELL -> listOf(PermissionManager.CORE)
             // 自动模式下，根据用户的默认 shell 偏好设置决定
             else -> {
                 val prefs = com.chaomixian.vflow.core.logging.LogManager.applicationContext.getSharedPreferences("vFlowPrefs", android.content.Context.MODE_PRIVATE)
@@ -58,9 +71,24 @@ class CoreShellCommandModule : BaseModule() {
             id = "mode",
             name = "执行方式",
             staticType = ParameterType.ENUM,
-            defaultValue = "自动",
+            defaultValue = MODE_AUTO,
             options = modeOptions,
             acceptsMagicVariable = false,
+            optionsStringRes = listOf(
+                R.string.option_vflow_core_shell_command_mode_shell,
+                R.string.option_vflow_core_shell_command_mode_root,
+                R.string.option_vflow_core_shell_command_mode_auto
+            ),
+            legacyValueMap = mapOf(
+                "Shell权限" to MODE_SHELL,
+                "Shell Permission" to MODE_SHELL,
+                "Shell" to MODE_SHELL,
+                "Root权限" to MODE_ROOT,
+                "Root Permission" to MODE_ROOT,
+                "Root" to MODE_ROOT,
+                "自动" to MODE_AUTO,
+                "Auto" to MODE_AUTO
+            ),
             nameStringRes = R.string.param_vflow_core_shell_command_mode_name
         ),
         InputDefinition(
@@ -89,54 +117,69 @@ class CoreShellCommandModule : BaseModule() {
             step.parameters["command"],
             getInputs().find { it.id == "command" },
         )
-        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_shell_command), modePill, "执行", commandPill)
+        return PillUtil.buildSpannable(
+            context,
+            context.getString(R.string.summary_vflow_core_shell_command),
+            modePill,
+            context.getString(R.string.summary_vflow_core_shell_command_connector),
+            commandPill
+        )
     }
 
     override suspend fun execute(
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val modeStr = context.getVariableAsString("mode", "自动")
+        val modeStr = normalizeMode(context.getVariableAsString("mode", MODE_AUTO))
         val rawCommand = context.getVariableAsString("command", "")
         val command = VariableResolver.resolve(rawCommand, context)
+        val appContext = context.applicationContext
+        val modeLabel = when (modeStr) {
+            MODE_ROOT -> appContext.getString(R.string.option_vflow_core_shell_command_mode_root)
+            MODE_SHELL -> appContext.getString(R.string.option_vflow_core_shell_command_mode_shell)
+            else -> appContext.getString(R.string.option_vflow_core_shell_command_mode_auto)
+        }
 
         if (command.isBlank()) {
-            return ExecutionResult.Failure("参数错误", "要执行的命令不能为空。")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_core_shell_command_invalid_param_title),
+                appContext.getString(R.string.error_vflow_core_shell_command_empty)
+            )
         }
 
         // 1. 确保 Core 已连接
         val connected = withContext(Dispatchers.IO) {
-            VFlowCoreBridge.connect(context.applicationContext)
+            VFlowCoreBridge.connect(appContext)
         }
 
         if (!connected) {
             return ExecutionResult.Failure(
-                "Core 未连接",
-                "vFlow Core 服务未运行。请确保已启动 vFlow Core。"
+                appContext.getString(R.string.error_vflow_core_not_connected),
+                appContext.getString(R.string.error_vflow_core_service_not_running)
             )
         }
 
         // 2. 确定执行模式
         val execMode = when (modeStr) {
-            "Root权限" -> {
+            MODE_ROOT -> {
                 // Root 权限：需要检查 Core 是否以 Root 运行
                 if (VFlowCoreBridge.privilegeMode != VFlowCoreBridge.PrivilegeMode.ROOT) {
                     return ExecutionResult.Failure(
-                        "权限不足",
-                        "此操作需要 Root 权限，但当前 Core 以 Shell 权限运行。"
+                        appContext.getString(R.string.error_vflow_core_shell_command_permission_denied),
+                        appContext.getString(R.string.error_vflow_core_shell_command_root_required)
                     )
                 }
                 ExecMode.ROOT
             }
-            "Shell权限" -> ExecMode.SHELL
-            "自动" -> ExecMode.AUTO
+            MODE_SHELL -> ExecMode.SHELL
+            MODE_AUTO -> ExecMode.AUTO
             else -> ExecMode.AUTO
         }
 
         // 3. 执行命令
-        onProgress(ProgressUpdate("正在通过 vFlow Core ($modeStr) 执行: $command"))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_core_shell_command_executing, modeLabel, command)))
 
-        val result = VFlowCoreBridge.exec(command, execMode, context.applicationContext)
+        val result = VFlowCoreBridge.exec(command, execMode, appContext)
 
         // 4. 返回结果
         return if (result.isBlank()) {

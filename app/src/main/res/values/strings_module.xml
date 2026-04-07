@@ -788,7 +788,7 @@
     <string name="module_vflow_interaction_ui_selector_desc">使用 GKD selector 语法查找屏幕控件</string>
     <string name="module_vflow_snippet_find_until_name">查找直到</string>
     <string name="module_vflow_snippet_find_until_desc">在屏幕上循环查找指定的文本，直到找到为止</string>
-    <string name="category_core">核心 (Beta)</string>
+    <string name="category_core">Core (Beta)</string>
     <string name="category_file">文件</string>
     <string name="category_shizuku">Shizuku</string>
     <string name="error_vflow_ai_completion_cannot_extract">无法从响应中提取回答：%s</string>
@@ -1422,7 +1422,8 @@
     <string name="summary_vflow_core_capture_screen">截屏 </string>
     <string name="summary_vflow_core_capture_screen_suffix">截屏</string>
 
-    <string name="summary_vflow_core_shell_command">执行命令 </string>
+    <string name="summary_vflow_core_shell_command">使用</string>
+    <string name="summary_vflow_core_shell_command_connector">执行命令</string>
     <string name="summary_vflow_core_shell_command_suffix">执行命令</string>
 
     <string name="summary_vflow_core_press_key">发送按键: </string>
@@ -1487,7 +1488,10 @@
     <string name="error_vflow_core_capture_screen_failed">截屏失败</string>
     <string name="error_vflow_core_not_connected">Core 未连接</string>
     <string name="error_vflow_core_service_not_running">vFlow Core 服务未运行。请确保已授予 Shizuku 或 Root 权限。</string>
+    <string name="error_vflow_core_shell_command_invalid_param_title">参数错误</string>
     <string name="error_vflow_core_shell_command_empty">要执行的命令不能为空。</string>
+    <string name="error_vflow_core_shell_command_permission_denied">权限不足</string>
+    <string name="error_vflow_core_shell_command_root_required">此操作需要 Root 权限，但当前 Core 以 Shell 权限运行。</string>
     <string name="error_vflow_core_press_key_invalid_code">按键代码必须为数字</string>
     <string name="error_vflow_core_press_key_invalid_code_detail">无法将 %1$s 解析为有效的按键代码。</string>
     <string name="error_vflow_core_input_text_empty">文本内容不能为空</string>
