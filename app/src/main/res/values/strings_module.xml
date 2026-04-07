@@ -1377,6 +1377,27 @@
     <string name="param_vflow_system_capture_screen_mode_name">模式</string>
     <string name="param_vflow_system_capture_screen_region_name">区域 (可选)</string>
     <string name="output_vflow_system_capture_screen_image_name">截图</string>
+    <string name="hint_vflow_system_capture_screen_region_input">区域坐标 (left,top,right,bottom)</string>
+    <string name="dialog_vflow_system_capture_screen_region_title">设置截屏区域</string>
+    <string name="dialog_vflow_system_capture_screen_region_message">请输入区域坐标\n例如：100,100,500,600</string>
+    <string name="text_vflow_system_capture_screen_region">区域: %1$s</string>
+    <string name="toast_vflow_system_capture_screen_overlay_permission_required">需要悬浮窗权限才能选择区域</string>
+    <string name="toast_vflow_system_capture_screen_shell_permission_required">需要 Shizuku 或 Root 权限才能截图</string>
+    <string name="toast_vflow_system_capture_screen_region_select_failed">区域选择失败: %1$s</string>
+    <string name="error_vflow_system_capture_screen_region_format">格式错误，请输入4个数字，用逗号分隔</string>
+    <string name="error_vflow_system_capture_screen_invalid_param_title">参数错误</string>
+    <string name="error_vflow_system_capture_screen_invalid_mode">无效的截屏模式</string>
+    <string name="error_vflow_system_capture_screen_crop_failed">裁剪失败</string>
+    <string name="error_vflow_system_capture_screen_crop_failed_message">无法裁剪图片</string>
+    <string name="error_vflow_system_capture_screen_failed">截屏失败</string>
+    <string name="error_vflow_system_capture_screen_failed_message">无法获取屏幕图像，请检查权限或重试</string>
+    <string name="msg_vflow_system_capture_screen_preparing">准备截屏 (模式: %1$s)...</string>
+    <string name="msg_vflow_system_capture_screen_cropping_region">裁剪区域: %1$s</string>
+    <string name="msg_vflow_system_capture_screen_success">截屏成功</string>
+    <string name="msg_vflow_system_capture_screen_auto_shell">自动模式：尝试 Shell 截图...</string>
+    <string name="msg_vflow_system_capture_screen_auto_media_projection">自动模式：回落到 MediaProjection...</string>
+    <string name="msg_vflow_system_capture_screen_request_permission">正在请求截屏权限...</string>
+    <string name="msg_vflow_system_capture_screen_capturing">正在捕获屏幕...</string>
 
     <!-- Core Module Options -->
     <string name="option_vflow_core_bluetooth_enable">开启</string>

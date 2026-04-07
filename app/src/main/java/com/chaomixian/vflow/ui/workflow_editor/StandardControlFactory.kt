@@ -527,7 +527,14 @@ object StandardControlFactory {
         return when (view) {
             is TextInputLayout -> view.editText?.text?.toString()
             is SwitchCompat -> view.isChecked
-            is Spinner -> view.selectedItem?.toString()
+            is Spinner -> {
+                val selectedIndex = view.selectedItemPosition
+                if (selectedIndex in inputDef.options.indices) {
+                    inputDef.options[selectedIndex]
+                } else {
+                    view.tag as? String ?: view.selectedItem?.toString()
+                }
+            }
             is Slider -> {
                 when (inputDef.staticType) {
                     ParameterType.NUMBER -> view.value.toInt()

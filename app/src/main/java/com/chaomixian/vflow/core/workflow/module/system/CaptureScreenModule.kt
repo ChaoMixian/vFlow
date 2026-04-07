@@ -20,6 +20,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.complex.VImage
@@ -39,6 +40,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class CaptureScreenModule : BaseModule() {
+    companion object {
+        private const val TAG = "CaptureScreenModule"
+        private const val MODE_AUTO = "auto"
+        private const val MODE_SCREENCAP = "screencap"
+    }
 
     override val id = "vflow.system.capture_screen"
     override val uiProvider = CaptureScreenModuleUIProvider()
@@ -52,7 +58,7 @@ class CaptureScreenModule : BaseModule() {
         descriptionStringRes = R.string.module_vflow_system_capture_screen_desc
     )
 
-    private val modeOptions = listOf("自动", "screencap") // 暂时移除MediaProjection入口
+    private val modeOptions = listOf(MODE_AUTO, MODE_SCREENCAP)
 
     // 动态权限声明
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
@@ -64,9 +70,18 @@ class CaptureScreenModule : BaseModule() {
             id = "mode",
             name = "模式",
             staticType = ParameterType.ENUM,
-            defaultValue = "自动",
+            defaultValue = MODE_AUTO,
             options = modeOptions,
             acceptsMagicVariable = false,
+            optionsStringRes = listOf(
+                R.string.option_vflow_system_capture_screen_mode_auto,
+                R.string.option_vflow_system_capture_screen_mode_screencap
+            ),
+            legacyValueMap = mapOf(
+                "自动" to MODE_AUTO,
+                "Auto" to MODE_AUTO,
+                "screencap" to MODE_SCREENCAP
+            ),
             nameStringRes = R.string.param_vflow_system_capture_screen_mode_name
         ),
         InputDefinition(
@@ -96,16 +111,28 @@ class CaptureScreenModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.getVariableAsString("mode", "自动")
-        val regionStr = context.getVariableAsString("region", "")
         val appContext = context.applicationContext
+        val localizedContext = getLocalizedContext(appContext)
+        val mode = normalizeMode(context.getVariableAsString("mode", MODE_AUTO))
+            ?: return ExecutionResult.Failure(
+                localizedContext.getString(R.string.error_vflow_system_capture_screen_invalid_param_title),
+                localizedContext.getString(R.string.error_vflow_system_capture_screen_invalid_mode)
+            )
+        val regionStr = context.getVariableAsString("region", "")
 
-        onProgress(ProgressUpdate("准备截屏 (模式: $mode)..."))
+        onProgress(
+            ProgressUpdate(
+                localizedContext.getString(
+                    R.string.msg_vflow_system_capture_screen_preparing,
+                    getModeDisplayName(localizedContext, mode)
+                )
+            )
+        )
 
         val imageUri: Uri? = when (mode) {
-            "自动" -> performAutomaticCapture(context, onProgress)
-            "screencap" -> performShellCapture(appContext, context.workDir, onProgress)
-            else -> return ExecutionResult.Failure("参数错误", "无效的截屏模式")
+            MODE_AUTO -> performAutomaticCapture(context, onProgress, localizedContext)
+            MODE_SCREENCAP -> performShellCapture(appContext, context.workDir, onProgress)
+            else -> null
         }
 
         if (imageUri != null) {
@@ -113,7 +140,14 @@ class CaptureScreenModule : BaseModule() {
             val finalUri = if (regionStr.isNotEmpty()) {
                 val region = parseRegion(regionStr)
                 if (region != null) {
-                    onProgress(ProgressUpdate("裁剪区域: $regionStr"))
+                    onProgress(
+                        ProgressUpdate(
+                            localizedContext.getString(
+                                R.string.msg_vflow_system_capture_screen_cropping_region,
+                                regionStr
+                            )
+                        )
+                    )
                     cropImageRegion(appContext, context.workDir, imageUri, region)
                 } else {
                     imageUri
@@ -123,13 +157,19 @@ class CaptureScreenModule : BaseModule() {
             }
 
             if (finalUri != null) {
-                onProgress(ProgressUpdate("截屏成功"))
+                onProgress(ProgressUpdate(localizedContext.getString(R.string.msg_vflow_system_capture_screen_success)))
                 return ExecutionResult.Success(mapOf("image" to VImage(finalUri.toString())))
             } else {
-                return ExecutionResult.Failure("裁剪失败", "无法裁剪图片")
+                return ExecutionResult.Failure(
+                    localizedContext.getString(R.string.error_vflow_system_capture_screen_crop_failed),
+                    localizedContext.getString(R.string.error_vflow_system_capture_screen_crop_failed_message)
+                )
             }
         } else {
-            return ExecutionResult.Failure("截屏失败", "无法获取屏幕图像，请检查权限或重试")
+            return ExecutionResult.Failure(
+                localizedContext.getString(R.string.error_vflow_system_capture_screen_failed),
+                localizedContext.getString(R.string.error_vflow_system_capture_screen_failed_message)
+            )
         }
     }
 
@@ -153,7 +193,7 @@ class CaptureScreenModule : BaseModule() {
                 null
             }
         } catch (e: Exception) {
-            DebugLogger.e("CaptureScreenModule", "解析区域失败: $regionStr", e)
+            DebugLogger.e(TAG, "解析区域失败: $regionStr", e)
             null
         }
     }
@@ -175,7 +215,7 @@ class CaptureScreenModule : BaseModule() {
                 inputStream?.close()
 
                 if (bitmap == null) {
-                    DebugLogger.e("CaptureScreenModule", "无法加载图片: $imageUri")
+                    DebugLogger.e(TAG, "无法加载图片: $imageUri")
                     return@withContext null
                 }
 
@@ -188,7 +228,7 @@ class CaptureScreenModule : BaseModule() {
                 )
 
                 if (safeRegion.width() <= 0 || safeRegion.height() <= 0) {
-                    DebugLogger.e("CaptureScreenModule", "无效的区域: $safeRegion")
+                    DebugLogger.e(TAG, "无效的区域: $safeRegion")
                     bitmap.recycle()
                     return@withContext null
                 }
@@ -216,7 +256,7 @@ class CaptureScreenModule : BaseModule() {
 
                 Uri.fromFile(outputFile)
             } catch (e: Exception) {
-                DebugLogger.e("CaptureScreenModule", "裁剪图片失败", e)
+                DebugLogger.e(TAG, "裁剪图片失败", e)
                 null
             }
         }
@@ -224,20 +264,21 @@ class CaptureScreenModule : BaseModule() {
 
     private suspend fun performAutomaticCapture(
         context: ExecutionContext,
-        onProgress: suspend (ProgressUpdate) -> Unit
+        onProgress: suspend (ProgressUpdate) -> Unit,
+        localizedContext: Context
     ): Uri? {
         val appContext = context.applicationContext
 
         // 1. 尝试 Shell 截图 (自动模式)
-        onProgress(ProgressUpdate("自动模式：尝试 Shell 截图..."))
+        onProgress(ProgressUpdate(localizedContext.getString(R.string.msg_vflow_system_capture_screen_auto_shell)))
         val uri = performShellCapture(appContext, context.workDir, onProgress)
         if (uri != null) return uri
 
-        DebugLogger.w("CaptureScreenModule", "Shell 截图失败，回落到 MediaProjection。")
+        DebugLogger.w(TAG, "Shell 截图失败，回落到 MediaProjection。")
 
         // 2. 最终回落：MediaProjection
-        onProgress(ProgressUpdate("自动模式：回落到 MediaProjection..."))
-        return captureWithMediaProjection(context, onProgress)
+        onProgress(ProgressUpdate(localizedContext.getString(R.string.msg_vflow_system_capture_screen_auto_media_projection)))
+        return captureWithMediaProjection(context, onProgress, localizedContext)
     }
 
     private suspend fun performShellCapture(
@@ -251,35 +292,39 @@ class CaptureScreenModule : BaseModule() {
         val path = cacheFile.absolutePath
 
         val command = "screencap -p \"$path\""
-        DebugLogger.i("CaptureScreenModule", "执行 Shell 截图命令: $command")
+        DebugLogger.i(TAG, "执行 Shell 截图命令: $command")
 
         return withContext(Dispatchers.IO) {
             try {
                 // 使用 ShellManager 自动选择最佳方式 (Root/Shizuku)
                 val result = ShellManager.execShellCommand(context, command, ShellManager.ShellMode.AUTO)
-                DebugLogger.i("CaptureScreenModule", "Shell 截图命令执行结果: $result")
+                DebugLogger.i(TAG, "Shell 截图命令执行结果: $result")
 
                 // 检查文件是否存在且大小正常 (忽略 ShellManager 的文本返回值，只看文件结果)
                 if (cacheFile.exists() && cacheFile.length() > 0) {
-                    DebugLogger.i("CaptureScreenModule", "Shell 截图成功: ${cacheFile.length()} 字节")
+                    DebugLogger.i(TAG, "Shell 截图成功: ${cacheFile.length()} 字节")
                     Uri.fromFile(cacheFile)
                 } else {
-                    DebugLogger.w("CaptureScreenModule", "Shell 截图未生成文件: exists=${cacheFile.exists()}, length=${cacheFile.length()}, result=$result")
+                    DebugLogger.w(TAG, "Shell 截图未生成文件: exists=${cacheFile.exists()}, length=${cacheFile.length()}, result=$result")
                     null
                 }
             } catch (e: Exception) {
-                DebugLogger.e("CaptureScreenModule", "Shell 截图异常", e)
+                DebugLogger.e(TAG, "Shell 截图异常", e)
                 null
             }
         }
     }
 
-    private suspend fun captureWithMediaProjection(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): Uri? {
+    private suspend fun captureWithMediaProjection(
+        context: ExecutionContext,
+        onProgress: suspend (ProgressUpdate) -> Unit,
+        localizedContext: Context
+    ): Uri? {
         val uiService = context.services.get(ExecutionUIService::class)
             ?: throw IllegalStateException("UI Service not available")
 
         // 1. 请求权限
-        onProgress(ProgressUpdate("正在请求截屏权限..."))
+        onProgress(ProgressUpdate(localizedContext.getString(R.string.msg_vflow_system_capture_screen_request_permission)))
         val resultData = uiService.requestMediaProjectionPermission()
             ?: return null
 
@@ -316,7 +361,7 @@ class CaptureScreenModule : BaseModule() {
                     if (image != null) {
                         val planes = image.planes
                         if (planes.isEmpty()) {
-                            DebugLogger.e("CaptureScreenModule", "Image planes array is empty")
+                            DebugLogger.e(TAG, "Image planes array is empty")
                             deferred.complete(null)
                             return@setOnImageAvailableListener
                         }
@@ -347,7 +392,7 @@ class CaptureScreenModule : BaseModule() {
                         deferred.complete(Uri.fromFile(file))
                     }
                 } catch (e: Exception) {
-                    DebugLogger.e("CaptureScreenModule", "ImageReader 处理异常", e)
+                    DebugLogger.e(TAG, "ImageReader 处理异常", e)
                     deferred.complete(null)
                     virtualDisplay?.release()
                     mediaProjection?.stop()
@@ -355,15 +400,37 @@ class CaptureScreenModule : BaseModule() {
                 }
             }, handler)
 
-            onProgress(ProgressUpdate("正在捕获屏幕..."))
+            onProgress(ProgressUpdate(localizedContext.getString(R.string.msg_vflow_system_capture_screen_capturing)))
             return deferred.await()
 
         } catch (e: SecurityException) {
-            DebugLogger.e("CaptureScreenModule", "MediaProjection 安全异常: 请检查前台服务权限。", e)
+            DebugLogger.e(TAG, "MediaProjection 安全异常: 请检查前台服务权限。", e)
             return null
         } catch (e: Exception) {
-            DebugLogger.e("CaptureScreenModule", "MediaProjection 未知异常", e)
+            DebugLogger.e(TAG, "MediaProjection 未知异常", e)
             return null
         }
+    }
+
+    private fun normalizeMode(mode: String?): String? {
+        return when (mode) {
+            MODE_AUTO,
+            "自动",
+            "Auto" -> MODE_AUTO
+            MODE_SCREENCAP -> MODE_SCREENCAP
+            else -> null
+        }
+    }
+
+    private fun getModeDisplayName(context: Context, mode: String): String {
+        return when (mode) {
+            MODE_AUTO -> context.getString(R.string.option_vflow_system_capture_screen_mode_auto)
+            MODE_SCREENCAP -> context.getString(R.string.option_vflow_system_capture_screen_mode_screencap)
+            else -> mode
+        }
+    }
+
+    private fun getLocalizedContext(context: Context): Context {
+        return LocaleManager.applyLanguage(context, LocaleManager.getLanguage(context))
     }
 }

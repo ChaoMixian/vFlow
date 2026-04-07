@@ -84,6 +84,8 @@
     <string name="dialog_unsaved_message">您想保存更改后再退出吗？</string>
     <string name="dialog_unsaved_save_exit">保存</string>
     <string name="dialog_unsaved_discard">放弃</string>
+    <string name="dialog_workflow_enum_migration_title">检测到可迁移的参数</string>
+    <string name="dialog_workflow_enum_migration_message">当前工作流中有 %1$d 个步骤、共 %2$d 个枚举参数仍在使用旧的展示值。是否现在将它们迁移到新版本？\n\n此次迁移只会更新当前编辑器中的内容，仍需点击保存才会写入工作流。</string>
 
     <string name="common_delete">删除</string>
     <string name="common_cancel">取消</string>

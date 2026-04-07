@@ -18,6 +18,9 @@ import android.view.View
 import android.widget.TextView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.InputDefinition
+import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.locale.LocaleManager
+import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.pill.Pill as CorePill
 import com.chaomixian.vflow.core.pill.PillFormatter
 import com.chaomixian.vflow.core.pill.PillType
@@ -107,11 +110,28 @@ object PillUtil {
         isModuleOption: Boolean = false
     ): Pill {
         val corePill = PillFormatter.createPillFromParam(
-            paramValue,
+            localizeEnumValue(paramValue, inputDef),
             inputDef,
             if (isModuleOption) PillType.MODULE_OPTION else PillType.PARAMETER
         )
         return Pill.fromCorePill(corePill)
+    }
+
+    private fun localizeEnumValue(paramValue: Any?, inputDef: InputDefinition?): Any? {
+        if (inputDef?.staticType != ParameterType.ENUM) return paramValue
+
+        val rawValue = paramValue?.toString() ?: return null
+        val normalizedValue = inputDef.legacyValueMap?.get(rawValue) ?: rawValue
+        val optionIndex = inputDef.options.indexOf(normalizedValue)
+        if (optionIndex == -1) return rawValue
+
+        val appContext = runCatching { LogManager.applicationContext }.getOrNull() ?: return normalizedValue
+        val localizedContext = LocaleManager.applyLanguage(
+            appContext,
+            LocaleManager.getLanguage(appContext)
+        )
+        val localizedOptions = inputDef.getLocalizedOptions(localizedContext)
+        return localizedOptions.getOrNull(optionIndex) ?: normalizedValue
     }
 
     /**

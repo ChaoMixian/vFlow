@@ -17,7 +17,12 @@ echo_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 # 获取脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="$SCRIPT_DIR/build"
-SOURCE_FILE="$SCRIPT_DIR/shell_launcher.cpp"
+
+# 定义要编译的源文件列表（格式：binary_name:source_file）
+SOURCE_FILES_LIST=(
+    "vflow_shell_exec:shell_launcher.cpp"
+    "key_event_trigger_handler:key_event_trigger_handler.cpp"
+)
 
 # 检测 NDK 路径
 detect_ndk() {
@@ -102,15 +107,9 @@ detect_host() {
 # 主函数
 main() {
     echo_info "========================================="
-    echo_info "vflow_shell_exec Multi-Arch Build Script"
+    echo_info "vflow Native Binaries Multi-Arch Build Script"
     echo_info "========================================="
     echo ""
-
-    # 检查源文件
-    if [ ! -f "$SOURCE_FILE" ]; then
-        echo_error "Source file not found: $SOURCE_FILE"
-        exit 1
-    fi
 
     # 检测 NDK
     NDK=$(detect_ndk)
@@ -129,11 +128,7 @@ main() {
     # 创建构建目录
     mkdir -p "$BUILD_DIR"
 
-    # 编译选项
-    CFLAGS="-static-libgcc -static-libstdc++ -pie -fPIE -O2 -s"
-    LDFLAGS="-llog -landroid"
-
-    # 定义架构列表（不使用关联数组，因为 bash 3.2 不支持）
+    # 定义架构列表
     ABIS=("armeabi-v7a" "arm64-v8a" "x86" "x86_64")
 
     # 函数：获取架构对应的编译器
@@ -147,36 +142,81 @@ main() {
         esac
     }
 
-    # 编译各个架构
-    echo_info "Building vflow_shell_exec for all architectures..."
-    echo ""
-
-    for ABI in "${ABIS[@]}"; do
-        CC=$(get_compiler "$ABI")
-        OUTPUT="$BUILD_DIR/$ABI/vflow_shell_exec"
-
-        echo_info "Building $ABI..."
-        echo "  Compiler: $CC"
-        echo "  Output:   $OUTPUT"
-
-        # 创建 ABI 目录
-        mkdir -p "$BUILD_DIR/$ABI"
-
-        # 编译
-        if "$TOOLCHAIN/bin/$CC" $CFLAGS "$SOURCE_FILE" $LDFLAGS -o "$OUTPUT"; then
-            # 检查是否编译成功
-            if [ -f "$OUTPUT" ]; then
-                SIZE=$(ls -lh "$OUTPUT" | awk '{print $5}')
-                echo_info "  ✓ Success ($SIZE)"
-            else
-                echo_error "  ✗ Failed (output not found)"
-                exit 1
-            fi
+    # 函数：根据二进制文件类型获取编译选项
+    get_compile_flags() {
+        local binary_name="$1"
+        if [ "$binary_name" = "vflow_shell_exec" ]; then
+            # shell_launcher 不需要 C++ 标准库
+            echo "-pie -fPIE -O2 -s"
         else
-            echo_error "  ✗ Failed (compilation error)"
+            # key_event_trigger_handler 需要静态链接 C++ 标准库
+            echo "-pie -fPIE -O2 -s -stdlib=libc++"
+        fi
+    }
+
+    # 函数：根据二进制文件类型获取链接选项
+    get_link_flags() {
+        local binary_name="$1"
+        if [ "$binary_name" = "vflow_shell_exec" ]; then
+            # shell_launcher 不需要 C++ 运行时
+            echo "-llog -landroid"
+        else
+            # key_event_trigger_handler 需要静态链接完整的 C++ 运行时
+            # 需要链接：libc++_static, libc++abi, libunwind
+            echo "-llog -landroid -lc++_static -lc++abi -lunwind"
+        fi
+    }
+
+    # 遍历所有源文件
+    for SOURCE_FILE_ENTRY in "${SOURCE_FILES_LIST[@]}"; do
+        # 解析 binary_name:source_file 格式
+        BINARY_NAME="${SOURCE_FILE_ENTRY%%:*}"
+        SOURCE_FILE_NAME="${SOURCE_FILE_ENTRY#*:}"
+        SOURCE_FILE="$SCRIPT_DIR/$SOURCE_FILE_NAME"
+
+        # 检查源文件是否存在
+        if [ ! -f "$SOURCE_FILE" ]; then
+            echo_error "Source file not found: $SOURCE_FILE"
             exit 1
         fi
+
+        echo_info "========================================="
+        echo_info "Building $BINARY_NAME for all architectures..."
+        echo_info "========================================="
         echo ""
+
+        # 编译各个架构
+        for ABI in "${ABIS[@]}"; do
+            CC=$(get_compiler "$ABI")
+            OUTPUT="$BUILD_DIR/$ABI/$BINARY_NAME"
+
+            # 获取针对此二进制文件的编译和链接选项
+            CFLAGS=$(get_compile_flags "$BINARY_NAME")
+            LDFLAGS=$(get_link_flags "$BINARY_NAME")
+
+            echo_info "Building $ABI..."
+            echo "  Compiler: $CC"
+            echo "  Output:   $OUTPUT"
+
+            # 创建 ABI 目录
+            mkdir -p "$BUILD_DIR/$ABI"
+
+            # 编译
+            if "$TOOLCHAIN/bin/$CC" $CFLAGS "$SOURCE_FILE" $LDFLAGS -o "$OUTPUT"; then
+                # 检查是否编译成功
+                if [ -f "$OUTPUT" ]; then
+                    SIZE=$(ls -lh "$OUTPUT" | awk '{print $5}')
+                    echo_info "  ✓ Success ($SIZE)"
+                else
+                    echo_error "  ✗ Failed (output not found)"
+                    exit 1
+                fi
+            else
+                echo_error "  ✗ Failed (compilation error)"
+                exit 1
+            fi
+            echo ""
+        done
     done
 
     # 总结
@@ -188,15 +228,19 @@ main() {
     echo ""
 
     # 列出编译结果
-    for ABI in "${ABIS[@]}"; do
-        OUTPUT="$BUILD_DIR/$ABI/vflow_shell_exec"
-        if [ -f "$OUTPUT" ]; then
-            SIZE=$(ls -lh "$OUTPUT" | awk '{print $5}')
-            echo_info "  $ABI: $SIZE"
-        fi
+    for SOURCE_FILE_ENTRY in "${SOURCE_FILES_LIST[@]}"; do
+        BINARY_NAME="${SOURCE_FILE_ENTRY%%:*}"
+        echo_info "$BINARY_NAME:"
+        for ABI in "${ABIS[@]}"; do
+            OUTPUT="$BUILD_DIR/$ABI/$BINARY_NAME"
+            if [ -f "$OUTPUT" ]; then
+                SIZE=$(ls -lh "$OUTPUT" | awk '{print $5}')
+                echo_info "  $ABI: $SIZE"
+            fi
+        done
+        echo ""
     done
 
-    echo ""
     echo_info "Next step: Run ./deploy.sh to copy binaries to assets"
 }
 

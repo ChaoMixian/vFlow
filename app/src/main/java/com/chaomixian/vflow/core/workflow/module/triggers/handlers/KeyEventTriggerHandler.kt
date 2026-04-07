@@ -1,56 +1,50 @@
-// 文件: main/java/com/chaomixian/vflow/core/workflow/module/triggers/handlers/KeyEventTriggerHandler.kt
-// 描述: 实现了精细化的工作流管理，解决了编译错误和稳定性问题。
-
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
+import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ShellManager
-import com.chaomixian.vflow.core.utils.StorageManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
-import kotlinx.coroutines.CancellationException
 
 class KeyEventTriggerHandler : BaseTriggerHandler() {
 
-    // 定义一个数据类来存储解析后的、规范化的触发器信息
     private data class ResolvedKeyEventTrigger(
         val trigger: TriggerSpec,
         val devicePath: String,
-        val keyCode: String,
-        val actionType: String,
-        val isSlider: Boolean = false
+        val keyCode: Int,
+        val actionType: String
     )
 
-    private enum class KeyState { IDLE, WAIT_FOR_DOUBLE, PROCESSING }
-
-    private val registeredTriggers = CopyOnWriteArrayList<TriggerSpec>()
-    private val activeTriggers = CopyOnWriteArrayList<ResolvedKeyEventTrigger>()
-    private var keyEventJob: Job? = null
-    private val keyStates = ConcurrentHashMap<String, KeyState>()
-    private val pendingClickJobs = ConcurrentHashMap<String, Job>()
-    private val firstClickTimestamps = ConcurrentHashMap<String, Long>()
-    private val doubleClickThreshold = 400L
-    private val longPressThreshold = 500L
-    private val lastSliderModeMap = ConcurrentHashMap<String, Int>()
-    private val sliderDebounceJobs = ConcurrentHashMap<String, Job>()
-    private val sliderDebounceTime = 200L
+    private data class NativeProcessSpec(
+        val devicePath: String,
+        val keyCode: Int,
+        val flags: Set<String>
+    )
 
     companion object {
         private const val TAG = "KeyEventTriggerHandler"
+        private const val NATIVE_BIN_DIR = "/data/local/tmp/vflow"
+        private const val NATIVE_BIN_NAME = "key_event_trigger_handler"
+
         const val ACTION_KEY_EVENT_RECEIVED = "com.chaomixian.vflow.KEY_EVENT_RECEIVED"
-        const val EXTRA_EVENT_TYPE = "event_type"
-        const val EXTRA_ACTION_TYPE = "action_type"
-        const val EXTRA_RINGER_MODE = "ringer_mode"
+        const val EXTRA_GESTURE_TYPE = "gesture_type"
+        const val EXTRA_KEY_CODE = "key_code"
+        const val EXTRA_DEVICE = "device"
     }
+
+    private val registeredTriggers = CopyOnWriteArrayList<TriggerSpec>()
+    private val activeTriggers = CopyOnWriteArrayList<ResolvedKeyEventTrigger>()
+    private var nativeProcessJob: Job? = null
 
     override fun start(context: Context) {
         super.start(context)
@@ -58,253 +52,191 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
     }
 
     override fun stop(context: Context) {
-        super.stop(context)
-        keyEventJob?.cancel()
+        nativeProcessJob?.cancel()
         triggerScope.launch {
-            DebugLogger.d(TAG, "KeyEventTriggerHandler 正在清理资源。")
-            ShellManager.execShellCommand(context, "killall getevent", ShellManager.ShellMode.AUTO)
-            StorageManager.scriptsDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }?.forEach { it.delete() }
+            cleanupNativeProcesses(context)
         }
-        DebugLogger.d(TAG, "KeyEventTriggerHandler 已停止并清理了资源。")
-    }
-
-    fun handleKeyEventIntent(context: Context, intent: Intent) {
-        if (intent.action == ACTION_KEY_EVENT_RECEIVED) {
-            if (intent.hasExtra(EXTRA_RINGER_MODE)) {
-                handleSliderEvent(context, intent)
-            } else {
-                handleKeyEvent(context, intent)
-            }
-        }
+        DebugLogger.d(TAG, "KeyEventTriggerHandler 已停止并请求清理原生进程。")
+        super.stop(context)
     }
 
     override fun addTrigger(context: Context, trigger: TriggerSpec) {
         registeredTriggers.removeAll { it.triggerId == trigger.triggerId }
         registeredTriggers.add(trigger)
-        DebugLogger.d(TAG, "已添加/更新触发器 '${trigger.triggerId}'。准备重新加载按键监听。")
+        DebugLogger.d(TAG, "已添加/更新触发器 '${trigger.triggerId}'。准备重载原生监听进程。")
         reloadKeyEventTriggers(context)
     }
 
     override fun removeTrigger(context: Context, triggerId: String) {
         val removed = registeredTriggers.removeAll { it.triggerId == triggerId }
         if (removed) {
-            DebugLogger.d(TAG, "已移除触发器: $triggerId。准备重新加载按键监听。")
+            DebugLogger.d(TAG, "已移除触发器 '$triggerId'。准备重载原生监听进程。")
             reloadKeyEventTriggers(context)
         }
     }
 
-    /**
-     * 新增一个私有辅助函数，用于将工作流的 triggerConfig 解析为标准化的 ResolvedKeyEventTrigger。
-     * 这个函数集中处理了预设和手动配置的逻辑，确保了数据的一致性。
-     */
+    fun handleKeyEventIntent(context: Context, intent: Intent) {
+        if (intent.action != ACTION_KEY_EVENT_RECEIVED) return
+
+        val gestureType = intent.getStringExtra(EXTRA_GESTURE_TYPE) ?: return
+        val keyCode = intent.getIntExtra(EXTRA_KEY_CODE, -1)
+        val device = intent.getStringExtra(EXTRA_DEVICE) ?: return
+        if (keyCode == -1) return
+
+        val actionType = gestureTypeToActionType(gestureType) ?: return
+        DebugLogger.d(TAG, "收到原生按键事件: device=$device key=$keyCode gesture=$gestureType")
+        executeMatchingWorkflows(context, device, keyCode, actionType)
+    }
+
     private fun resolveTrigger(trigger: TriggerSpec): ResolvedKeyEventTrigger? {
-        val config = trigger.parameters
-        val preset = config["device_preset"] as? String
-        val actionType = config["action_type"] as? String ?: return null
-        var devicePath: String?
-        var keyCode: String?
-        var isSlider = false
+        val params = trigger.parameters
+        val devicePath = params["device"] as? String ?: return null
+        val keyCodeValue = params["key_code"] as? String ?: return null
+        val rawActionType = params["action_type"] as? String ?: return null
+        val actionType = normalizeActionType(rawActionType) ?: return null
+        val keyCode = parseKeyCode(keyCodeValue) ?: return null
 
-        when (preset) {
-            "一加 13T (侧键)" -> {
-                devicePath = "/dev/input/event0"
-                keyCode = (config["_internal_key_code"] as? String) ?: "BTN_TRIGGER_HAPPY32"
-            }
-            "一加 13 (三段式)" -> {
-                devicePath = "/dev/input/event6"
-                keyCode = (config["_internal_key_code"] as? String) ?: "KEY_F3"
-                isSlider = true
-            }
-            else -> { // "手动/自定义"
-                devicePath = config["device"] as? String
-                keyCode = config["key_code"] as? String
-            }
-        }
-
-        if (devicePath.isNullOrBlank() || keyCode.isNullOrBlank()) {
-            return null
-        }
-
-        return ResolvedKeyEventTrigger(trigger, devicePath, keyCode, actionType, isSlider)
+        return ResolvedKeyEventTrigger(
+            trigger = trigger,
+            devicePath = devicePath,
+            keyCode = keyCode,
+            actionType = actionType
+        )
     }
 
     private fun reloadKeyEventTriggers(context: Context) {
-        keyEventJob?.cancel()
-        DebugLogger.d(TAG, "请求重新加载触发器，正在停止所有旧的监听脚本...")
+        nativeProcessJob?.cancel()
+        DebugLogger.d(TAG, "请求重新加载触发器，正在停止旧的 C++ 进程...")
 
-        keyEventJob = triggerScope.launch {
-            // 1. 清理旧的监听进程
+        nativeProcessJob = triggerScope.launch {
             try {
-                DebugLogger.d(TAG, "KeyEventTriggerHandler 结束进程并清理残留中...")
-                ShellManager.execShellCommand(context, "killall getevent", ShellManager.ShellMode.AUTO)
-                val pidFiles = StorageManager.scriptsDir.listFiles { _, name -> name.startsWith("vflow_listener_") && name.endsWith(".pid") }
-                pidFiles?.forEach { pidFile ->
-                    try {
-                        val pid = pidFile.readText().trim()
-                        DebugLogger.d(TAG, "KeyEventTriggerHandler 正在结束进程 $pid...")
-                        if (pid.isNotEmpty()) ShellManager.execShellCommand(context, "kill $pid", ShellManager.ShellMode.AUTO)
-                        pidFile.delete()
-                    } catch (e: Exception) {
-                        DebugLogger.w(TAG, "清理 PID 文件 ${pidFile.name} 时出错: ", e)
+                cleanupNativeProcesses(context)
+
+                activeTriggers.clear()
+                activeTriggers.addAll(registeredTriggers.mapNotNull { resolveTrigger(it) })
+
+                if (activeTriggers.isEmpty()) {
+                    DebugLogger.d(TAG, "没有已启用的按键触发器，停止监听。")
+                    return@launch
+                }
+
+                val binaryFile = deployNativeBinary(context)
+                if (binaryFile == null) {
+                    DebugLogger.e(TAG, "无法部署原生按键监听器。")
+                    return@launch
+                }
+
+                val specs = activeTriggers
+                    .groupBy { it.devicePath to it.keyCode }
+                    .map { (groupKey, triggers) ->
+                        NativeProcessSpec(
+                            devicePath = groupKey.first,
+                            keyCode = groupKey.second,
+                            flags = triggers.mapNotNull { actionTypeToNativeFlag(it.actionType) }.toSet()
+                        )
                     }
-                }
-                delay(500)
-            } catch (e: Exception) {
-                DebugLogger.e(TAG, "停止旧监听进程时出错: ", e)
-            }
 
-            // 2. 使用新的辅助函数来构建 activeTriggers 列表
-            activeTriggers.clear()
-            activeTriggers.addAll(registeredTriggers.mapNotNull { resolveTrigger(it) })
-            if (activeTriggers.isEmpty()) {
-                DebugLogger.d(TAG, "没有已启用的按键触发器，停止监听。")
-                return@launch
-            }
-
-            // 3. 根据设备路径对触发器分组，并启动新的监听脚本
-            val triggersByDevice = activeTriggers.groupBy { it.devicePath }
-            val cacheDirPath = StorageManager.scriptsDir.absolutePath
-            DebugLogger.d(TAG, "KeyEventTriggerHandler 设备路径：$triggersByDevice 缓存文件夹：$cacheDirPath")
-
-            triggersByDevice.forEach { (path, triggers) ->
-                val isSlider = triggers.any { it.isSlider }
-                val script = if (isSlider) {
-                    createSliderScriptForDevice(path, cacheDirPath, context.packageName)
-                } else {
-                    createShellScriptForDevice(path, triggers.map { it.keyCode }.distinct(), cacheDirPath, context.packageName)
-                }
-
-                if (script.isNotBlank()) {
+                specs.forEach { spec ->
                     launch {
                         try {
-                            val scriptFile = File(StorageManager.scriptsDir, "key_listener_${path.replace('/', '_')}.sh")
-                            DebugLogger.d(TAG, "KeyEventTriggerHandler 准备创建监听脚本：${scriptFile.absolutePath} ...")
-                            scriptFile.writeText(script)
-                            scriptFile.setExecutable(true)
-                            DebugLogger.d(TAG, "正在为设备 $path 启动新的监听脚本...")
-                            ShellManager.execShellCommand(context, "sh ${scriptFile.absolutePath}", ShellManager.ShellMode.AUTO)
+                            startNativeProcess(context, binaryFile.absolutePath, spec)
                         } catch (e: Exception) {
                             if (e is CancellationException) {
-                                DebugLogger.e(TAG, "设备 $path 监听脚本的执行被取消。", e)
+                                DebugLogger.d(TAG, "设备 ${spec.devicePath} 按键 ${spec.keyCode} 的监听进程被取消。")
                             } else {
-                                DebugLogger.e(TAG, "执行设备 $path 的监听脚本时出错。", e)
+                                DebugLogger.e(TAG, "启动设备 ${spec.devicePath} 按键 ${spec.keyCode} 的监听进程时出错。", e)
                             }
                         }
                     }
                 }
-            }
-        }
-    }
-
-    private fun handleKeyEvent(context: Context, intent: Intent) {
-        val device = intent.getStringExtra("device") ?: return
-        val keyCode = intent.getStringExtra("key_code") ?: return
-        val eventType = intent.getStringExtra(EXTRA_EVENT_TYPE) ?: return
-        val pressDuration = intent.getLongExtra("duration", 0)
-        val uniqueKey = "$device-$keyCode"
-
-        if (eventType == "UP") {
-            if (pressDuration >= longPressThreshold) {
-                resetKeyState(uniqueKey)
-                executeMatchingWorkflows(context, device, keyCode, "长按")
-                return
-            }
-
-            val currentState = keyStates[uniqueKey] ?: KeyState.IDLE
-            val now = System.currentTimeMillis()
-
-            when (currentState) {
-                KeyState.IDLE -> {
-                    keyStates[uniqueKey] = KeyState.WAIT_FOR_DOUBLE
-                    firstClickTimestamps[uniqueKey] = now
-                    if (hasActionType(device, keyCode, "短按 (立即触发)")) {
-                        executeMatchingWorkflows(context, device, keyCode, "短按 (立即触发)")
-                    }
-                    pendingClickJobs[uniqueKey] = triggerScope.launch {
-                        delay(doubleClickThreshold)
-                        if (isActive && keyStates[uniqueKey] == KeyState.WAIT_FOR_DOUBLE) {
-                            executeMatchingWorkflows(context, device, keyCode, "单击")
-                            resetKeyState(uniqueKey)
-                        }
-                    }
-                }
-                KeyState.WAIT_FOR_DOUBLE -> {
-                    val firstClickTime = firstClickTimestamps[uniqueKey] ?: 0
-                    if (now - firstClickTime <= doubleClickThreshold) {
-                        keyStates[uniqueKey] = KeyState.PROCESSING
-                        pendingClickJobs[uniqueKey]?.cancel()
-                        executeMatchingWorkflows(context, device, keyCode, "双击")
-                        resetKeyState(uniqueKey)
-                    } else {
-                        pendingClickJobs[uniqueKey]?.cancel()
-                        keyStates[uniqueKey] = KeyState.WAIT_FOR_DOUBLE
-                        firstClickTimestamps[uniqueKey] = now
-                        if (hasActionType(device, keyCode, "短按 (立即触发)")) {
-                            executeMatchingWorkflows(context, device, keyCode, "短按 (立即触发)")
-                        }
-                        pendingClickJobs[uniqueKey] = triggerScope.launch {
-                            delay(doubleClickThreshold)
-                            if (isActive && keyStates[uniqueKey] == KeyState.WAIT_FOR_DOUBLE) {
-                                executeMatchingWorkflows(context, device, keyCode, "单击")
-                                resetKeyState(uniqueKey)
-                            }
-                        }
-                    }
-                }
-                KeyState.PROCESSING -> {}
-            }
-        }
-    }
-
-    /**
-     * hasActionType 现在直接查询已解析的 activeTriggers 列表，避免了空指针异常。
-     */
-    private fun hasActionType(devicePath: String, keyCode: String, actionType: String): Boolean {
-        return activeTriggers.any {
-            it.devicePath == devicePath && it.keyCode == keyCode && it.actionType == actionType
-        }
-    }
-
-    private fun resetKeyState(uniqueKey: String) {
-        keyStates.remove(uniqueKey)
-        firstClickTimestamps.remove(uniqueKey)
-        pendingClickJobs[uniqueKey]?.cancel()
-        pendingClickJobs.remove(uniqueKey)
-    }
-
-    private fun handleSliderEvent(context: Context, intent: Intent) {
-        val device = intent.getStringExtra("device") ?: return
-        val ringerModeStr = intent.getStringExtra(EXTRA_RINGER_MODE) ?: return
-        val newRingerMode = ringerModeStr.toIntOrNull() ?: return
-
-        sliderDebounceJobs[device]?.cancel()
-        sliderDebounceJobs[device] = triggerScope.launch {
-            delay(sliderDebounceTime)
-            val lastRingerMode = lastSliderModeMap[device]
-            if (lastRingerMode != null && lastRingerMode != newRingerMode) {
-                when {
-                    newRingerMode > lastRingerMode -> executeMatchingWorkflows(context, device, "KEY_F3", "向上滑动")
-                    newRingerMode < lastRingerMode -> executeMatchingWorkflows(context, device, "KEY_F3", "向下滑动")
+            } catch (e: Exception) {
+                if (e is CancellationException) {
+                    DebugLogger.d(TAG, "原生监听器重载已取消。")
+                } else {
+                    DebugLogger.e(TAG, "重载原生监听器失败。", e)
                 }
             }
-            lastSliderModeMap[device] = newRingerMode
         }
     }
 
-    /**
-     * executeMatchingWorkflows 现在直接查询已解析的 activeTriggers 列表。
-     */
-    private fun executeMatchingWorkflows(context: Context, devicePath: String, keyCode: String, actionType: String) {
+    private suspend fun cleanupNativeProcesses(context: Context) {
+        runShellCommand(context, "killall $NATIVE_BIN_NAME")
+        delay(300)
+    }
+
+    private suspend fun deployNativeBinary(context: Context): File? {
+        val deviceAbi = detectDeviceAbi()
+        val assetPath = "key_event_trigger_handler/$deviceAbi/$NATIVE_BIN_NAME"
+        val stagedFile = File(StorageManager.tempDir, "${NATIVE_BIN_NAME}_$deviceAbi")
+        val targetDir = File(NATIVE_BIN_DIR)
+        val targetFile = File(targetDir, NATIVE_BIN_NAME)
+
+        return try {
+            context.assets.open(assetPath).use { input ->
+                stagedFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            stagedFile.setReadable(true, false)
+
+            val deployResult = ShellManager.deployExecutableViaShell(
+                context = context,
+                stagedFile = stagedFile,
+                targetPath = targetFile.absolutePath
+            )
+
+            if (!deployResult.success) {
+                DebugLogger.e(TAG, "部署原生监听器失败: ${deployResult.output}")
+                null
+            } else {
+                DebugLogger.d(TAG, "原生监听器已部署: ${deployResult.targetFile.absolutePath}")
+                deployResult.targetFile
+            }
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "部署原生监听器失败。", e)
+            null
+        }
+    }
+
+    private suspend fun startNativeProcess(
+        context: Context,
+        binaryPath: String,
+        spec: NativeProcessSpec
+    ) {
+        val args = buildList {
+            add("--device")
+            add(spec.devicePath)
+            add("--key")
+            add(spec.keyCode.toString())
+            add("--package")
+            add(context.packageName)
+            spec.flags.sorted().forEach { add(it) }
+        }
+
+        val command = buildString {
+            append(shellQuote(binaryPath))
+            args.forEach { arg ->
+                append(' ')
+                append(shellQuote(arg))
+            }
+        }
+
+        DebugLogger.d(TAG, "启动 C++ 监听进程: $command")
+        val execResult = runShellCommand(context, "$command </dev/null >/dev/null 2>&1 &")
+        DebugLogger.d(TAG, "启动结果: $execResult")
+    }
+
+    private fun executeMatchingWorkflows(context: Context, devicePath: String, keyCode: Int, actionType: String) {
         val matchingTriggers = activeTriggers.filter {
             it.devicePath == devicePath && it.keyCode == keyCode && it.actionType == actionType
         }.distinctBy { it.trigger.workflowId }
 
-        if (matchingTriggers.isNotEmpty()) {
-            triggerScope.launch {
-                when {
-                    matchingTriggers.size == 1 -> executeTrigger(context, matchingTriggers.first().trigger)
-                    else -> handleMultipleMatches(context, matchingTriggers.map { it.trigger })
-                }
+        if (matchingTriggers.isEmpty()) return
+
+        triggerScope.launch {
+            when {
+                matchingTriggers.size == 1 -> executeTrigger(context, matchingTriggers.first().trigger)
+                else -> handleMultipleMatches(context, matchingTriggers.map { it.trigger })
             }
         }
     }
@@ -316,125 +248,97 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         triggers.firstOrNull { it.workflowId == selectedWorkflowId }?.let { executeTrigger(context, it) }
     }
 
-    private fun createSliderScriptForDevice(device: String, cacheDir: String, packageName: String): String {
-        val serviceComponent = "$packageName/com.chaomixian.vflow.services.TriggerService"
-        val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
-        val pidFilePath = "$cacheDir/$pidFileName"
-
-        // 增加日志文件定义
-        val logFile = "$cacheDir/vflow_shell.log"
-        val markerFile = "$cacheDir/vflow_logging_enabled.marker"
-
-        return """
-            #!/system/bin/sh
-            DEVICE="$device"
-            SERVICE_COMPONENT="$serviceComponent"
-            PID_FILE="$pidFilePath"
-            LOG_FILE="$logFile"
-            MARKER_FILE="$markerFile"
-
-            # 日志函数
-            log_msg() {
-              if [ -f "${'$'}MARKER_FILE" ]; then
-                echo "${'$'}(date +"%Y-%m-%d %H:%M:%S") [Slider/${'$'}DEVICE] ${'$'}1" >> "${'$'}LOG_FILE"
-              fi
-            }
-
-            if [ -f "${'$'}PID_FILE" ]; then
-                EXISTING_PID=`cat "${'$'}PID_FILE"`
-                if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
-                    log_msg "Listener already running with PID ${'$'}EXISTING_PID"
-                    exit 0
-                else
-                    rm -f "${'$'}PID_FILE"
-                fi
-            fi
-
-            echo "$$" > "${'$'}PID_FILE"
-            log_msg "Listener started with PID $$"
-            trap 'rm -f "${'$'}PID_FILE"; log_msg "Listener stopped"; exit' INT TERM EXIT
-            
-            CURRENT_RINGER_MODE=`settings get system ringer_mode`
-            log_msg "Initial ringer mode: ${'$'}CURRENT_RINGER_MODE"
-            am start-service -n "${'$'}SERVICE_COMPONENT" -a ${KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es ringer_mode "${'$'}CURRENT_RINGER_MODE"
-
-            getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
-              if echo "${'$'}line" | grep -q "KEY_F3.*UP"; then
-                  log_msg "Detected slider movement event"
-                  sleep 0.1
-                  NEW_RINGER_MODE=`settings get system ringer_mode`
-                  log_msg "New ringer mode: ${'$'}NEW_RINGER_MODE"
-                  am start-service -n "${'$'}SERVICE_COMPONENT" -a ${KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es ringer_mode "${'$'}NEW_RINGER_MODE"
-              fi
-            done
-        """.trimIndent()
+    private suspend fun runShellCommand(context: Context, command: String): String {
+        return try {
+            ShellManager.execShellCommand(context, command, ShellManager.ShellMode.AUTO)
+        } catch (e: Exception) {
+            DebugLogger.e(TAG, "执行 Shell 命令失败: $command", e)
+            "Error: ${e.message}"
+        }
     }
 
-    private fun createShellScriptForDevice(device: String, keyCodes: List<String>, cacheDir: String, packageName: String): String {
-        if (keyCodes.isEmpty()) return ""
-        val grepPattern = keyCodes.joinToString("|")
-        val serviceComponent = "$packageName/com.chaomixian.vflow.services.TriggerService"
-        val pidFileName = "vflow_listener_${device.replace('/', '_')}.pid"
-        val pidFilePath = "$cacheDir/$pidFileName"
+    private fun actionTypeToNativeFlag(actionType: String): String? {
+        return when (actionType) {
+            KeyEventTriggerModule.ACTION_SINGLE_CLICK -> "--click"
+            KeyEventTriggerModule.ACTION_DOUBLE_CLICK -> "--double"
+            KeyEventTriggerModule.ACTION_LONG_PRESS -> "--hold"
+            KeyEventTriggerModule.ACTION_SHORT_PRESS -> "--press"
+            KeyEventTriggerModule.ACTION_SWIPE_DOWN,
+            KeyEventTriggerModule.ACTION_SWIPE_UP -> "--slider"
+            else -> null
+        }
+    }
 
-        // 增加日志文件定义
-        val logFile = "$cacheDir/vflow_shell.log"
-        val markerFile = "$cacheDir/vflow_logging_enabled.marker"
+    private fun normalizeActionType(actionType: String): String? {
+        return when (actionType) {
+            KeyEventTriggerModule.ACTION_SINGLE_CLICK,
+            "单击",
+            "Single Click" -> KeyEventTriggerModule.ACTION_SINGLE_CLICK
 
-        return """
-            #!/system/bin/sh
-            DEVICE="$device"
-            GREP_PATTERN="$grepPattern"
-            SERVICE_COMPONENT="$serviceComponent"
-            PID_FILE="$pidFilePath"
-            LOG_FILE="$logFile"
-            MARKER_FILE="$markerFile"
-            
-            # 日志函数
-            log_msg() {
-              if [ -f "${'$'}MARKER_FILE" ]; then
-                echo "${'$'}(date +"%Y-%m-%d %H:%M:%S") [Key/${'$'}DEVICE] ${'$'}1" >> "${'$'}LOG_FILE"
-              fi
+            KeyEventTriggerModule.ACTION_DOUBLE_CLICK,
+            "双击",
+            "Double Click" -> KeyEventTriggerModule.ACTION_DOUBLE_CLICK
+
+            KeyEventTriggerModule.ACTION_LONG_PRESS,
+            "长按",
+            "Long Press" -> KeyEventTriggerModule.ACTION_LONG_PRESS
+
+            KeyEventTriggerModule.ACTION_SHORT_PRESS,
+            "短按 (立即触发)",
+            "Short Press (Immediate)" -> KeyEventTriggerModule.ACTION_SHORT_PRESS
+
+            KeyEventTriggerModule.ACTION_SWIPE_DOWN,
+            "向下滑动",
+            "Swipe Down" -> KeyEventTriggerModule.ACTION_SWIPE_DOWN
+
+            KeyEventTriggerModule.ACTION_SWIPE_UP,
+            "向上滑动",
+            "Swipe Up" -> KeyEventTriggerModule.ACTION_SWIPE_UP
+
+            else -> {
+                DebugLogger.w(TAG, "不支持的按键动作类型: $actionType")
+                null
             }
+        }
+    }
 
-            if [ -f "${'$'}PID_FILE" ]; then
-                EXISTING_PID=`cat "${'$'}PID_FILE"`
-                if [ -n "${'$'}EXISTING_PID" ] && ps -p "${'$'}EXISTING_PID" > /dev/null; then
-                    log_msg "Listener already running with PID ${'$'}EXISTING_PID"
-                    exit 0
-                else
-                    rm -f "${'$'}PID_FILE"
-                fi
-            fi
+    private fun gestureTypeToActionType(gestureType: String): String? {
+        return when (gestureType) {
+            "click" -> KeyEventTriggerModule.ACTION_SINGLE_CLICK
+            "double_click" -> KeyEventTriggerModule.ACTION_DOUBLE_CLICK
+            "long_press" -> KeyEventTriggerModule.ACTION_LONG_PRESS
+            "short_press" -> KeyEventTriggerModule.ACTION_SHORT_PRESS
+            "swipe_down" -> KeyEventTriggerModule.ACTION_SWIPE_DOWN
+            "swipe_up" -> KeyEventTriggerModule.ACTION_SWIPE_UP
+            else -> null
+        }
+    }
 
-            echo "$$" > "${'$'}PID_FILE"
-            log_msg "Listener started with PID $$ monitoring: ${'$'}GREP_PATTERN"
-            trap 'rm -f "${'$'}PID_FILE"; log_msg "Listener stopped"; exit' INT TERM EXIT
+    private fun parseKeyCode(value: String?): Int? {
+        val normalized = value?.trim()?.lowercase() ?: return null
+        if (normalized.isEmpty()) return null
+        return try {
+            when {
+                normalized.startsWith("0x") -> normalized.substring(2).toInt(16)
+                else -> normalized.toInt()
+            }
+        } catch (_: NumberFormatException) {
+            null
+        }
+    }
 
-            while true; do
-              getevent -l "${'$'}DEVICE" | while IFS= read -r line; do
-                if echo "${'$'}line" | grep -E -q "(${'$'}GREP_PATTERN)"; then
-                    log_msg "Event captured: ${'$'}line"
-                    
-                    TIMESTAMP=`date +%s%3N`
-                    EVENT_TYPE=`echo ${'$'}line | awk '{print ${'$'}NF}'`
-                    KEY_CODE=`echo ${'$'}line | awk '{print ${'$'}2}'`
+    private fun detectDeviceAbi(): String {
+        val primaryAbi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty()
+        return when {
+            primaryAbi.startsWith("arm64") -> "arm64-v8a"
+            primaryAbi.startsWith("armeabi-v7a") -> "armeabi-v7a"
+            primaryAbi.startsWith("x86_64") -> "x86_64"
+            primaryAbi.startsWith("x86") -> "x86"
+            else -> "arm64-v8a"
+        }
+    }
 
-                    if [ "${'$'}EVENT_TYPE" = "DOWN" ]; then
-                        DOWN_TIMESTAMP=${'$'}TIMESTAMP
-                        log_msg "Processing DOWN for ${'$'}KEY_CODE"
-                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}KEY_CODE" --es event_type "DOWN"
-                    elif [ "${'$'}EVENT_TYPE" = "UP" ]; then
-                        if [ -z "${'$'}DOWN_TIMESTAMP" ]; then continue; fi
-                        PRESS_DURATION=$((TIMESTAMP - DOWN_TIMESTAMP))
-                        DOWN_TIMESTAMP=""
-                        log_msg "Processing UP for ${'$'}KEY_CODE (duration: ${'$'}PRESS_DURATION ms)"
-                        am start-service -n "${'$'}SERVICE_COMPONENT" -a ${KeyEventTriggerHandler.ACTION_KEY_EVENT_RECEIVED} --es device "${'$'}DEVICE" --es key_code "${'$'}KEY_CODE" --es event_type "UP" --el duration ${'$'}PRESS_DURATION
-                    fi
-                fi
-              done
-              sleep 1
-            done
-        """.trimIndent()
+    private fun shellQuote(value: String): String {
+        return "'${value.replace("'", "'\\''")}'"
     }
 }

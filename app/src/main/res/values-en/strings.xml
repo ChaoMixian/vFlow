@@ -76,6 +76,8 @@
     <string name="dialog_unsaved_message">Do you want to save changes before exiting?</string>
     <string name="dialog_unsaved_save_exit">Save</string>
     <string name="dialog_unsaved_discard">Discard</string>
+    <string name="dialog_workflow_enum_migration_title">Migratable Parameters Detected</string>
+    <string name="dialog_workflow_enum_migration_message">%1$d steps in this workflow still contain %2$d enum parameters stored as legacy display values. Do you want to migrate them to new version now?\n\nThis only updates the current editor state. You still need to tap Save to persist the workflow.</string>
 
     <string name="common_delete">Delete</string>
     <string name="common_cancel">Cancel</string>

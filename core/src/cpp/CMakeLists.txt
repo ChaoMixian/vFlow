@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.22.1)
 # Since this is the top level CMakeLists.txt, the project name is also accessible
 # with ${CMAKE_PROJECT_NAME} (both CMake variables are in-sync within the top level
 # build script scope).
-project("launcher")
+project("vflow-native")
 
 # 使用 shell_launcher.cpp 构建一个可执行文件，用于以 shell 身份执行命令
 add_executable(vflow_shell_exec
@@ -20,5 +20,13 @@ add_executable(vflow_shell_exec
 # build script, prebuilt third-party libraries, or Android system libraries.
 target_link_libraries(vflow_shell_exec
         # List libraries link to the target library
+        android
+        log)
+
+# 使用 key_event_trigger_handler.cpp 构建按键事件触发处理器
+add_executable(key_event_trigger_handler
+        key_event_trigger_handler.cpp)
+
+target_link_libraries(key_event_trigger_handler
         android
         log)

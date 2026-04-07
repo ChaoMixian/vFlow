@@ -5,8 +5,6 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.*
-import com.chaomixian.vflow.core.pill.PillFormatter
-import com.chaomixian.vflow.core.pill.PillType
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -83,15 +81,13 @@ class CoreShellCommandModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val modePill = PillFormatter.createPillFromParam(
+        val modePill = PillUtil.createPillFromParam(
             step.parameters["mode"],
             getInputs().find { it.id == "mode" },
-            PillType.PARAMETER
         )
-        val commandPill = PillFormatter.createPillFromParam(
+        val commandPill = PillUtil.createPillFromParam(
             step.parameters["command"],
             getInputs().find { it.id == "command" },
-            PillType.PARAMETER
         )
         return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_core_shell_command), modePill, "执行", commandPill)
     }

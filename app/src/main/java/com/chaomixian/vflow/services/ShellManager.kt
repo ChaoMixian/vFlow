@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import rikka.shizuku.Shizuku
 import java.io.DataOutputStream
+import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -28,6 +29,7 @@ object ShellManager {
     private const val TAG = "vFlowShellManager"
     private const val BIND_TIMEOUT_MS = 3000L
     private const val MAX_RETRY_COUNT = 3
+    private const val DEPLOY_SUCCESS_MARKER = "__VFLOW_DEPLOY_OK__"
 
     /**
      * Shell 执行模式
@@ -37,6 +39,12 @@ object ShellManager {
         SHIZUKU, // 强制使用 Shizuku
         ROOT     // 强制使用 Root
     }
+
+    data class ExecutableDeployResult(
+        val targetFile: File,
+        val success: Boolean,
+        val output: String
+    )
 
     @Volatile
     private var shellService: IShizukuUserService? = null
@@ -224,6 +232,65 @@ object ShellManager {
     }
 
     /**
+     * 通过 shell 将已暂存的可执行文件部署到目标路径，并在 shell 侧完成可执行校验。
+     * 不能使用应用进程的 File.exists()/canExecute() 检查 /data/local/tmp 这类 shell 可见目录。
+     */
+    suspend fun deployExecutableViaShell(
+        context: Context,
+        stagedFile: File,
+        targetPath: String,
+        mode: ShellMode = ShellMode.AUTO,
+        cleanupStagedFile: Boolean = true
+    ): ExecutableDeployResult {
+        val targetFile = File(targetPath)
+        val targetDir = targetFile.parentFile
+        if (targetDir == null) {
+            return ExecutableDeployResult(
+                targetFile = targetFile,
+                success = false,
+                output = "Error: Invalid target path"
+            )
+        }
+
+        return try {
+            val command = buildString {
+                append("mkdir -p ")
+                append(shellQuote(targetDir.absolutePath))
+                append(" && cp ")
+                append(shellQuote(stagedFile.absolutePath))
+                append(' ')
+                append(shellQuote(targetFile.absolutePath))
+                append(" && chmod 755 ")
+                append(shellQuote(targetFile.absolutePath))
+                append(" && [ -f ")
+                append(shellQuote(targetFile.absolutePath))
+                append(" ] && [ -x ")
+                append(shellQuote(targetFile.absolutePath))
+                append(" ] && printf ")
+                append(shellQuote(DEPLOY_SUCCESS_MARKER))
+            }
+
+            val output = execShellCommand(context, command, mode)
+            val success = !output.startsWith("Error:", ignoreCase = true) && output.contains(DEPLOY_SUCCESS_MARKER)
+            val normalizedOutput = when {
+                success -> "Success"
+                output.startsWith("Error:", ignoreCase = true) -> output
+                else -> "Error: Shell verification failed"
+            }
+
+            ExecutableDeployResult(
+                targetFile = targetFile,
+                success = success,
+                output = normalizedOutput
+            )
+        } finally {
+            if (cleanupStagedFile) {
+                stagedFile.delete()
+            }
+        }
+    }
+
+    /**
      * 内部 Root 执行逻辑
      */
     private fun executeRootCommand(command: String): String {
@@ -254,6 +321,10 @@ object ShellManager {
             DebugLogger.e(TAG, "Root execution failed", e)
             "Error: ${e.message}"
         }
+    }
+
+    private fun shellQuote(value: String): String {
+        return "'${value.replace("'", "'\\''")}'"
     }
 
     /**

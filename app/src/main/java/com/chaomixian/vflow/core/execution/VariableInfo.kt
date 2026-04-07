@@ -11,14 +11,14 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 /**
  * 变量类型枚举（用户可见的中文类型名）
  */
-enum class VariableType(val displayName: String, val typeId: String) {
-    STRING("文本", "vflow.type.string"),
-    NUMBER("数字", "vflow.type.number"),
-    BOOLEAN("布尔", "vflow.type.boolean"),
-    DICTIONARY("字典", "vflow.type.dictionary"),
-    LIST("列表", "vflow.type.list"),
-    IMAGE("图像", "vflow.type.image"),
-    COORDINATE("坐标", "vflow.type.coordinate");
+enum class VariableType(val displayName: String, val typeId: String, val storedValue: String) {
+    STRING("文本", "vflow.type.string", "string"),
+    NUMBER("数字", "vflow.type.number", "number"),
+    BOOLEAN("布尔", "vflow.type.boolean", "boolean"),
+    DICTIONARY("字典", "vflow.type.dictionary", "dictionary"),
+    LIST("列表", "vflow.type.list", "list"),
+    IMAGE("图像", "vflow.type.image", "image"),
+    COORDINATE("坐标", "vflow.type.coordinate", "coordinate");
 
     companion object {
         /**
@@ -33,6 +33,24 @@ enum class VariableType(val displayName: String, val typeId: String) {
          */
         fun fromTypeId(typeId: String): VariableType? {
             return values().find { it.typeId == typeId }
+        }
+
+        /**
+         * 从工作流中存储的类型值获取类型枚举。
+         * 同时兼容内部常量、历史中文/英文显示值以及 typeId。
+         */
+        fun fromStoredValue(value: String?): VariableType? {
+            if (value.isNullOrBlank()) return null
+            return when (value) {
+                "文本", "Text", "string", "vflow.type.string" -> STRING
+                "数字", "Number", "number", "vflow.type.number" -> NUMBER
+                "布尔", "Boolean", "boolean", "vflow.type.boolean" -> BOOLEAN
+                "字典", "Dictionary", "dictionary", "vflow.type.dictionary" -> DICTIONARY
+                "列表", "List", "list", "vflow.type.list" -> LIST
+                "图像", "图片", "Image", "image", "vflow.type.image" -> IMAGE
+                "坐标", "Coordinate", "coordinate", "vflow.type.coordinate" -> COORDINATE
+                else -> null
+            }
         }
     }
 }
@@ -107,8 +125,8 @@ data class VariableInfo(
                 (it.parameters["variableName"] as? String) == varName
             } ?: return null
 
-            val varType = createVarStep.parameters["type"] as? String ?: "文本"
-            val typeEnum = VariableType.fromDisplayName(varType) ?: return null
+            val varType = createVarStep.parameters["type"] as? String
+            val typeEnum = VariableType.fromStoredValue(varType) ?: VariableType.STRING
 
             return VariableInfo(
                 sourceName = varName,

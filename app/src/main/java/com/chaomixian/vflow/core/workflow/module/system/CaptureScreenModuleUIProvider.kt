@@ -121,7 +121,7 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            hint = "区域坐标 (left,top,right,bottom)"
+            hint = context.getString(R.string.hint_vflow_system_capture_screen_region_input)
         }
 
         val textInputEditText = TextInputEditText(context).apply {
@@ -136,10 +136,10 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
         textInputLayout.addView(textInputEditText)
 
         MaterialAlertDialogBuilder(context)
-            .setTitle("设置截屏区域")
-            .setMessage("请输入区域坐标\n例如：100,100,500,600")
+            .setTitle(R.string.dialog_vflow_system_capture_screen_region_title)
+            .setMessage(context.getString(R.string.dialog_vflow_system_capture_screen_region_message))
             .setView(textInputLayout)
-            .setPositiveButton("确定") { dialog, _ ->
+            .setPositiveButton(R.string.common_ok) { dialog, _ ->
                 val input = textInputEditText.text?.toString()?.trim() ?: ""
                 if (input.isNotEmpty()) {
                     // 验证格式
@@ -150,7 +150,7 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
                         holder.onParametersChangedCallback?.invoke()
                         dialog.dismiss()
                     } else {
-                        textInputLayout.error = "格式错误，请输入4个数字，用逗号分隔"
+                        textInputLayout.error = context.getString(R.string.error_vflow_system_capture_screen_region_format)
                     }
                 } else {
                     holder.region = ""
@@ -162,7 +162,7 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
                     dialog.dismiss()
                 }
             }
-            .setNegativeButton("取消") { dialog, _ ->
+            .setNegativeButton(R.string.common_cancel) { dialog, _ ->
                 dialog.dismiss()
             }
             .show()
@@ -174,7 +174,7 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
         // 检查悬浮窗权限
         if (!PermissionManager.isGranted(context, PermissionManager.OVERLAY)) {
             DebugLogger.w("CaptureScreenModuleUIProvider", "悬浮窗权限未授予")
-            Toast.makeText(context, "需要悬浮窗权限才能选择区域", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.toast_vflow_system_capture_screen_overlay_permission_required, Toast.LENGTH_SHORT).show()
             return
         }
         DebugLogger.i("CaptureScreenModuleUIProvider", "悬浮窗权限检查通过")
@@ -184,7 +184,7 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
         val hasShellPermission = shellPermissions.all { PermissionManager.isGranted(context, it) }
         if (!hasShellPermission) {
             DebugLogger.w("CaptureScreenModuleUIProvider", "Shell 权限未授予: $shellPermissions")
-            Toast.makeText(context, "需要 Shizuku 或 Root 权限才能截图", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.toast_vflow_system_capture_screen_shell_permission_required, Toast.LENGTH_SHORT).show()
             return
         }
         DebugLogger.i("CaptureScreenModuleUIProvider", "Shell 权限检查通过")
@@ -232,7 +232,11 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
                 DebugLogger.e("CaptureScreenModuleUIProvider", "区域选择失败", e)
                 withContext(Dispatchers.Main) {
                     contextRef.get()?.let {
-                        Toast.makeText(it, "区域选择失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            it,
+                            it.getString(R.string.toast_vflow_system_capture_screen_region_select_failed, e.message ?: ""),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -241,7 +245,7 @@ class CaptureScreenModuleUIProvider : ModuleUIProvider {
 
     private fun updateRegionInfo(holder: ViewHolder, region: String) {
         holder.layoutRegionInfo.isVisible = true
-        holder.tvRegionInfo.text = "区域: $region"
+        holder.tvRegionInfo.text = holder.view.context.getString(R.string.text_vflow_system_capture_screen_region, region)
 
         // 如果有截图，显示裁剪后的预览
         if (holder.screenshotUri != null) {
