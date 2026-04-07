@@ -70,6 +70,19 @@
 -keep class com.chaomixian.vflow.data.update.** { *; }
 -keep class com.chaomixian.vflow.data.repository.api.** { *; }
 
+# 9.1 保留 API 协议模型与认证持久化模型
+-keep class com.chaomixian.vflow.api.model.** { *; }
+-keep class com.chaomixian.vflow.api.auth.** { *; }
+
+# 9.2 保留日志与轻量本地持久化 DTO
+-keep class com.chaomixian.vflow.core.logging.** { *; }
+-keep class com.chaomixian.vflow.core.module.RecentModulesManager$RecentModuleRecord { *; }
+
+# 9.3 保留定义在 handler 文件中的请求 DTO
+-keep class com.chaomixian.vflow.api.handler.BatchExportRequest { *; }
+-keep class com.chaomixian.vflow.api.handler.ImportWorkflowDataRequest { *; }
+-keep class com.chaomixian.vflow.api.handler.WorkflowImportData { *; }
+
 # 10. 保留 Shizuku & AIDL 相关
 -keep class com.chaomixian.vflow.services.IShizukuUserService { *; }
 -keep class com.chaomixian.vflow.services.IShizukuUserService$Stub { *; }

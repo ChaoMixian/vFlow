@@ -12,7 +12,9 @@ import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerMod
 import com.chaomixian.vflow.services.TriggerServiceProxy
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.reflect.TypeToken
 import java.util.UUID
 
 class WorkflowManager(val context: Context) {
@@ -20,30 +22,6 @@ class WorkflowManager(val context: Context) {
     private val gson = GsonBuilder()
         .registerTypeHierarchyAdapter(VObject::class.java, VObjectGsonAdapter())
         .create()
-
-    private data class WorkflowStorageRecord(
-        val id: String? = null,
-        val name: String? = null,
-        val triggers: List<ActionStep>? = null,
-        val steps: List<ActionStep>? = null,
-        val isEnabled: Boolean? = null,
-        val isFavorite: Boolean? = null,
-        val wasEnabledBeforePermissionsLost: Boolean? = null,
-        val folderId: String? = null,
-        val order: Int? = null,
-        val shortcutName: String? = null,
-        val shortcutIconRes: String? = null,
-        val modifiedAt: Long? = null,
-        val version: String? = null,
-        val vFlowLevel: Int? = null,
-        val description: String? = null,
-        val author: String? = null,
-        val homepage: String? = null,
-        val tags: List<String>? = null,
-        val maxExecutionTime: Int? = null,
-        val triggerConfig: Map<String, Any?>? = null,
-        val triggerConfigs: List<Map<String, Any?>>? = null
-    )
 
     fun saveWorkflow(workflow: Workflow) {
         val workflows = getAllWorkflows().toMutableList()
@@ -181,41 +159,95 @@ class WorkflowManager(val context: Context) {
     }
 
     private fun parseWorkflowRecord(element: JsonElement): Workflow {
-        val record = gson.fromJson(element, WorkflowStorageRecord::class.java)
-        return record?.toWorkflow() ?: throw IllegalStateException("Workflow record is null")
-    }
-
-    private fun WorkflowStorageRecord.toWorkflow(): Workflow {
+        val record = element.asJsonObjectOrNull()
+            ?: throw IllegalStateException("Workflow record is not a JSON object")
         val legacyTriggerConfigs = buildList {
-            triggerConfigs?.let { addAll(it) }
-            triggerConfig?.let { add(it) }
+            record.getMapList("triggerConfigs")?.let { addAll(it) }
+            record.getMap("triggerConfig")?.let { add(it) }
         }
         val normalizedContent = WorkflowNormalizer.normalize(
-            triggers = triggers,
-            steps = steps,
+            triggers = record.getActionSteps("triggers"),
+            steps = record.getActionSteps("steps"),
             legacyTriggerConfigs = legacyTriggerConfigs
         )
 
         return Workflow(
-            id = id?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
-            name = name?.takeIf { it.isNotBlank() } ?: "未命名工作流",
+            id = record.getString("id")?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
+            name = record.getString("name")?.takeIf { it.isNotBlank() } ?: "未命名工作流",
             triggers = normalizedContent.triggers,
             steps = normalizedContent.steps,
-            isEnabled = isEnabled ?: true,
-            isFavorite = isFavorite ?: false,
-            wasEnabledBeforePermissionsLost = wasEnabledBeforePermissionsLost ?: false,
-            folderId = folderId,
-            order = order ?: 0,
-            shortcutName = shortcutName,
-            shortcutIconRes = shortcutIconRes,
-            modifiedAt = modifiedAt?.takeIf { it > 0 } ?: System.currentTimeMillis(),
-            version = version?.takeIf { it.isNotBlank() } ?: "1.0.0",
-            vFlowLevel = vFlowLevel?.takeIf { it > 0 } ?: 1,
-            description = description ?: "",
-            author = author ?: "",
-            homepage = homepage ?: "",
-            tags = tags ?: emptyList(),
-            maxExecutionTime = maxExecutionTime
+            isEnabled = record.getBoolean("isEnabled") ?: true,
+            isFavorite = record.getBoolean("isFavorite") ?: false,
+            wasEnabledBeforePermissionsLost = record.getBoolean("wasEnabledBeforePermissionsLost") ?: false,
+            folderId = record.getString("folderId"),
+            order = record.getInt("order") ?: 0,
+            shortcutName = record.getString("shortcutName"),
+            shortcutIconRes = record.getString("shortcutIconRes"),
+            modifiedAt = record.getLong("modifiedAt")?.takeIf { it > 0 } ?: System.currentTimeMillis(),
+            version = record.getString("version")?.takeIf { it.isNotBlank() } ?: "1.0.0",
+            vFlowLevel = record.getInt("vFlowLevel")?.takeIf { it > 0 } ?: 1,
+            description = record.getString("description") ?: "",
+            author = record.getString("author") ?: "",
+            homepage = record.getString("homepage") ?: "",
+            tags = record.getStringList("tags") ?: emptyList(),
+            maxExecutionTime = record.getInt("maxExecutionTime")
         )
+    }
+
+    private fun JsonElement.asJsonObjectOrNull(): JsonObject? {
+        return if (isJsonObject) asJsonObject else null
+    }
+
+    private fun JsonObject.getString(name: String): String? {
+        val element = get(name) ?: return null
+        if (!element.isJsonPrimitive || !element.asJsonPrimitive.isString) return null
+        return element.asString
+    }
+
+    private fun JsonObject.getBoolean(name: String): Boolean? {
+        val element = get(name) ?: return null
+        if (!element.isJsonPrimitive) return null
+        return runCatching { element.asBoolean }.getOrNull()
+    }
+
+    private fun JsonObject.getInt(name: String): Int? {
+        val element = get(name) ?: return null
+        if (!element.isJsonPrimitive) return null
+        return runCatching { element.asInt }.getOrNull()
+    }
+
+    private fun JsonObject.getLong(name: String): Long? {
+        val element = get(name) ?: return null
+        if (!element.isJsonPrimitive) return null
+        return runCatching { element.asLong }.getOrNull()
+    }
+
+    private fun JsonObject.getStringList(name: String): List<String>? {
+        val element = get(name) ?: return null
+        if (!element.isJsonArray) return null
+        return element.asJsonArray.mapNotNull { item ->
+            if (item.isJsonPrimitive && item.asJsonPrimitive.isString) item.asString else null
+        }
+    }
+
+    private fun JsonObject.getActionSteps(name: String): List<ActionStep>? {
+        val element = get(name) ?: return null
+        if (!element.isJsonArray) return null
+        val type = object : TypeToken<List<ActionStep>>() {}.type
+        return gson.fromJson<List<ActionStep>>(element, type)
+    }
+
+    private fun JsonObject.getMap(name: String): Map<String, Any?>? {
+        val element = get(name) ?: return null
+        if (!element.isJsonObject) return null
+        val type = object : TypeToken<Map<String, Any?>>() {}.type
+        return gson.fromJson<Map<String, Any?>>(element, type)
+    }
+
+    private fun JsonObject.getMapList(name: String): List<Map<String, Any?>>? {
+        val element = get(name) ?: return null
+        if (!element.isJsonArray) return null
+        val type = object : TypeToken<List<Map<String, Any?>>>() {}.type
+        return gson.fromJson<List<Map<String, Any?>>>(element, type)
     }
 }
