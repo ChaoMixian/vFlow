@@ -62,9 +62,13 @@ object PillRenderer {
 
             return if (propName != null) {
                 val propDisplay = varInfo.getPropertyDisplayName(context, propName)
-                "${varInfo.sourceName} 的 $propDisplay"
+                context.getString(
+                    R.string.magic_variable_property_name,
+                    varInfo.getLocalizedSourceName(context),
+                    propDisplay
+                )
             } else {
-                varInfo.sourceName
+                varInfo.getLocalizedSourceName(context)
             }
         }
         return variableReference

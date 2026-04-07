@@ -73,8 +73,13 @@ data class VariableInfo(
     val sourceName: String,
     val typeId: String,
     val sourceModuleId: String,
-    val sourceStepId: String? = null
+    val sourceStepId: String? = null,
+    val sourceNameResId: Int? = null
 ) {
+    fun getLocalizedSourceName(context: Context): String {
+        return sourceNameResId?.let(context::getString) ?: sourceName
+    }
+
     /**
      * 获取属性的本地化显示名称
      * @param context Android上下文
@@ -155,7 +160,8 @@ data class VariableInfo(
                 sourceName = outputDef.name,
                 typeId = actualTypeId,
                 sourceModuleId = sourceStep.moduleId,
-                sourceStepId = stepId
+                sourceStepId = stepId,
+                sourceNameResId = outputDef.nameStringRes
             )
         }
 
@@ -184,7 +190,8 @@ data class VariableInfo(
                 sourceName = outputDef.name,
                 typeId = actualTypeId,
                 sourceModuleId = sourceStep.moduleId,
-                sourceStepId = stepId
+                sourceStepId = stepId,
+                sourceNameResId = outputDef.nameStringRes
             )
         }
 

@@ -84,11 +84,16 @@ object PillVariableResolver {
 
         // 构建显示名称（使用本地化属性名）
         val stepPrefix = if (stepIndex >= 0) "#$stepIndex " else ""
+        val localizedSourceName = varInfo.getLocalizedSourceName(context)
         val displayName = if (propertyName != null) {
             val localizedPropName = varInfo.getPropertyDisplayName(context, propertyName)
-            "${stepPrefix}${varInfo.sourceName} 的 $localizedPropName"
+            context.getString(
+                R.string.magic_variable_property_name,
+                "$stepPrefix$localizedSourceName",
+                localizedPropName
+            )
         } else {
-            "${stepPrefix}${varInfo.sourceName}"
+            "$stepPrefix$localizedSourceName"
         }
 
         return ResolvedInfo(displayName, color, propertyName)
