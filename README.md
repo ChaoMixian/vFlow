@@ -124,7 +124,7 @@ vFlow 最常见的贡献方式就是添加新的模块。步骤如下：
 
 ## 📄 许可证
 
-本项目采用 [GPL License](LICENSE) 许可证。
+本项目采用 [GNU General Public License v2.0 or later (GPL-2.0-or-later)](LICENSE) 许可证。
 
 ## 💰 关于赞助
 

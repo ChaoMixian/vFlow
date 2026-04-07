@@ -125,7 +125,7 @@ The most common way to contribute to vFlow is by adding new modules. Steps:
 
 ## 📄 License
 
-This project is licensed under the [GPL License](LICENSE).
+This project is licensed under the [GNU General Public License v2.0 or later (GPL-2.0-or-later)](LICENSE).
 
 ## 💰 Sponsorship
 
