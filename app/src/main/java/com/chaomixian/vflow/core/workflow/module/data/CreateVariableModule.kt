@@ -252,26 +252,17 @@ class CreateVariableModule : BaseModule() {
                     val listValue = rawValue.raw as? List<*>
                     when {
                         mapValue != null -> {
-                            val x = (mapValue["x"] as? Number)?.toInt() ?: 0
-                            val y = (mapValue["y"] as? Number)?.toInt() ?: 0
+                            val x = resolveCoordinateComponent(mapValue["x"], context)
+                            val y = resolveCoordinateComponent(mapValue["y"], context)
                             VCoordinate(x, y)
                         }
                         listValue != null && listValue.size >= 2 -> {
-                            val x = (listValue[0] as? Number)?.toInt() ?: 0
-                            val y = (listValue[1] as? Number)?.toInt() ?: 0
+                            val x = resolveCoordinateComponent(listValue[0], context)
+                            val y = resolveCoordinateComponent(listValue[1], context)
                             VCoordinate(x, y)
                         }
                         else -> {
-                            // 尝试从字符串解析 "x,y" 格式
-                            val str = rawValue.asString()
-                            val parts = str.split(",")
-                            if (parts.size == 2) {
-                                val x = parts[0].trim().toIntOrNull() ?: 0
-                                val y = parts[1].trim().toIntOrNull() ?: 0
-                                VCoordinate(x, y)
-                            } else {
-                                VCoordinate(0, 0)
-                            }
+                            resolveCoordinateFromString(rawValue.asString(), context)
                         }
                     }
                 }
@@ -291,5 +282,43 @@ class CreateVariableModule : BaseModule() {
         }
 
         return ExecutionResult.Success(mapOf("variable" to variable))
+    }
+
+    private fun resolveCoordinateComponent(value: Any?, context: ExecutionContext): Int {
+        val vObject = VObjectFactory.from(value)
+        val numericValue = vObject.asNumber()
+        if (numericValue != null) {
+            return numericValue.toInt()
+        }
+
+        val rawText = vObject.asString().trim()
+        if (rawText.isEmpty()) {
+            return 0
+        }
+
+        val resolvedText = if (VariableResolver.hasVariableReference(rawText)) {
+            VariableResolver.resolve(rawText, context).trim()
+        } else {
+            rawText
+        }
+
+        return resolvedText.toDoubleOrNull()?.toInt() ?: 0
+    }
+
+    private fun resolveCoordinateFromString(value: String, context: ExecutionContext): VCoordinate {
+        val resolvedText = if (VariableResolver.hasVariableReference(value)) {
+            VariableResolver.resolve(value, context).trim()
+        } else {
+            value.trim()
+        }
+
+        val parts = resolvedText.split(",")
+        if (parts.size != 2) {
+            return VCoordinate(0, 0)
+        }
+
+        val x = parts[0].trim().toDoubleOrNull()?.toInt() ?: 0
+        val y = parts[1].trim().toDoubleOrNull()?.toInt() ?: 0
+        return VCoordinate(x, y)
     }
 }
