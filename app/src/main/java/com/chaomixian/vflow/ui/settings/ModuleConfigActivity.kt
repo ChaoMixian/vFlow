@@ -16,9 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
-import com.chaomixian.vflow.integration.feishu.FeishuModuleConfig
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.chaomixian.vflow.ui.common.ThemeUtils
@@ -28,7 +28,12 @@ class ModuleConfigActivity : BaseActivity() {
     companion object {
         const val PREFS_NAME = "module_config_prefs"
         const val KEY_BACKTAP_SENSITIVITY = "backtap_sensitivity"
-        const val KEY_FEISHU_ACCESS_TOKEN = "feishu_access_token"
+        const val KEY_FEISHU_APP_ID = "feishu_app_id"
+        const val KEY_FEISHU_APP_SECRET = "feishu_app_secret"
+        const val KEY_FEISHU_APP_ACCESS_TOKEN = "feishu_app_access_token"
+        const val KEY_FEISHU_APP_ACCESS_TOKEN_EXPIRES_AT = "feishu_app_access_token_expires_at"
+        const val KEY_FEISHU_TENANT_ACCESS_TOKEN = "feishu_access_token"
+        const val KEY_FEISHU_TENANT_ACCESS_TOKEN_EXPIRES_AT = "feishu_access_token_expires_at"
 
         // 灵敏度范围：0-10，对应灵敏度值从 0.0（最灵敏）到 0.75（最难触发）
         const val MIN_SENSITIVITY_VALUE = 0.0f
@@ -74,15 +79,20 @@ fun ModuleConfigScreen(onBack: () -> Unit) {
         mutableFloatStateOf(prefs.getFloat(ModuleConfigActivity.KEY_BACKTAP_SENSITIVITY, 0.05f)
             .coerceIn(ModuleConfigActivity.MIN_SENSITIVITY_VALUE, ModuleConfigActivity.MAX_SENSITIVITY_VALUE))
     }
-    var feishuAccessToken by remember {
+    var feishuAppId by remember {
         mutableStateOf(
-            prefs.getString(ModuleConfigActivity.KEY_FEISHU_ACCESS_TOKEN, "").orEmpty()
+            prefs.getString(ModuleConfigActivity.KEY_FEISHU_APP_ID, "").orEmpty()
+        )
+    }
+    var feishuAppSecret by remember {
+        mutableStateOf(
+            prefs.getString(ModuleConfigActivity.KEY_FEISHU_APP_SECRET, "").orEmpty()
         )
     }
 
     // 滑块值 (0-10) 转换为实际灵敏度值
     val sliderPosition = ((sensitivityValue - ModuleConfigActivity.MIN_SENSITIVITY_VALUE) /
-            (ModuleConfigActivity.MAX_SENSITIVITY_VALUE - ModuleConfigActivity.MIN_SENSITIVITY_VALUE) * 10).toFloat()
+            (ModuleConfigActivity.MAX_SENSITIVITY_VALUE - ModuleConfigActivity.MIN_SENSITIVITY_VALUE) * 10)
 
     Scaffold(
         topBar = {
@@ -173,21 +183,54 @@ fun ModuleConfigScreen(onBack: () -> Unit) {
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.module_config_feishu_access_token),
+                        text = stringResource(R.string.module_config_feishu_app_id),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
-                        value = feishuAccessToken,
+                        value = feishuAppId,
                         onValueChange = {
-                            feishuAccessToken = it
-                            prefs.edit { putString(ModuleConfigActivity.KEY_FEISHU_ACCESS_TOKEN, it.trim()) }
+                            feishuAppId = it
+                            prefs.edit {
+                                putString(ModuleConfigActivity.KEY_FEISHU_APP_ID, it.trim())
+                                remove(ModuleConfigActivity.KEY_FEISHU_APP_ACCESS_TOKEN)
+                                remove(ModuleConfigActivity.KEY_FEISHU_APP_ACCESS_TOKEN_EXPIRES_AT)
+                                remove(ModuleConfigActivity.KEY_FEISHU_TENANT_ACCESS_TOKEN)
+                                remove(ModuleConfigActivity.KEY_FEISHU_TENANT_ACCESS_TOKEN_EXPIRES_AT)
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.module_config_feishu_access_token)) },
-                        placeholder = { Text(stringResource(R.string.module_config_feishu_access_token_hint)) },
-                        minLines = 3
+                        label = { Text(stringResource(R.string.module_config_feishu_app_id)) },
+                        placeholder = { Text(stringResource(R.string.module_config_feishu_app_id_hint)) },
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = stringResource(R.string.module_config_feishu_app_secret),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = feishuAppSecret,
+                        onValueChange = {
+                            feishuAppSecret = it
+                            prefs.edit {
+                                putString(ModuleConfigActivity.KEY_FEISHU_APP_SECRET, it.trim())
+                                remove(ModuleConfigActivity.KEY_FEISHU_APP_ACCESS_TOKEN)
+                                remove(ModuleConfigActivity.KEY_FEISHU_APP_ACCESS_TOKEN_EXPIRES_AT)
+                                remove(ModuleConfigActivity.KEY_FEISHU_TENANT_ACCESS_TOKEN)
+                                remove(ModuleConfigActivity.KEY_FEISHU_TENANT_ACCESS_TOKEN_EXPIRES_AT)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.module_config_feishu_app_secret)) },
+                        placeholder = { Text(stringResource(R.string.module_config_feishu_app_secret_hint)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))

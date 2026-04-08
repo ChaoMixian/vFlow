@@ -36,7 +36,7 @@ class FeishuSendMessageModule : BaseModule() {
         nameStringRes = R.string.module_vflow_feishu_send_message_name,
         descriptionStringRes = R.string.module_vflow_feishu_send_message_desc,
         name = "发送飞书消息",
-        description = "通过共享飞书令牌向用户或群聊发送消息",
+        description = "通过飞书应用凭证自动获取令牌并发送消息",
         iconRes = R.drawable.rounded_sms_24,
         category = "飞书",
         categoryId = "feishu"
@@ -193,12 +193,15 @@ class FeishuSendMessageModule : BaseModule() {
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         return withContext(Dispatchers.IO) {
             try {
-                val token = FeishuModuleConfig.getToken(appContext)
-                if (token.isBlank()) {
-                    return@withContext ExecutionResult.Failure(
-                        "缺少飞书令牌",
-                        "请先在设置 -> 模块配置中填写飞书访问令牌"
-                    )
+                val timeout = context.getVariableAsLong("timeout") ?: 15L
+                val token = when (val tokenResolution = FeishuModuleConfig.resolveTenantAccessToken(appContext, timeout)) {
+                    is FeishuModuleConfig.TokenResolution.Success -> tokenResolution.token
+                    is FeishuModuleConfig.TokenResolution.Failure -> {
+                        return@withContext ExecutionResult.Failure(
+                            tokenResolution.title,
+                            tokenResolution.message
+                        )
+                    }
                 }
 
                 val receiveIdType = context.getVariableAsString("receive_id_type", "open_id")
@@ -212,7 +215,6 @@ class FeishuSendMessageModule : BaseModule() {
                 val content = buildContent(context, msgType)
                     ?: return@withContext ExecutionResult.Failure("参数错误", "消息内容格式不正确")
 
-                val timeout = context.getVariableAsLong("timeout") ?: 15L
                 val uuidRaw = context.getVariableAsString("uuid", "")
                 val uuid = VariableResolver.resolve(uuidRaw, context).trim()
 

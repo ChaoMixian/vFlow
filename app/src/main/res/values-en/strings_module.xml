@@ -679,7 +679,7 @@
     <string name="module_vflow_network_http_request_name">HTTP Request</string>
     <string name="module_vflow_network_http_request_desc">Send HTTP request and get response</string>
     <string name="module_vflow_feishu_send_message_name">Send Feishu Message</string>
-    <string name="module_vflow_feishu_send_message_desc">Send messages to users or chats with the shared Feishu token</string>
+    <string name="module_vflow_feishu_send_message_desc">Automatically fetch and cache Feishu access tokens with app credentials, then send messages to users or chats</string>
     <string name="module_vflow_network_feishu_upload_name">Feishu Upload Media</string>
     <string name="module_vflow_network_feishu_upload_desc">Upload files to Feishu cloud documents</string>
     <string name="param_vflow_feishu_send_message_receive_id_type_name">Recipient Type</string>
@@ -726,7 +726,7 @@
     <string name="param_vflow_feishu_upload_parent_node_name">Document Token</string>
     <string name="param_vflow_feishu_upload_extra_name">Extra Parameters</string>
     <string name="param_vflow_feishu_upload_timeout_name">Timeout (Seconds)</string>
-    <string name="hint_vflow_feishu_upload_access_token">Leave empty to use the shared token from settings</string>
+    <string name="hint_vflow_feishu_upload_access_token">Leave empty to use the auto-fetched cached token from settings</string>
     <string name="hint_vflow_feishu_upload_file">Select or reference the image file to upload</string>
     <string name="hint_vflow_feishu_upload_file_name">Leave empty to use the original filename</string>
     <string name="hint_vflow_feishu_upload_parent_node">The document token used as upload target</string>

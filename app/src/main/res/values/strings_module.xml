@@ -629,7 +629,7 @@
     <string name="module_vflow_network_http_request_name">HTTP 请求</string>
     <string name="module_vflow_network_http_request_desc">发送 HTTP 请求并获取响应</string>
     <string name="module_vflow_feishu_send_message_name">发送飞书消息</string>
-    <string name="module_vflow_feishu_send_message_desc">通过共享飞书令牌向用户或群聊发送消息</string>
+    <string name="module_vflow_feishu_send_message_desc">通过飞书应用凭证自动获取并缓存访问令牌后向用户或群聊发送消息</string>
     <string name="module_vflow_network_feishu_upload_name">飞书上传素材</string>
     <string name="module_vflow_network_feishu_upload_desc">上传文件到飞书云文档</string>
     <string name="param_vflow_feishu_send_message_receive_id_type_name">接收者类型</string>
@@ -676,7 +676,7 @@
     <string name="param_vflow_feishu_upload_parent_node_name">文档 Token</string>
     <string name="param_vflow_feishu_upload_extra_name">额外参数</string>
     <string name="param_vflow_feishu_upload_timeout_name">超时(秒)</string>
-    <string name="hint_vflow_feishu_upload_access_token">留空则使用设置中的飞书访问令牌</string>
+    <string name="hint_vflow_feishu_upload_access_token">留空则使用设置中自动获取并缓存的飞书访问令牌</string>
     <string name="hint_vflow_feishu_upload_file">选择或引用要上传的图片文件</string>
     <string name="hint_vflow_feishu_upload_file_name">留空则使用原始文件名</string>
     <string name="hint_vflow_feishu_upload_parent_node">要上传到的云文档 token</string>

@@ -31,7 +31,7 @@ class FeishuMediaUploadModule : BaseModule() {
         nameStringRes = R.string.module_vflow_network_feishu_upload_name,
         descriptionStringRes = R.string.module_vflow_network_feishu_upload_desc,
         name = "飞书上传素材",
-        description = "上传文件到飞书云文档",
+        description = "上传文件到飞书云文档，支持自动获取飞书令牌",
         iconRes = R.drawable.rounded_cloud_24,
         category = "飞书",
         categoryId = "feishu"
@@ -165,15 +165,26 @@ class FeishuMediaUploadModule : BaseModule() {
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         return withContext(Dispatchers.IO) {
             try {
+                val timeout = context.getVariableAsLong("timeout") ?: 30
                 val rawAccessToken = context.getVariableAsString("access_token", "")
                 val accessToken = VariableResolver.resolve(rawAccessToken, context)
                     .trim()
-                    .ifEmpty { FeishuModuleConfig.getToken(appContext) }
+                    .ifEmpty {
+                        when (val tokenResolution = FeishuModuleConfig.resolveTenantAccessToken(appContext, timeout)) {
+                            is FeishuModuleConfig.TokenResolution.Success -> tokenResolution.token
+                            is FeishuModuleConfig.TokenResolution.Failure -> {
+                                return@withContext ExecutionResult.Failure(
+                                    tokenResolution.title,
+                                    tokenResolution.message
+                                )
+                            }
+                        }
+                    }
 
                 if (accessToken.isEmpty()) {
                     return@withContext ExecutionResult.Failure(
                         "参数错误",
-                        "访问令牌不能为空，请在步骤中填写或前往设置 -> 模块配置配置飞书令牌"
+                        "访问令牌不能为空，请在步骤中填写或在设置 -> 模块配置中填写飞书 App ID 和 App Secret"
                     )
                 }
 
@@ -211,8 +222,6 @@ class FeishuMediaUploadModule : BaseModule() {
                 }
 
                 val extra = context.getVariableAsString("extra", "")
-
-                val timeout = context.getVariableAsLong("timeout") ?: 30
 
                 onProgress(ProgressUpdate("正在读取文件..."))
                 val uri = android.net.Uri.parse(image.uriString)
