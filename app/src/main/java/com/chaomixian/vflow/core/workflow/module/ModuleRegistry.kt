@@ -144,6 +144,7 @@ object ModuleRegistry {
         register(HttpRequestModule(), context)
         register(AIModule(), context)
         register(FeishuSendMessageModule(), context)
+        register(FeishuGetMessageHistoryModule(), context)
         register(FeishuMediaUploadModule(), context)
 
         // 应用与系统
