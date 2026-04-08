@@ -629,9 +629,10 @@
     <string name="module_vflow_network_http_request_name">HTTP 请求</string>
     <string name="module_vflow_network_http_request_desc">发送 HTTP 请求并获取响应</string>
     <string name="module_vflow_feishu_send_message_name">发送飞书消息</string>
-    <string name="module_vflow_feishu_send_message_desc">通过飞书应用凭证自动获取并缓存访问令牌后向用户或群聊发送消息</string>
+    <string name="module_vflow_feishu_send_message_desc">支持以应用身份或用户身份向用户或群聊发送飞书消息</string>
     <string name="module_vflow_network_feishu_upload_name">飞书上传素材</string>
     <string name="module_vflow_network_feishu_upload_desc">上传文件到飞书云文档</string>
+    <string name="param_vflow_feishu_send_message_auth_mode_name">发送身份</string>
     <string name="param_vflow_feishu_send_message_receive_id_type_name">接收者类型</string>
     <string name="param_vflow_feishu_send_message_receive_id_name">接收者 ID</string>
     <string name="param_vflow_feishu_send_message_msg_type_name">消息类型</string>
@@ -643,6 +644,8 @@
     <string name="hint_vflow_feishu_send_message_text">发送文本消息时填写</string>
     <string name="hint_vflow_feishu_send_message_content_json">非文本消息传入 content 对应的 JSON 对象</string>
     <string name="hint_vflow_feishu_send_message_uuid">可选，用于请求去重</string>
+    <string name="option_vflow_feishu_send_message_auth_mode_tenant">应用身份</string>
+    <string name="option_vflow_feishu_send_message_auth_mode_user">用户身份</string>
     <string name="option_vflow_feishu_send_message_receive_id_type_open_id">open_id</string>
     <string name="option_vflow_feishu_send_message_receive_id_type_union_id">union_id</string>
     <string name="option_vflow_feishu_send_message_receive_id_type_user_id">user_id</string>

@@ -679,9 +679,10 @@
     <string name="module_vflow_network_http_request_name">HTTP Request</string>
     <string name="module_vflow_network_http_request_desc">Send HTTP request and get response</string>
     <string name="module_vflow_feishu_send_message_name">Send Feishu Message</string>
-    <string name="module_vflow_feishu_send_message_desc">Automatically fetch and cache Feishu access tokens with app credentials, then send messages to users or chats</string>
+    <string name="module_vflow_feishu_send_message_desc">Send Feishu messages to users or chats as either the app or an authorized user</string>
     <string name="module_vflow_network_feishu_upload_name">Feishu Upload Media</string>
     <string name="module_vflow_network_feishu_upload_desc">Upload files to Feishu cloud documents</string>
+    <string name="param_vflow_feishu_send_message_auth_mode_name">Send As</string>
     <string name="param_vflow_feishu_send_message_receive_id_type_name">Recipient Type</string>
     <string name="param_vflow_feishu_send_message_receive_id_name">Recipient ID</string>
     <string name="param_vflow_feishu_send_message_msg_type_name">Message Type</string>
@@ -693,6 +694,8 @@
     <string name="hint_vflow_feishu_send_message_text">Used when sending text messages</string>
     <string name="hint_vflow_feishu_send_message_content_json">Pass the JSON object used as Feishu content for non-text messages</string>
     <string name="hint_vflow_feishu_send_message_uuid">Optional idempotency UUID</string>
+    <string name="option_vflow_feishu_send_message_auth_mode_tenant">App Identity</string>
+    <string name="option_vflow_feishu_send_message_auth_mode_user">User Identity</string>
     <string name="option_vflow_feishu_send_message_receive_id_type_open_id">open_id</string>
     <string name="option_vflow_feishu_send_message_receive_id_type_union_id">union_id</string>
     <string name="option_vflow_feishu_send_message_receive_id_type_user_id">user_id</string>

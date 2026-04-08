@@ -36,12 +36,13 @@ class FeishuSendMessageModule : BaseModule() {
         nameStringRes = R.string.module_vflow_feishu_send_message_name,
         descriptionStringRes = R.string.module_vflow_feishu_send_message_desc,
         name = "发送飞书消息",
-        description = "通过飞书应用凭证自动获取令牌并发送消息",
+        description = "支持以应用身份或用户身份发送飞书消息",
         iconRes = R.drawable.rounded_sms_24,
         category = "飞书",
         categoryId = "feishu"
     )
 
+    private val authModeOptions = listOf("tenant_access_token", "user_access_token")
     private val receiveIdTypeOptions = listOf("open_id", "union_id", "user_id", "email", "chat_id")
     private val msgTypeOptions = listOf(
         "text",
@@ -58,6 +59,18 @@ class FeishuSendMessageModule : BaseModule() {
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(
+        InputDefinition(
+            id = "auth_mode",
+            name = "发送身份",
+            nameStringRes = R.string.param_vflow_feishu_send_message_auth_mode_name,
+            staticType = ParameterType.ENUM,
+            defaultValue = "tenant_access_token",
+            options = authModeOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_feishu_send_message_auth_mode_tenant,
+                R.string.option_vflow_feishu_send_message_auth_mode_user
+            )
+        ),
         InputDefinition(
             id = "receive_id_type",
             name = "接收者类型",
@@ -164,9 +177,10 @@ class FeishuSendMessageModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
+        val authModePill = PillUtil.createPillFromParam(step.parameters["auth_mode"], getInputs().find { it.id == "auth_mode" }, isModuleOption = true)
         val receiveIdPill = PillUtil.createPillFromParam(step.parameters["receive_id"], getInputs().find { it.id == "receive_id" })
         val msgTypePill = PillUtil.createPillFromParam(step.parameters["msg_type"], getInputs().find { it.id == "msg_type" }, isModuleOption = true)
-        return PillUtil.buildSpannable(context, "飞书发送", msgTypePill, "到", receiveIdPill)
+        return PillUtil.buildSpannable(context, "飞书发送", authModePill, msgTypePill, "到", receiveIdPill)
     }
 
     override fun validate(step: ActionStep, allSteps: List<ActionStep>): ValidationResult {
@@ -194,7 +208,14 @@ class FeishuSendMessageModule : BaseModule() {
         return withContext(Dispatchers.IO) {
             try {
                 val timeout = context.getVariableAsLong("timeout") ?: 15L
-                val token = when (val tokenResolution = FeishuModuleConfig.resolveTenantAccessToken(appContext, timeout)) {
+                val authMode = context.getVariableAsString("auth_mode", "tenant_access_token")
+                val token = when (
+                    val tokenResolution = if (authMode == "user_access_token") {
+                        FeishuModuleConfig.resolveUserAccessToken(appContext, timeout)
+                    } else {
+                        FeishuModuleConfig.resolveTenantAccessToken(appContext, timeout)
+                    }
+                ) {
                     is FeishuModuleConfig.TokenResolution.Success -> tokenResolution.token
                     is FeishuModuleConfig.TokenResolution.Failure -> {
                         return@withContext ExecutionResult.Failure(

@@ -32,9 +32,26 @@
     <string name="module_config_feishu_app_id_hint">Enter the app_id of your Feishu custom app</string>
     <string name="module_config_feishu_app_secret">App Secret</string>
     <string name="module_config_feishu_app_secret_hint">Enter the app_secret of your Feishu custom app</string>
+    <string name="module_config_feishu_user_auth_code">User Authorization Code</string>
+    <string name="module_config_feishu_user_auth_code_hint">Enter the latest OAuth authorization code to exchange a user_access_token on first user-mode send</string>
+    <string name="module_config_feishu_user_redirect_uri">Redirect URI (Optional)</string>
+    <string name="module_config_feishu_user_redirect_uri_hint">If redirect_uri was used during authorization, keep the same value here</string>
+    <string name="module_config_feishu_user_code_verifier">Code Verifier (Optional)</string>
+    <string name="module_config_feishu_user_code_verifier_hint">If PKCE was used during authorization, enter the matching code_verifier here</string>
+    <string name="module_config_feishu_user_scope">Scope (Optional)</string>
+    <string name="module_config_feishu_user_scope_hint">Optional space-separated scope list used to narrow user_access_token permissions</string>
     <string name="module_config_feishu_access_token">Access Token</string>
     <string name="module_config_feishu_access_token_hint">Paste the shared token used by Feishu modules</string>
     <string name="module_config_feishu_desc">Feishu modules automatically fetch and cache both app_access_token and tenant_access_token with the App ID and App Secret. Cached tokens are reused until they expire, then refreshed automatically.</string>
+    <string name="module_config_feishu_user_auth_title">User Authentication</string>
+    <string name="module_config_feishu_user_redirect_label">Fixed Redirect URI</string>
+    <string name="module_config_feishu_user_redirect_note">If Feishu says the redirect URI is not configured, add the address above once in the developer console under Security Settings -> Redirect URL.</string>
+    <string name="module_config_feishu_user_auth_start">Start Authentication</string>
+    <string name="module_config_feishu_user_auth_restart">Re-authenticate</string>
+    <string name="module_config_feishu_user_auth_in_progress">Authenticating...</string>
+    <string name="module_config_feishu_user_auth_copy_redirect">Copy Redirect URI</string>
+    <string name="module_config_feishu_user_auth_clear">Clear User Authentication</string>
+    <string name="module_config_feishu_user_desc">Tap Start Authentication to jump to Feishu. After approval, the app automatically caches user_access_token; if offline_access is enabled and refresh is allowed, it also caches refresh_token.</string>
 
     <string name="settings_section_debugging">Debugging</string>
     <string name="settings_switch_enable_logging">Record Debug Logs</string>
