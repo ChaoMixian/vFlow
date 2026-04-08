@@ -145,10 +145,11 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
         // 恢复其他参数
         (currentParameters["method"] as? String)?.let { holder.methodSpinner.setSelection(module.methodOptions.indexOf(it)) }
-        (currentParameters["body_type"] as? String)?.let { holder.bodyTypeSpinner.setSelection(module.bodyTypeOptions.indexOf(it)) }
+        val normalizedBodyType = HttpRequestModule.normalizeBodyType(currentParameters["body_type"] as? String)
+        holder.bodyTypeSpinner.setSelection(module.bodyTypeOptions.indexOf(normalizedBodyType).coerceAtLeast(0))
 
         // 更新 Body 编辑器
-        updateBodyEditor(context, holder, currentParameters["body_type"] as? String, currentParameters["body"], onMagicVariableRequested)
+        updateBodyEditor(context, holder, normalizedBodyType, currentParameters["body"], onMagicVariableRequested)
 
         // 恢复高级选项的展开状态
         val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
