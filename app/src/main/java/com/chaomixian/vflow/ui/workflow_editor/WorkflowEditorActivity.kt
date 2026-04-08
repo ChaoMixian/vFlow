@@ -11,6 +11,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.EditText
@@ -228,6 +229,14 @@ class WorkflowEditorActivity : BaseActivity() {
         })
 
         setupRecyclerView()
+
+        // 点击内容区域时清除标题输入框焦点并关闭键盘
+        recyclerView.setOnTouchListener { _, _ ->
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(nameEditText.windowToken, 0)
+            nameEditText.clearFocus()
+            false
+        }
 
         // 初始化 PickerHandler
         pickerHandler = PickerHandler(
