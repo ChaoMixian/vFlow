@@ -283,6 +283,15 @@ class ExecutionUIService(private val context: Context) {
             putExtra("module_name", moduleName)
             putExtra("error_message", errorMessage)
         }
-        startActivityAndAwaitResult(intent, "执行出错", "$workflowName - $moduleName: $errorMessage").await()
+        startActivityAndAwaitResult(
+            intent,
+            context.getString(R.string.execution_error_notification_title),
+            context.getString(
+                R.string.execution_error_notification_content,
+                workflowName,
+                moduleName,
+                errorMessage
+            )
+        ).await()
     }
 }

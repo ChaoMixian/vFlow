@@ -46,7 +46,7 @@ class LogAdapter(
             val context = itemView.context
 
             nameView.text = log.workflowName
-            messageView.text = log.message
+            messageView.text = log.resolveMessage(context)
             timestampView.text = DateUtils.getRelativeTimeSpanString(
                 log.timestamp,
                 System.currentTimeMillis(),

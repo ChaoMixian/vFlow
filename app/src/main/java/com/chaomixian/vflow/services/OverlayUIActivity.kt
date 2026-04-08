@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import coil.load
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -32,6 +33,12 @@ import java.io.File
 import java.util.*
 
 class OverlayUIActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        super.attachBaseContext(context)
+    }
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -112,9 +119,12 @@ class OverlayUIActivity : AppCompatActivity() {
             }
             "share" -> handleShareRequest()
             "error_dialog" -> {
-                val workflowName = intent.getStringExtra("workflow_name") ?: "未知工作流"
-                val moduleName = intent.getStringExtra("module_name") ?: "未知模块"
-                val errorMessage = intent.getStringExtra("error_message") ?: "未知错误"
+                val workflowName = intent.getStringExtra("workflow_name")
+                    ?: getString(R.string.summary_unknown_workflow)
+                val moduleName = intent.getStringExtra("module_name")
+                    ?: getString(R.string.ui_inspector_unknown)
+                val errorMessage = intent.getStringExtra("error_message")
+                    ?: getString(R.string.error_unknown_error)
                 showErrorDialog(workflowName, moduleName, errorMessage)
             }
             else -> finishWithError()
@@ -311,13 +321,13 @@ class OverlayUIActivity : AppCompatActivity() {
         val moduleText = dialogView.findViewById<TextView>(R.id.text_module_name)
         val messageText = dialogView.findViewById<TextView>(R.id.text_error_message)
 
-        workflowText.text = "工作流：$workflowName"
-        moduleText.text = "出错模块：$moduleName"
+        workflowText.text = getString(R.string.execution_error_workflow_name, workflowName)
+        moduleText.text = getString(R.string.execution_error_module_name, moduleName)
         messageText.text = errorMessage
 
         MaterialAlertDialogBuilder(this)
             .setView(dialogView)
-            .setPositiveButton("确定") { _, _ -> complete(true) }
+            .setPositiveButton(R.string.common_ok) { _, _ -> complete(true) }
             .setOnCancelListener { cancel() }
             .show()
     }

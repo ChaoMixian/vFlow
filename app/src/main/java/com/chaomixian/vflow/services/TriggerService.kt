@@ -16,6 +16,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.ExecutionLogger
 import com.chaomixian.vflow.core.logging.LogManager
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
@@ -58,6 +59,12 @@ class TriggerService : Service() {
         const val ACTION_UPDATE_NOTIFICATION = "com.chaomixian.vflow.ACTION_UPDATE_NOTIFICATION"
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        super.attachBaseContext(context)
+    }
+
     override fun onCreate() {
         super.onCreate()
         workflowManager = WorkflowManager(applicationContext)
@@ -70,7 +77,7 @@ class TriggerService : Service() {
         TriggerHandlerRegistry.initialize() // 确保服务独立运行时也能初始化注册表
         ExecutionNotificationManager.initialize(this)
         LogManager.initialize(applicationContext)
-        ExecutionLogger.initialize(applicationContext, serviceScope) // 使用服务的协程作用域
+        ExecutionLogger.initialize(this, serviceScope) // 使用服务的协程作用域和当前语言上下文
 
         // 在服务创建时就注册并启动所有处理器
         registerAndStartHandlers()

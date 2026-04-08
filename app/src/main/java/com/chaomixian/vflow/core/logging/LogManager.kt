@@ -17,14 +17,32 @@ data class LogEntry(
     val timestamp: Long,
     val status: LogStatus,
     val message: String? = null,
-    val detailedLog: String? = null
-) : Parcelable
+    val detailedLog: String? = null,
+    val messageKey: LogMessageKey? = null,
+    val messageArgs: List<String> = emptyList()
+) : Parcelable {
+    fun resolveMessage(context: Context): String? {
+        return LogMessageFormatter.resolve(this) { resId, formatArgs ->
+            if (formatArgs.isEmpty()) {
+                context.getString(resId)
+            } else {
+                context.getString(resId, *formatArgs)
+            }
+        }
+    }
+}
 
 // 定义日志状态的枚举
 enum class LogStatus {
     SUCCESS,
     CANCELLED,
     FAILURE
+}
+
+enum class LogMessageKey {
+    EXECUTION_COMPLETED,
+    EXECUTION_CANCELLED,
+    EXECUTION_FAILED_AT_STEP
 }
 
 /**
@@ -89,10 +107,7 @@ object LogManager {
             try {
                 // 在反序列化后，过滤掉任何可能导致崩溃的不完整条目
                 val logs: List<LogEntry?>? = gson.fromJson(json, type)
-                logs?.filterNotNull()?.filter {
-                    // 确保所有必要的字段都不是 null
-                    it.workflowId != null && it.workflowName != null && it.status != null
-                } ?: emptyList()
+                logs?.filterNotNull() ?: emptyList()
             } catch (e: Exception) {
                 // 如果解析失败，返回空列表以避免崩溃
                 emptyList()

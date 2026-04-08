@@ -261,7 +261,7 @@ class HomeFragment : Fragment() {
             val timestampView = itemView.findViewById<TextView>(R.id.log_timestamp)
 
             nameView.text = log.workflowName
-            messageView.text = log.message
+            messageView.text = log.resolveMessage(requireContext())
             timestampView.text = DateUtils.getRelativeTimeSpanString(
                 log.timestamp,
                 System.currentTimeMillis(),

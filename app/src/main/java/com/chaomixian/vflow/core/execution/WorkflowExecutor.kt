@@ -3,6 +3,8 @@ package com.chaomixian.vflow.core.execution
 
 import android.content.Context
 import android.os.Parcelable
+import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
@@ -548,10 +550,18 @@ object WorkflowExecutor {
                         // 尝试获取 UI 服务并显示错误弹窗
                         // 仅当应用在前台或有悬浮窗权限时，弹窗才会显示（由 ExecutionUIService 处理）
                         try {
+                            val localizedAppContext = LocaleManager.applyLanguage(
+                                initialContext.applicationContext,
+                                LocaleManager.getLanguage(initialContext.applicationContext)
+                            )
                             val uiService = initialContext.services.get(ExecutionUIService::class)
                             uiService?.showError(
                                 workflowName = workflow.name,
-                                moduleName = "#${pc + 1} ${module.metadata.name}",
+                                moduleName = localizedAppContext.getString(
+                                    R.string.execution_error_step_module_name,
+                                    pc + 1,
+                                    module.metadata.getLocalizedName(localizedAppContext)
+                                ),
                                 errorMessage = result.errorMessage
                             )
                         } catch (e: Exception) {

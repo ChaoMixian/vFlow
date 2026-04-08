@@ -525,6 +525,9 @@
     <string name="log_details_title">%1$s - 日志</string>
     <string name="log_execution_time">执行时间: %1$s</string>
     <string name="log_no_detail_message">无详细信息</string>
+    <string name="log_message_execution_completed">执行完成</string>
+    <string name="log_message_execution_cancelled">执行已停止</string>
+    <string name="log_message_execution_failed_at_step">在步骤 #%1$s (%2$s) 执行失败</string>
     <string name="log_workflow_id">工作流ID: %1$s</string>
     <string name="folder_workflow_count">%1$d 个工作流</string>
     <string name="text_placeholder_dash">-</string>
@@ -567,6 +570,11 @@
     <string name="text_workflow_unnamed">工作流：未命名</string>
     <string name="text_error_module">出错模块：#1 点击</string>
     <string name="label_error_reason">错误原因</string>
+    <string name="execution_error_workflow_name">工作流：%1$s</string>
+    <string name="execution_error_module_name">出错模块：%1$s</string>
+    <string name="execution_error_step_module_name">#%1$d %2$s</string>
+    <string name="execution_error_notification_title">执行出错</string>
+    <string name="execution_error_notification_content">%1$s - %2$s: %3$s</string>
     <string name="text_use_same_choice">为之后的操作使用相同选择</string>
     <string name="label_log_details">日志详情</string>
     <string name="label_basic_info">基本信息</string>

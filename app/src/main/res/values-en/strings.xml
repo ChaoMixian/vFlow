@@ -540,6 +540,9 @@
     <string name="log_details_title">%1$s - Log</string>
     <string name="log_execution_time">Execution time: %1$s</string>
     <string name="log_no_detail_message">No detailed information</string>
+    <string name="log_message_execution_completed">Execution completed</string>
+    <string name="log_message_execution_cancelled">Execution stopped</string>
+    <string name="log_message_execution_failed_at_step">Failed at step #%1$s (%2$s)</string>
     <string name="log_workflow_id">Workflow ID: %1$s</string>
     <string name="folder_workflow_count">%1$d workflows</string>
     <string name="text_placeholder_dash">-</string>
@@ -582,6 +585,11 @@
     <string name="text_workflow_unnamed">Workflow: Unnamed</string>
     <string name="text_error_module">Error Module: #1 Click</string>
     <string name="label_error_reason">Error Reason</string>
+    <string name="execution_error_workflow_name">Workflow: %1$s</string>
+    <string name="execution_error_module_name">Error Module: %1$s</string>
+    <string name="execution_error_step_module_name">#%1$d %2$s</string>
+    <string name="execution_error_notification_title">Execution Error</string>
+    <string name="execution_error_notification_content">%1$s - %2$s: %3$s</string>
     <string name="text_use_same_choice">Use same choice for subsequent actions</string>
     <string name="label_log_details">Log Details</string>
     <string name="label_basic_info">Basic Info</string>

@@ -66,7 +66,7 @@ class LogViewerSheet : BottomSheetDialogFragment() {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             tvTime.text = context.getString(R.string.log_execution_time, dateFormat.format(Date(log.timestamp)))
 
-            tvMessage.text = log.message ?: context.getString(R.string.log_no_detail_message)
+            tvMessage.text = log.resolveMessage(context) ?: context.getString(R.string.log_no_detail_message)
             tvId.text = context.getString(R.string.log_workflow_id, log.workflowId)
 
             // 使用 isNullOrEmpty() 安全检查，防止空指针异常
