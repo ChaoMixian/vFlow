@@ -3,8 +3,8 @@
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
-import android.util.Log
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
 import com.chaomixian.vflow.services.ServiceStateBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -251,7 +251,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     private fun handleAppOpenFromLauncher(context: Context, packageName: String, className: String) {
         DebugLogger.d(TAG, "从桌面打开应用: $packageName")
         appOpenStates[packageName] = true
-        checkForAppTrigger(context, packageName, className, "打开时")
+        checkForAppTrigger(context, packageName, className, AppStartTriggerModule.EVENT_OPENED)
     }
 
     private fun handleImmediateAppCloseEvent(context: Context, packageName: String) {
@@ -263,7 +263,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
         if (appOpenStates[packageName] == true) {
             appOpenStates[packageName] = false
             DebugLogger.d(TAG, "确认应用关闭（返回桌面）: $packageName")
-            checkForAppTrigger(context, packageName, "", "关闭时")
+            checkForAppTrigger(context, packageName, "", AppStartTriggerModule.EVENT_CLOSED)
         }
     }
 
@@ -279,7 +279,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
             pendingCloseChecks[packageName]?.cancel()
             pendingCloseChecks.remove(packageName)
 
-            checkForAppTrigger(context, packageName, className, "打开时")
+            checkForAppTrigger(context, packageName, className, AppStartTriggerModule.EVENT_OPENED)
         } else {
             DebugLogger.d(TAG, "应用 $packageName 已处于打开状态，忽略重复打开事件")
         }
@@ -311,7 +311,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
             if (confirmedClosed && appOpenStates[packageName] == true) {
                 appOpenStates[packageName] = false
                 DebugLogger.d(TAG, "确认应用关闭: $packageName")
-                checkForAppTrigger(context, packageName, "", "关闭时")
+                checkForAppTrigger(context, packageName, "", AppStartTriggerModule.EVENT_CLOSED)
             } else {
                 DebugLogger.d(TAG, "应用 $packageName 未真正关闭，取消关闭事件")
             }
@@ -403,17 +403,18 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     }
 
     private fun checkForAppTrigger(context: Context, packageName: String, className: String, eventType: String) {
+        val normalizedEventType = AppStartTriggerModule.normalizeEvent(eventType) ?: return
         listeningTriggers.forEach { trigger ->
             val config = trigger.parameters
-            val configEvent = config["event"] as? String
+            val configEvent = AppStartTriggerModule.normalizeEvent(config["event"] as? String)
 
-            if (configEvent == eventType) {
+            if (configEvent == normalizedEventType) {
                 @Suppress("UNCHECKED_CAST")
                 val targetPackages = config["packageNames"] as? List<String> ?: emptyList()
 
                 if (targetPackages.contains(packageName)) {
                     triggerScope.launch {
-                        DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}', 事件: $packageName $eventType")
+                        DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}', 事件: $packageName $normalizedEventType")
                         executeTrigger(context, trigger)
                     }
                 }

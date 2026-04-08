@@ -8,6 +8,7 @@ import android.telephony.TelephonyManager
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.workflow.module.triggers.CallTriggerModule
 import kotlinx.coroutines.launch
 
 class CallTriggerHandler : ListeningTriggerHandler() {
@@ -26,15 +27,23 @@ class CallTriggerHandler : ListeningTriggerHandler() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
                     val stateStr = intent.getStringExtra(TelephonyManager.EXTRA_STATE) ?: ""
-                    val state = when (stateStr) {
-                        TelephonyManager.EXTRA_STATE_RINGING -> "来电"
-                        TelephonyManager.EXTRA_STATE_OFFHOOK -> "接通"
-                        TelephonyManager.EXTRA_STATE_IDLE -> "挂断"
+                    val callType = when (stateStr) {
+                        TelephonyManager.EXTRA_STATE_RINGING -> CallTriggerModule.TYPE_INCOMING
+                        TelephonyManager.EXTRA_STATE_OFFHOOK -> CallTriggerModule.TYPE_ANSWERED
+                        TelephonyManager.EXTRA_STATE_IDLE -> CallTriggerModule.TYPE_ENDED
+                        else -> null
+                    }
+                    val displayState = when (callType) {
+                        CallTriggerModule.TYPE_INCOMING -> "来电"
+                        CallTriggerModule.TYPE_ANSWERED -> "接通"
+                        CallTriggerModule.TYPE_ENDED -> "挂断"
                         else -> stateStr
                     }
 
-                    DebugLogger.d(TAG, "电话状态变化: $state")
-                    findAndExecuteWorkflows(ctx, state)
+                    if (callType == null) return
+
+                    DebugLogger.d(TAG, "电话状态变化: $displayState")
+                    findAndExecuteWorkflows(ctx, callType, displayState)
                 }
             }
         }
@@ -52,15 +61,15 @@ class CallTriggerHandler : ListeningTriggerHandler() {
         }
     }
 
-    private fun findAndExecuteWorkflows(context: Context, callState: String) {
+    private fun findAndExecuteWorkflows(context: Context, callType: String, displayState: String) {
         triggerScope.launch {
             listeningTriggers.forEach { trigger ->
                 val config = trigger.parameters
-                val matchResult = checkFilters(callState, config)
+                val matchResult = checkFilters(callType, config)
                 if (matchResult.isMatch) {
                     DebugLogger.i(TAG, "电话事件满足条件，触发工作流 '${trigger.workflowName}'")
                     val triggerDataMap = mutableMapOf(
-                        "call_state" to VString(callState)
+                        "call_state" to VString(displayState)
                     )
                     executeTrigger(context, trigger, VDictionary(triggerDataMap))
                 }
@@ -70,14 +79,15 @@ class CallTriggerHandler : ListeningTriggerHandler() {
 
     private data class FilterMatchResult(val isMatch: Boolean)
 
-    private fun checkFilters(callState: String, config: Map<String, Any?>): FilterMatchResult {
-        val callType = config["call_type"] as? String ?: "任意"
+    private fun checkFilters(callType: String, config: Map<String, Any?>): FilterMatchResult {
+        val configCallType = CallTriggerModule.normalizeCallType(config["call_type"] as? String)
+            ?: CallTriggerModule.TYPE_ANY
 
-        val callTypeMatches = when (callType) {
-            "任意" -> true
-            "来电" -> callState == "来电"
-            "接通" -> callState == "接通"
-            "挂断" -> callState == "挂断"
+        val callTypeMatches = when (configCallType) {
+            CallTriggerModule.TYPE_ANY -> true
+            CallTriggerModule.TYPE_INCOMING -> callType == CallTriggerModule.TYPE_INCOMING
+            CallTriggerModule.TYPE_ANSWERED -> callType == CallTriggerModule.TYPE_ANSWERED
+            CallTriggerModule.TYPE_ENDED -> callType == CallTriggerModule.TYPE_ENDED
             else -> false
         }
 

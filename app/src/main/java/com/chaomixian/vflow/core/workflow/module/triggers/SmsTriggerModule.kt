@@ -24,6 +24,27 @@ class SmsTriggerModule : BaseModule() {
         const val CONTENT_CONTAINS = "content_contains"
         const val CONTENT_NOT_CONTAINS = "content_not_contains"
         const val CONTENT_REGEX = "content_regex"
+
+        fun normalizeSenderFilterType(value: String?): String? {
+            return when (value) {
+                SENDER_ANY, "任意号码", "Any Number" -> SENDER_ANY
+                SENDER_CONTAINS, "号码包含", "Number Contains" -> SENDER_CONTAINS
+                SENDER_NOT_CONTAINS, "号码不包含", "Number Not Contains" -> SENDER_NOT_CONTAINS
+                SENDER_REGEX, "正则匹配", "Regex Match" -> SENDER_REGEX
+                else -> null
+            }
+        }
+
+        fun normalizeContentFilterType(value: String?): String? {
+            return when (value) {
+                CONTENT_ANY, "任意内容", "Any Content" -> CONTENT_ANY
+                CONTENT_CODE, "识别验证码", "Detect Verification Code" -> CONTENT_CODE
+                CONTENT_CONTAINS, "内容包含", "Content Contains" -> CONTENT_CONTAINS
+                CONTENT_NOT_CONTAINS, "内容不包含", "Content Not Contains" -> CONTENT_NOT_CONTAINS
+                CONTENT_REGEX, "正则匹配", "Regex Match" -> CONTENT_REGEX
+                else -> null
+            }
+        }
     }
     override val id = "vflow.trigger.sms"
     override val metadata = ActionMetadata(

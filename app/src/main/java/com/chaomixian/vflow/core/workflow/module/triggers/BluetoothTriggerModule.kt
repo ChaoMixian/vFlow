@@ -20,6 +20,30 @@ class BluetoothTriggerModule : BaseModule() {
         const val STATE_EVENT_OFF = "off"
         const val DEVICE_EVENT_CONNECTED = "connected"
         const val DEVICE_EVENT_DISCONNECTED = "disconnected"
+
+        fun normalizeTriggerType(value: String?): String? {
+            return when (value) {
+                TRIGGER_TYPE_STATE, "蓝牙状态", "Bluetooth State" -> TRIGGER_TYPE_STATE
+                TRIGGER_TYPE_DEVICE, "设备连接", "Device Connection" -> TRIGGER_TYPE_DEVICE
+                else -> null
+            }
+        }
+
+        fun normalizeStateEvent(value: String?): String? {
+            return when (value) {
+                STATE_EVENT_ON, "开启时", "Turned On" -> STATE_EVENT_ON
+                STATE_EVENT_OFF, "关闭时", "Turned Off" -> STATE_EVENT_OFF
+                else -> null
+            }
+        }
+
+        fun normalizeDeviceEvent(value: String?): String? {
+            return when (value) {
+                DEVICE_EVENT_CONNECTED, "连接时", "Connected" -> DEVICE_EVENT_CONNECTED
+                DEVICE_EVENT_DISCONNECTED, "断开时", "Disconnected" -> DEVICE_EVENT_DISCONNECTED
+                else -> null
+            }
+        }
     }
     override val id = "vflow.trigger.bluetooth"
     override val metadata = ActionMetadata(

@@ -11,6 +11,7 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.utils.CodeExtractor // 导入 CodeExtractor
+import com.chaomixian.vflow.core.workflow.module.triggers.SmsTriggerModule
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 
@@ -83,23 +84,25 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
      * [核心修改] 检查过滤器，并在匹配时提取验证码。
      */
     private fun checkFilters(sender: String, content: String, config: Map<String, Any?>): FilterMatchResult {
-        val senderFilterType = config["sender_filter_type"] as? String ?: "任意号码"
+        val senderFilterType = SmsTriggerModule.normalizeSenderFilterType(config["sender_filter_type"] as? String)
+            ?: SmsTriggerModule.SENDER_ANY
         val senderFilterValue = config["sender_filter_value"] as? String ?: ""
-        val contentFilterType = config["content_filter_type"] as? String ?: "任意内容"
+        val contentFilterType = SmsTriggerModule.normalizeContentFilterType(config["content_filter_type"] as? String)
+            ?: SmsTriggerModule.CONTENT_ANY
         val contentFilterValue = config["content_filter_value"] as? String ?: ""
 
         val senderMatches = when (senderFilterType) {
-            "任意号码" -> true
-            "号码包含" -> sender.contains(senderFilterValue)
-            "号码不包含" -> !sender.contains(senderFilterValue)
-            "正则匹配" -> try { Pattern.compile(senderFilterValue).matcher(sender).find() } catch (e: Exception) { false }
+            SmsTriggerModule.SENDER_ANY -> true
+            SmsTriggerModule.SENDER_CONTAINS -> sender.contains(senderFilterValue)
+            SmsTriggerModule.SENDER_NOT_CONTAINS -> !sender.contains(senderFilterValue)
+            SmsTriggerModule.SENDER_REGEX -> try { Pattern.compile(senderFilterValue).matcher(sender).find() } catch (e: Exception) { false }
             else -> false
         }
 
         if (!senderMatches) return FilterMatchResult(false)
 
         // 当内容过滤器是“识别验证码”时
-        if (contentFilterType == "识别验证码") {
+        if (contentFilterType == SmsTriggerModule.CONTENT_CODE) {
             // 使用 CodeExtractor 提取验证码
             val code = CodeExtractor.getCode(content)
             return if (code != null) {
@@ -111,10 +114,10 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
 
         // 处理其他内容过滤器
         val contentMatches = when (contentFilterType) {
-            "任意内容" -> true
-            "内容包含" -> content.contains(contentFilterValue, ignoreCase = true)
-            "内容不包含" -> !content.contains(contentFilterValue, ignoreCase = true)
-            "正则匹配" -> try { Pattern.compile(contentFilterValue).matcher(content).find() } catch (e: Exception) { false }
+            SmsTriggerModule.CONTENT_ANY -> true
+            SmsTriggerModule.CONTENT_CONTAINS -> content.contains(contentFilterValue, ignoreCase = true)
+            SmsTriggerModule.CONTENT_NOT_CONTAINS -> !content.contains(contentFilterValue, ignoreCase = true)
+            SmsTriggerModule.CONTENT_REGEX -> try { Pattern.compile(contentFilterValue).matcher(content).find() } catch (e: Exception) { false }
             else -> false
         }
 

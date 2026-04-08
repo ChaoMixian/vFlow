@@ -75,7 +75,8 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
 
         // 设置事件选项的默认选中状态
         if (hasEventParameter) {
-            val currentEvent = currentParameters["event"] as? String
+            val currentEvent = AppStartTriggerModule.normalizeEvent(currentParameters["event"] as? String)
+                ?: AppStartTriggerModule.EVENT_OPENED
 
             if (currentEvent == AppStartTriggerModule.EVENT_CLOSED) {
                 holder.eventToggleGroup.check(R.id.chip_app_close)

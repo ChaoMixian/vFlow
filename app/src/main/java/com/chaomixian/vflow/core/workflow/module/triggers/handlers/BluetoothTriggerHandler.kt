@@ -11,6 +11,7 @@ import android.content.IntentFilter
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.workflow.module.triggers.BluetoothTriggerModule
 import kotlinx.coroutines.launch
 
 @SuppressLint("MissingPermission")
@@ -54,19 +55,23 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
             BluetoothAdapter.ACTION_STATE_CHANGED -> {
                 val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
                 val event = when (state) {
-                    BluetoothAdapter.STATE_ON -> "开启时"
-                    BluetoothAdapter.STATE_OFF -> "关闭时"
+                    BluetoothAdapter.STATE_ON -> BluetoothTriggerModule.STATE_EVENT_ON
+                    BluetoothAdapter.STATE_OFF -> BluetoothTriggerModule.STATE_EVENT_OFF
                     else -> null
                 }
                 if (event != null) {
-                    findAndExecuteWorkflows(context, "蓝牙状态", event, null)
+                    findAndExecuteWorkflows(context, BluetoothTriggerModule.TRIGGER_TYPE_STATE, event, null)
                 }
             }
             BluetoothDevice.ACTION_ACL_CONNECTED, BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
                 val device: BluetoothDevice? = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                 if (device != null) {
-                    val event = if (intent.action == BluetoothDevice.ACTION_ACL_CONNECTED) "连接时" else "断开时"
-                    findAndExecuteWorkflows(context, "设备连接", event, device)
+                    val event = if (intent.action == BluetoothDevice.ACTION_ACL_CONNECTED) {
+                        BluetoothTriggerModule.DEVICE_EVENT_CONNECTED
+                    } else {
+                        BluetoothTriggerModule.DEVICE_EVENT_DISCONNECTED
+                    }
+                    findAndExecuteWorkflows(context, BluetoothTriggerModule.TRIGGER_TYPE_DEVICE, event, device)
                 }
             }
         }
@@ -76,18 +81,18 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
         triggerScope.launch {
             listeningTriggers.forEach { trigger ->
                 val config = trigger.parameters
-                val configTriggerType = config["trigger_type"] as? String
+                val configTriggerType = BluetoothTriggerModule.normalizeTriggerType(config["trigger_type"] as? String)
 
                 if (configTriggerType != triggerType) return@forEach
 
-                if (triggerType == "蓝牙状态") {
-                    val configEvent = config["state_event"] as? String
+                if (triggerType == BluetoothTriggerModule.TRIGGER_TYPE_STATE) {
+                    val configEvent = BluetoothTriggerModule.normalizeStateEvent(config["state_event"] as? String)
                     if (configEvent == event) {
                         DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: 蓝牙 $event")
                         executeTrigger(context, trigger)
                     }
                 } else { // 设备连接
-                    val configEvent = config["device_event"] as? String
+                    val configEvent = BluetoothTriggerModule.normalizeDeviceEvent(config["device_event"] as? String)
                     val configAddress = config["device_address"] as? String
                     if (configEvent == event && (configAddress == "any" || configAddress == device?.address)) {
                         DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: $event '${device?.name}'")

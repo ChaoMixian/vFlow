@@ -15,6 +15,7 @@ import android.util.Log
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.module.triggers.LocationTriggerData
+import com.chaomixian.vflow.core.workflow.module.triggers.LocationTriggerModule
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -363,7 +364,7 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
             val fenceLat = config["latitude"] as? Double ?: return@forEach
             val fenceLon = config["longitude"] as? Double ?: return@forEach
             val fenceRadius = config["radius"] as? Double ?: return@forEach
-            val configEvent = config["event"] as? String ?: return@forEach
+            val configEvent = LocationTriggerModule.normalizeEvent(config["event"] as? String) ?: return@forEach
 
             // 计算当前位置到围栏中心的距离
             val distance = calculateDistance(
@@ -382,10 +383,7 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
             if (!wasInFence && isInFence) {
                 stateStore.setInFence(fenceId, true)
 
-                // 判断是否匹配工作流配置的事件
-                val enterEvent = context.getString(com.chaomixian.vflow.R.string.option_vflow_trigger_location_event_enter)
-
-                if (configEvent == enterEvent) {
+                if (configEvent == LocationTriggerModule.EVENT_ENTER) {
                     DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'：进入围栏")
                     executeWorkflow(context, trigger, location)
                 }
@@ -394,9 +392,7 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
             else if (wasInFence && !isInFence) {
                 stateStore.setInFence(fenceId, false)
 
-                val exitEvent = context.getString(com.chaomixian.vflow.R.string.option_vflow_trigger_location_event_exit)
-
-                if (configEvent == exitEvent) {
+                if (configEvent == LocationTriggerModule.EVENT_EXIT) {
                     DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'：离开围栏")
                     executeWorkflow(context, trigger, location)
                 }

@@ -18,6 +18,14 @@ class LocationTriggerModule : BaseModule() {
     companion object {
         const val EVENT_ENTER = "enter"
         const val EVENT_EXIT = "exit"
+
+        fun normalizeEvent(value: String?): String? {
+            return when (value) {
+                EVENT_ENTER, "进入时", "Enter" -> EVENT_ENTER
+                EVENT_EXIT, "离开时", "Exit" -> EVENT_EXIT
+                else -> null
+            }
+        }
     }
     override val id = "vflow.trigger.location"
     override val metadata = ActionMetadata(

@@ -21,6 +21,30 @@ class WifiTriggerModule : BaseModule() {
         const val CONNECTION_EVENT_DISCONNECTED = "disconnected"
         const val STATE_EVENT_ON = "on"
         const val STATE_EVENT_OFF = "off"
+
+        fun normalizeTriggerType(value: String?): String? {
+            return when (value) {
+                TRIGGER_TYPE_CONNECTION, "网络连接", "Network Connection" -> TRIGGER_TYPE_CONNECTION
+                TRIGGER_TYPE_STATE, "Wi-Fi状态", "Wi-Fi State" -> TRIGGER_TYPE_STATE
+                else -> null
+            }
+        }
+
+        fun normalizeConnectionEvent(value: String?): String? {
+            return when (value) {
+                CONNECTION_EVENT_CONNECTED, "连接到", "Connect to" -> CONNECTION_EVENT_CONNECTED
+                CONNECTION_EVENT_DISCONNECTED, "断开连接", "Disconnect from" -> CONNECTION_EVENT_DISCONNECTED
+                else -> null
+            }
+        }
+
+        fun normalizeStateEvent(value: String?): String? {
+            return when (value) {
+                STATE_EVENT_ON, "开启时", "Turned On" -> STATE_EVENT_ON
+                STATE_EVENT_OFF, "关闭时", "Turned Off" -> STATE_EVENT_OFF
+                else -> null
+            }
+        }
     }
     override val id = "vflow.trigger.wifi"
     override val metadata = ActionMetadata(

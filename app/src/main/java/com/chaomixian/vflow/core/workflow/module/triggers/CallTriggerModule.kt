@@ -16,6 +16,16 @@ class CallTriggerModule : BaseModule() {
         const val TYPE_INCOMING = "incoming"
         const val TYPE_ANSWERED = "answered"
         const val TYPE_ENDED = "ended"
+
+        fun normalizeCallType(value: String?): String? {
+            return when (value) {
+                TYPE_ANY, "任意", "Any" -> TYPE_ANY
+                TYPE_INCOMING, "来电", "Incoming" -> TYPE_INCOMING
+                TYPE_ANSWERED, "接通", "Answered" -> TYPE_ANSWERED
+                TYPE_ENDED, "挂断", "Ended" -> TYPE_ENDED
+                else -> null
+            }
+        }
     }
     override val id = "vflow.trigger.call"
     override val metadata = ActionMetadata(

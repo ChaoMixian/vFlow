@@ -15,6 +15,14 @@ class AppStartTriggerModule : BaseModule() {
     companion object {
         const val EVENT_OPENED = "opened"
         const val EVENT_CLOSED = "closed"
+
+        fun normalizeEvent(value: String?): String? {
+            return when (value) {
+                EVENT_OPENED, "打开时", "Opened" -> EVENT_OPENED
+                EVENT_CLOSED, "关闭时", "Closed" -> EVENT_CLOSED
+                else -> null
+            }
+        }
     }
 
     override val id = "vflow.trigger.app_start"
@@ -68,7 +76,7 @@ class AppStartTriggerModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val event = step.parameters["event"] as? String ?: EVENT_OPENED
+        val event = normalizeEvent(step.parameters["event"] as? String) ?: EVENT_OPENED
 
         @Suppress("UNCHECKED_CAST")
         val packageNames = step.parameters["packageNames"] as? List<String> ?: emptyList()

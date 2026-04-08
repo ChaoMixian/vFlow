@@ -13,6 +13,7 @@ import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.workflow.module.triggers.WifiTriggerModule
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -60,7 +61,12 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                     if (ssid != null) {
                         activeWifiConnections[network] = ssid
                         DebugLogger.d(TAG, "网络已连接: $ssid")
-                        findAndExecuteWorkflows(context, "网络连接", "连接到", ssid)
+                        findAndExecuteWorkflows(
+                            context,
+                            WifiTriggerModule.TRIGGER_TYPE_CONNECTION,
+                            WifiTriggerModule.CONNECTION_EVENT_CONNECTED,
+                            ssid
+                        )
                     }
                 }
             }
@@ -68,7 +74,12 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                 super.onLost(network)
                 activeWifiConnections.remove(network)?.let { lostSsid ->
                     DebugLogger.d(TAG, "网络已断开: $lostSsid")
-                    findAndExecuteWorkflows(context, "网络连接", "断开连接", lostSsid)
+                    findAndExecuteWorkflows(
+                        context,
+                        WifiTriggerModule.TRIGGER_TYPE_CONNECTION,
+                        WifiTriggerModule.CONNECTION_EVENT_DISCONNECTED,
+                        lostSsid
+                    )
                 }
             }
         }
@@ -97,11 +108,21 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                     when (wifiState) {
                         WifiManager.WIFI_STATE_ENABLED -> {
                             DebugLogger.d(TAG, "Wi-Fi 已开启")
-                            findAndExecuteWorkflows(context, "Wi-Fi状态", "开启时", null)
+                            findAndExecuteWorkflows(
+                                context,
+                                WifiTriggerModule.TRIGGER_TYPE_STATE,
+                                WifiTriggerModule.STATE_EVENT_ON,
+                                null
+                            )
                         }
                         WifiManager.WIFI_STATE_DISABLED -> {
                             DebugLogger.d(TAG, "Wi-Fi 已关闭")
-                            findAndExecuteWorkflows(context, "Wi-Fi状态", "关闭时", null)
+                            findAndExecuteWorkflows(
+                                context,
+                                WifiTriggerModule.TRIGGER_TYPE_STATE,
+                                WifiTriggerModule.STATE_EVENT_OFF,
+                                null
+                            )
                         }
                     }
                 }
@@ -126,11 +147,11 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
         triggerScope.launch {
             listeningTriggers.forEach { trigger ->
                 val config = trigger.parameters
-                val configTriggerType = config["trigger_type"] as? String
+                val configTriggerType = WifiTriggerModule.normalizeTriggerType(config["trigger_type"] as? String)
                 if (configTriggerType != triggerType) return@forEach
 
-                if (triggerType == "网络连接") {
-                    val configEvent = config["connection_event"] as? String
+                if (triggerType == WifiTriggerModule.TRIGGER_TYPE_CONNECTION) {
+                    val configEvent = WifiTriggerModule.normalizeConnectionEvent(config["connection_event"] as? String)
                     val configTarget = config["network_target"] as? String
                     val targetMatches = (configTarget == ANY_WIFI_TARGET) || (configTarget.equals(ssid, ignoreCase = true))
                     if (configEvent == event && targetMatches) {
@@ -139,7 +160,7 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                         executeTrigger(context, trigger, triggerData)
                     }
                 } else { // Wi-Fi状态
-                    val configEvent = config["state_event"] as? String
+                    val configEvent = WifiTriggerModule.normalizeStateEvent(config["state_event"] as? String)
                     if (configEvent == event) {
                         DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: Wi-Fi $event")
                         executeTrigger(context, trigger)
