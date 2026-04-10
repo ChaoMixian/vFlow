@@ -27,6 +27,8 @@ import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.FolderManager
+import com.chaomixian.vflow.core.workflow.WorkflowBatchEnumMigrationPreview
+import com.chaomixian.vflow.core.workflow.WorkflowEnumMigration
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.model.WorkflowFolder
@@ -56,6 +58,8 @@ class WorkflowListFragment : Fragment() {
     private var pendingWorkflow: Workflow? = null
     private var pendingExportFolderId: String? = null
     private val gson = Gson()
+    private var pendingEnumMigrationPreview: WorkflowBatchEnumMigrationPreview? = null
+    private var dismissedEnumMigrationSignature: String? = null
 
     // 排序状态：false = 默认排序，true = 按名称排序
     private var isSortedByName = false
@@ -189,23 +193,17 @@ class WorkflowListFragment : Fragment() {
     private val backupLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
+        val migrationPreview = pendingEnumMigrationPreview
         uri?.let { fileUri ->
             try {
-                // 导出所有工作流（包括文件夹信息），每个工作流带 _meta
-                val allWorkflows = workflowManager.getAllWorkflows()
-                val allFolders = folderManager.getAllFolders()
-                val workflowsWithMeta = allWorkflows.map { createWorkflowExportData(it) }
-                val backupData = mapOf(
-                    "workflows" to workflowsWithMeta,
-                    "folders" to allFolders
-                )
-                val jsonString = gson.toJson(backupData)
-                requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
+                backupAllWorkflowsToUri(fileUri)
                 Toast.makeText(requireContext(), getString(R.string.toast_backup_success), Toast.LENGTH_SHORT).show()
+                migrationPreview?.let { applyWorkflowEnumMigration(it) }
             } catch (e: Exception) {
                 Toast.makeText(requireContext(), getString(R.string.toast_backup_failed, e.message ?: ""), Toast.LENGTH_LONG).show()
             }
         }
+        pendingEnumMigrationPreview = null
     }
 
     // 导入
@@ -281,6 +279,7 @@ class WorkflowListFragment : Fragment() {
         super.onResume()
         checkAndReEnableWorkflows()
         loadData()
+        maybePromptWorkflowEnumMigration()
     }
 
     // 选项菜单处理
@@ -464,6 +463,99 @@ class WorkflowListFragment : Fragment() {
             recyclerView.adapter = adapter
         }
         ShortcutHelper.updateShortcuts(requireContext())
+    }
+
+    private fun backupAllWorkflowsToUri(fileUri: Uri) {
+        val allWorkflows = workflowManager.getAllWorkflows()
+        val allFolders = folderManager.getAllFolders()
+        val workflowsWithMeta = allWorkflows.map { createWorkflowExportData(it) }
+        val backupData = mapOf(
+            "workflows" to workflowsWithMeta,
+            "folders" to allFolders
+        )
+        val jsonString = gson.toJson(backupData)
+        requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
+    }
+
+    private fun maybePromptWorkflowEnumMigration() {
+        if (pendingEnumMigrationPreview != null) return
+
+        val preview = WorkflowEnumMigration.scan(workflowManager.getAllWorkflows())
+        if (preview == null) {
+            dismissedEnumMigrationSignature = null
+            return
+        }
+
+        val signature = buildWorkflowEnumMigrationSignature(preview)
+        if (signature == dismissedEnumMigrationSignature) return
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.dialog_workflow_enum_migration_title)
+            .setMessage(
+                getString(
+                    R.string.dialog_workflow_enum_migration_batch_message,
+                    preview.affectedWorkflowCount,
+                    preview.affectedStepCount,
+                    preview.affectedFieldCount
+                )
+            )
+            .setPositiveButton(R.string.common_yes) { _, _ ->
+                showWorkflowEnumMigrationBackupDialog(preview, signature)
+            }
+            .setNegativeButton(R.string.common_no) { _, _ ->
+                dismissedEnumMigrationSignature = signature
+            }
+            .setOnCancelListener {
+                dismissedEnumMigrationSignature = signature
+            }
+            .show()
+    }
+
+    private fun showWorkflowEnumMigrationBackupDialog(
+        preview: WorkflowBatchEnumMigrationPreview,
+        signature: String
+    ) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.dialog_workflow_enum_migration_backup_title)
+            .setMessage(R.string.dialog_workflow_enum_migration_backup_message)
+            .setPositiveButton(R.string.common_yes) { _, _ ->
+                pendingEnumMigrationPreview = preview
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                backupLauncher.launch("vflow_backup_before_enum_migration_${timestamp}.json")
+            }
+            .setNegativeButton(R.string.common_no) { _, _ ->
+                applyWorkflowEnumMigration(preview)
+            }
+            .setNeutralButton(R.string.common_cancel) { _, _ ->
+                dismissedEnumMigrationSignature = signature
+            }
+            .setOnCancelListener {
+                dismissedEnumMigrationSignature = signature
+            }
+            .show()
+    }
+
+    private fun applyWorkflowEnumMigration(preview: WorkflowBatchEnumMigrationPreview) {
+        preview.migratedWorkflows.forEach(workflowManager::saveWorkflow)
+        dismissedEnumMigrationSignature = null
+        loadData()
+        Toast.makeText(
+            requireContext(),
+            getString(
+                R.string.toast_workflow_enum_migration_success,
+                preview.affectedWorkflowCount,
+                preview.affectedFieldCount
+            ),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun buildWorkflowEnumMigrationSignature(preview: WorkflowBatchEnumMigrationPreview): String {
+        return preview.previews
+            .sortedBy { it.originalWorkflow.id }
+            .joinToString(separator = "|") {
+                "${it.originalWorkflow.id}:${it.originalWorkflow.modifiedAt}:${it.affectedFieldCount}"
+            }
     }
 
     private fun setupRecyclerView() {

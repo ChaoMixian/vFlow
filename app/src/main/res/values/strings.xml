@@ -107,6 +107,9 @@
     <string name="dialog_unsaved_discard">放弃</string>
     <string name="dialog_workflow_enum_migration_title">检测到可迁移的参数</string>
     <string name="dialog_workflow_enum_migration_message">当前工作流中有 %1$d 个步骤、共 %2$d 个枚举参数仍在使用旧的展示值。是否现在将它们迁移到新版本？\n\n此次迁移只会更新当前编辑器中的内容，仍需点击保存才会写入工作流。</string>
+    <string name="dialog_workflow_enum_migration_batch_message">当前有 %1$d 个工作流中包含 %2$d 个步骤、共 %3$d 个枚举参数仍在使用旧的展示值。是否现在将它们迁移到新版本？\n\n此次迁移会立即写入受影响的工作流。</string>
+    <string name="dialog_workflow_enum_migration_backup_title">迁移前备份</string>
+    <string name="dialog_workflow_enum_migration_backup_message">建议先备份当前所有工作流。是否现在先导出备份，再执行迁移？\n\n选择“否”将直接执行迁移。</string>
 
     <string name="common_delete">删除</string>
     <string name="common_cancel">取消</string>
@@ -344,6 +347,7 @@
     <string name="toast_export_failed">导出失败: %s</string>
     <string name="toast_backup_success">备份成功</string>
     <string name="toast_backup_failed">备份失败: %s</string>
+    <string name="toast_workflow_enum_migration_success">已迁移 %1$d 个工作流中的 %2$d 个枚举参数</string>
     <string name="toast_no_workflow_in_file">文件中没有可导入的工作流</string>
     <string name="toast_import_failed">导入失败: %s</string>
     <string name="toast_copied_as">已复制为 \'%s (副本)\'</string>

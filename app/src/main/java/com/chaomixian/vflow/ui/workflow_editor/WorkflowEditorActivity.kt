@@ -35,6 +35,7 @@ import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.workflow.WorkflowEnumMigration
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -67,13 +68,6 @@ import java.util.*
  * 工作流编辑器 Activity。
  */
 class WorkflowEditorActivity : BaseActivity() {
-    private data class EnumMigrationPreview(
-        val migratedTriggers: List<ActionStep>,
-        val migratedActions: List<ActionStep>,
-        val affectedStepCount: Int,
-        val affectedFieldCount: Int
-    )
-
     private lateinit var workflowManager: WorkflowManager
     private var currentWorkflow: Workflow? = null
     private val triggerSteps = mutableListOf<ActionStep>()
@@ -1532,7 +1526,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun maybePromptEnumMigration() {
-        val preview = scanEnumMigrationPreview() ?: return
+        val preview = WorkflowEnumMigration.scan(getCurrentWorkflowState()) ?: return
 
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.dialog_workflow_enum_migration_title)
@@ -1545,79 +1539,13 @@ class WorkflowEditorActivity : BaseActivity() {
             )
             .setPositiveButton(R.string.common_yes) { _, _ ->
                 triggerSteps.clear()
-                triggerSteps.addAll(preview.migratedTriggers)
+                triggerSteps.addAll(preview.migratedWorkflow.triggers)
                 actionSteps.clear()
-                actionSteps.addAll(preview.migratedActions)
+                actionSteps.addAll(preview.migratedWorkflow.steps)
                 recalculateAndNotify()
             }
             .setNegativeButton(R.string.common_no, null)
             .show()
-    }
-
-    private fun scanEnumMigrationPreview(): EnumMigrationPreview? {
-        val editableSteps = getAllEditableSteps()
-        var affectedStepCount = 0
-        var affectedFieldCount = 0
-
-        val migratedTriggers = triggerSteps.map { step ->
-            val migration = migrateLegacyEnumValues(step, editableSteps)
-            if (migration != null) {
-                affectedStepCount += 1
-                affectedFieldCount += migration.second
-                migration.first
-            } else {
-                step
-            }
-        }
-
-        val migratedActions = actionSteps.map { step ->
-            val migration = migrateLegacyEnumValues(step, editableSteps)
-            if (migration != null) {
-                affectedStepCount += 1
-                affectedFieldCount += migration.second
-                migration.first
-            } else {
-                step
-            }
-        }
-
-        if (affectedFieldCount == 0) return null
-
-        return EnumMigrationPreview(
-            migratedTriggers = migratedTriggers,
-            migratedActions = migratedActions,
-            affectedStepCount = affectedStepCount,
-            affectedFieldCount = affectedFieldCount
-        )
-    }
-
-    private fun migrateLegacyEnumValues(
-        step: ActionStep,
-        allSteps: List<ActionStep>
-    ): Pair<ActionStep, Int>? {
-        val module = ModuleRegistry.getModule(step.moduleId) ?: return null
-        val stepForUi = ActionStep(step.moduleId, step.parameters, step.indentationLevel, step.id)
-        val inputDefinitions = (module.getInputs() + module.getDynamicInputs(stepForUi, allSteps))
-            .distinctBy { it.id }
-
-        val updatedParameters = step.parameters.toMutableMap()
-        var migratedFieldCount = 0
-
-        inputDefinitions.forEach { inputDef ->
-            if (inputDef.staticType != ParameterType.ENUM) return@forEach
-
-            val currentValue = updatedParameters[inputDef.id] as? String ?: return@forEach
-            if (inputDef.options.contains(currentValue)) return@forEach
-
-            val mappedValue = inputDef.normalizeEnumValueOrNull(currentValue) ?: return@forEach
-            if (!inputDef.options.contains(mappedValue)) return@forEach
-
-            updatedParameters[inputDef.id] = mappedValue
-            migratedFieldCount += 1
-        }
-
-        if (migratedFieldCount == 0) return null
-        return step.copy(parameters = updatedParameters) to migratedFieldCount
     }
 
     private fun recalculateAllIndentation() {
