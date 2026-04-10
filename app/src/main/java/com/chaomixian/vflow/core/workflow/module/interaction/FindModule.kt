@@ -141,7 +141,7 @@ class FindTextModule : BaseModule() {
         // 定义所有输出
         return listOf(
             OutputDefinition("first_result", "第一个结果", resultTypeName, conditions, nameStringRes = R.string.output_vflow_device_find_text_first_result_name),
-            OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, conditions, nameStringRes = R.string.output_vflow_device_find_text_all_results_name),
+            OutputDefinition("all_results", "所有结果", VTypeRegistry.LIST.id, conditions, listElementType = resultTypeName, nameStringRes = R.string.output_vflow_device_find_text_all_results_name),
             OutputDefinition("count", "结果数量", VTypeRegistry.NUMBER.id, conditions, nameStringRes = R.string.output_vflow_device_find_text_count_name)
         )
     }

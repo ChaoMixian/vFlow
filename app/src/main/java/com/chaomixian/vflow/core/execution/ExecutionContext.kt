@@ -6,7 +6,14 @@ import android.os.Parcelable
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VObjectFactory
 import com.chaomixian.vflow.core.types.basic.*
+import com.chaomixian.vflow.core.types.complex.VCoordinate
+import com.chaomixian.vflow.core.types.complex.VCoordinateRegion
+import com.chaomixian.vflow.core.types.complex.VEvent
+import com.chaomixian.vflow.core.types.complex.VImage
+import com.chaomixian.vflow.core.types.complex.VNotification
+import com.chaomixian.vflow.core.types.complex.VUiComponent
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 import java.io.File
 import java.util.*
 
@@ -171,6 +178,50 @@ data class ExecutionContext(
         }
     }
 
+    fun getVariableAsDictionary(key: String): VDictionary? {
+        return getVariable(key) as? VDictionary
+    }
+
+    fun getVariableAsList(key: String): VList? {
+        return getVariable(key) as? VList
+    }
+
+    fun getVariableAsImage(key: String): VImage? {
+        return getVariable(key) as? VImage
+    }
+
+    fun getVariableAsCoordinate(key: String): VCoordinate? {
+        return getVariable(key) as? VCoordinate
+    }
+
+    fun getVariableAsCoordinateRegion(key: String): VCoordinateRegion? {
+        return getVariable(key) as? VCoordinateRegion
+    }
+
+    fun getVariableAsEvent(key: String): VEvent? {
+        return getVariable(key) as? VEvent
+    }
+
+    fun getVariableAsNotification(key: String): VNotification? {
+        return coerceNotification(getVariable(key))
+    }
+
+    fun getVariableAsNotificationList(key: String): List<VNotification> {
+        return coerceList(key, ::coerceNotification)
+    }
+
+    fun getVariableAsUiComponent(key: String): VUiComponent? {
+        return coerceUiComponent(getVariable(key))
+    }
+
+    fun getVariableAsUiComponentList(key: String): List<VUiComponent> {
+        return coerceList(key, ::coerceUiComponent)
+    }
+
+    fun getVariableAsUiElementList(key: String): List<UiElement> {
+        return getVariableAsUiComponentList(key).map { it.element }
+    }
+
     /**
      * 获取参数的原始字符串值，不进行命名变量的自动解引用。
      *
@@ -196,6 +247,29 @@ data class ExecutionContext(
      */
     fun getOutput(stepId: String, outputKey: String): VObject {
         return stepOutputs[stepId]?.get(outputKey) ?: VNull
+    }
+
+    private fun <T> coerceList(key: String, extractor: (VObject) -> T?): List<T> {
+        val value = getVariable(key)
+        return when (value) {
+            is VList -> value.raw.mapNotNull(extractor)
+            is VNull -> emptyList()
+            else -> listOfNotNull(extractor(value))
+        }
+    }
+
+    private fun coerceNotification(value: VObject): VNotification? {
+        return when (value) {
+            is VNotification -> value
+            else -> null
+        }
+    }
+
+    private fun coerceUiComponent(value: VObject): VUiComponent? {
+        return when (value) {
+            is VUiComponent -> value
+            else -> null
+        }
     }
 
     companion object {

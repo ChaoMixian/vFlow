@@ -181,11 +181,9 @@ class ShowFloatWindowModule : BaseModule() {
         } else {
             // === 首次启动逻辑 (Start) ===
 
-            val elementsListVObject = context.getVariable(KEY_UI_ELEMENTS_LIST)
-            @Suppress("UNCHECKED_CAST")
-            val elements = if (elementsListVObject is VList) {
-                elementsListVObject.raw.mapNotNull { it.raw as? UiElement }
-            } else {
+            val elements = context.getVariableAsUiElementList(KEY_UI_ELEMENTS_LIST)
+                .takeIf { context.getVariableAsList(KEY_UI_ELEMENTS_LIST) != null }
+                ?: run {
                 return ExecutionResult.Failure("配置错误", appContext.getString(R.string.error_vflow_ui_empty_list))
             }
 

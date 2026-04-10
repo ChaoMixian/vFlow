@@ -4,6 +4,7 @@ package com.chaomixian.vflow.core.workflow.module.scripted
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.google.gson.annotations.SerializedName
 
 /**
@@ -64,12 +65,12 @@ data class JsonOutput(
 ) {
     fun toOutputDefinition(): OutputDefinition {
         val typeName = when (type.lowercase()) {
-            "number" -> "vflow.type.number"
-            "boolean" -> "vflow.type.boolean"
-            "list" -> "vflow.type.list"
-            "dictionary" -> "vflow.type.dictionary"
-            "image" -> "vflow.type.image"
-            else -> "vflow.type.text"
+            "number" -> VTypeRegistry.NUMBER.id
+            "boolean" -> VTypeRegistry.BOOLEAN.id
+            "list" -> VTypeRegistry.LIST.id
+            "dictionary" -> VTypeRegistry.DICTIONARY.id
+            "image" -> VTypeRegistry.IMAGE.id
+            else -> VTypeRegistry.STRING.id
         }
         return OutputDefinition(id, name, typeName)
     }

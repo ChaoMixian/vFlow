@@ -122,7 +122,7 @@ class FindNotificationModule : BaseModule() {
                 appContext.getString(R.string.error_vflow_notification_find_not_found),
                 appContext.getString(R.string.error_vflow_notification_find_no_match),
                 partialOutputs = mapOf(
-                    "notifications" to emptyList<Any>()   // 空列表（语义化）
+                    "notifications" to VList(emptyList())   // 空列表（语义化）
                 )
             )
         }

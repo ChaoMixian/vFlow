@@ -146,19 +146,11 @@ class HttpRequestModule : BaseModule() {
                 val method = context.getVariableAsString("method", "GET")
 
                 // 解析 Headers (支持变量)
-                @Suppress("UNCHECKED_CAST")
-                val headersObj = context.getVariable("headers")
-                val rawHeaders = (headersObj as? VDictionary)?.raw
-                    ?: (headersObj as? Map<String, Any?>)
-                    ?: emptyMap()
+                val rawHeaders = context.getVariableAsDictionary("headers")?.raw ?: emptyMap()
                 val headers = resolveMap(rawHeaders, context)
 
                 // 解析 Query Params (支持变量)
-                @Suppress("UNCHECKED_CAST")
-                val queryParamsObj = context.getVariable("query_params")
-                val rawQueryParams = (queryParamsObj as? VDictionary)?.raw
-                    ?: (queryParamsObj as? Map<String, Any?>)
-                    ?: emptyMap()
+                val rawQueryParams = context.getVariableAsDictionary("query_params")?.raw ?: emptyMap()
                 val queryParams = resolveMap(rawQueryParams, context)
 
                 // 解析 Body
@@ -175,12 +167,10 @@ class HttpRequestModule : BaseModule() {
                     BODY_TYPE_FORM -> {
                         // 表单：必须使用字符串转换（表单编码要求）
                         val mapData = (bodyDataRaw as? VDictionary)?.raw
-                            ?: (bodyDataRaw as? Map<*, *>)
-                        if (mapData is Map<*, *>) {
-                            @Suppress("UNCHECKED_CAST")
-                            resolveMap(mapData as Map<String, Any?>, context)  // 保持现有行为：转字符串
+                        if (mapData != null) {
+                            resolveMap(mapData, context)
                         } else {
-                            mapData
+                            bodyDataRaw.raw
                         }
                     }
                     BODY_TYPE_JSON -> {
@@ -189,12 +179,9 @@ class HttpRequestModule : BaseModule() {
                         // 2. VObject 输入（直接插入的魔法变量）- 提取raw值并递归解析
                         // 3. 字符串输入（来自 RichTextView）- 解析变量后尝试解析JSON
                         val mapData = (bodyDataRaw as? VDictionary)?.raw
-                            ?: (bodyDataRaw as? Map<*, *>)
 
-                        if (mapData is Map<*, *>) {
-                            // Map 输入：递归解析 Map 中的值
-                            @Suppress("UNCHECKED_CAST")
-                            resolveMapForJson(mapData as Map<String, Any?>, context)
+                        if (mapData != null) {
+                            resolveMapForJson(mapData, context)
                         } else if (bodyDataRaw is VObject) {
                             // VObject 输入（直接插入的魔法变量，如 VBoolean、VString 等）
                             resolveValuePreservingType(bodyDataRaw, context)
@@ -414,7 +401,7 @@ class HttpRequestModule : BaseModule() {
                 if (images.isEmpty()) {
                     android.util.Log.e("HttpRequestModule", "No images found, trying magicVariables")
                     // 没有找到图片，尝试直接作为单个 VImage 处理
-                    val image = context.getVariable("body") as? VImage
+                    val image = context.getVariableAsImage("body")
                     android.util.Log.d("HttpRequestModule", "Magic variable image: $image")
                     if (image != null) {
                         createSingleFileUpload(context, image)

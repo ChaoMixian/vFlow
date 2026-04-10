@@ -218,26 +218,10 @@ class CreateVariableModule : BaseModule() {
                 VBoolean(rawValue.asBoolean())
             }
             TYPE_DICTIONARY -> {
-                // 如果已经是 VDictionary，直接使用
-                if (rawValue is VDictionary) {
-                    rawValue
-                } else {
-                    // 尝试从 Map 或其他类型转换
-                    val mapValue = rawValue.raw as? Map<*, *> ?: emptyMap<String, VObject>()
-                    val vMap = mapValue.entries.associate { entry ->
-                        entry.key.toString() to VObjectFactory.from(entry.value)
-                    }
-                    VDictionary(vMap)
-                }
+                coerceDictionary(rawValue)
             }
             TYPE_LIST -> {
-                // 如果已经是 VList，直接使用
-                if (rawValue is VList) {
-                    rawValue
-                } else {
-                    val listValue = rawValue.raw as? List<*> ?: emptyList<Any?>()
-                    VList(listValue.map { VObjectFactory.from(it) })
-                }
+                coerceList(rawValue)
             }
             TYPE_IMAGE -> {
                 VImage(rawValue.asString())
@@ -247,18 +231,27 @@ class CreateVariableModule : BaseModule() {
                 if (rawValue is VCoordinate) {
                     rawValue
                 } else {
-                    // 尝试从 Map 或 List 转换
-                    val mapValue = rawValue.raw as? Map<*, *>
-                    val listValue = rawValue.raw as? List<*>
                     when {
-                        mapValue != null -> {
-                            val x = resolveCoordinateComponent(mapValue["x"], context)
-                            val y = resolveCoordinateComponent(mapValue["y"], context)
+                        rawValue is VDictionary -> {
+                            val x = resolveCoordinateComponent(rawValue.raw["x"] ?: VNull, context)
+                            val y = resolveCoordinateComponent(rawValue.raw["y"] ?: VNull, context)
                             VCoordinate(x, y)
                         }
-                        listValue != null && listValue.size >= 2 -> {
-                            val x = resolveCoordinateComponent(listValue[0], context)
-                            val y = resolveCoordinateComponent(listValue[1], context)
+                        rawValue is VList && rawValue.raw.size >= 2 -> {
+                            val x = resolveCoordinateComponent(rawValue.raw[0], context)
+                            val y = resolveCoordinateComponent(rawValue.raw[1], context)
+                            VCoordinate(x, y)
+                        }
+                        rawValue.raw is Map<*, *> -> {
+                            val mapValue = rawValue.raw as Map<*, *>
+                            val x = resolveCoordinateComponent(VObjectFactory.from(mapValue["x"]), context)
+                            val y = resolveCoordinateComponent(VObjectFactory.from(mapValue["y"]), context)
+                            VCoordinate(x, y)
+                        }
+                        rawValue.raw is List<*> && (rawValue.raw as List<*>).size >= 2 -> {
+                            val listValue = rawValue.raw as List<*>
+                            val x = resolveCoordinateComponent(VObjectFactory.from(listValue[0]), context)
+                            val y = resolveCoordinateComponent(VObjectFactory.from(listValue[1]), context)
                             VCoordinate(x, y)
                         }
                         else -> {
@@ -284,14 +277,37 @@ class CreateVariableModule : BaseModule() {
         return ExecutionResult.Success(mapOf("variable" to variable))
     }
 
-    private fun resolveCoordinateComponent(value: Any?, context: ExecutionContext): Int {
-        val vObject = VObjectFactory.from(value)
-        val numericValue = vObject.asNumber()
+    private fun coerceDictionary(value: VObject): VDictionary {
+        return when (value) {
+            is VDictionary -> value
+            else -> {
+                val rawMap = value.raw as? Map<*, *> ?: return VDictionary(emptyMap())
+                VDictionary(
+                    rawMap.entries.associate { entry ->
+                        entry.key.toString() to VObjectFactory.from(entry.value)
+                    }
+                )
+            }
+        }
+    }
+
+    private fun coerceList(value: VObject): VList {
+        return when (value) {
+            is VList -> value
+            else -> {
+                val rawList = value.raw as? List<*> ?: return VList(emptyList())
+                VList(rawList.map { VObjectFactory.from(it) })
+            }
+        }
+    }
+
+    private fun resolveCoordinateComponent(value: VObject, context: ExecutionContext): Int {
+        val numericValue = value.asNumber()
         if (numericValue != null) {
             return numericValue.toInt()
         }
 
-        val rawText = vObject.asString().trim()
+        val rawText = value.asString().trim()
         if (rawText.isEmpty()) {
             return 0
         }

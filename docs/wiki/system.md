@@ -314,7 +314,7 @@
 
 ```lua
 {
-    notifications = list  -- NotificationObject 列表
+    notifications = list  -- VNotification 列表
 }
 
 ```
@@ -329,7 +329,7 @@
 
 | 参数ID | 名称 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- | --- |
-| `target` | 目标通知 | any | 是 | 单个 NotificationObject 或 列表 |
+| `target` | 目标通知 | any | 是 | 单个 VNotification 或 VNotification 列表 |
 
 #### 返回值
 

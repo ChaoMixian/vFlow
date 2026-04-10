@@ -17,6 +17,47 @@ import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
 import java.util.UUID
 
+internal fun normalizeJsonElementValue(element: JsonElement?): Any? {
+    if (element == null || element.isJsonNull) return null
+
+    return when {
+        element.isJsonObject -> {
+            LinkedHashMap<String, Any?>().apply {
+                element.asJsonObject.entrySet().forEach { (key, value) ->
+                    put(key, normalizeJsonElementValue(value))
+                }
+            }
+        }
+        element.isJsonArray -> element.asJsonArray.map { item ->
+            normalizeJsonElementValue(item)
+        }
+        element.isJsonPrimitive -> {
+            val primitive = element.asJsonPrimitive
+            when {
+                primitive.isBoolean -> primitive.asBoolean
+                primitive.isNumber -> primitive.asNumber
+                primitive.isString -> primitive.asString
+                else -> null
+            }
+        }
+        else -> null
+    }
+}
+
+internal fun normalizedObjectMap(value: Any?): Map<String, Any?>? {
+    val map = value as? Map<*, *> ?: return null
+    return LinkedHashMap<String, Any?>().apply {
+        map.forEach { (key, nestedValue) ->
+            key?.toString()?.let { put(it, nestedValue) }
+        }
+    }
+}
+
+internal fun normalizedObjectMapList(value: Any?): List<Map<String, Any?>>? {
+    val list = value as? List<*> ?: return null
+    return list.mapNotNull(::normalizedObjectMap)
+}
+
 class WorkflowManager(val context: Context) {
     private val prefs = context.getSharedPreferences("vflow_workflows", Context.MODE_PRIVATE)
     private val gson = GsonBuilder()
@@ -240,14 +281,12 @@ class WorkflowManager(val context: Context) {
     private fun JsonObject.getMap(name: String): Map<String, Any?>? {
         val element = get(name) ?: return null
         if (!element.isJsonObject) return null
-        val type = object : TypeToken<Map<String, Any?>>() {}.type
-        return gson.fromJson<Map<String, Any?>>(element, type)
+        return normalizedObjectMap(normalizeJsonElementValue(element))
     }
 
     private fun JsonObject.getMapList(name: String): List<Map<String, Any?>>? {
         val element = get(name) ?: return null
         if (!element.isJsonArray) return null
-        val type = object : TypeToken<List<Map<String, Any?>>>() {}.type
-        return gson.fromJson<List<Map<String, Any?>>>(element, type)
+        return normalizedObjectMapList(normalizeJsonElementValue(element))
     }
 }

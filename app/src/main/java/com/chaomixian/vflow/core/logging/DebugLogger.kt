@@ -110,33 +110,37 @@ object DebugLogger {
         d("DebugLogger", "应用日志缓冲区和 Shell 日志文件已清空。")
     }
 
+    private inline fun logToSystem(block: () -> Unit) {
+        runCatching(block)
+    }
+
     fun d(tag: String, message: String) {
-        android.util.Log.d(tag, message)
+        logToSystem { android.util.Log.d(tag, message) }
         if (isLoggingEnabled) addToBuffer("D", tag, message)
     }
 
     fun d(tag: String, message: String, throwable: Throwable?) {
-        android.util.Log.d(tag, message, throwable)
+        logToSystem { android.util.Log.d(tag, message, throwable) }
         if (isLoggingEnabled) addToBuffer("D", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun i(tag: String, message: String) {
-        android.util.Log.i(tag, message)
+        logToSystem { android.util.Log.i(tag, message) }
         if (isLoggingEnabled) addToBuffer("I", tag, message)
     }
 
     fun i(tag: String, message: String, throwable: Throwable?) {
-        android.util.Log.i(tag, message, throwable)
+        logToSystem { android.util.Log.i(tag, message, throwable) }
         if (isLoggingEnabled) addToBuffer("I", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun w(tag: String, message: String, throwable: Throwable? = null) {
-        android.util.Log.w(tag, message, throwable)
+        logToSystem { android.util.Log.w(tag, message, throwable) }
         if (isLoggingEnabled) addToBuffer("W", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun e(tag: String, message: String, throwable: Throwable? = null) {
-        android.util.Log.e(tag, message, throwable)
+        logToSystem { android.util.Log.e(tag, message, throwable) }
         if (isLoggingEnabled) addToBuffer("E", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 

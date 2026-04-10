@@ -356,11 +356,7 @@ class OperitModule : BaseModule() {
         val rawAction = execContext.getVariableAsString("workflow_action", ACTION_TRIGGER_WORKFLOW)
         val workflowAction = VariableResolver.resolve(rawAction, execContext)
 
-        @Suppress("UNCHECKED_CAST")
-        val extrasObj = execContext.getVariable("workflow_extras")
-        val extrasMap = (extrasObj as? VDictionary)?.raw
-            ?: (extrasObj as? Map<String, Any?>)
-            ?: emptyMap()
+        val extrasMap = execContext.getVariableAsDictionary("workflow_extras")?.raw ?: emptyMap()
 
         if (workflowAction.isBlank()) {
             return ExecutionResult.Failure("参数错误", "工作流Action不能为空")

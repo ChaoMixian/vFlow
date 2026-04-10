@@ -206,7 +206,7 @@ class OCRModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         // 获取参数
-        val imageVar = context.getVariable("image") as? VImage
+        val imageVar = context.getVariableAsImage("image")
             ?: return ExecutionResult.Failure("参数错误", "请提供一张有效的图片。")
         val inputsById = getInputs().associateBy { it.id }
         val rawMode = context.getVariableAsString("mode", MODE_RECOGNIZE)

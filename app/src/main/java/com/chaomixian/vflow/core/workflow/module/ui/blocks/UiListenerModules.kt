@@ -42,13 +42,13 @@ class OnUiEventModule : BaseBlockModule() {
         // 只接受 VUiComponent 对象本身（不接受属性）
         InputDefinition("target_id", "目标组件", ParameterType.ANY, "",
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf("vflow.type.uicomponent")
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.UI_COMPONENT.id)
         )
     )
 
     override fun getOutputs(step: ActionStep?) = listOf(
         // 输出事件携带的值 (例如开关的 true/false，输入框的文本)
-        OutputDefinition("value", "事件值", "vflow.type.any")
+        OutputDefinition("value", "事件值", VTypeRegistry.ANY.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
@@ -56,15 +56,12 @@ class OnUiEventModule : BaseBlockModule() {
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         // 获取当前事件
-        val eventVObject = context.getVariable(KEY_CURRENT_EVENT)
-        val event = if (eventVObject is VEvent) {
-            eventVObject.event
-        } else {
+        val event = context.getVariableAsEvent(KEY_CURRENT_EVENT)?.event ?: run {
             return ExecutionResult.Failure("环境错误", appContext.getString(R.string.error_vflow_ui_wrong_place))
         }
 
         // 获取目标组件（必须是 VUiComponent 对象）
-        val targetComponent = context.magicVariables["target_id"] as? com.chaomixian.vflow.core.types.complex.VUiComponent
+        val targetComponent = context.getVariableAsUiComponent("target_id")
             ?: return ExecutionResult.Failure("参数错误", appContext.getString(R.string.error_vflow_ui_wrong_target))
 
         // 判断事件是否匹配目标组件
@@ -185,11 +182,8 @@ class UpdateUiComponentModule : BaseModule() {
         }
 
         // 提取目标组件 ID（支持 VUiComponent 对象或字符串）
-        val targetId = when (val obj = context.magicVariables["target_id"]) {
-            is com.chaomixian.vflow.core.types.basic.VString -> obj.raw
-            is com.chaomixian.vflow.core.types.complex.VUiComponent -> obj.getId()
-            else -> context.getVariableAsRaw("target_id") as? String ?: ""
-        }
+        val targetId = context.getVariableAsUiComponent("target_id")?.getId()
+            ?: context.getVariableAsString("target_id")
 
         // 验证 targetId 不为空
         if (targetId.isEmpty()) {
@@ -199,8 +193,7 @@ class UpdateUiComponentModule : BaseModule() {
         val payload = mutableMapOf<String, Any?>()
 
         // 解析 text 参数（支持魔法变量、命名变量和组件属性）
-        // 使用 getVariableAsRaw 自动处理 VString 解包
-        val rawText = context.getVariableAsRaw("text") as? String
+        val rawText = context.getVariableAsString("text")
         if (!rawText.isNullOrEmpty()) {
             // getVariableAsRawString 已经解析过魔法变量了，但如果返回的还是魔法变量引用，再次解析
             val resolvedText = if (com.chaomixian.vflow.core.execution.VariableResolver.hasVariableReference(rawText)) {
@@ -219,22 +212,22 @@ class UpdateUiComponentModule : BaseModule() {
         else if (visible == VISIBILITY_HIDE) payload["visible"] = false
 
         // 解析布局属性
-        val padding = context.variables["padding"] as? Number
-        if (padding != null && padding.toInt() > 0) {
-            payload["padding"] = padding.toInt()
+        val padding = context.getVariableAsInt("padding")
+        if (padding != null && padding > 0) {
+            payload["padding"] = padding
         }
 
-        val margin = context.variables["margin"] as? Number
-        if (margin != null && margin.toInt() > 0) {
-            payload["margin"] = margin.toInt()
+        val margin = context.getVariableAsInt("margin")
+        if (margin != null && margin > 0) {
+            payload["margin"] = margin
         }
 
-        val textSize = context.variables["textSize"] as? Number
-        if (textSize != null && textSize.toFloat() > 0) {
-            payload["textSize"] = textSize.toFloat()
+        val textSize = context.getVariableAsNumber("textSize")?.toFloat()
+        if (textSize != null && textSize > 0f) {
+            payload["textSize"] = textSize
         }
 
-        val background = context.getVariableAsRaw("background") as? String
+        val background = context.getVariableAsString("background")
         if (!background.isNullOrEmpty()) {
             payload["background"] = background
         }
@@ -287,8 +280,8 @@ class GetComponentValueModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?) = listOf(
-        OutputDefinition("component", "组件对象", "vflow.type.uicomponent"),
-        OutputDefinition("value", "组件值", "vflow.type.any")
+        OutputDefinition("component", "组件对象", VTypeRegistry.UI_COMPONENT.id),
+        OutputDefinition("value", "组件值", VTypeRegistry.ANY.id)
     )
 
     override fun getSummary(context: Context, step: ActionStep) =
@@ -296,22 +289,12 @@ class GetComponentValueModule : BaseModule() {
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         // 从 VString 对象或 VUiComponent 对象中提取组件 ID
-        val componentId = when (val obj = context.magicVariables["component_id"]) {
-            is com.chaomixian.vflow.core.types.basic.VString -> obj.raw
-            is com.chaomixian.vflow.core.types.complex.VUiComponent -> obj.getId()
-            else -> context.getVariableAsRaw("component_id") as? String ?: ""
-        }
+        val componentId = context.getVariableAsUiComponent("component_id")?.getId()
+            ?: context.getVariableAsString("component_id")
 
         // 创建 VUiComponent 对象
-        @Suppress("UNCHECKED_CAST")
-        val elementsListVObject = context.getVariable(KEY_UI_ELEMENTS_LIST)
-        @Suppress("UNCHECKED_CAST")
-        val elementsList: List<com.chaomixian.vflow.core.workflow.module.ui.model.UiElement>? = if (elementsListVObject is VList) {
-            elementsListVObject.raw.mapNotNull { (it.raw as? com.chaomixian.vflow.core.workflow.module.ui.model.UiElement) }
-        } else {
-            null
-        }
-        val element = elementsList?.find { uiElement -> uiElement.id == componentId }
+        val element = context.getVariableAsUiElementList(KEY_UI_ELEMENTS_LIST)
+            .find { uiElement -> uiElement.id == componentId }
 
         return if (element != null) {
             // 创建一个 valueProvider 来动态获取组件值

@@ -16,6 +16,7 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
@@ -260,7 +261,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
                 // 为"文件"类型添加类型过滤，只允许图片类型变量
                 if (bodyType == BODY_TYPE_FILE) {
-                    richTextView.setVariableTypeFilter(setOf("vflow.type.image"))
+                    richTextView.setVariableTypeFilter(setOf(VTypeRegistry.IMAGE.id))
                 }
 
                 richTextView.tag = "body"

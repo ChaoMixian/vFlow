@@ -6,6 +6,7 @@ import com.chaomixian.vflow.core.workflow.module.data.FileOperationModule
 import com.chaomixian.vflow.core.workflow.module.data.TextProcessingModule
 import com.chaomixian.vflow.core.workflow.module.interaction.FindTextModule
 import com.chaomixian.vflow.core.workflow.module.interaction.OCRModule
+import com.chaomixian.vflow.core.workflow.module.system.GetAppUsageStatsModule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,7 +42,9 @@ class ModuleOutputEnumNormalizationTest {
         )
 
         val firstResult = outputs.first { it.id == "first_result" }
+        val allResults = outputs.first { it.id == "all_results" }
         assertEquals(VTypeRegistry.COORDINATE.id, firstResult.typeName)
+        assertEquals(VTypeRegistry.COORDINATE.id, allResults.listElementType)
     }
 
     @Test
@@ -52,6 +55,15 @@ class ModuleOutputEnumNormalizationTest {
 
         assertTrue(outputs.any { it.id == "found" })
         assertTrue(outputs.any { it.id == "all_matches" })
+    }
+
+    @Test
+    fun `usage stats list output declares dictionary element type`() {
+        val outputs = GetAppUsageStatsModule().getOutputs(null)
+
+        val statsList = outputs.first { it.id == "stats_list" }
+        assertEquals(VTypeRegistry.LIST.id, statsList.typeName)
+        assertEquals(VTypeRegistry.DICTIONARY.id, statsList.listElementType)
     }
 
     private fun step(moduleId: String, key: String, value: String): ActionStep {

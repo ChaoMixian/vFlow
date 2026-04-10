@@ -26,6 +26,8 @@ VObject类型系统的设计遵循以下原则：
 1. **统一的运行时表示**
    - 所有的运行时数据都必须封装为VObject
    - 模块之间只传递VObject，不传递原生类型
+   - 模块输入输出边界禁止直接暴露原始业务对象或原始 `Map/List`
+   - 原始业务对象只允许存在于 `VObject.raw` 和平台 API 交互点
 
 2. **类型安全与灵活性兼顾**
    - 提供静态类型信息（`VType`）用于UI提示和验证
@@ -68,7 +70,7 @@ interface VObject {
 存储原始数据的容器。可以是：
 - Kotlin原生类型：`String`, `Double`, `Boolean`, `List`, `Map`
 - Android原生类型：`Bitmap`, `Rect` 等
-- 自定义业务对象：`NotificationObject`, `ScreenNode` 等
+- 包装器内部持有的业务对象：例如 `VNotification.raw -> NotificationObject`
 
 #### `type: VType`
 对象的类型定义，用于：
@@ -121,7 +123,6 @@ VType (根类型)
 │       ├── IMAGE (图片)
 │       ├── DATE (日期)
 │       ├── TIME (时间)
-│       ├── UI_ELEMENT (界面元素)
 │       ├── UI_COMPONENT (UI组件)
 │       ├── COORDINATE (坐标)
 │       ├── NOTIFICATION (通知)

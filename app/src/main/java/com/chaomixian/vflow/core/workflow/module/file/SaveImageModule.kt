@@ -95,7 +95,7 @@ class SaveImageModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val imageVar = context.getVariable("image") as? VImage
+        val imageVar = context.getVariableAsImage("image")
             ?: return ExecutionResult.Failure(
                 appContext.getString(R.string.error_vflow_file_save_image_param_error),
                 appContext.getString(R.string.error_vflow_file_save_image_invalid)

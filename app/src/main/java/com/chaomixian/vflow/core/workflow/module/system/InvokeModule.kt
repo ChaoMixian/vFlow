@@ -136,11 +136,7 @@ class InvokeModule : BaseModule() {
         val rawFlags = context.getVariableAsString("flags", "")
         val flagsInt = rawFlags.toIntOrNull()
 
-        @Suppress("UNCHECKED_CAST")
-        val extrasObj = context.getVariable("extras")
-        val extrasMap = (extrasObj as? VDictionary)?.raw
-            ?: (extrasObj as? Map<String, Any?>)
-            ?: emptyMap()
+        val extrasMap = context.getVariableAsDictionary("extras")?.raw ?: emptyMap()
 
         val intent = Intent()
 

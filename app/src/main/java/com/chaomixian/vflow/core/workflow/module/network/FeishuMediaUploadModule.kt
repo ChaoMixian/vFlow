@@ -18,8 +18,32 @@ import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.google.gson.JsonParser
 import java.io.IOException
 import java.util.zip.Adler32
+
+internal data class FeishuMediaUploadResponse(
+    val code: Int,
+    val msg: String,
+    val fileToken: String
+)
+
+internal fun parseFeishuMediaUploadResponse(responseBody: String): FeishuMediaUploadResponse? {
+    val root = runCatching { JsonParser.parseString(responseBody) }.getOrNull() ?: return null
+    if (!root.isJsonObject) return null
+
+    val obj = root.asJsonObject
+    val code = obj.get("code")?.takeIf { it.isJsonPrimitive }?.asInt ?: -1
+    val msg = obj.get("msg")?.takeIf { it.isJsonPrimitive }?.asString ?: "未知错误"
+    val data = obj.get("data")?.takeIf { it.isJsonObject }?.asJsonObject
+    val fileToken = data?.get("file_token")?.takeIf { it.isJsonPrimitive }?.asString ?: ""
+
+    return FeishuMediaUploadResponse(
+        code = code,
+        msg = msg,
+        fileToken = fileToken
+    )
+}
 
 /**
  * 飞书云文档素材上传模块。
@@ -290,22 +314,16 @@ class FeishuMediaUploadModule : BaseModule() {
 
                 onProgress(ProgressUpdate("上传完成，正在解析响应..."))
 
-                val jsonResponse = try {
-                    com.google.gson.Gson().fromJson(responseBody, java.util.Map::class.java) as? Map<String, Any?>
-                } catch (e: Exception) {
-                    null
-                }
-
-                if (jsonResponse == null) {
+                val parsedResponse = parseFeishuMediaUploadResponse(responseBody)
+                if (parsedResponse == null) {
                     return@withContext ExecutionResult.Failure(
                         "响应解析失败",
                         "无法解析服务器响应: $responseBody"
                     )
                 }
 
-                val code = (jsonResponse["code"] as? Double)?.toInt() ?: -1
-                val msg = (jsonResponse["msg"] as? String) ?: "未知错误"
-                val data = jsonResponse["data"] as? Map<String, Any?>
+                val code = parsedResponse.code
+                val msg = parsedResponse.msg
 
                 if (code != 0) {
                     return@withContext ExecutionResult.Failure(
@@ -314,7 +332,7 @@ class FeishuMediaUploadModule : BaseModule() {
                     )
                 }
 
-                val fileToken = data?.get("file_token") as? String ?: ""
+                val fileToken = parsedResponse.fileToken
 
                 onProgress(ProgressUpdate("上传成功！"))
 

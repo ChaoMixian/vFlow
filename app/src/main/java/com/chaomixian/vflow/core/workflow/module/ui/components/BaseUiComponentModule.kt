@@ -40,24 +40,14 @@ abstract class BaseUiComponentModule : BaseModule() {
     abstract fun createUiElement(context: ExecutionContext, step: ActionStep): UiElement
 
     override fun getOutputs(step: ActionStep?) = listOf(
-        OutputDefinition("component", "组件对象", "vflow.type.uicomponent", nameStringRes = R.string.output_vflow_ui_component_base_component_name),
+        OutputDefinition("component", "组件对象", VTypeRegistry.UI_COMPONENT.id, nameStringRes = R.string.output_vflow_ui_component_base_component_name),
         OutputDefinition("id", "组件ID", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_ui_component_base_id_name)
     )
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        @Suppress("UNCHECKED_CAST")
-        val listVObject = context.getVariable(KEY_UI_ELEMENTS_LIST)
-        @Suppress("UNCHECKED_CAST")
-        val list = if (listVObject is VList) {
-            // 获取底层的 MutableList<UiElement>，如果不存在则创建
-            val rawList = listVObject.raw.mapNotNull { it.raw as? UiElement }.toMutableList()
-            // 更新 VList 中的数据
-            val newListVObject = VObjectFactory.from(rawList)
-            context.namedVariables[KEY_UI_ELEMENTS_LIST] = newListVObject
-            rawList
-        } else {
-            null
-        }
+        val list = context.getVariableAsUiElementList(KEY_UI_ELEMENTS_LIST)
+            .toMutableList()
+            .takeIf { context.getVariableAsList(KEY_UI_ELEMENTS_LIST) != null }
 
         if (list != null) {
             val element = createUiElement(context, step = context.allSteps[context.currentStepIndex])

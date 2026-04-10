@@ -85,7 +85,7 @@ class GetAppUsageStatsModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("stats_list", "统计列表", VTypeRegistry.LIST.id, nameStringRes = R.string.output_vflow_system_get_usage_stats_stats_list_name),
+        OutputDefinition("stats_list", "统计列表", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.DICTIONARY.id, nameStringRes = R.string.output_vflow_system_get_usage_stats_stats_list_name),
         OutputDefinition("most_used_app", "最常使用的应用", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_system_get_usage_stats_most_used_app_name),
         OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_system_get_usage_stats_success_name)
     )

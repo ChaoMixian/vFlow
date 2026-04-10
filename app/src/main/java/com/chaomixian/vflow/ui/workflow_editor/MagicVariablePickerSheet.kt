@@ -29,7 +29,7 @@ data class MagicVariableItem(
     val variableReference: String,
     val variableName: String,
     val originDescription: String,
-    val typeId: String = "vflow.type.any"
+    val typeId: String = VTypeRegistry.ANY.id
 ) : Parcelable
 
 /**
@@ -148,9 +148,9 @@ class MagicVariablePickerSheet : BottomSheetDialogFragment() {
         } else {
             // 特殊处理：字典、列表和字符串类型
             when (item.typeId) {
-                "vflow.type.dictionary" -> showDictionaryOptionsDialog(item, properties, acceptedTypes)
-                "vflow.type.list" -> showListOptionsDialog(item, properties, acceptedTypes)
-                "vflow.type.string" -> showStringOptionsDialog(item, properties, acceptedTypes)
+                VTypeRegistry.DICTIONARY.id -> showDictionaryOptionsDialog(item, properties, acceptedTypes)
+                VTypeRegistry.LIST.id -> showListOptionsDialog(item, properties, acceptedTypes)
+                VTypeRegistry.STRING.id -> showStringOptionsDialog(item, properties, acceptedTypes)
                 else -> showPropertySelectionDialog(item, properties, acceptedTypes)
             }
         }

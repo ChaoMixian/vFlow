@@ -179,7 +179,11 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
                     map[key] = readValue(reader, null)
                 }
                 reader.endObject()
-                map
+                if (map.keys == setOf("type", "value") && map["type"] is String) {
+                    createVObject(map["type"] as String, map["value"])
+                } else {
+                    map
+                }
             }
             else -> reader.skipValue()
         }
@@ -335,6 +339,7 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
     private fun writeAny(out: JsonWriter, value: Any?) {
         when (value) {
             null -> out.nullValue()
+            is VObject -> write(out, value)
             is String -> out.value(value)
             is Number -> out.value(value)
             is Boolean -> out.value(value)

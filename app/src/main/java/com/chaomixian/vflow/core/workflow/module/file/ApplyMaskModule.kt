@@ -93,7 +93,7 @@ class ApplyMaskModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val imageVar = context.getVariable("image") as? VImage
+        val imageVar = context.getVariableAsImage("image")
             ?: return ExecutionResult.Failure("参数错误", "需要一个图像变量作为输入。")
 
         val appContext = context.applicationContext

@@ -13,13 +13,17 @@ import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
  * 变量类型枚举（用户可见的中文类型名）
  */
 enum class VariableType(val displayName: String, val typeId: String, val storedValue: String) {
-    STRING("文本", "vflow.type.string", "string"),
-    NUMBER("数字", "vflow.type.number", "number"),
-    BOOLEAN("布尔", "vflow.type.boolean", "boolean"),
-    DICTIONARY("字典", "vflow.type.dictionary", "dictionary"),
-    LIST("列表", "vflow.type.list", "list"),
-    IMAGE("图像", "vflow.type.image", "image"),
-    COORDINATE("坐标", "vflow.type.coordinate", "coordinate");
+    STRING("文本", VTypeRegistry.STRING.id, "string"),
+    NUMBER("数字", VTypeRegistry.NUMBER.id, "number"),
+    BOOLEAN("布尔", VTypeRegistry.BOOLEAN.id, "boolean"),
+    DICTIONARY("字典", VTypeRegistry.DICTIONARY.id, "dictionary"),
+    LIST("列表", VTypeRegistry.LIST.id, "list"),
+    IMAGE("图像", VTypeRegistry.IMAGE.id, "image"),
+    COORDINATE("坐标", VTypeRegistry.COORDINATE.id, "coordinate"),
+    COORDINATE_REGION("坐标区域", VTypeRegistry.COORDINATE_REGION.id, VTypeRegistry.COORDINATE_REGION.id),
+    NOTIFICATION("通知", VTypeRegistry.NOTIFICATION.id, VTypeRegistry.NOTIFICATION.id),
+    UI_COMPONENT("UI组件", VTypeRegistry.UI_COMPONENT.id, VTypeRegistry.UI_COMPONENT.id),
+    EVENT("事件", VTypeRegistry.EVENT.id, VTypeRegistry.EVENT.id);
 
     companion object {
         /**

@@ -5,6 +5,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.ExecutionServices
 import com.chaomixian.vflow.core.execution.VariableType
 import com.chaomixian.vflow.core.module.ExecutionResult
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.core.workflow.module.logic.IF_START_ID
@@ -106,6 +107,14 @@ class LegacyEnumNormalizationTest {
             CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull("图片")
         )
         assertEquals(VariableType.IMAGE, VariableType.fromStoredValue("图片"))
+    }
+
+    @Test
+    fun `variable type recognizes complex vtype ids`() {
+        assertEquals(VariableType.NOTIFICATION, VariableType.fromStoredValue(VTypeRegistry.NOTIFICATION.id))
+        assertEquals(VariableType.UI_COMPONENT, VariableType.fromStoredValue(VTypeRegistry.UI_COMPONENT.id))
+        assertEquals(VariableType.EVENT, VariableType.fromStoredValue(VTypeRegistry.EVENT.id))
+        assertEquals(VariableType.COORDINATE_REGION, VariableType.fromStoredValue(VTypeRegistry.COORDINATE_REGION.id))
     }
 
     @Test

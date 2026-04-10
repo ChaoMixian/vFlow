@@ -7,7 +7,6 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.*
-import com.chaomixian.vflow.core.types.complex.VNotification
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.NotificationTriggerHandler
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -33,7 +32,7 @@ class RemoveNotificationModule : BaseModule() {
             name = "目标通知",
             staticType = ParameterType.ANY,
             acceptsMagicVariable = true,
-            acceptedMagicVariableTypes = setOf(NotificationObject.TYPE_NAME, VTypeRegistry.LIST.id),
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NOTIFICATION.id, VTypeRegistry.LIST.id),
             nameStringRes = R.string.param_vflow_notification_remove_target_name
         )
     )
@@ -58,18 +57,8 @@ class RemoveNotificationModule : BaseModule() {
                 appContext.getString(R.string.error_vflow_notification_remove_need_permission)
             )
 
-        val target = context.getVariable("target")
-
-        val notificationsToRemove = when (target) {
-            is VNotification -> listOf(target.notification)
-            is VList -> target.raw.mapNotNull { item ->
-                when (item) {
-                    is VNotification -> item.notification
-                    else -> item.raw as? NotificationObject
-                }
-            }
-            else -> listOfNotNull(target.raw as? NotificationObject)
-        }
+        val notificationsToRemove = context.getVariableAsNotificationList("target")
+            .map { it.notification }
 
         if (notificationsToRemove.isEmpty()) {
             return ExecutionResult.Failure(

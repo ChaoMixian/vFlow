@@ -39,7 +39,7 @@ class CallWorkflowModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("result", nameStringRes = R.string.output_vflow_logic_call_workflow_result_name, name = "子工作流返回值", typeName = "vflow.type.any")
+        OutputDefinition("result", nameStringRes = R.string.output_vflow_logic_call_workflow_result_name, name = "子工作流返回值", typeName = VTypeRegistry.ANY.id)
     )
 
     /**
@@ -60,7 +60,7 @@ class CallWorkflowModule : BaseModule() {
         outputs.add(OutputDefinition(
             id = "result",
             name = "子工作流返回值",
-            typeName = "vflow.type.any"
+            typeName = VTypeRegistry.ANY.id
         ))
 
         // 2. 收集子工作流中的命名变量作为输出
@@ -84,7 +84,7 @@ class CallWorkflowModule : BaseModule() {
     }
 
     private fun resolveNamedVariableType(type: String?): String {
-        return VariableType.fromStoredValue(type)?.typeId ?: "vflow.type.any"
+        return VariableType.fromStoredValue(type)?.typeId ?: VTypeRegistry.ANY.id
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {

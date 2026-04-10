@@ -148,7 +148,7 @@ object VariableResolver {
 
             // 兼容旧逻辑：如果只是 {{key}} 且在 magicVariables 里有 (例如循环变量 index)
             if (currentObj is VNull && context.magicVariables.containsKey(rootKey)) {
-                currentObj = VObjectFactory.from(context.magicVariables[rootKey])
+                currentObj = context.magicVariables[rootKey] ?: VNull
                 // 消耗掉第1个节点，从 index 1 开始遍历属性
                 return traverseProperties(currentObj, path, 1)
             }

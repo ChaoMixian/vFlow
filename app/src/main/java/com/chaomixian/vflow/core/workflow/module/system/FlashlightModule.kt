@@ -11,6 +11,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.module.InputDefinition.Companion.slider
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -106,7 +107,7 @@ class FlashlightModule : BaseModule() {
         OutputDefinition(
             id = "success",
             name = "是否成功",
-            typeName = "vflow.type.boolean",
+            typeName = VTypeRegistry.BOOLEAN.id,
             nameStringRes = R.string.output_vflow_device_flashlight_success_name
         )
     )

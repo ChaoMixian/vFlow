@@ -11,6 +11,24 @@ import fi.iki.elonen.NanoHTTPD
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
+internal fun parseImportedActionStep(stepMap: Map<*, *>, errorLabel: String): ActionStep {
+    val moduleId = stepMap["moduleId"] as? String
+        ?: throw IllegalArgumentException("Invalid $errorLabel format: missing moduleId")
+    val rawParameters = stepMap["parameters"]
+    val parameters = when (rawParameters) {
+        null -> emptyMap()
+        is Map<*, *> -> normalizeImportedJsonObject(rawParameters)
+        else -> throw IllegalArgumentException("Invalid $errorLabel format: parameters must be an object")
+    }
+
+    return ActionStep(
+        moduleId = moduleId,
+        parameters = parameters,
+        indentationLevel = (stepMap["indentationLevel"] as? Number)?.toInt() ?: 0,
+        id = stepMap["id"] as? String ?: UUID.randomUUID().toString()
+    )
+}
+
 /**
  * 导入导出Handler
  */
@@ -112,25 +130,11 @@ class ImportExportHandler(
 
             // 构建步骤列表
             val triggers: List<ActionStep> = workflowData.triggers?.map { stepMap ->
-                val stepMapTyped = stepMap as? Map<String, Any?>
-                    ?: throw IllegalArgumentException("Invalid trigger format")
-                ActionStep(
-                    moduleId = stepMapTyped["moduleId"] as? String ?: "",
-                    parameters = (stepMapTyped["parameters"] as? Map<String, Any?>) ?: emptyMap(),
-                    indentationLevel = (stepMapTyped["indentationLevel"] as? Number)?.toInt() ?: 0,
-                    id = stepMapTyped["id"] as? String ?: UUID.randomUUID().toString()
-                )
+                parseImportedActionStep(stepMap, "trigger")
             } ?: emptyList()
 
             val steps: List<ActionStep> = workflowData.steps?.map { stepMap ->
-                val stepMapTyped = stepMap as? Map<String, Any?>
-                    ?: throw IllegalArgumentException("Invalid step format")
-                ActionStep(
-                    moduleId = stepMapTyped["moduleId"] as? String ?: "",
-                    parameters = (stepMapTyped["parameters"] as? Map<String, Any?>) ?: emptyMap(),
-                    indentationLevel = (stepMapTyped["indentationLevel"] as? Number)?.toInt() ?: 0,
-                    id = stepMapTyped["id"] as? String ?: UUID.randomUUID().toString()
-                )
+                parseImportedActionStep(stepMap, "step")
             } ?: emptyList()
 
             val normalizedContent = WorkflowNormalizer.normalize(

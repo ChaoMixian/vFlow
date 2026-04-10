@@ -574,7 +574,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 if (!varName.isNullOrBlank()) {
                     // 使用统一的 VariableType 枚举获取 typeId，消除硬编码映射
                     val typeEnum = com.chaomixian.vflow.core.execution.VariableType.fromStoredValue(varType)
-                    val typeId = typeEnum?.typeId ?: "vflow.type.any"
+                    val typeId = typeEnum?.typeId ?: com.chaomixian.vflow.core.types.VTypeRegistry.ANY.id
 
                     availableNamedVariables[varName] = MagicVariableItem(
                         variableReference = "[[$varName]]",
@@ -613,7 +613,7 @@ class WorkflowEditorActivity : BaseActivity() {
                             if (!availableNamedVariables.containsKey(varName)) {
                                 val varType = sourceVariables[varName] ?: getString(R.string.variable_type_text)
                                 val typeEnum = com.chaomixian.vflow.core.execution.VariableType.fromStoredValue(varType)
-                                val typeId = typeEnum?.typeId ?: "vflow.type.any"
+                                val typeId = typeEnum?.typeId ?: com.chaomixian.vflow.core.types.VTypeRegistry.ANY.id
 
                                 availableNamedVariables[varName] = MagicVariableItem(
                                     variableReference = "[[$varName]]",
@@ -902,7 +902,7 @@ class WorkflowEditorActivity : BaseActivity() {
                     // 使用 listElementType 作为类型描述（如果有的话）
                     val typeDescription = when {
                         outputDef.listElementType != null -> "(${outputDef.listElementType.split('.').last()})"
-                        outputDef.typeName == "vflow.type.any" -> ""
+                        outputDef.typeName == com.chaomixian.vflow.core.types.VTypeRegistry.ANY.id -> ""
                         else -> "(${outputDef.typeName.split('.').last()})"
                     }
                     MagicVariableItem(

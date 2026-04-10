@@ -38,7 +38,7 @@ data class SimpleActionStepDto(
             id = id,
             moduleId = moduleId,
             indentationLevel = indentationLevel ?: 0,
-            parameters = parameters ?: emptyMap()
+            parameters = parameters?.let { normalizeImportedJsonObject(it) } ?: emptyMap()
         )
     }
 }

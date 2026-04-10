@@ -21,7 +21,8 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.overlay.AgentOverlayManager
-import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -45,6 +46,34 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import java.util.concurrent.CancellationException
 
+internal fun parseAgentToolArguments(argsStr: String): Map<String, Any?> {
+    val root = runCatching { JsonParser.parseString(argsStr) }.getOrNull() ?: return emptyMap()
+    if (!root.isJsonObject) return emptyMap()
+
+    return root.asJsonObject.entrySet().associate { (key, value) ->
+        key to normalizeAgentToolArgument(value)
+    }
+}
+
+private fun normalizeAgentToolArgument(value: JsonElement): Any? {
+    return when {
+        value.isJsonNull -> null
+        value.isJsonObject -> value.asJsonObject.entrySet().associate { (key, nestedValue) ->
+            key to normalizeAgentToolArgument(nestedValue)
+        }
+        value.isJsonArray -> value.asJsonArray.map { normalizeAgentToolArgument(it) }
+        value.isJsonPrimitive -> {
+            val primitive = value.asJsonPrimitive
+            when {
+                primitive.isBoolean -> primitive.asBoolean
+                primitive.isNumber -> primitive.asNumber
+                else -> primitive.asString
+            }
+        }
+        else -> null
+    }
+}
+
 class AgentModule : BaseModule() {
     companion object {
         private const val PROVIDER_DASHSCOPE = "dashscope"
@@ -66,7 +95,6 @@ class AgentModule : BaseModule() {
     )
 
     override val uiProvider: ModuleUIProvider = AgentModuleUIProvider()
-    private val gson = Gson()
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(
@@ -467,7 +495,7 @@ class AgentModule : BaseModule() {
                                 throw Exception("Tool name is missing or empty")
                             }
 
-                            val args = try { gson.fromJson(argsStr, Map::class.java) as Map<String, Any> } catch (e: Exception) { emptyMap<String, Any>() }
+                            val args = parseAgentToolArguments(argsStr)
 
                             // 更新悬浮窗显示即将执行的操作
                             val actionDisplay = when(name) {

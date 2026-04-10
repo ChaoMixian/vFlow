@@ -48,7 +48,7 @@ class ForEachModule : BaseBlockModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("item", nameStringRes = R.string.output_vflow_logic_foreach_start_item_name, name = "重复项目", typeName = "vflow.type.any"), // 默认类型，实际类型由 getDynamicOutputs 确定
+        OutputDefinition("item", nameStringRes = R.string.output_vflow_logic_foreach_start_item_name, name = "重复项目", typeName = VTypeRegistry.ANY.id), // 默认类型，实际类型由 getDynamicOutputs 确定
         OutputDefinition("index", nameStringRes = R.string.output_vflow_logic_foreach_start_index_name, name = "重复索引", typeName = VTypeRegistry.NUMBER.id)
     )
 
@@ -60,7 +60,7 @@ class ForEachModule : BaseBlockModule() {
         val listElementType = inferListElementType(step, allSteps)
 
         return listOf(
-            OutputDefinition("item", nameStringRes = R.string.output_vflow_logic_foreach_start_item_name, name = "重复项目", typeName = listElementType ?: "vflow.type.any"),
+            OutputDefinition("item", nameStringRes = R.string.output_vflow_logic_foreach_start_item_name, name = "重复项目", typeName = listElementType ?: VTypeRegistry.ANY.id),
             OutputDefinition("index", nameStringRes = R.string.output_vflow_logic_foreach_start_index_name, name = "重复索引", typeName = VTypeRegistry.NUMBER.id)
         )
     }

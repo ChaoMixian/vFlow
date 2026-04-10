@@ -8,6 +8,7 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VDictionary
+import com.chaomixian.vflow.core.types.complex.VNotification
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.notification.NotificationObject
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -104,7 +105,7 @@ class NotificationTriggerModule : BaseModule() {
 
         return ExecutionResult.Success(
             outputs = mapOf(
-                "notification_object" to notificationObject,
+                "notification_object" to VNotification(notificationObject),
                 "package_name" to VString(packageName),
                 "title" to VString(title),
                 "content" to VString(content)

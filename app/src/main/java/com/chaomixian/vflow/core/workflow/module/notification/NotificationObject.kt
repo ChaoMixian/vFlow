@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.workflow.module.notification
 
 import android.os.Parcelable
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import kotlinx.parcelize.Parcelize
 
 /**
@@ -20,6 +21,6 @@ data class NotificationObject(
 ) : Parcelable {
     companion object {
         /** NotificationObject 类型的唯一标识符。 */
-        const val TYPE_NAME = "vflow.type.notification_object"
+        val TYPE_NAME = VTypeRegistry.NOTIFICATION.id
     }
 }

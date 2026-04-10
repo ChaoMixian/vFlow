@@ -183,7 +183,7 @@ class FindImageModule : BaseModule() {
             ?: return ExecutionResult.Failure("加载失败", "无法加载模板图片。")
 
         // 检查是否有外部输入的截图
-        val externalScreenshotVar = context.getVariable("screenshot_uri") as? VImage
+        val externalScreenshotVar = context.getVariableAsImage("screenshot_uri")
         val screenBitmap = if (externalScreenshotVar != null) {
             onProgress(ProgressUpdate("正在使用外部截图..."))
             loadBitmap(appContext, externalScreenshotVar.uriString)
