@@ -25,6 +25,7 @@ import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.services.UiInspectorService
 import com.chaomixian.vflow.ui.changelog.ChangelogActivity
 import com.chaomixian.vflow.ui.settings.KeyTesterActivity
+import com.chaomixian.vflow.ui.settings.CrashReportsActivity
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.api.ApiService
 import com.chaomixian.vflow.core.workflow.WorkflowManager
@@ -265,6 +266,11 @@ class SettingsFragment : Fragment() {
         // 启动按键测试器
         keyTesterButton.setOnClickListener {
             val intent = Intent(requireContext(), KeyTesterActivity::class.java)
+            startActivity(intent)
+        }
+
+        view.findViewById<View>(R.id.button_crash_reports).setOnClickListener {
+            val intent = Intent(requireContext(), CrashReportsActivity::class.java)
             startActivity(intent)
         }
 

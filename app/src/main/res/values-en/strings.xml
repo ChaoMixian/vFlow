@@ -104,6 +104,7 @@
     <string name="dialog_workflow_enum_migration_backup_message">Backing up all workflows first is recommended. Do you want to export a backup before running the migration?\n\nSelecting "No" applies the migration immediately.</string>
 
     <string name="common_delete">Delete</string>
+    <string name="common_back">Back</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_confirm">Confirm</string>
     <string name="save">Save</string>
@@ -218,6 +219,34 @@
     <string name="common_copy">Copy</string>
     <string name="common_share">Share</string>
     <string name="common_export">Export</string>
+    <string name="crash_report_dialog_title">Previous crash detected</string>
+    <string name="crash_report_dialog_message">Time: %1$s\nThread: %2$s\nException: %3$s\nMessage: %4$s</string>
+    <string name="crash_report_detail_title">Crash Report</string>
+    <string name="crash_report_action_view">View Details</string>
+    <string name="crash_report_action_later">Later</string>
+    <string name="crash_report_deleted">Crash report deleted</string>
+    <string name="crash_report_share_title">Share Crash Report</string>
+    <string name="crash_report_share_subject">vFlow Crash Report</string>
+    <string name="crash_report_message_unknown">Unknown error</string>
+    <string name="crash_reports_title">Crash Reports</string>
+    <string name="crash_reports_subtitle">This screen shows locally saved crash history. Each crash also keeps one pending report so the app can surface it quickly on next launch.</string>
+    <string name="crash_reports_empty_title">No crash reports yet</string>
+    <string name="crash_reports_empty_message">Trigger a manual test crash, or wait for a real crash, and the local report will appear here.</string>
+    <string name="crash_reports_pending_badge">Pending</string>
+    <string name="crash_reports_pending_detail_hint">This is the most recent crash report that has not been cleared yet.</string>
+    <string name="crash_reports_label_thread">Thread</string>
+    <string name="crash_reports_label_exception">Exception</string>
+    <string name="crash_reports_delete_confirm_title">Delete crash report?</string>
+    <string name="crash_reports_delete_confirm_message">After deletion, this local crash report will no longer be available inside the app.</string>
+    <string name="crash_reports_clear_all">Clear All</string>
+    <string name="crash_reports_clear_all_confirm_title">Delete all crash reports?</string>
+    <string name="crash_reports_clear_all_confirm_message">This removes all archived crash reports and the pending crash report. This cannot be undone.</string>
+    <string name="crash_reports_test_title">Trigger Test Crash</string>
+    <string name="crash_reports_test_description">This immediately crashes the app so you can verify local crash capture and the next-launch recovery prompt.</string>
+    <string name="crash_reports_test_button">Crash Now</string>
+    <string name="crash_reports_test_confirm_title">Trigger a crash now?</string>
+    <string name="crash_reports_test_confirm_message">The app will crash and exit immediately. Use this only to verify local crash logging.</string>
+    <string name="crash_reports_test_exception_message">Manual test crash from CrashReportsActivity</string>
     <string name="common_import">Import</string>
 
     <!-- Home Screen -->
@@ -281,6 +310,8 @@
     <string name="settings_btn_shell_root">Root</string>
     <string name="settings_button_run_diagnostic">Run Key Diagnostic</string>
     <string name="settings_button_key_tester">Key Tester</string>
+    <string name="settings_button_crash_reports">Crash Reports</string>
+    <string name="settings_button_crash_reports_desc">Browse local crash history and manually test crash capture</string>
     <string name="settings_button_core_management">vFlow Core Management</string>
     <string name="settings_button_ui_inspector">UI Inspector</string>
     <string name="settings_switch_keep_alive_unavailable">%1$s (Shizuku not active)</string>

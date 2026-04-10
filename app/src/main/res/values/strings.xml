@@ -112,6 +112,7 @@
     <string name="dialog_workflow_enum_migration_backup_message">建议先备份当前所有工作流。是否现在先导出备份，再执行迁移？\n\n选择“否”将直接执行迁移。</string>
 
     <string name="common_delete">删除</string>
+    <string name="common_back">返回</string>
     <string name="common_cancel">取消</string>
     <string name="common_confirm">确定</string>
     <string name="save">保存</string>
@@ -226,6 +227,34 @@
     <string name="common_copy">复制</string>
     <string name="common_share">分享</string>
     <string name="common_export">导出</string>
+    <string name="crash_report_dialog_title">检测到上次异常退出</string>
+    <string name="crash_report_dialog_message">时间：%1$s\n线程：%2$s\n异常：%3$s\n消息：%4$s</string>
+    <string name="crash_report_detail_title">崩溃报告</string>
+    <string name="crash_report_action_view">查看详情</string>
+    <string name="crash_report_action_later">稍后处理</string>
+    <string name="crash_report_deleted">已删除崩溃报告</string>
+    <string name="crash_report_share_title">分享崩溃报告</string>
+    <string name="crash_report_share_subject">vFlow 崩溃报告</string>
+    <string name="crash_report_message_unknown">未知错误</string>
+    <string name="crash_reports_title">崩溃报告</string>
+    <string name="crash_reports_subtitle">这里展示本地保存的历史崩溃记录。每次崩溃还会额外保留一份“待处理”报告，便于下次启动时快速查看。</string>
+    <string name="crash_reports_empty_title">还没有崩溃记录</string>
+    <string name="crash_reports_empty_message">手动触发一次测试崩溃，或等待应用实际崩溃后，这里会显示本地报告。</string>
+    <string name="crash_reports_pending_badge">待处理</string>
+    <string name="crash_reports_pending_detail_hint">这是最近一次异常退出后尚未清理的待处理报告。</string>
+    <string name="crash_reports_label_thread">线程</string>
+    <string name="crash_reports_label_exception">异常</string>
+    <string name="crash_reports_delete_confirm_title">删除崩溃报告？</string>
+    <string name="crash_reports_delete_confirm_message">删除后将无法在应用内继续查看这份本地崩溃记录。</string>
+    <string name="crash_reports_clear_all">清空全部</string>
+    <string name="crash_reports_clear_all_confirm_title">清空全部崩溃报告？</string>
+    <string name="crash_reports_clear_all_confirm_message">这会删除所有历史崩溃记录和待处理报告，且无法恢复。</string>
+    <string name="crash_reports_test_title">手动触发崩溃</string>
+    <string name="crash_reports_test_description">点击后会立即让应用崩溃，用来验证本地崩溃采集和下次启动提示是否正常工作。</string>
+    <string name="crash_reports_test_button">立即崩溃</string>
+    <string name="crash_reports_test_confirm_title">确认触发崩溃？</string>
+    <string name="crash_reports_test_confirm_message">应用会立刻崩溃并退出。这只用于验证本地崩溃日志采集。</string>
+    <string name="crash_reports_test_exception_message">Manual test crash from CrashReportsActivity</string>
     <string name="common_import">导入</string>
 
     <!-- Home Screen -->
@@ -289,6 +318,8 @@
     <string name="settings_btn_shell_root">Root</string>
     <string name="settings_button_run_diagnostic">运行按键诊断</string>
     <string name="settings_button_key_tester">按键测试器</string>
+    <string name="settings_button_crash_reports">崩溃报告</string>
+    <string name="settings_button_crash_reports_desc">查看本地历史崩溃记录，并手动测试崩溃采集</string>
     <string name="settings_button_core_management">vFlow Core 管理</string>
     <string name="settings_button_ui_inspector">UI 检查器</string>
     <string name="settings_switch_keep_alive_unavailable">%1$s (Shizuku未激活)</string>

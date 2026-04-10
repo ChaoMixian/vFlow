@@ -11,6 +11,7 @@ import java.util.*
 object DebugLogger {
 
     private val logBuffer = mutableListOf<String>()
+    private val crashBuffer = mutableListOf<String>()
     private var isLoggingEnabled = false
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
     private var appContext: Context? = null
@@ -18,6 +19,7 @@ object DebugLogger {
     // 使用公共目录下的日志文件
     private const val SHELL_LOG_FILENAME = "vflow_shell.log"
     private const val MARKER_FILENAME = "vflow_logging_enabled.marker"
+    private const val MAX_CRASH_BUFFER = 200
 
     fun initialize(context: Context) {
         appContext = context.applicationContext
@@ -98,6 +100,9 @@ object DebugLogger {
         synchronized(logBuffer) {
             logBuffer.clear()
         }
+        synchronized(crashBuffer) {
+            crashBuffer.clear()
+        }
         // 清除 StorageManager 中的 Shell 日志
         try {
             val shellFile = File(StorageManager.logsDir, SHELL_LOG_FILENAME)
@@ -116,40 +121,71 @@ object DebugLogger {
 
     fun d(tag: String, message: String) {
         logToSystem { android.util.Log.d(tag, message) }
-        if (isLoggingEnabled) addToBuffer("D", tag, message)
+        recordLog("D", tag, message)
     }
 
     fun d(tag: String, message: String, throwable: Throwable?) {
         logToSystem { android.util.Log.d(tag, message, throwable) }
-        if (isLoggingEnabled) addToBuffer("D", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
+        recordLog("D", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun i(tag: String, message: String) {
         logToSystem { android.util.Log.i(tag, message) }
-        if (isLoggingEnabled) addToBuffer("I", tag, message)
+        recordLog("I", tag, message)
     }
 
     fun i(tag: String, message: String, throwable: Throwable?) {
         logToSystem { android.util.Log.i(tag, message, throwable) }
-        if (isLoggingEnabled) addToBuffer("I", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
+        recordLog("I", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun w(tag: String, message: String, throwable: Throwable? = null) {
         logToSystem { android.util.Log.w(tag, message, throwable) }
-        if (isLoggingEnabled) addToBuffer("W", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
+        recordLog("W", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
     fun e(tag: String, message: String, throwable: Throwable? = null) {
         logToSystem { android.util.Log.e(tag, message, throwable) }
-        if (isLoggingEnabled) addToBuffer("E", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
+        recordLog("E", tag, "$message\n${throwable?.stackTraceToString() ?: ""}")
     }
 
-    @Synchronized
-    private fun addToBuffer(level: String, tag: String, message: String) {
-        val timestamp = dateFormat.format(Date())
-        logBuffer.add("$timestamp $level/$tag: $message")
-        if (logBuffer.size > 5000) {
-            logBuffer.removeAt(0)
+    private fun recordLog(level: String, tag: String, message: String) {
+        val entry = buildLogEntry(level, tag, message)
+        synchronized(crashBuffer) {
+            crashBuffer.add(entry)
+            if (crashBuffer.size > MAX_CRASH_BUFFER) {
+                crashBuffer.removeAt(0)
+            }
         }
+        if (isLoggingEnabled) {
+            synchronized(logBuffer) {
+                logBuffer.add(entry)
+                if (logBuffer.size > 5000) {
+                    logBuffer.removeAt(0)
+                }
+            }
+        }
+    }
+
+    fun getRecentLogsForCrash(limit: Int = MAX_CRASH_BUFFER): List<String> {
+        return synchronized(crashBuffer) {
+            crashBuffer.takeLast(limit).toList()
+        }
+    }
+
+    fun getShellLogsForCrash(maxChars: Int = 8000): String? {
+        return runCatching {
+            val shellFile = File(StorageManager.logsDir, SHELL_LOG_FILENAME)
+            if (!shellFile.exists()) return null
+            val contents = shellFile.readText()
+            if (contents.length <= maxChars) contents else contents.takeLast(maxChars)
+        }.getOrNull()
+    }
+
+    private fun buildLogEntry(level: String, tag: String, message: String): String {
+        val timestamp = synchronized(dateFormat) {
+            dateFormat.format(Date())
+        }
+        return "$timestamp $level/$tag: $message"
     }
 }

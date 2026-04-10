@@ -6,8 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.app.ActivityManager
 import android.os.Bundle
+import android.widget.ScrollView
+import android.widget.TextView
 import android.view.View
 import android.view.ViewTreeObserver
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -17,6 +20,9 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.locale.toast
+import com.chaomixian.vflow.core.logging.CrashReport
+import com.chaomixian.vflow.core.logging.CrashReportManager
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
@@ -29,10 +35,14 @@ import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.services.PermissionGuardianService
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.chaomixian.vflow.services.CoreManagementService
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * 应用的主 Activity。
@@ -48,6 +58,27 @@ class MainActivity : BaseActivity() {
     }
 
     private var insetsApplied = false // 标记边衬区是否已应用
+    private var uiShellReady = false
+    private var navigationReady = false
+    private var startupCompleted = false
+    private var pendingCrashExportText: String? = null
+    private val exportCrashReportLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+            try {
+                val reportText = pendingCrashExportText ?: return@registerForActivityResult
+                val targetUri = uri ?: return@registerForActivityResult
+                val outputStream = contentResolver.openOutputStream(targetUri)
+                    ?: throw IllegalStateException("Failed to open output stream")
+                outputStream.use {
+                    outputStream.write(reportText.toByteArray())
+                }
+                toast(R.string.settings_toast_logs_exported)
+            } catch (e: Exception) {
+                toast(getString(R.string.settings_toast_export_failed, e.message))
+            } finally {
+                pendingCrashExportText = null
+            }
+        }
 
     /** Activity 创建时的初始化。 */
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +92,61 @@ class MainActivity : BaseActivity() {
             finish()
             return
         }
+
+        initializeUiShell()
+
+        if (savedInstanceState == null) {
+            val pendingCrashReport = CrashReportManager.getPendingCrashReport()
+            if (pendingCrashReport != null) {
+                maybeShowPendingCrashReport(pendingCrashReport) {
+                    continueStartup(savedInstanceState)
+                }
+                return
+            }
+        }
+
+        continueStartup(savedInstanceState)
+    }
+
+    private fun initializeUiShell() {
+        if (uiShellReady) return
+        uiShellReady = true
+
+        setContentView(R.layout.activity_main)
+
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+    }
+
+    private fun initializeNavigation() {
+        if (navigationReady) return
+        navigationReady = true
+
+        val navView: BottomNavigationView = findViewById(R.id.bottom_nav_view)
+        val navHostFragment = supportFragmentManager
+            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+        val hasGraph = runCatching { navController.graph.id }.getOrNull() != null
+        if (!hasGraph) {
+            navController.setGraph(R.navigation.main_nav_graph, null)
+        }
+
+        val appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.navigation_home,
+                R.id.navigation_workflows,
+                R.id.navigation_modules,
+                R.id.navigation_repository,
+                R.id.navigation_settings
+            )
+        )
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        navView.setupWithNavController(navController)
+    }
+
+    private fun continueStartup(savedInstanceState: Bundle?) {
+        if (startupCompleted) return
+        startupCompleted = true
 
         ModuleRegistry.initialize(applicationContext) // 初始化模块注册表
         ModuleManager.loadModules(this, true) // 初始化用户模块管理器
@@ -83,24 +169,7 @@ class MainActivity : BaseActivity() {
         checkPermissionGuardianAutoStart()
         // 启动后台触发器服务
         startService(Intent(this, TriggerService::class.java))
-
-
-        setContentView(R.layout.activity_main)
-
-        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-
-        val navView: BottomNavigationView = findViewById(R.id.bottom_nav_view)
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        val navController = navHostFragment.navController
-
-        // 配置 AppBar，定义顶级导航目标
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(R.id.navigation_home, R.id.navigation_workflows, R.id.navigation_modules, R.id.navigation_repository, R.id.navigation_settings)
-        )
-        setupActionBarWithNavController(navController, appBarConfiguration) // 将 Toolbar 与 NavController 集成
-        navView.setupWithNavController(navController) // 将 BottomNavigationView 与 NavController 集成
+        initializeNavigation()
     }
 
     /**
@@ -109,15 +178,17 @@ class MainActivity : BaseActivity() {
      */
     override fun onStart() {
         super.onStart()
-        if (!insetsApplied) {
+        if (uiShellReady && !insetsApplied) {
             val appBarLayout = findViewById<AppBarLayout>(R.id.app_bar_layout)
             val navView: BottomNavigationView = findViewById(R.id.bottom_nav_view)
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
             applyWindowInsets(appBarLayout, navView, navHostFragment.requireView())
             // insetsApplied 会在 applyWindowInsets 的回调中设置
         }
-        // 每次返回主界面时，检查并应用 Shizuku 相关设置
-        checkAndApplyStartupSettings()
+        if (startupCompleted) {
+            // 每次返回主界面时，检查并应用 Shizuku 相关设置
+            checkAndApplyStartupSettings()
+        }
     }
 
     /**
@@ -209,6 +280,91 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    private fun maybeShowPendingCrashReport(
+        report: CrashReport,
+        onComplete: () -> Unit
+    ) {
+        val summary = getString(
+            R.string.crash_report_dialog_message,
+            crashDateFormat.format(Date(report.timestamp)),
+            report.threadName,
+            report.exceptionType,
+            report.exceptionMessage ?: getString(R.string.crash_report_message_unknown)
+        )
+
+        var openedDetails = false
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.crash_report_dialog_title)
+            .setMessage(summary)
+            .setPositiveButton(R.string.crash_report_action_view) { _, _ ->
+                openedDetails = true
+                showCrashReportDetails(report, onComplete)
+            }
+            .setNeutralButton(R.string.common_delete) { _, _ ->
+                CrashReportManager.clearPendingCrashReport()
+                toast(R.string.crash_report_deleted)
+                onComplete()
+            }
+            .setNegativeButton(R.string.crash_report_action_later) { _, _ ->
+                onComplete()
+            }
+            .create()
+
+        dialog.setOnDismissListener {
+            if (!openedDetails) {
+                onComplete()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showCrashReportDetails(
+        report: CrashReport,
+        onComplete: () -> Unit
+    ) {
+        val reportText = CrashReportManager.formatReport(report)
+        val textView = TextView(this).apply {
+            text = reportText
+            setTextIsSelectable(true)
+            setPadding(dialogPadding, dialogPadding, dialogPadding, dialogPadding)
+        }
+        val scrollView = ScrollView(this).apply {
+            addView(textView)
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.crash_report_detail_title)
+            .setView(scrollView)
+            .setPositiveButton(R.string.common_share) { _, _ ->
+                shareCrashReport(reportText)
+            }
+            .setNeutralButton(R.string.common_export) { _, _ ->
+                exportCrashReport(report, reportText)
+            }
+            .setNegativeButton(R.string.common_close, null)
+            .create()
+
+        dialog.setOnDismissListener {
+            onComplete()
+        }
+        dialog.show()
+    }
+
+    private fun exportCrashReport(report: CrashReport, reportText: String) {
+        pendingCrashExportText = reportText
+        val fileName = "vflow-crash-${exportDateFormat.format(Date(report.timestamp))}.txt"
+        exportCrashReportLauncher.launch(fileName)
+    }
+
+    private fun shareCrashReport(reportText: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.crash_report_share_subject))
+            putExtra(Intent.EXTRA_TEXT, reportText)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.crash_report_share_title)))
+    }
+
 
     /**
      * 应用窗口边衬区到 AppBar、底部导航和 Fragment 容器。
@@ -256,4 +412,11 @@ class MainActivity : BaseActivity() {
         }
         bottomNav.viewTreeObserver.addOnGlobalLayoutListener(globalLayoutListener)
     }
+
+    private val dialogPadding: Int by lazy {
+        resources.getDimensionPixelSize(androidx.appcompat.R.dimen.abc_dialog_padding_material)
+    }
+
+    private val crashDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    private val exportDateFormat = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
 }

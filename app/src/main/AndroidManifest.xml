@@ -65,6 +65,7 @@
 
 
     <application
+        android:name=".VFlowApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -294,6 +295,12 @@
             android:name=".ui.settings.KeyTesterActivity"
             android:exported="false"
             android:label="按键测试器"
+            android:theme="@style/Theme.vFlow" />
+
+        <activity
+            android:name=".ui.settings.CrashReportsActivity"
+            android:exported="false"
+            android:label="@string/crash_reports_title"
             android:theme="@style/Theme.vFlow" />
 
         <activity
