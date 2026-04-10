@@ -23,6 +23,7 @@ import androidx.core.content.FileProvider
 import coil.load
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.locale.LocaleManager
+import com.chaomixian.vflow.core.workflow.module.system.InputModule
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -89,9 +90,9 @@ class OverlayUIActivity : AppCompatActivity() {
             }
             "input" -> {
                 val inputType = intent.getStringExtra("input_type")
-                when (inputType) {
-                    "时间" -> showTimePickerDialog(title ?: "请选择时间")
-                    "日期" -> showDatePickerDialog(title ?: "请选择日期")
+                when {
+                    isTimeInputType(inputType) -> showTimePickerDialog(title ?: "请选择时间")
+                    isDateInputType(inputType) -> showDatePickerDialog(title ?: "请选择日期")
                     else -> showTextInputDialog(title ?: "请输入", inputType)
                 }
             }
@@ -268,7 +269,7 @@ class OverlayUIActivity : AppCompatActivity() {
 
     private fun showTextInputDialog(title: String, type: String?) {
         val editText = EditText(this).apply {
-            inputType = if (type == "数字") {
+            inputType = if (isNumberInputType(type)) {
                 InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
             } else {
                 InputType.TYPE_CLASS_TEXT
@@ -279,12 +280,27 @@ class OverlayUIActivity : AppCompatActivity() {
             .setView(editText)
             .setPositiveButton("确定") { _, _ ->
                 val inputText = editText.text.toString()
-                val result: Any? = if (type == "数字") inputText.toDoubleOrNull() else inputText
+                val result: Any? = if (isNumberInputType(type)) inputText.toDoubleOrNull() else inputText
                 complete(result)
             }
             .setNegativeButton("取消") { _, _ -> cancel() }
             .setOnCancelListener { cancel() }
             .show()
+    }
+
+    private fun isNumberInputType(type: String?): Boolean {
+        val inputType = InputModule.INPUT_TYPE_DEFINITION.normalizeEnumValueOrNull(type) ?: InputModule.TYPE_TEXT
+        return inputType == InputModule.TYPE_NUMBER
+    }
+
+    private fun isTimeInputType(type: String?): Boolean {
+        val inputType = InputModule.INPUT_TYPE_DEFINITION.normalizeEnumValueOrNull(type) ?: InputModule.TYPE_TEXT
+        return inputType == InputModule.TYPE_TIME
+    }
+
+    private fun isDateInputType(type: String?): Boolean {
+        val inputType = InputModule.INPUT_TYPE_DEFINITION.normalizeEnumValueOrNull(type) ?: InputModule.TYPE_TEXT
+        return inputType == InputModule.TYPE_DATE
     }
 
     private fun showTimePickerDialog(title: String) {

@@ -16,6 +16,14 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  * 通过 shell 命令控制移动数据开关
  */
 class MobileDataModule : BaseModule() {
+    companion object {
+        private const val ACTION_ENABLE = "enable"
+        private const val ACTION_DISABLE = "disable"
+        private val ACTION_LEGACY_MAP = mapOf(
+            "开启" to ACTION_ENABLE,
+            "关闭" to ACTION_DISABLE
+        )
+    }
 
     override val id = "vflow.system.mobile_data"
     override val metadata = ActionMetadata(
@@ -31,15 +39,21 @@ class MobileDataModule : BaseModule() {
         return ShellManager.getRequiredPermissions(com.chaomixian.vflow.core.logging.LogManager.applicationContext)
     }
 
-    private val actionOptions = listOf("开启", "关闭")
+    private val actionOptions = listOf(ACTION_ENABLE, ACTION_DISABLE)
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "action",
             name = "操作",
             staticType = ParameterType.ENUM,
-            defaultValue = "开启",
-            options = actionOptions
+            defaultValue = ACTION_ENABLE,
+            options = actionOptions,
+            optionsStringRes = listOf(
+                R.string.option_vflow_system_mobile_data_enable,
+                R.string.option_vflow_system_mobile_data_disable
+            ),
+            legacyValueMap = ACTION_LEGACY_MAP,
+            nameStringRes = R.string.param_vflow_system_mobile_data_action_name
         )
     )
 
@@ -64,15 +78,16 @@ class MobileDataModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val step = context.allSteps[context.currentStepIndex]
-        val action = step.parameters["action"]?.toString() ?: "开启"
+        val actionInput = getInputs().first { it.id == "action" }
+        val rawAction = context.getVariableAsString("action", ACTION_ENABLE)
+        val action = actionInput.normalizeEnumValue(rawAction) ?: rawAction
 
         val success = when (action) {
-            "开启" -> {
+            ACTION_ENABLE -> {
                 onProgress(ProgressUpdate("正在开启移动数据..."))
                 execMobileDataCommand(context, true)
             }
-            "关闭" -> {
+            ACTION_DISABLE -> {
                 onProgress(ProgressUpdate("正在关闭移动数据..."))
                 execMobileDataCommand(context, false)
             }
@@ -82,7 +97,11 @@ class MobileDataModule : BaseModule() {
         }
 
         return if (success) {
-            onProgress(ProgressUpdate("移动数据${action}完成"))
+            val actionLabel = when (action) {
+                ACTION_DISABLE -> appContext.getString(R.string.option_vflow_system_mobile_data_disable)
+                else -> appContext.getString(R.string.option_vflow_system_mobile_data_enable)
+            }
+            onProgress(ProgressUpdate("移动数据${actionLabel}完成"))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
             ExecutionResult.Failure("执行失败", "移动数据操作失败")

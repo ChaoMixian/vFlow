@@ -42,6 +42,12 @@ class DarkModeModule : BaseModule() {
         const val MODE_DARK = "dark"
         const val MODE_LIGHT = "light"
         const val MODE_TOGGLE = "toggle"
+        private val MODE_LEGACY_MAP = mapOf(
+            "切换" to MODE_TOGGLE,
+            "深色" to MODE_DARK,
+            "浅色" to MODE_LIGHT,
+            "自动" to MODE_AUTO
+        )
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -58,6 +64,7 @@ class DarkModeModule : BaseModule() {
                 R.string.option_vflow_system_darkmode_light,
                 R.string.option_vflow_system_darkmode_auto
             ),
+            legacyValueMap = MODE_LEGACY_MAP,
             inputStyle = InputStyle.CHIP_GROUP
         )
     )
@@ -72,7 +79,7 @@ class DarkModeModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val mode = step.parameters["mode"] as? String ?: MODE_AUTO
+        val mode = getInputs().normalizeEnumValue("mode", step.parameters["mode"] as? String, MODE_AUTO) ?: MODE_AUTO
 
         // 序列化值转换为本地化显示文本
         val displayText = when (mode) {
@@ -90,7 +97,7 @@ class DarkModeModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.getVariable("mode").asString() ?: MODE_AUTO
+        val mode = getInputs().normalizeEnumValue("mode", context.getVariable("mode").asString(), MODE_AUTO) ?: MODE_AUTO
 
         val command = when (mode) {
             MODE_DARK -> "cmd uimode night yes"

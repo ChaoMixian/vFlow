@@ -27,9 +27,29 @@ import java.util.concurrent.TimeUnit
  */
 class AIModule : BaseModule() {
     companion object {
-        private const val PROVIDER_OPENAI = "openai"
-        private const val PROVIDER_DEEPSEEK = "deepseek"
-        private const val PROVIDER_CUSTOM = "custom"
+        const val PROVIDER_OPENAI = "openai"
+        const val PROVIDER_DEEPSEEK = "deepseek"
+        const val PROVIDER_CUSTOM = "custom"
+
+        val PROVIDER_INPUT_DEFINITION = InputDefinition(
+            "provider",
+            "服务商",
+            ParameterType.ENUM,
+            PROVIDER_OPENAI,
+            options = listOf(PROVIDER_OPENAI, PROVIDER_DEEPSEEK, PROVIDER_CUSTOM),
+            nameStringRes = R.string.param_vflow_network_ai_provider,
+            optionsStringRes = listOf(
+                R.string.option_vflow_ai_completion_provider_openai,
+                R.string.option_vflow_ai_completion_provider_deepseek,
+                R.string.option_vflow_ai_completion_provider_custom
+            ),
+            legacyValueMap = mapOf(
+                "OpenAI" to PROVIDER_OPENAI,
+                "DeepSeek" to PROVIDER_DEEPSEEK,
+                "自定义" to PROVIDER_CUSTOM,
+                "Custom" to PROVIDER_CUSTOM
+            )
+        )
     }
 
     override val id = "vflow.ai.completion"
@@ -48,25 +68,7 @@ class AIModule : BaseModule() {
     private val gson = Gson()
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(
-            "provider",
-            "服务商",
-            ParameterType.ENUM,
-            PROVIDER_OPENAI,
-            options = listOf(PROVIDER_OPENAI, PROVIDER_DEEPSEEK, PROVIDER_CUSTOM),
-            nameStringRes = R.string.param_vflow_network_ai_provider,
-            optionsStringRes = listOf(
-                R.string.option_vflow_ai_completion_provider_openai,
-                R.string.option_vflow_ai_completion_provider_deepseek,
-                R.string.option_vflow_ai_completion_provider_custom
-            ),
-            legacyValueMap = mapOf(
-                "OpenAI" to PROVIDER_OPENAI,
-                "DeepSeek" to PROVIDER_DEEPSEEK,
-                "自定义" to PROVIDER_CUSTOM,
-                "Custom" to PROVIDER_CUSTOM
-            )
-        ),
+        PROVIDER_INPUT_DEFINITION,
         InputDefinition("base_url", "Base URL", ParameterType.STRING, "https://api.openai.com/v1", nameStringRes = R.string.param_vflow_network_ai_base_url),
         InputDefinition("api_key", "API Key", ParameterType.STRING, "", nameStringRes = R.string.param_vflow_network_ai_api_key),
         InputDefinition("model", "模型", ParameterType.STRING, "gpt-3.5-turbo", nameStringRes = R.string.param_vflow_network_ai_model),
@@ -83,14 +85,14 @@ class AIModule : BaseModule() {
 
     // 摘要显示逻辑
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val provider = step.parameters["provider"] as? String ?: PROVIDER_OPENAI
+        val provider = PROVIDER_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["provider"] as? String) ?: PROVIDER_OPENAI
         val promptText = step.parameters["prompt"] as? String ?: ""
         val providerDisplay = getProviderDisplayName(context, provider)
 
         // 如果内容是"复杂"的（多变量或长文本），VariableResolver.isComplex 会返回 true
         // 此时我们由 createPreview 显示大预览框，摘要只显示简单标题
         if (VariableResolver.isComplex(promptText)) {
-            val providerPill = PillUtil.createPillFromParam(step.parameters["provider"], getInputs().find { it.id == "provider" }, isModuleOption = true)
+            val providerPill = PillUtil.createPillFromParam(step.parameters["provider"], PROVIDER_INPUT_DEFINITION, isModuleOption = true)
             val prefix = context.getString(R.string.summary_vflow_network_ai_prefix)
             val suffix = context.getString(R.string.summary_vflow_network_ai_middle)
             return PillUtil.buildSpannable(context, prefix, providerPill, suffix)

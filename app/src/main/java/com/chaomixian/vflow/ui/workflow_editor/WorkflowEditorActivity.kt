@@ -1609,7 +1609,7 @@ class WorkflowEditorActivity : BaseActivity() {
             val currentValue = updatedParameters[inputDef.id] as? String ?: return@forEach
             if (inputDef.options.contains(currentValue)) return@forEach
 
-            val mappedValue = inputDef.legacyValueMap?.get(currentValue) ?: return@forEach
+            val mappedValue = inputDef.normalizeEnumValueOrNull(currentValue) ?: return@forEach
             if (!inputDef.options.contains(mappedValue)) return@forEach
 
             updatedParameters[inputDef.id] = mappedValue

@@ -102,7 +102,9 @@ class BackTapTriggerHandler : BaseTriggerHandler(), SensorEventListener {
     override fun addTrigger(context: Context, trigger: TriggerSpec) {
         activeTriggers.removeAll { it.trigger.triggerId == trigger.triggerId }
         DebugLogger.d(TAG, "Added trigger: ${trigger.triggerId}")
-        val mode = trigger.parameters["mode"] as? String ?: BackTapTriggerModule.MODE_DOUBLE_TAP
+        val modeInput = BackTapTriggerModule().getInputs().first { it.id == "mode" }
+        val rawMode = trigger.parameters["mode"] as? String ?: BackTapTriggerModule.MODE_DOUBLE_TAP
+        val mode = modeInput.normalizeEnumValue(rawMode) ?: rawMode
         activeTriggers.add(ResolvedBackTapTrigger(trigger, mode))
         reloadTriggers()
     }

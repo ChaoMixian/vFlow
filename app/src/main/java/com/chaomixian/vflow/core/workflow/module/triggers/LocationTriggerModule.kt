@@ -18,14 +18,25 @@ class LocationTriggerModule : BaseModule() {
     companion object {
         const val EVENT_ENTER = "enter"
         const val EVENT_EXIT = "exit"
-
-        fun normalizeEvent(value: String?): String? {
-            return when (value) {
-                EVENT_ENTER, "进入时", "Enter" -> EVENT_ENTER
-                EVENT_EXIT, "离开时", "Exit" -> EVENT_EXIT
-                else -> null
-            }
-        }
+        private val EVENT_OPTIONS = listOf(EVENT_ENTER, EVENT_EXIT)
+        private val EVENT_INPUT = InputDefinition(
+            id = "event",
+            name = "事件",
+            staticType = ParameterType.ENUM,
+            defaultValue = EVENT_ENTER,
+            options = EVENT_OPTIONS,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_location_event_enter,
+                R.string.option_vflow_trigger_location_event_exit
+            ),
+            legacyValueMap = mapOf(
+                "进入时" to EVENT_ENTER,
+                "Enter" to EVENT_ENTER,
+                "离开时" to EVENT_EXIT,
+                "Exit" to EVENT_EXIT
+            ),
+            nameStringRes = R.string.param_vflow_trigger_location_event_name
+        )
     }
     override val id = "vflow.trigger.location"
     override val metadata = ActionMetadata(
@@ -50,26 +61,8 @@ class LocationTriggerModule : BaseModule() {
         )
     )
     override val uiProvider: ModuleUIProvider = LocationTriggerUIProvider()
-
-    private val triggerEventOptions by lazy { listOf(EVENT_ENTER, EVENT_EXIT) }
-
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(
-            id = "event",
-            name = "事件",
-            staticType = ParameterType.ENUM,
-            defaultValue = EVENT_ENTER,
-            options = triggerEventOptions,
-            optionsStringRes = listOf(
-                R.string.option_vflow_trigger_location_event_enter,
-                R.string.option_vflow_trigger_location_event_exit
-            ),
-            legacyValueMap = mapOf(
-                appContext.getString(R.string.option_vflow_trigger_location_event_enter) to EVENT_ENTER,
-                appContext.getString(R.string.option_vflow_trigger_location_event_exit) to EVENT_EXIT
-            ),
-            nameStringRes = R.string.param_vflow_trigger_location_event_name
-        ),
+        EVENT_INPUT,
         InputDefinition(
             id = "latitude",
             name = "纬度",
@@ -122,7 +115,7 @@ class LocationTriggerModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val event = step.parameters["event"] as? String ?: EVENT_ENTER
+        val event = EVENT_INPUT.normalizeEnumValue(step.parameters["event"] as? String) ?: EVENT_ENTER
         val latitude = step.parameters["latitude"] as? Double ?: 0.0
         val longitude = step.parameters["longitude"] as? Double ?: 0.0
         val radius = step.parameters["radius"] as? Double ?: 500.0

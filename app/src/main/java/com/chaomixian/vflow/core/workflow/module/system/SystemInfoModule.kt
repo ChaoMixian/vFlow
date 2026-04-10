@@ -88,8 +88,10 @@ class SystemInfoModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-
-        val resultValue: String = when (context.getVariableAsString("infotype", INFO_MODEL)) {
+        val infoTypeInput = getInputs().first { it.id == "infotype" }
+        val rawInfoType = context.getVariableAsString("infotype", INFO_MODEL)
+        val infoType = infoTypeInput.normalizeEnumValue(rawInfoType) ?: rawInfoType
+        val resultValue: String = when (infoType) {
             INFO_MODEL -> Build.MODEL
             INFO_BRAND -> Build.BRAND
             INFO_ANDROID_VERSION -> Build.VERSION.RELEASE

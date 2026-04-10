@@ -20,6 +20,50 @@ class KeyEventTriggerModule : BaseModule() {
         const val ACTION_SHORT_PRESS = "short_press"
         const val ACTION_SWIPE_DOWN = "swipe_down"
         const val ACTION_SWIPE_UP = "swipe_up"
+
+        val ACTION_TYPE_LEGACY_MAP = mapOf(
+            "单击" to ACTION_SINGLE_CLICK,
+            "Single Click" to ACTION_SINGLE_CLICK,
+            "双击" to ACTION_DOUBLE_CLICK,
+            "Double Click" to ACTION_DOUBLE_CLICK,
+            "长按" to ACTION_LONG_PRESS,
+            "Long Press" to ACTION_LONG_PRESS,
+            "短按 (立即触发)" to ACTION_SHORT_PRESS,
+            "Short Press (Immediate)" to ACTION_SHORT_PRESS,
+            "向下滑动" to ACTION_SWIPE_DOWN,
+            "Swipe Down" to ACTION_SWIPE_DOWN,
+            "向上滑动" to ACTION_SWIPE_UP,
+            "Swipe Up" to ACTION_SWIPE_UP
+        )
+
+        val ACTION_OPTIONS = listOf(
+            ACTION_SINGLE_CLICK,
+            ACTION_DOUBLE_CLICK,
+            ACTION_LONG_PRESS,
+            ACTION_SHORT_PRESS,
+            ACTION_SWIPE_DOWN,
+            ACTION_SWIPE_UP
+        )
+
+        fun actionTypeInputDefinition(): InputDefinition {
+            return InputDefinition(
+                id = "action_type",
+                name = "操作类型",
+                staticType = ParameterType.ENUM,
+                defaultValue = ACTION_SINGLE_CLICK,
+                options = ACTION_OPTIONS,
+                optionsStringRes = listOf(
+                    R.string.option_vflow_trigger_key_event_action_single_click,
+                    R.string.option_vflow_trigger_key_event_action_double_click,
+                    R.string.option_vflow_trigger_key_event_action_long_press,
+                    R.string.option_vflow_trigger_key_event_action_short_press,
+                    R.string.option_vflow_trigger_key_event_action_swipe_down,
+                    R.string.option_vflow_trigger_key_event_action_swipe_up
+                ),
+                legacyValueMap = ACTION_TYPE_LEGACY_MAP,
+                nameStringRes = R.string.param_vflow_trigger_key_event_action_type_name
+            )
+        }
     }
 
     override val id = "vflow.trigger.key_event"
@@ -36,17 +80,6 @@ class KeyEventTriggerModule : BaseModule() {
     override val requiredPermissions: List<Permission>
         get() = ShellManager.getRequiredPermissions(LogManager.applicationContext)
 
-    private val allActionOptions by lazy {
-        listOf(
-            ACTION_SINGLE_CLICK,
-            ACTION_DOUBLE_CLICK,
-            ACTION_LONG_PRESS,
-            ACTION_SHORT_PRESS,
-            ACTION_SWIPE_DOWN,
-            ACTION_SWIPE_UP
-        )
-    }
-
     override fun onParameterUpdated(
         step: ActionStep,
         updatedParameterId: String,
@@ -60,30 +93,7 @@ class KeyEventTriggerModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("device", "输入设备", ParameterType.STRING, "/dev/input/event0", nameStringRes = R.string.param_vflow_trigger_key_event_device_name),
         InputDefinition("key_code", "按键码", ParameterType.STRING, "116", nameStringRes = R.string.param_vflow_trigger_key_event_key_code_name),
-        InputDefinition(
-            "action_type",
-            "操作类型",
-            ParameterType.ENUM,
-            ACTION_SINGLE_CLICK,
-            options = allActionOptions,
-            optionsStringRes = listOf(
-                R.string.option_vflow_trigger_key_event_action_single_click,
-                R.string.option_vflow_trigger_key_event_action_double_click,
-                R.string.option_vflow_trigger_key_event_action_long_press,
-                R.string.option_vflow_trigger_key_event_action_short_press,
-                R.string.option_vflow_trigger_key_event_action_swipe_down,
-                R.string.option_vflow_trigger_key_event_action_swipe_up
-            ),
-            legacyValueMap = mapOf(
-                appContext.getString(R.string.option_vflow_trigger_key_event_action_single_click) to ACTION_SINGLE_CLICK,
-                appContext.getString(R.string.option_vflow_trigger_key_event_action_double_click) to ACTION_DOUBLE_CLICK,
-                appContext.getString(R.string.option_vflow_trigger_key_event_action_long_press) to ACTION_LONG_PRESS,
-                appContext.getString(R.string.option_vflow_trigger_key_event_action_short_press) to ACTION_SHORT_PRESS,
-                appContext.getString(R.string.option_vflow_trigger_key_event_action_swipe_down) to ACTION_SWIPE_DOWN,
-                appContext.getString(R.string.option_vflow_trigger_key_event_action_swipe_up) to ACTION_SWIPE_UP
-            ),
-            nameStringRes = R.string.param_vflow_trigger_key_event_action_type_name
-        )
+        actionTypeInputDefinition()
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> = getInputs()

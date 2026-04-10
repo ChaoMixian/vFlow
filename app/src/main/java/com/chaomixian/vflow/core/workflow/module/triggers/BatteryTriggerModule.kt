@@ -26,6 +26,10 @@ class BatteryTriggerModule : BaseModule() {
     companion object {
         const val VALUE_BELOW = "below"
         const val VALUE_ABOVE = "above"
+        private val CONDITION_LEGACY_MAP = mapOf(
+            "低于" to VALUE_BELOW,
+            "高于" to VALUE_ABOVE
+        )
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -40,6 +44,7 @@ class BatteryTriggerModule : BaseModule() {
                 R.string.option_vflow_trigger_battery_below,
                 R.string.option_vflow_trigger_battery_above
             ),
+            legacyValueMap = CONDITION_LEGACY_MAP,
             inputStyle = InputStyle.CHIP_GROUP
         ),
         InputDefinition(
@@ -59,7 +64,7 @@ class BatteryTriggerModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val level = (step.parameters["level"] as? Number)?.toInt() ?: 50
-        val aboveOrBelow = step.parameters["above_or_below"] as? String ?: VALUE_BELOW
+        val aboveOrBelow = getInputs().normalizeEnumValue("above_or_below", step.parameters["above_or_below"] as? String) ?: VALUE_BELOW
 
         // 序列化值转换为本地化显示文本
         val displayText = when (aboveOrBelow) {

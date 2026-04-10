@@ -21,38 +21,20 @@ import java.util.*
 
 class InputModule : BaseModule() {
     companion object {
-        private const val TYPE_TEXT = "text"
-        private const val TYPE_NUMBER = "number"
-        private const val TYPE_TIME = "time"
-        private const val TYPE_DATE = "date"
-    }
+        const val TYPE_TEXT = "text"
+        const val TYPE_NUMBER = "number"
+        const val TYPE_TIME = "time"
+        const val TYPE_DATE = "date"
 
-    override val id = "vflow.data.input"
-    override val metadata = ActionMetadata(
-        nameStringRes = R.string.module_vflow_data_input_name,
-        descriptionStringRes = R.string.module_vflow_data_input_desc,
-        name = "请求输入",
-        description = "弹出一个窗口，请求用户输入文本、数字、时间或日期。",
-        iconRes = R.drawable.rounded_keyboard_external_input_24,
-        category = "应用与系统",
-        categoryId = "device"
-    )
+        val INPUT_TYPE_OPTIONS = listOf(TYPE_TEXT, TYPE_NUMBER, TYPE_TIME, TYPE_DATE)
 
-    // 声明此模块需要悬浮窗权限
-    override val requiredPermissions = listOf(PermissionManager.OVERLAY)
-
-    private val typeOptions by lazy {
-        listOf(TYPE_TEXT, TYPE_NUMBER, TYPE_TIME, TYPE_DATE)
-    }
-
-    override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(
+        val INPUT_TYPE_DEFINITION = InputDefinition(
             id = "inputType",
             nameStringRes = R.string.param_vflow_data_input_inputType_name,
             name = "输入类型",
             staticType = ParameterType.ENUM,
             defaultValue = TYPE_TEXT,
-            options = typeOptions,
+            options = INPUT_TYPE_OPTIONS,
             optionsStringRes = listOf(
                 R.string.option_vflow_data_input_type_text,
                 R.string.option_vflow_data_input_type_number,
@@ -70,7 +52,25 @@ class InputModule : BaseModule() {
                 "Date" to TYPE_DATE
             ),
             acceptsMagicVariable = false
-        ),
+        )
+    }
+
+    override val id = "vflow.data.input"
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_data_input_name,
+        descriptionStringRes = R.string.module_vflow_data_input_desc,
+        name = "请求输入",
+        description = "弹出一个窗口，请求用户输入文本、数字、时间或日期。",
+        iconRes = R.drawable.rounded_keyboard_external_input_24,
+        category = "应用与系统",
+        categoryId = "device"
+    )
+
+    // 声明此模块需要悬浮窗权限
+    override val requiredPermissions = listOf(PermissionManager.OVERLAY)
+
+    override fun getInputs(): List<InputDefinition> = listOf(
+        INPUT_TYPE_DEFINITION,
         InputDefinition(
             id = "prompt",
             nameStringRes = R.string.param_vflow_data_input_prompt_name,
@@ -83,7 +83,8 @@ class InputModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val inputType = step?.parameters?.get("inputType") as? String ?: TYPE_TEXT
+        val rawInputType = step?.parameters?.get("inputType") as? String ?: TYPE_TEXT
+        val inputType = INPUT_TYPE_DEFINITION.normalizeEnumValueOrNull(rawInputType) ?: TYPE_TEXT
         val outputTypeName = when (inputType) {
             TYPE_NUMBER -> VTypeRegistry.NUMBER.id
             TYPE_TIME -> VTypeRegistry.TIME.id
@@ -129,7 +130,8 @@ class InputModule : BaseModule() {
                 "无法获取UI服务来请求用户输入。"
             )
 
-        val inputType = context.getVariableAsString("inputType", TYPE_TEXT)
+        val rawInputType = context.getVariableAsString("inputType", TYPE_TEXT)
+        val inputType = INPUT_TYPE_DEFINITION.normalizeEnumValueOrNull(rawInputType) ?: TYPE_TEXT
         val prompt = context.getVariableAsString("prompt").ifBlank { appContext.getString(R.string.param_vflow_data_input_prompt_default) }
 
         onProgress(ProgressUpdate("等待用户输入 (${getInputTypeDisplayName(inputType)})..."))

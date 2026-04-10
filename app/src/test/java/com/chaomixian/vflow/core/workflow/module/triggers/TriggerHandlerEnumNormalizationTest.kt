@@ -1,5 +1,6 @@
 package com.chaomixian.vflow.core.workflow.module.triggers
 
+import com.chaomixian.vflow.core.module.normalizeEnumValueOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -7,75 +8,104 @@ class TriggerHandlerEnumNormalizationTest {
 
     @Test
     fun `normalizes wifi trigger values`() {
+        val module = WifiTriggerModule()
+        val triggerTypeInput = module.getInputs().first { it.id == "trigger_type" }
+        val connectionEventInput = module.getInputs().first { it.id == "connection_event" }
+        val stateEventInput = module.getInputs().first { it.id == "state_event" }
+
         assertEquals(
             WifiTriggerModule.TRIGGER_TYPE_CONNECTION,
-            WifiTriggerModule.normalizeTriggerType("网络连接")
-        )
-        assertEquals(
-            WifiTriggerModule.TRIGGER_TYPE_STATE,
-            WifiTriggerModule.normalizeTriggerType("Wi-Fi State")
+            triggerTypeInput.normalizeEnumValueOrNull("网络连接")
         )
         assertEquals(
             WifiTriggerModule.CONNECTION_EVENT_CONNECTED,
-            WifiTriggerModule.normalizeConnectionEvent("Connect to")
+            connectionEventInput.normalizeEnumValueOrNull("连接到")
         )
         assertEquals(
             WifiTriggerModule.STATE_EVENT_OFF,
-            WifiTriggerModule.normalizeStateEvent("关闭时")
+            stateEventInput.normalizeEnumValueOrNull("关闭时")
         )
     }
 
     @Test
     fun `normalizes bluetooth trigger values`() {
-        assertEquals(
-            BluetoothTriggerModule.TRIGGER_TYPE_STATE,
-            BluetoothTriggerModule.normalizeTriggerType("Bluetooth State")
-        )
+        val module = BluetoothTriggerModule()
+        val triggerTypeInput = module.getInputs().first { it.id == "trigger_type" }
+        val stateEventInput = module.getInputs().first { it.id == "state_event" }
+        val deviceEventInput = module.getInputs().first { it.id == "device_event" }
+
         assertEquals(
             BluetoothTriggerModule.TRIGGER_TYPE_DEVICE,
-            BluetoothTriggerModule.normalizeTriggerType("设备连接")
+            triggerTypeInput.normalizeEnumValueOrNull("设备连接")
         )
         assertEquals(
             BluetoothTriggerModule.STATE_EVENT_ON,
-            BluetoothTriggerModule.normalizeStateEvent("Turned On")
+            stateEventInput.normalizeEnumValueOrNull("开启时")
         )
         assertEquals(
             BluetoothTriggerModule.DEVICE_EVENT_DISCONNECTED,
-            BluetoothTriggerModule.normalizeDeviceEvent("断开时")
+            deviceEventInput.normalizeEnumValueOrNull("断开时")
         )
     }
 
     @Test
     fun `normalizes call trigger values`() {
-        assertEquals(CallTriggerModule.TYPE_ANY, CallTriggerModule.normalizeCallType("任意"))
-        assertEquals(CallTriggerModule.TYPE_INCOMING, CallTriggerModule.normalizeCallType("Incoming"))
-        assertEquals(CallTriggerModule.TYPE_ANSWERED, CallTriggerModule.normalizeCallType("接通"))
-        assertEquals(CallTriggerModule.TYPE_ENDED, CallTriggerModule.normalizeCallType("Ended"))
+        val input = CallTriggerModule().getInputs().first { it.id == "call_type" }
+
+        assertEquals(CallTriggerModule.TYPE_ANY, input.normalizeEnumValueOrNull("任意"))
+        assertEquals(CallTriggerModule.TYPE_ANSWERED, input.normalizeEnumValueOrNull("接通"))
+        assertEquals(CallTriggerModule.TYPE_ENDED, input.normalizeEnumValueOrNull("挂断"))
+    }
+
+    @Test
+    fun `normalizes key event trigger english action values`() {
+        val input = KeyEventTriggerModule().getInputs().first { it.id == "action_type" }
+
+        assertEquals(
+            KeyEventTriggerModule.ACTION_SINGLE_CLICK,
+            input.normalizeEnumValueOrNull("Single Click")
+        )
+        assertEquals(
+            KeyEventTriggerModule.ACTION_SHORT_PRESS,
+            input.normalizeEnumValueOrNull("Short Press (Immediate)")
+        )
     }
 
     @Test
     fun `normalizes sms trigger values`() {
-        assertEquals(
-            SmsTriggerModule.SENDER_ANY,
-            SmsTriggerModule.normalizeSenderFilterType("Any Number")
-        )
+        val senderInput = SmsTriggerModule().getInputs().first { it.id == "sender_filter_type" }
+        val contentInput = SmsTriggerModule().getInputs().first { it.id == "content_filter_type" }
+
         assertEquals(
             SmsTriggerModule.SENDER_NOT_CONTAINS,
-            SmsTriggerModule.normalizeSenderFilterType("号码不包含")
+            senderInput.normalizeEnumValueOrNull("号码不包含")
         )
         assertEquals(
             SmsTriggerModule.CONTENT_CODE,
-            SmsTriggerModule.normalizeContentFilterType("识别验证码")
+            contentInput.normalizeEnumValueOrNull("识别验证码")
         )
         assertEquals(
             SmsTriggerModule.CONTENT_REGEX,
-            SmsTriggerModule.normalizeContentFilterType("Regex Match")
+            contentInput.normalizeEnumValueOrNull("正则匹配")
         )
     }
 
     @Test
     fun `normalizes location trigger values`() {
-        assertEquals(LocationTriggerModule.EVENT_ENTER, LocationTriggerModule.normalizeEvent("进入时"))
-        assertEquals(LocationTriggerModule.EVENT_EXIT, LocationTriggerModule.normalizeEvent("Exit"))
+        val input = LocationTriggerModule().getInputs().first { it.id == "event" }
+
+        assertEquals(LocationTriggerModule.EVENT_ENTER, input.normalizeEnumValueOrNull("进入时"))
+        assertEquals(LocationTriggerModule.EVENT_EXIT, input.normalizeEnumValueOrNull("离开时"))
+    }
+
+    @Test
+    fun `normalizes receive share english values`() {
+        val input = ReceiveShareTriggerModule().getInputs().first { it.id == "acceptedType" }
+
+        assertEquals("any", input.normalizeEnumValueOrNull("Any"))
+        assertEquals("text", input.normalizeEnumValueOrNull("Text"))
+        assertEquals("link", input.normalizeEnumValueOrNull("Link"))
+        assertEquals("image", input.normalizeEnumValueOrNull("Image"))
+        assertEquals("file", input.normalizeEnumValueOrNull("File"))
     }
 }

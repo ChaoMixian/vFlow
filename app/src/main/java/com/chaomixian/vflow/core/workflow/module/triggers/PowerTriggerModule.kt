@@ -25,6 +25,10 @@ class PowerTriggerModule : BaseModule() {
     companion object {
         const val VALUE_CONNECTED = "connected"
         const val VALUE_DISCONNECTED = "disconnected"
+        private val STATE_LEGACY_MAP = mapOf(
+            "已连接" to VALUE_CONNECTED,
+            "已断开" to VALUE_DISCONNECTED
+        )
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -39,6 +43,7 @@ class PowerTriggerModule : BaseModule() {
                 R.string.option_vflow_trigger_power_connected,
                 R.string.option_vflow_trigger_power_disconnected
             ),
+            legacyValueMap = STATE_LEGACY_MAP,
             inputStyle = InputStyle.CHIP_GROUP
         )
     )
@@ -46,7 +51,7 @@ class PowerTriggerModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val powerState = step.parameters["power_state"] as? String ?: VALUE_CONNECTED
+        val powerState = getInputs().normalizeEnumValue("power_state", step.parameters["power_state"] as? String) ?: VALUE_CONNECTED
 
         // 序列化值转换为本地化显示文本
         val displayText = when (powerState) {

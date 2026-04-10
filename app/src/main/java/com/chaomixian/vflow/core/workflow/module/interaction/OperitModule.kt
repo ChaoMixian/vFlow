@@ -214,7 +214,9 @@ class OperitModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.getVariableAsString("mode", MODE_CHAT)
+        val modeInput = getInputs().first { it.id == "mode" }
+        val rawMode = context.getVariableAsString("mode", MODE_CHAT)
+        val mode = modeInput.normalizeEnumValue(rawMode) ?: rawMode
 
         return when (mode) {
             MODE_CHAT -> executeExternalChat(context, onProgress)

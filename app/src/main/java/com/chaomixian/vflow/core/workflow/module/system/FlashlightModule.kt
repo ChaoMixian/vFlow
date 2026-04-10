@@ -42,6 +42,11 @@ class FlashlightModule : BaseModule() {
         const val MODE_OFF = "off"        // 关闭
         const val PREFS_NAME = "flashlight_prefs"
         const val PREFS_LAST_STATE = "last_flashlight_state"
+        private val MODE_LEGACY_MAP = mapOf(
+            "切换" to MODE_TOGGLE,
+            "开启" to MODE_ON,
+            "关闭" to MODE_OFF
+        )
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -57,6 +62,7 @@ class FlashlightModule : BaseModule() {
                 R.string.option_vflow_device_flashlight_on,
                 R.string.option_vflow_device_flashlight_off
             ),
+            legacyValueMap = MODE_LEGACY_MAP,
             inputStyle = InputStyle.CHIP_GROUP,
             nameStringRes = R.string.param_vflow_device_flashlight_mode_name
         ),
@@ -75,11 +81,12 @@ class FlashlightModule : BaseModule() {
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
-        val mode = step?.parameters?.get("mode") as? String ?: MODE_TOGGLE
+        val inputs = getInputs()
+        val mode = inputs.normalizeEnumValue("mode", step?.parameters?.get("mode") as? String) ?: MODE_TOGGLE
         val isOnMode = mode == MODE_ON
         val supportsStrength = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
-        return getInputs().map { input ->
+        return inputs.map { input ->
             if (input.id == "strengthPercent") {
                 input.copy(
                     isHidden = !isOnMode,
@@ -105,7 +112,7 @@ class FlashlightModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val mode = step.parameters["mode"] as? String ?: MODE_TOGGLE
+        val mode = getInputs().normalizeEnumValue("mode", step.parameters["mode"] as? String) ?: MODE_TOGGLE
 
         val modeText = when (mode) {
             MODE_TOGGLE -> context.getString(R.string.summary_vflow_device_flashlight_toggle)
@@ -175,7 +182,7 @@ class FlashlightModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val step = context.allSteps[context.currentStepIndex]
-        val mode = step.parameters["mode"] as? String ?: MODE_TOGGLE
+        val mode = getInputs().normalizeEnumValue("mode", step.parameters["mode"] as? String) ?: MODE_TOGGLE
 
         // 获取 CameraManager
         val cameraManager = appContext.getSystemService(Context.CAMERA_SERVICE) as? CameraManager

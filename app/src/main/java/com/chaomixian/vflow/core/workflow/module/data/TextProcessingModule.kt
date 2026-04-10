@@ -64,7 +64,9 @@ class TextProcessingModule : BaseModule() {
         step: ActionStep?,
         allSteps: List<ActionStep>?
     ): List<OutputDefinition> {
-        val operation = step?.parameters?.get("operation") as? String ?: OP_JOIN
+        val operationInput = getInputs().first { it.id == "operation" }
+        val rawOperation = step?.parameters?.get("operation") as? String ?: OP_JOIN
+        val operation = operationInput.normalizeEnumValue(rawOperation) ?: rawOperation
         return when (operation) {
             OP_JOIN, OP_REPLACE -> listOf(OutputDefinition("result_text", "结果文本", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_text_processing_result_text_name))
             OP_SPLIT, OP_REGEX -> listOf(OutputDefinition("result_list", "结果列表", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_data_text_processing_result_list_name))
@@ -123,7 +125,9 @@ class TextProcessingModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val operation = context.getVariableAsString("operation", "")
+        val operationInput = getInputs().first { it.id == "operation" }
+        val rawOperation = context.getVariableAsString("operation", "")
+        val operation = operationInput.normalizeEnumValue(rawOperation) ?: rawOperation
         if (operation.isEmpty()) {
             return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_param_error), appContext.getString(R.string.error_vflow_data_text_processing_no_operation))
         }

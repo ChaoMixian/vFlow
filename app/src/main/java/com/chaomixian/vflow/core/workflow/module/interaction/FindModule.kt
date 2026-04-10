@@ -122,7 +122,9 @@ class FindTextModule : BaseModule() {
      * 新增“数量”和“所有结果”输出，并将原始结果重命名为“第一个结果”。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val format = step?.parameters?.get("outputFormat") as? String ?: OUTPUT_ELEMENT
+        val outputFormatInput = getInputs().first { it.id == "outputFormat" }
+        val rawFormat = step?.parameters?.get("outputFormat") as? String ?: OUTPUT_ELEMENT
+        val format = outputFormatInput.normalizeEnumValue(rawFormat) ?: rawFormat
         // 定义通用的条件分支选项（存在/不存在）
         val conditions = listOf(
             ConditionalOption("存在", "存在"),
@@ -201,12 +203,15 @@ class FindTextModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务错误", "无法获取到当前窗口的根节点。")
 
         try {
-            val matchModeStr = context.getVariableAsString("matchMode", MATCH_EXACT)
+            val inputsById = getInputs().associateBy { it.id }
+            val rawMatchMode = context.getVariableAsString("matchMode", MATCH_EXACT)
+            val matchModeStr = inputsById["matchMode"]?.normalizeEnumValue(rawMatchMode) ?: rawMatchMode
             onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_device_find_text_searching, getMatchModeDisplayName(matchModeStr), targetText)))
 
             val nodes = findNodesByText(rootNode, targetText, matchModeStr)
             val count = nodes.size
-            val outputFormat = context.getVariableAsString("outputFormat", OUTPUT_ELEMENT)
+            val rawOutputFormat = context.getVariableAsString("outputFormat", OUTPUT_ELEMENT)
+            val outputFormat = inputsById["outputFormat"]?.normalizeEnumValue(rawOutputFormat) ?: rawOutputFormat
             val outputs = mutableMapOf<String, Any?>()
 
             outputs["count"] = VNumber(count.toDouble())

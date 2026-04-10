@@ -14,26 +14,14 @@ import java.util.Stack
 class HttpRequestModuleTest {
 
     @Test
-    fun `normalizeBodyType maps legacy and internal values`() {
-        assertEquals("json", HttpRequestModule.normalizeBodyType("json"))
-        assertEquals("json", HttpRequestModule.normalizeBodyType("JSON"))
-        assertEquals("form", HttpRequestModule.normalizeBodyType("表单"))
-        assertEquals("raw", HttpRequestModule.normalizeBodyType("Raw Text"))
-        assertEquals("file", HttpRequestModule.normalizeBodyType("文件"))
-        assertEquals("none", HttpRequestModule.normalizeBodyType(null))
-    }
-
-    @Test
-    fun `createRequestBody builds json body for internal and legacy body types`() {
+    fun `createRequestBody builds json body for internal body type`() {
         val module = HttpRequestModule()
         val context = createExecutionContext()
         val bodyData = linkedMapOf("message" to "hello")
 
         val internalBody = module.invokeCreateRequestBody(context, "json", bodyData)
-        val legacyBody = module.invokeCreateRequestBody(context, "JSON", bodyData)
 
         assertJsonRequestBody(internalBody)
-        assertJsonRequestBody(legacyBody)
     }
 
     private fun createExecutionContext(): ExecutionContext {

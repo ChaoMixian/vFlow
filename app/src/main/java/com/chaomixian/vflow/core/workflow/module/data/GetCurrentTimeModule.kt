@@ -149,7 +149,9 @@ class GetCurrentTimeModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val format = context.getVariableAsString("format", FORMAT_DATETIME)
+        val formatInput = getInputs().first { it.id == "format" }
+        val rawFormat = context.getVariableAsString("format", FORMAT_DATETIME)
+        val format = formatInput.normalizeEnumValue(rawFormat) ?: rawFormat
         val timezoneId = context.getVariableAsString("timezone", "")
 
         try {

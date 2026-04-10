@@ -113,7 +113,7 @@ class CaptureScreenModule : BaseModule() {
     ): ExecutionResult {
         val appContext = context.applicationContext
         val localizedContext = getLocalizedContext(appContext)
-        val mode = normalizeMode(context.getVariableAsString("mode", MODE_AUTO))
+        val mode = getInputs().normalizeEnumValueOrNull("mode", context.getVariableAsString("mode", MODE_AUTO))
             ?: return ExecutionResult.Failure(
                 localizedContext.getString(R.string.error_vflow_system_capture_screen_invalid_param_title),
                 localizedContext.getString(R.string.error_vflow_system_capture_screen_invalid_mode)
@@ -409,16 +409,6 @@ class CaptureScreenModule : BaseModule() {
         } catch (e: Exception) {
             DebugLogger.e(TAG, "MediaProjection 未知异常", e)
             return null
-        }
-    }
-
-    private fun normalizeMode(mode: String?): String? {
-        return when (mode) {
-            MODE_AUTO,
-            "自动",
-            "Auto" -> MODE_AUTO
-            MODE_SCREENCAP -> MODE_SCREENCAP
-            else -> null
         }
     }
 

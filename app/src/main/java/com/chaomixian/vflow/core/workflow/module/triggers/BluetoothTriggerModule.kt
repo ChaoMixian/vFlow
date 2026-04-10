@@ -20,30 +20,19 @@ class BluetoothTriggerModule : BaseModule() {
         const val STATE_EVENT_OFF = "off"
         const val DEVICE_EVENT_CONNECTED = "connected"
         const val DEVICE_EVENT_DISCONNECTED = "disconnected"
-
-        fun normalizeTriggerType(value: String?): String? {
-            return when (value) {
-                TRIGGER_TYPE_STATE, "蓝牙状态", "Bluetooth State" -> TRIGGER_TYPE_STATE
-                TRIGGER_TYPE_DEVICE, "设备连接", "Device Connection" -> TRIGGER_TYPE_DEVICE
-                else -> null
-            }
-        }
-
-        fun normalizeStateEvent(value: String?): String? {
-            return when (value) {
-                STATE_EVENT_ON, "开启时", "Turned On" -> STATE_EVENT_ON
-                STATE_EVENT_OFF, "关闭时", "Turned Off" -> STATE_EVENT_OFF
-                else -> null
-            }
-        }
-
-        fun normalizeDeviceEvent(value: String?): String? {
-            return when (value) {
-                DEVICE_EVENT_CONNECTED, "连接时", "Connected" -> DEVICE_EVENT_CONNECTED
-                DEVICE_EVENT_DISCONNECTED, "断开时", "Disconnected" -> DEVICE_EVENT_DISCONNECTED
-                else -> null
-            }
-        }
+        const val ANY_DEVICE_ADDRESS = "any"
+        private val TRIGGER_TYPE_LEGACY_MAP = mapOf(
+            "蓝牙状态" to TRIGGER_TYPE_STATE,
+            "设备连接" to TRIGGER_TYPE_DEVICE
+        )
+        private val STATE_EVENT_LEGACY_MAP = mapOf(
+            "开启时" to STATE_EVENT_ON,
+            "关闭时" to STATE_EVENT_OFF
+        )
+        private val DEVICE_EVENT_LEGACY_MAP = mapOf(
+            "连接时" to DEVICE_EVENT_CONNECTED,
+            "断开时" to DEVICE_EVENT_DISCONNECTED
+        )
     }
     override val id = "vflow.trigger.bluetooth"
     override val metadata = ActionMetadata(
@@ -75,10 +64,7 @@ class BluetoothTriggerModule : BaseModule() {
                 R.string.option_vflow_trigger_bluetooth_type_state,
                 R.string.option_vflow_trigger_bluetooth_type_device
             ),
-            legacyValueMap = mapOf(
-                appContext.getString(R.string.option_vflow_trigger_bluetooth_type_state) to TRIGGER_TYPE_STATE,
-                appContext.getString(R.string.option_vflow_trigger_bluetooth_type_device) to TRIGGER_TYPE_DEVICE
-            ),
+            legacyValueMap = TRIGGER_TYPE_LEGACY_MAP,
             nameStringRes = R.string.param_vflow_trigger_bluetooth_trigger_type_name
         ),
         // 蓝牙状态
@@ -92,10 +78,7 @@ class BluetoothTriggerModule : BaseModule() {
                 R.string.option_vflow_trigger_bluetooth_state_on,
                 R.string.option_vflow_trigger_bluetooth_state_off
             ),
-            legacyValueMap = mapOf(
-                appContext.getString(R.string.option_vflow_trigger_bluetooth_state_on) to STATE_EVENT_ON,
-                appContext.getString(R.string.option_vflow_trigger_bluetooth_state_off) to STATE_EVENT_OFF
-            ),
+            legacyValueMap = STATE_EVENT_LEGACY_MAP,
             nameStringRes = R.string.param_vflow_trigger_bluetooth_state_event_name
         ),
         // 设备连接
@@ -109,19 +92,18 @@ class BluetoothTriggerModule : BaseModule() {
                 R.string.option_vflow_trigger_bluetooth_device_connected,
                 R.string.option_vflow_trigger_bluetooth_device_disconnected
             ),
-            legacyValueMap = mapOf(
-                appContext.getString(R.string.option_vflow_trigger_bluetooth_device_connected) to DEVICE_EVENT_CONNECTED,
-                appContext.getString(R.string.option_vflow_trigger_bluetooth_device_disconnected) to DEVICE_EVENT_DISCONNECTED
-            ),
+            legacyValueMap = DEVICE_EVENT_LEGACY_MAP,
             nameStringRes = R.string.param_vflow_trigger_bluetooth_device_event_name
         ),
-        InputDefinition("device_address", "设备地址", ParameterType.STRING, isHidden = true, nameStringRes = R.string.param_vflow_trigger_bluetooth_device_address_name),
-        InputDefinition("device_name", "设备名称", ParameterType.STRING, defaultValue = "任何设备", nameStringRes = R.string.param_vflow_trigger_bluetooth_device_name_name)
+        InputDefinition("device_address", "设备地址", ParameterType.STRING, defaultValue = ANY_DEVICE_ADDRESS, isHidden = true, nameStringRes = R.string.param_vflow_trigger_bluetooth_device_address_name),
+        InputDefinition("device_name", "设备名称", ParameterType.STRING, defaultValue = "", nameStringRes = R.string.param_vflow_trigger_bluetooth_device_name_name)
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val all = getInputs()
-        val triggerType = step?.parameters?.get("trigger_type") as? String ?: TRIGGER_TYPE_STATE
+        val triggerTypeInput = all.first { it.id == "trigger_type" }
+        val rawTriggerType = step?.parameters?.get("trigger_type") as? String ?: TRIGGER_TYPE_STATE
+        val triggerType = triggerTypeInput.normalizeEnumValue(rawTriggerType) ?: rawTriggerType
         val dynamicInputs = mutableListOf(all.first { it.id == "trigger_type" })
 
         if (triggerType == TRIGGER_TYPE_STATE) {
@@ -142,19 +124,30 @@ class BluetoothTriggerModule : BaseModule() {
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val triggerType = step.parameters["trigger_type"] as? String ?: TRIGGER_TYPE_STATE
+        val allInputs = getInputs()
+        val triggerTypeInput = allInputs.first { it.id == "trigger_type" }
+        val rawTriggerType = step.parameters["trigger_type"] as? String ?: TRIGGER_TYPE_STATE
+        val triggerType = triggerTypeInput.normalizeEnumValue(rawTriggerType) ?: rawTriggerType
         val statePrefix = context.getString(R.string.summary_vflow_trigger_bluetooth_state_prefix)
         val devicePrefix = context.getString(R.string.summary_vflow_trigger_bluetooth_device_prefix)
 
         return if (triggerType == TRIGGER_TYPE_STATE) {
-            val event = step.parameters["state_event"] as? String ?: STATE_EVENT_ON
-            val eventPill = PillUtil.createPillFromParam(event, getInputs().find { it.id == "state_event" }, isModuleOption = true)
+            val rawEvent = step.parameters["state_event"] as? String ?: STATE_EVENT_ON
+            val eventPill = PillUtil.createPillFromParam(rawEvent, allInputs.find { it.id == "state_event" }, isModuleOption = true)
             PillUtil.buildSpannable(context, "$statePrefix ", eventPill)
         } else {
-            val event = step.parameters["device_event"] as? String ?: DEVICE_EVENT_CONNECTED
-            val deviceName = step.parameters["device_name"] as? String ?: "任何设备"
-            val eventPill = PillUtil.createPillFromParam(event, getInputs().find { it.id == "device_event" }, isModuleOption = true)
-            val devicePill = PillUtil.Pill(deviceName, "device_name")
+            val rawEvent = step.parameters["device_event"] as? String ?: DEVICE_EVENT_CONNECTED
+            val deviceAddress = step.parameters["device_address"] as? String
+            val deviceName = step.parameters["device_name"] as? String
+            val eventPill = PillUtil.createPillFromParam(rawEvent, allInputs.find { it.id == "device_event" }, isModuleOption = true)
+            val devicePill = PillUtil.Pill(
+                if (deviceAddress == ANY_DEVICE_ADDRESS || (deviceAddress.isNullOrBlank() && deviceName.isNullOrBlank())) {
+                    context.getString(R.string.summary_vflow_trigger_bluetooth_any_device)
+                } else {
+                    deviceName?.takeIf { it.isNotBlank() } ?: deviceAddress.orEmpty()
+                },
+                "device_name"
+            )
             PillUtil.buildSpannable(context, "$devicePrefix ", eventPill, " ", devicePill)
         }
     }

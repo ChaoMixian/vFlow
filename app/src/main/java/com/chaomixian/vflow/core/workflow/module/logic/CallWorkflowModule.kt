@@ -4,9 +4,10 @@ package com.chaomixian.vflow.core.workflow.module.logic
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
-import com.chaomixian.vflow.core.execution.SubWorkflowResult
+import com.chaomixian.vflow.core.execution.VariableType
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -69,17 +70,7 @@ class CallWorkflowModule : BaseModule() {
                 val varName = subStep.parameters["variableName"] as? String
                 if (!varName.isNullOrBlank() && !seenNamedVars.contains(varName)) {
                     seenNamedVars.add(varName)
-                    val type = subStep.parameters["type"] as? String ?: "文本"
-                    val typeName = when (type) {
-                        "文本" -> "vflow.type.string"
-                        "数字" -> "vflow.type.number"
-                        "布尔" -> "vflow.type.boolean"
-                        "字典" -> "vflow.type.dictionary"
-                        "列表" -> "vflow.type.list"
-                        "图像" -> "vflow.type.image"
-                        "坐标" -> "vflow.type.coordinate"
-                        else -> "vflow.type.any"
-                    }
+                    val typeName = resolveNamedVariableType(subStep.parameters["type"] as? String)
                     outputs.add(OutputDefinition(
                         id = "var_$varName",
                         name = "变量: $varName",
@@ -90,6 +81,10 @@ class CallWorkflowModule : BaseModule() {
         }
 
         return outputs
+    }
+
+    private fun resolveNamedVariableType(type: String?): String {
+        return VariableType.fromStoredValue(type)?.typeId ?: "vflow.type.any"
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -108,7 +103,6 @@ class CallWorkflowModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val workflowId = context.getVariableAsString("workflow_id", "")
-            ?: return ExecutionResult.Failure("参数错误", "未选择要调用的工作流。")
 
         val workflowToCall = WorkflowManager(context.applicationContext).getWorkflow(workflowId)
             ?: return ExecutionResult.Failure("执行错误", "找不到ID为 '$workflowId' 的工作流。")

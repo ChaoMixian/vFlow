@@ -7,6 +7,7 @@ import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 
 /**
  * 变量类型枚举（用户可见的中文类型名）
@@ -41,16 +42,9 @@ enum class VariableType(val displayName: String, val typeId: String, val storedV
          */
         fun fromStoredValue(value: String?): VariableType? {
             if (value.isNullOrBlank()) return null
-            return when (value) {
-                "文本", "Text", "string", "vflow.type.string" -> STRING
-                "数字", "Number", "number", "vflow.type.number" -> NUMBER
-                "布尔", "Boolean", "boolean", "vflow.type.boolean" -> BOOLEAN
-                "字典", "Dictionary", "dictionary", "vflow.type.dictionary" -> DICTIONARY
-                "列表", "List", "list", "vflow.type.list" -> LIST
-                "图像", "图片", "Image", "image", "vflow.type.image" -> IMAGE
-                "坐标", "Coordinate", "coordinate", "vflow.type.coordinate" -> COORDINATE
-                else -> null
-            }
+            fromTypeId(value)?.let { return it }
+            val normalizedValue = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(value) ?: return null
+            return values().find { it.storedValue == normalizedValue }
         }
     }
 }

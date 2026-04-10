@@ -177,7 +177,9 @@ class CoreScreenOperationModule : BaseModule() {
             )
         }
 
-        val opType = context.getVariableAsString("operation_type", OP_CLICK)
+        val operationTypeInput = getInputs().first { it.id == "operation_type" }
+        val rawOpType = context.getVariableAsString("operation_type", OP_CLICK)
+        val opType = operationTypeInput.normalizeEnumValue(rawOpType) ?: rawOpType
 
         return when (opType) {
             OP_CLICK -> executeClick(context, onProgress)

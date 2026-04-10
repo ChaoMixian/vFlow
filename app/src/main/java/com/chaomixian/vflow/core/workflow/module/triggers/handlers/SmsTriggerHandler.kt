@@ -84,11 +84,14 @@ class SmsTriggerHandler : ListeningTriggerHandler() {
      * [核心修改] 检查过滤器，并在匹配时提取验证码。
      */
     private fun checkFilters(sender: String, content: String, config: Map<String, Any?>): FilterMatchResult {
-        val senderFilterType = SmsTriggerModule.normalizeSenderFilterType(config["sender_filter_type"] as? String)
-            ?: SmsTriggerModule.SENDER_ANY
+        val inputsById = SmsTriggerModule().getInputs().associateBy { it.id }
+        val rawSenderFilterType = config["sender_filter_type"] as? String ?: SmsTriggerModule.SENDER_ANY
+        val senderFilterType = inputsById["sender_filter_type"]?.normalizeEnumValue(rawSenderFilterType)
+            ?: rawSenderFilterType
         val senderFilterValue = config["sender_filter_value"] as? String ?: ""
-        val contentFilterType = SmsTriggerModule.normalizeContentFilterType(config["content_filter_type"] as? String)
-            ?: SmsTriggerModule.CONTENT_ANY
+        val rawContentFilterType = config["content_filter_type"] as? String ?: SmsTriggerModule.CONTENT_ANY
+        val contentFilterType = inputsById["content_filter_type"]?.normalizeEnumValue(rawContentFilterType)
+            ?: rawContentFilterType
         val contentFilterValue = config["content_filter_value"] as? String ?: ""
 
         val senderMatches = when (senderFilterType) {

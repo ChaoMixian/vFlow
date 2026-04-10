@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.workflow.module.triggers.PowerTriggerModule
 import kotlinx.coroutines.launch
 
 class PowerTriggerHandler : ListeningTriggerHandler() {
@@ -55,9 +56,11 @@ class PowerTriggerHandler : ListeningTriggerHandler() {
         DebugLogger.d(TAG, "收到电源事件: $action")
 
         triggerScope.launch {
+            val stateInput = PowerTriggerModule().getInputs().first { it.id == "power_state" }
             listeningTriggers.forEach { trigger ->
                 val config = trigger.parameters
-                val desiredState = config["power_state"] as? String ?: return@forEach
+                val rawDesiredState = config["power_state"] as? String ?: return@forEach
+                val desiredState = stateInput.normalizeEnumValue(rawDesiredState) ?: rawDesiredState
 
                 val shouldTrigger = when (desiredState) {
                     "connected" -> action == Intent.ACTION_POWER_CONNECTED

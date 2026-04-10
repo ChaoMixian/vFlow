@@ -26,6 +26,9 @@ class LoadVariablesModuleUIProvider : ModuleUIProvider {
         val shareRadio: RadioButton = view.findViewById(R.id.radio_share)
         val copyRadio: RadioButton = view.findViewById(R.id.radio_copy)
         val helpText: TextView = view.findViewById(R.id.text_help)
+
+        var selectedWorkflowId: String? = null
+        var selectedVariableNames: List<String> = emptyList()
     }
 
     override fun getHandledInputIds(): Set<String> = setOf("workflow_id", "variable_names", "mode")
@@ -44,28 +47,34 @@ class LoadVariablesModuleUIProvider : ModuleUIProvider {
 
         // 恢复状态
         val workflowId = currentParameters["workflow_id"] as? String
-        val mode = currentParameters["mode"] as? String ?: "share"
+        val mode = currentParameters["mode"] as? String ?: LoadVariablesModule.MODE_SHARE
+        holder.selectedWorkflowId = workflowId
+        holder.selectedVariableNames = (currentParameters["variable_names"] as? String)
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotBlank() }
+            .orEmpty()
 
         if (workflowId != null) {
             val workflowManager = WorkflowManager(context)
             val workflow = workflowManager.getWorkflow(workflowId)
             holder.selectedWorkflowText.text = workflow?.name ?: context.getString(R.string.label_workflow_not_selected)
+        } else {
+            holder.selectedWorkflowText.text = context.getString(R.string.label_workflow_not_selected)
         }
 
         // 设置模式
         when (mode) {
-            "share" -> holder.shareRadio.isChecked = true
-            "copy" -> holder.copyRadio.isChecked = true
+            LoadVariablesModule.MODE_COPY -> holder.copyRadio.isChecked = true
+            else -> holder.shareRadio.isChecked = true
         }
 
         // 模式切换监听
         holder.radioGroup.setOnCheckedChangeListener { _, checkedId ->
-            val newMode = when (checkedId) {
-                R.id.radio_share -> "share"
-                R.id.radio_copy -> "copy"
-                else -> "share"
+            when (checkedId) {
+                R.id.radio_copy -> holder.copyRadio.isChecked = true
+                else -> holder.shareRadio.isChecked = true
             }
-            (currentParameters as MutableMap<String, Any?>)["mode"] = newMode
             onParametersChanged()
         }
 
@@ -83,12 +92,11 @@ class LoadVariablesModuleUIProvider : ModuleUIProvider {
 
                     holder.selectedWorkflowText.text = workflow?.name ?: context.getString(R.string.label_workflow_not_selected)
 
-                    // 更新参数
-                    (currentParameters as MutableMap<String, Any?>)["workflow_id"] = selectedId
+                    holder.selectedWorkflowId = selectedId
 
                     // 获取所有变量名
                     val varNames = getNamedVariableNames(workflow)
-                    (currentParameters as MutableMap<String, Any?>)["variable_names"] = varNames.joinToString(",")
+                    holder.selectedVariableNames = varNames
 
                     onParametersChanged()
                 }
@@ -108,7 +116,12 @@ class LoadVariablesModuleUIProvider : ModuleUIProvider {
     }
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
-        return emptyMap()
+        val h = holder as ViewHolder
+        return mapOf(
+            "workflow_id" to h.selectedWorkflowId,
+            "variable_names" to h.selectedVariableNames.joinToString(","),
+            "mode" to if (h.copyRadio.isChecked) LoadVariablesModule.MODE_COPY else LoadVariablesModule.MODE_SHARE
+        )
     }
 
     private fun getNamedVariableNames(workflow: Workflow?): List<String> {

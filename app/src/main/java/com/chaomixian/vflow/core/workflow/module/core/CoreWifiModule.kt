@@ -97,7 +97,9 @@ class CoreWifiModule : BaseModule() {
         }
 
         // 2. 获取参数
-        val action = context.getVariableAsString("action", ACTION_TOGGLE)
+        val actionInput = getInputs().first { it.id == "action" }
+        val rawAction = context.getVariableAsString("action", ACTION_TOGGLE)
+        val action = actionInput.normalizeEnumValue(rawAction) ?: rawAction
 
         // 3. 执行操作
         val (success, newState) = when (action) {

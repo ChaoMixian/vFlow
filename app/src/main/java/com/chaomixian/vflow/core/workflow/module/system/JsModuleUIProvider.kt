@@ -56,7 +56,7 @@ class JsModuleUIProvider : ModuleUIProvider {
         }
 
         val scriptInputLayout = TextInputLayout(context).apply {
-            hint = "JavaScript 脚本"
+            hint = context.getString(R.string.param_vflow_system_js_script_name)
         }
         val scriptInput = EditText(context).apply {
             minLines = 8
@@ -71,7 +71,7 @@ class JsModuleUIProvider : ModuleUIProvider {
         val inputsEditorView = inflater.inflate(R.layout.partial_dictionary_editor, view, false)
         val inputsRecyclerView = inputsEditorView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.recycler_view_dictionary)
         val addInputButton = inputsEditorView.findViewById<android.widget.Button>(R.id.button_add_kv_pair)
-        addInputButton.text = "添加输入"
+        addInputButton.setText(R.string.button_add_input)
 
         val currentInputs = (currentParameters["inputs"] as? Map<*, *>)
             ?.mapNotNull { (key, value) ->

@@ -16,16 +16,32 @@ class CallTriggerModule : BaseModule() {
         const val TYPE_INCOMING = "incoming"
         const val TYPE_ANSWERED = "answered"
         const val TYPE_ENDED = "ended"
-
-        fun normalizeCallType(value: String?): String? {
-            return when (value) {
-                TYPE_ANY, "任意", "Any" -> TYPE_ANY
-                TYPE_INCOMING, "来电", "Incoming" -> TYPE_INCOMING
-                TYPE_ANSWERED, "接通", "Answered" -> TYPE_ANSWERED
-                TYPE_ENDED, "挂断", "Ended" -> TYPE_ENDED
-                else -> null
-            }
-        }
+        private val CALL_TYPE_OPTIONS = listOf(TYPE_ANY, TYPE_INCOMING, TYPE_ANSWERED, TYPE_ENDED)
+        private val CALL_TYPE_INPUT = InputDefinition(
+            id = "call_type",
+            name = "触发类型",
+            staticType = ParameterType.ENUM,
+            defaultValue = TYPE_ANY,
+            options = CALL_TYPE_OPTIONS,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_call_type_any,
+                R.string.option_vflow_trigger_call_type_incoming,
+                R.string.option_vflow_trigger_call_type_answered,
+                R.string.option_vflow_trigger_call_type_ended
+            ),
+            legacyValueMap = mapOf(
+                "任意" to TYPE_ANY,
+                "Any" to TYPE_ANY,
+                "来电" to TYPE_INCOMING,
+                "Incoming" to TYPE_INCOMING,
+                "接通" to TYPE_ANSWERED,
+                "Answered" to TYPE_ANSWERED,
+                "挂断" to TYPE_ENDED,
+                "Ended" to TYPE_ENDED
+            ),
+            nameStringRes = R.string.param_vflow_trigger_call_type_name,
+            inputStyle = InputStyle.CHIP_GROUP
+        )
     }
     override val id = "vflow.trigger.call"
     override val metadata = ActionMetadata(
@@ -39,29 +55,7 @@ class CallTriggerModule : BaseModule() {
     )
 
     override val requiredPermissions = listOf(PermissionManager.READ_PHONE_STATE)
-
-    private val callTypeOptions by lazy { listOf(TYPE_ANY, TYPE_INCOMING, TYPE_ANSWERED, TYPE_ENDED) }
-
-    override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("call_type", "触发类型", ParameterType.ENUM,
-            defaultValue = TYPE_ANY,
-            options = callTypeOptions,
-            optionsStringRes = listOf(
-                R.string.option_vflow_trigger_call_type_any,
-                R.string.option_vflow_trigger_call_type_incoming,
-                R.string.option_vflow_trigger_call_type_answered,
-                R.string.option_vflow_trigger_call_type_ended
-            ),
-            legacyValueMap = mapOf(
-                appContext.getString(R.string.option_vflow_trigger_call_type_any) to TYPE_ANY,
-                appContext.getString(R.string.option_vflow_trigger_call_type_incoming) to TYPE_INCOMING,
-                appContext.getString(R.string.option_vflow_trigger_call_type_answered) to TYPE_ANSWERED,
-                appContext.getString(R.string.option_vflow_trigger_call_type_ended) to TYPE_ENDED
-            ),
-            nameStringRes = R.string.param_vflow_trigger_call_type_name,
-            inputStyle = InputStyle.CHIP_GROUP
-        )
-    )
+    override fun getInputs(): List<InputDefinition> = listOf(CALL_TYPE_INPUT)
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition("call_state", "通话状态", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_call_state_name)

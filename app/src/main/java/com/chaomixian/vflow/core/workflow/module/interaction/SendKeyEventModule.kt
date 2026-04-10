@@ -110,7 +110,9 @@ class SendKeyEventModule : BaseModule() {
         val service = context.services.get(VFlowAccessibilityService::class)
             ?: return ExecutionResult.Failure("服务未连接", "执行此操作需要无障碍服务。")
 
-        val keyName = context.getVariableAsString("key_action", ACTION_BACK)
+        val actionInput = getInputs().first { it.id == "key_action" }
+        val rawKeyName = context.getVariableAsString("key_action", ACTION_BACK)
+        val keyName = actionInput.normalizeEnumValue(rawKeyName) ?: rawKeyName
         val action = keyOptions[keyName]
             ?: return ExecutionResult.Failure("参数错误", "无效的操作名称: $keyName")
 

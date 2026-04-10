@@ -23,6 +23,9 @@ import java.util.*
 import kotlin.math.min
 
 class ApplyMaskModule : BaseModule() {
+    companion object {
+        private const val MASK_SHAPE_ROUNDED_RECT = "rounded_rect"
+    }
 
     override val id = "vflow.file.apply_mask"
     override val metadata = ActionMetadata(
@@ -35,7 +38,7 @@ class ApplyMaskModule : BaseModule() {
         categoryId = "file"
     )
 
-    private val maskOptions = listOf("圆角矩形")
+    private val maskOptions = listOf(MASK_SHAPE_ROUNDED_RECT)
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -50,9 +53,13 @@ class ApplyMaskModule : BaseModule() {
             id = "mask_shape",
             name = "蒙版形状",
             staticType = ParameterType.ENUM,
-            defaultValue = "圆角矩形",
+            defaultValue = MASK_SHAPE_ROUNDED_RECT,
             options = maskOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            optionsStringRes = listOf(R.string.option_vflow_file_apply_mask_shape_rounded_rect),
+            legacyValueMap = mapOf(
+                "圆角矩形" to MASK_SHAPE_ROUNDED_RECT
+            )
         )
     )
 

@@ -15,14 +15,26 @@ class AppStartTriggerModule : BaseModule() {
     companion object {
         const val EVENT_OPENED = "opened"
         const val EVENT_CLOSED = "closed"
-
-        fun normalizeEvent(value: String?): String? {
-            return when (value) {
-                EVENT_OPENED, "打开时", "Opened" -> EVENT_OPENED
-                EVENT_CLOSED, "关闭时", "Closed" -> EVENT_CLOSED
-                else -> null
-            }
-        }
+        private val EVENT_OPTIONS = listOf(EVENT_OPENED, EVENT_CLOSED)
+        private val EVENT_INPUT = InputDefinition(
+            id = "event",
+            name = "事件",
+            nameStringRes = R.string.param_vflow_trigger_app_start_event_name,
+            staticType = ParameterType.ENUM,
+            defaultValue = EVENT_OPENED,
+            options = EVENT_OPTIONS,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_app_start_event_opened,
+                R.string.option_vflow_trigger_app_start_event_closed
+            ),
+            legacyValueMap = mapOf(
+                "打开时" to EVENT_OPENED,
+                "Opened" to EVENT_OPENED,
+                "关闭时" to EVENT_CLOSED,
+                "Closed" to EVENT_CLOSED
+            ),
+            acceptsMagicVariable = false
+        )
     }
 
     override val id = "vflow.trigger.app_start"
@@ -35,34 +47,13 @@ class AppStartTriggerModule : BaseModule() {
         category = "触发器",
         categoryId = "trigger"
     )
-
-    private val eventOptions by lazy { listOf(EVENT_OPENED, EVENT_CLOSED) }
-
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
     // 为该模块提供自定义的UI交互逻辑
     override val uiProvider: ModuleUIProvider = AppStartTriggerUIProvider()
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(
-            id = "event",
-            name = "事件",
-            nameStringRes = R.string.param_vflow_trigger_app_start_event_name,
-            staticType = ParameterType.ENUM,
-            defaultValue = EVENT_OPENED,
-            options = eventOptions,
-            optionsStringRes = listOf(
-                R.string.option_vflow_trigger_app_start_event_opened,
-                R.string.option_vflow_trigger_app_start_event_closed
-            ),
-            legacyValueMap = mapOf(
-                "打开时" to EVENT_OPENED,
-                "Opened" to EVENT_OPENED,
-                "关闭时" to EVENT_CLOSED,
-                "Closed" to EVENT_CLOSED
-            ),
-            acceptsMagicVariable = false
-        ),
+        EVENT_INPUT,
         InputDefinition(
             id = "packageNames",
             name = "应用包名列表",
@@ -76,7 +67,7 @@ class AppStartTriggerModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val event = normalizeEvent(step.parameters["event"] as? String) ?: EVENT_OPENED
+        val event = EVENT_INPUT.normalizeEnumValueOrNull(step.parameters["event"] as? String) ?: EVENT_OPENED
 
         @Suppress("UNCHECKED_CAST")
         val packageNames = step.parameters["packageNames"] as? List<String> ?: emptyList()

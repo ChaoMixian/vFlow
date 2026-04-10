@@ -69,6 +69,10 @@ class FeishuSendMessageModule : BaseModule() {
             optionsStringRes = listOf(
                 R.string.option_vflow_feishu_send_message_auth_mode_tenant,
                 R.string.option_vflow_feishu_send_message_auth_mode_user
+            ),
+            legacyValueMap = mapOf(
+                "应用身份" to "tenant_access_token",
+                "用户身份" to "user_access_token"
             )
         ),
         InputDefinition(
@@ -84,7 +88,7 @@ class FeishuSendMessageModule : BaseModule() {
                 R.string.option_vflow_feishu_send_message_receive_id_type_user_id,
                 R.string.option_vflow_feishu_send_message_receive_id_type_email,
                 R.string.option_vflow_feishu_send_message_receive_id_type_chat_id
-            )
+            ),
         ),
         InputDefinition(
             id = "receive_id",
@@ -115,7 +119,7 @@ class FeishuSendMessageModule : BaseModule() {
                 R.string.option_vflow_feishu_send_message_msg_type_share_chat,
                 R.string.option_vflow_feishu_send_message_msg_type_share_user,
                 R.string.option_vflow_feishu_send_message_msg_type_system
-            )
+            ),
         ),
         InputDefinition(
             id = "text",
@@ -207,8 +211,10 @@ class FeishuSendMessageModule : BaseModule() {
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         return withContext(Dispatchers.IO) {
             try {
+                val inputsById = getInputs().associateBy { it.id }
                 val timeout = context.getVariableAsLong("timeout") ?: 15L
-                val authMode = context.getVariableAsString("auth_mode", "tenant_access_token")
+                val rawAuthMode = context.getVariableAsString("auth_mode", "tenant_access_token")
+                val authMode = inputsById["auth_mode"]?.normalizeEnumValue(rawAuthMode) ?: rawAuthMode
                 val token = when (
                     val tokenResolution = if (authMode == "user_access_token") {
                         FeishuModuleConfig.resolveUserAccessToken(appContext, timeout)

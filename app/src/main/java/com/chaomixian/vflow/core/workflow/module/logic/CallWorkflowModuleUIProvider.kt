@@ -39,9 +39,9 @@ class CallWorkflowModuleUIProvider : ModuleUIProvider {
 
         fun updateSelectedWorkflowText(workflowId: String?) {
             holder.selectedWorkflowText.text = if (workflowId != null) {
-                workflowManager.getWorkflow(workflowId)?.name ?: "未知/已删除的工作流"
+                workflowManager.getWorkflow(workflowId)?.name ?: context.getString(R.string.summary_unknown_workflow)
             } else {
-                "未选择"
+                context.getString(R.string.summary_no_workflow_selected)
             }
         }
 
@@ -53,7 +53,7 @@ class CallWorkflowModuleUIProvider : ModuleUIProvider {
             val workflowIds = allWorkflows.map { it.id }.toTypedArray()
 
             MaterialAlertDialogBuilder(context)
-                .setTitle("选择要调用的工作流")
+                .setTitle(R.string.dialog_call_workflow_select_title)
                 .setItems(workflowNames) { _, which ->
                     val selectedId = workflowIds[which]
                     updateSelectedWorkflowText(selectedId)

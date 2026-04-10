@@ -160,14 +160,18 @@ class FindElementModule : BaseModule() {
             ?: return ExecutionResult.Failure("服务不可用", "无障碍服务未启动")
 
         // === 解析参数 ===
+        val inputsById = getInputs().associateBy { it.id }
         val text = context.getVariableAsString("text", "")
-        val textMatchMode = context.getVariableAsString("text_match_mode", MATCH_CONTAINS)
+        val rawTextMatchMode = context.getVariableAsString("text_match_mode", MATCH_CONTAINS)
+        val textMatchMode = inputsById["text_match_mode"]?.normalizeEnumValue(rawTextMatchMode) ?: rawTextMatchMode
 
         val viewId = context.getVariableAsString("view_id", "")
-        val idMatchMode = context.getVariableAsString("id_match_mode", MATCH_CONTAINS)
+        val rawIdMatchMode = context.getVariableAsString("id_match_mode", MATCH_CONTAINS)
+        val idMatchMode = inputsById["id_match_mode"]?.normalizeEnumValue(rawIdMatchMode) ?: rawIdMatchMode
 
         val className = context.getVariableAsString("class_name", "")
-        val classMatchMode = context.getVariableAsString("class_match_mode", MATCH_EXACT)
+        val rawClassMatchMode = context.getVariableAsString("class_match_mode", MATCH_EXACT)
+        val classMatchMode = inputsById["class_match_mode"]?.normalizeEnumValue(rawClassMatchMode) ?: rawClassMatchMode
 
         // 现在 variables 是 Map<String, VObject>，使用 getVariable 获取并检查类型
         val searchRegion = parseSearchRegion(context.getVariable("search_region"))
@@ -182,7 +186,8 @@ class FindElementModule : BaseModule() {
 
         // 使用 getVariableAsInt 获取数字类型
         val depthLimit = context.getVariableAsInt("depth_limit") ?: 50
-        val resultSelection = context.getVariableAsString("result_selection", RESULT_FIRST)
+        val rawResultSelection = context.getVariableAsString("result_selection", RESULT_FIRST)
+        val resultSelection = inputsById["result_selection"]?.normalizeEnumValue(rawResultSelection) ?: rawResultSelection
         val onlyLeafNodes = context.getVariableAsBoolean("only_leaf_nodes") ?: false
 
         // === 检查是否至少有一个查找条件 ===

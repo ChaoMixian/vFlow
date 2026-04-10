@@ -23,22 +23,37 @@ class BackTapTriggerModule : BaseModule() {
     )
 
     companion object {
-        const val MODE_DOUBLE_TAP = "双击"
-        const val MODE_TRIPLE_TAP = "三击"
+        const val MODE_DOUBLE_TAP = "double_tap"
+        const val MODE_TRIPLE_TAP = "triple_tap"
+        private val MODE_LEGACY_MAP = mapOf(
+            "双击" to MODE_DOUBLE_TAP,
+            "三击" to MODE_TRIPLE_TAP
+        )
     }
 
     // 自定义 UIProvider，用于显示模块配置按钮
     override val uiProvider: ModuleUIProvider = BackTapTriggerModuleUIProvider()
 
     override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("mode", "模式", ParameterType.ENUM, MODE_DOUBLE_TAP, options = listOf(MODE_DOUBLE_TAP, MODE_TRIPLE_TAP), nameStringRes = R.string.param_vflow_trigger_backtap_mode_name)
+        InputDefinition(
+            "mode",
+            "模式",
+            ParameterType.ENUM,
+            MODE_DOUBLE_TAP,
+            options = listOf(MODE_DOUBLE_TAP, MODE_TRIPLE_TAP),
+            nameStringRes = R.string.param_vflow_trigger_backtap_mode_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_trigger_backtap_mode_double_tap,
+                R.string.option_vflow_trigger_backtap_mode_triple_tap
+            ),
+            legacyValueMap = MODE_LEGACY_MAP
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val mode = step.parameters["mode"] as? String ?: MODE_DOUBLE_TAP
-        val modePill = PillUtil.Pill(
-            mode,
-            "mode",
+        val modePill = PillUtil.createPillFromParam(
+            step.parameters["mode"] ?: MODE_DOUBLE_TAP,
+            getInputs().find { it.id == "mode" },
             isModuleOption = true
         )
         return PillUtil.buildSpannable(context, "轻敲背面 ", modePill)

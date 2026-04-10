@@ -16,6 +16,7 @@ import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
+import com.chaomixian.vflow.core.module.normalizeEnumValue
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.google.android.material.chip.Chip
@@ -118,7 +119,9 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
             ?.optionsStringRes
             ?.map(context::getString)
             ?: executionModeOptions
-        val executionMode = normalizeExecutionMode(currentParameters["execution_mode"] as? String)
+        val executionMode = module.getInputs()
+            .normalizeEnumValue("execution_mode", currentParameters["execution_mode"] as? String, MODE_AUTO)
+            ?: MODE_AUTO
         val modeAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, executionModeLabels)
         modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         holder.modeSpinner.adapter = modeAdapter
@@ -199,14 +202,6 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         }
 
         return params
-    }
-
-    private fun normalizeExecutionMode(value: String?): String {
-        return when (value) {
-            MODE_ACCESSIBILITY, "无障碍", "Accessibility" -> MODE_ACCESSIBILITY
-            MODE_SHELL, "Shell" -> MODE_SHELL
-            else -> MODE_AUTO
-        }
     }
 
     // 创建普通输入行

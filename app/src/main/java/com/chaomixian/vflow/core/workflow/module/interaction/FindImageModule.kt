@@ -159,13 +159,15 @@ class FindImageModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val appContext = context.applicationContext
+        val thresholdInput = getInputs().first { it.id == "threshold" }
 
         val templateUri = context.getVariableAsString("template_uri", "")
         if (templateUri.isNullOrEmpty()) {
             return ExecutionResult.Failure("参数错误", "请先设置模板图片。")
         }
 
-        val thresholdStr = context.getVariableAsString("threshold", THRESHOLD_80)
+        val rawThreshold = context.getVariableAsString("threshold", THRESHOLD_80)
+        val thresholdStr = thresholdInput.normalizeEnumValue(rawThreshold) ?: THRESHOLD_80
         // 将用户阈值转换为内部阈值（允许的最大差异百分比）
         val maxDiffPercent = when {
             thresholdStr == THRESHOLD_90 -> 0.10  // 90%相似 = 最多10%差异

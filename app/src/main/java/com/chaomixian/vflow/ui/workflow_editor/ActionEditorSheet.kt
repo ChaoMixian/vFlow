@@ -287,7 +287,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 val currentValue = currentParameters[inputDef.id] as? String
                 if (currentValue != null && !inputDef.options.contains(currentValue)) {
                     // 尝试使用向后兼容映射
-                    val mappedValue = inputDef.legacyValueMap?.get(currentValue)
+                    val mappedValue = inputDef.normalizeEnumValueOrNull(currentValue)
                     if (mappedValue != null && inputDef.options.contains(mappedValue)) {
                         currentParameters[inputDef.id] = mappedValue
                     } else {

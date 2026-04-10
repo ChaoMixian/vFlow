@@ -15,8 +15,20 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
  * 从文本中提取指定部分
  */
 class TextExtractModule : BaseModule() {
+    companion object {
+        private const val MODE_SUBSTRING = "substring"
+        private const val MODE_PREFIX = "prefix"
+        private const val MODE_SUFFIX = "suffix"
+        private const val MODE_CHAR = "char"
+        private val MODE_LEGACY_MAP = mapOf(
+            "提取中间" to MODE_SUBSTRING,
+            "提取前缀" to MODE_PREFIX,
+            "提取后缀" to MODE_SUFFIX,
+            "提取字符" to MODE_CHAR
+        )
+    }
 
-    private val modeOptions = listOf("提取中间", "提取前缀", "提取后缀", "提取字符")
+    private val modeOptions = listOf(MODE_SUBSTRING, MODE_PREFIX, MODE_SUFFIX, MODE_CHAR)
 
     override val id = "vflow.data.text_extract"
     override val metadata = ActionMetadata(
@@ -46,9 +58,16 @@ class TextExtractModule : BaseModule() {
             nameStringRes = R.string.param_vflow_data_text_extract_mode_name,
             name = "提取方式",
             staticType = ParameterType.ENUM,
-            defaultValue = "提取中间",
+            defaultValue = MODE_SUBSTRING,
             options = modeOptions,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            optionsStringRes = listOf(
+                R.string.option_vflow_data_text_extract_mode_substring,
+                R.string.option_vflow_data_text_extract_mode_prefix,
+                R.string.option_vflow_data_text_extract_mode_suffix,
+                R.string.option_vflow_data_text_extract_mode_char
+            ),
+            legacyValueMap = MODE_LEGACY_MAP
         ),
         // 提取中间 - 当 mode 等于 "提取中间" 时显示
         InputDefinition(
@@ -58,7 +77,7 @@ class TextExtractModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 0.0,
             acceptsMagicVariable = true,
-            visibility = InputVisibility.whenEquals("mode", "提取中间")
+            visibility = InputVisibility.whenEquals("mode", MODE_SUBSTRING)
         ),
         InputDefinition(
             id = "end",
@@ -67,7 +86,7 @@ class TextExtractModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 0.0,
             acceptsMagicVariable = true,
-            visibility = InputVisibility.whenEquals("mode", "提取中间")
+            visibility = InputVisibility.whenEquals("mode", MODE_SUBSTRING)
         ),
         // 提取字符 - 当 mode 等于 "提取字符" 时显示
         InputDefinition(
@@ -77,7 +96,7 @@ class TextExtractModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 0.0,
             acceptsMagicVariable = true,
-            visibility = InputVisibility.whenEquals("mode", "提取字符")
+            visibility = InputVisibility.whenEquals("mode", MODE_CHAR)
         ),
         // 提取字符/前缀/后缀 - 当 mode 不等于 "提取中间" 时显示
         InputDefinition(
@@ -87,7 +106,7 @@ class TextExtractModule : BaseModule() {
             staticType = ParameterType.NUMBER,
             defaultValue = 1.0,
             acceptsMagicVariable = true,
-            visibility = InputVisibility.notEquals("mode", "提取中间")
+            visibility = InputVisibility.notEquals("mode", MODE_SUBSTRING)
         )
     )
 
@@ -106,12 +125,18 @@ class TextExtractModule : BaseModule() {
             step.parameters["text"],
             inputs.find { it.id == "text" }
         )
-        val mode = step.parameters["mode"] as? String ?: "提取中间"
+        val modePill = PillUtil.createPillFromParam(
+            step.parameters["mode"] ?: MODE_SUBSTRING,
+            inputs.find { it.id == "mode" },
+            isModuleOption = true
+        )
         return PillUtil.buildSpannable(
             context,
             "提取: ",
             textPill,
-            " ($mode)"
+            " (",
+            modePill,
+            ")"
         )
     }
 
@@ -120,7 +145,9 @@ class TextExtractModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val text = context.getVariableAsString("text", "")
-        val mode = context.getVariableAsString("mode", "提取中间")
+        val modeInput = getInputs().first { it.id == "mode" }
+        val rawMode = context.getVariableAsString("mode", MODE_SUBSTRING)
+        val mode = modeInput.normalizeEnumValue(rawMode) ?: rawMode
 
         if (text.isEmpty()) {
             return ExecutionResult.Failure(
@@ -130,20 +157,20 @@ class TextExtractModule : BaseModule() {
         }
 
         val result = when (mode) {
-            "提取中间" -> {
+            MODE_SUBSTRING -> {
                 val start = context.getVariableAsString("start", "0").toIntOrNull() ?: 0
                 val end = context.getVariableAsString("end", "0").toIntOrNull() ?: 0
                 extractSubstring(text, start, end)
             }
-            "提取前缀" -> {
+            MODE_PREFIX -> {
                 val count = context.getVariableAsString("count", "0").toIntOrNull() ?: 0
                 text.take(count.coerceAtLeast(0))
             }
-            "提取后缀" -> {
+            MODE_SUFFIX -> {
                 val count = context.getVariableAsString("count", "0").toIntOrNull() ?: 0
                 text.takeLast(count.coerceAtLeast(0))
             }
-            "提取字符" -> {
+            MODE_CHAR -> {
                 val index = context.getVariableAsString("index", "0").toIntOrNull() ?: 0
                 val count = context.getVariableAsString("count", "1").toIntOrNull() ?: 1
                 extractCharAt(text, index, count)

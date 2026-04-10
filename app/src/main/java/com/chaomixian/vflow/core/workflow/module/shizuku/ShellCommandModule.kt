@@ -110,7 +110,9 @@ class ShellCommandModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val modeStr = context.getVariableAsString("mode", MODE_AUTO)
+        val modeInput = getInputs().first { it.id == "mode" }
+        val rawModeStr = context.getVariableAsString("mode", MODE_AUTO)
+        val modeStr = modeInput.normalizeEnumValue(rawModeStr) ?: rawModeStr
         val rawCommand = context.getVariableAsString("command", "")
         val command = VariableResolver.resolve(rawCommand, context)
 

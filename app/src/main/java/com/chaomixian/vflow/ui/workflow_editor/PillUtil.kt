@@ -121,7 +121,7 @@ object PillUtil {
         if (inputDef?.staticType != ParameterType.ENUM) return paramValue
 
         val rawValue = paramValue?.toString() ?: return null
-        val normalizedValue = inputDef.legacyValueMap?.get(rawValue) ?: rawValue
+        val normalizedValue = inputDef.normalizeEnumValue(rawValue, null) ?: rawValue
         val optionIndex = inputDef.options.indexOf(normalizedValue)
         if (optionIndex == -1) return rawValue
 

@@ -449,6 +449,19 @@ data class InputDefinition(
         return if (hintStringRes != null) context.getString(hintStringRes) else hint
     }
 
+    fun normalizeEnumValue(
+        rawValue: String?,
+        fallbackValue: String? = defaultValue as? String
+    ): String? {
+        return legacyValueMap?.get(rawValue) ?: rawValue ?: fallbackValue
+    }
+
+    fun normalizeEnumValueOrNull(rawValue: String?): String? {
+        val normalizedValue = normalizeEnumValue(rawValue, null) ?: return null
+        if (options.isEmpty()) return normalizedValue
+        return normalizedValue.takeIf { it in options }
+    }
+
     companion object {
         /**
          * 创建一个滑块配置
@@ -460,6 +473,23 @@ data class InputDefinition(
             return Triple(min, max, step)
         }
     }
+}
+
+fun List<InputDefinition>.normalizeEnumValue(
+    inputId: String,
+    rawValue: String?,
+    fallbackValue: String? = null
+): String? {
+    val input = firstOrNull { it.id == inputId }
+    return input?.normalizeEnumValue(rawValue, fallbackValue) ?: rawValue ?: fallbackValue
+}
+
+fun List<InputDefinition>.normalizeEnumValueOrNull(
+    inputId: String,
+    rawValue: String?
+): String? {
+    val input = firstOrNull { it.id == inputId } ?: return null
+    return input.normalizeEnumValueOrNull(rawValue)
 }
 
 /**

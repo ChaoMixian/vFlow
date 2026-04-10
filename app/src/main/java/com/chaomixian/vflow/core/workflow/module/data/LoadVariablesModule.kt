@@ -9,6 +9,15 @@ import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 
 class LoadVariablesModule : BaseModule() {
+    companion object {
+        internal const val MODE_SHARE = "share"
+        internal const val MODE_COPY = "copy"
+        private val MODE_LEGACY_MAP = mapOf(
+            "共享" to MODE_SHARE,
+            "复制" to MODE_COPY
+        )
+    }
+
     override val id = "vflow.variable.load"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_variable_load_name,
@@ -41,11 +50,17 @@ class LoadVariablesModule : BaseModule() {
         ),
         InputDefinition(
             id = "mode",
+            nameStringRes = R.string.label_load_variables_mode,
             name = "模式",
             staticType = ParameterType.ENUM,
-            defaultValue = "share",
-            options = listOf("share", "copy"),
-            acceptsMagicVariable = false
+            defaultValue = MODE_SHARE,
+            options = listOf(MODE_SHARE, MODE_COPY),
+            optionsStringRes = listOf(
+                R.string.param_vflow_variable_load_mode_share,
+                R.string.param_vflow_variable_load_mode_copy
+            ),
+            acceptsMagicVariable = false,
+            legacyValueMap = MODE_LEGACY_MAP
         )
     )
 
@@ -55,7 +70,9 @@ class LoadVariablesModule : BaseModule() {
     ): ExecutionResult {
         val workflowId = context.getVariableAsString("workflow_id", "")
         val variableNamesStr = context.getVariableAsString("variable_names", "")
-        val mode = context.getVariableAsString("mode", "share")
+        val modeInput = getInputs().first { it.id == "mode" }
+        val rawMode = context.getVariableAsString("mode", MODE_SHARE)
+        val mode = modeInput.normalizeEnumValue(rawMode) ?: rawMode
 
         if (workflowId.isBlank() || variableNamesStr.isBlank()) {
             return ExecutionResult.Success(emptyMap())
@@ -63,13 +80,13 @@ class LoadVariablesModule : BaseModule() {
 
         val variableNames = variableNamesStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
 
-        if (mode == "share") {
+        if (mode == MODE_SHARE) {
             // 共享模式：无需操作，namedVariables 本已共享
             return ExecutionResult.Success(emptyMap())
         }
 
         // 复制模式：从源工作流获取变量的初始值
-        if (mode == "copy") {
+        if (mode == MODE_COPY) {
             val workflowManager = WorkflowManager(context.applicationContext)
             val sourceWorkflow = workflowManager.getWorkflow(workflowId)
 
@@ -121,7 +138,9 @@ class LoadVariablesModule : BaseModule() {
         }
 
         // 返回默认值
-        val type = createVarStep.parameters["type"] as? String ?: "文本"
+        val typeInput = CreateVariableModule().getInputs().first { it.id == "type" }
+        val rawType = createVarStep.parameters["type"] as? String ?: CreateVariableModule.TYPE_STRING
+        val type = typeInput.normalizeEnumValue(rawType) ?: rawType
         return getDefaultValue(type)
     }
 
@@ -130,13 +149,13 @@ class LoadVariablesModule : BaseModule() {
      */
     private fun getDefaultValue(type: String): VObject {
         return when (type) {
-            "文本" -> VObjectFactory.from("")
-            "数字" -> VObjectFactory.from(0)
-            "布尔" -> VObjectFactory.from(false)
-            "字典" -> VObjectFactory.from(emptyMap<String, Any>())
-            "列表" -> VObjectFactory.from(emptyList<Any>())
-            "图像" -> VObjectFactory.from("")
-            "坐标" -> VObjectFactory.from(mapOf("x" to 0, "y" to 0))
+            CreateVariableModule.TYPE_STRING -> VObjectFactory.from("")
+            CreateVariableModule.TYPE_NUMBER -> VObjectFactory.from(0)
+            CreateVariableModule.TYPE_BOOLEAN -> VObjectFactory.from(false)
+            CreateVariableModule.TYPE_DICTIONARY -> VObjectFactory.from(emptyMap<String, Any>())
+            CreateVariableModule.TYPE_LIST -> VObjectFactory.from(emptyList<Any>())
+            CreateVariableModule.TYPE_IMAGE -> VObjectFactory.from("")
+            CreateVariableModule.TYPE_COORDINATE -> VObjectFactory.from(mapOf("x" to 0, "y" to 0))
             else -> VObjectFactory.from("")
         }
     }

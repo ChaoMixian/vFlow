@@ -58,8 +58,6 @@ class VariableModuleUIProvider(
         return typeOptions.map { CreateVariableModule.getTypeLabel(context, it) }
     }
 
-    private fun normalizeType(value: String?): String = CreateVariableModule.normalizeType(value)
-
     override fun getHandledInputIds(): Set<String> {
         return setOf("type", "value")
     }
@@ -75,7 +73,8 @@ class VariableModuleUIProvider(
         allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): View? {
-        val type = normalizeType(step.parameters["type"] as? String)
+        val type = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["type"] as? String)
+            ?: CreateVariableModule.TYPE_STRING
         // 根据变量类型，委托给相应的 UIProvider 来创建预览
         return when (type) {
             CreateVariableModule.TYPE_STRING -> richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
@@ -119,7 +118,8 @@ class VariableModuleUIProvider(
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         typeSpinner.adapter = adapter
 
-        val currentType = normalizeType(currentParameters["type"] as? String ?: typeOptions.first())
+        val currentType = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(currentParameters["type"] as? String)
+            ?: typeOptions.first()
         val selectionIndex = typeOptions.indexOf(currentType)
         if (selectionIndex != -1) typeSpinner.setSelection(selectionIndex)
 

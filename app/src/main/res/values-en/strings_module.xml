@@ -360,6 +360,7 @@
     <string name="output_vflow_trigger_bluetooth_device_address_name">Device Address</string>
     <string name="summary_vflow_trigger_bluetooth_state_prefix">When Bluetooth</string>
     <string name="summary_vflow_trigger_bluetooth_device_prefix">When</string>
+    <string name="summary_vflow_trigger_bluetooth_any_device">Any Device</string>
     <string name="msg_vflow_trigger_bluetooth_triggered">Bluetooth event triggered</string>
     <string name="option_vflow_trigger_bluetooth_type_state">Bluetooth State</string>
     <string name="option_vflow_trigger_bluetooth_type_device">Device Connection</string>
@@ -394,6 +395,8 @@
     <string name="module_vflow_trigger_backtap_name">Back Tap Trigger</string>
     <string name="module_vflow_trigger_backtap_desc">Trigger workflow by tapping the back of your phone (double/triple tap)</string>
     <string name="param_vflow_trigger_backtap_mode_name">Mode</string>
+    <string name="option_vflow_trigger_backtap_mode_double_tap">Double Tap</string>
+    <string name="option_vflow_trigger_backtap_mode_triple_tap">Triple Tap</string>
 
     <!-- vflow.trigger.notification - Notification Trigger -->
     <string name="module_vflow_trigger_notification_name">Notification Trigger</string>
@@ -839,6 +842,25 @@
     <string name="param_vflow_logic_while_start_value1_name">Compare Value 1</string>
     <string name="param_vflow_logic_while_start_value2_name">Compare Value 2</string>
     <string name="output_vflow_logic_while_start_result_name">Condition Result</string>
+    <string name="option_vflow_logic_condition_exists">Exists</string>
+    <string name="option_vflow_logic_condition_not_exists">Not Exists</string>
+    <string name="option_vflow_logic_condition_is_empty">Is Empty</string>
+    <string name="option_vflow_logic_condition_is_not_empty">Is Not Empty</string>
+    <string name="option_vflow_logic_condition_equals">Equals</string>
+    <string name="option_vflow_logic_condition_strict_equals">Strict Equals</string>
+    <string name="option_vflow_logic_condition_not_equals">Not Equals</string>
+    <string name="option_vflow_logic_condition_contains">Contains</string>
+    <string name="option_vflow_logic_condition_not_contains">Not Contains</string>
+    <string name="option_vflow_logic_condition_starts_with">Starts With</string>
+    <string name="option_vflow_logic_condition_ends_with">Ends With</string>
+    <string name="option_vflow_logic_condition_matches_regex">Matches Regex</string>
+    <string name="option_vflow_logic_condition_number_gt">Greater Than</string>
+    <string name="option_vflow_logic_condition_number_gte">Greater Than Or Equal</string>
+    <string name="option_vflow_logic_condition_number_lt">Less Than</string>
+    <string name="option_vflow_logic_condition_number_lte">Less Than Or Equal</string>
+    <string name="option_vflow_logic_condition_number_between">Between</string>
+    <string name="option_vflow_logic_condition_is_true">Is True</string>
+    <string name="option_vflow_logic_condition_is_false">Is False</string>
 
     <!-- vflow.logic.while.end - EndWhile Module -->
     <string name="module_vflow_logic_while_end_name">End Loop</string>
@@ -1596,6 +1618,7 @@
     <string name="module_vflow_device_send_key_event_name">Global Action</string>
     <string name="module_vflow_file_apply_mask_desc">Apply Material You style rounded rectangle mask to image</string>
     <string name="module_vflow_file_apply_mask_name">Apply Mask</string>
+    <string name="option_vflow_file_apply_mask_shape_rounded_rect">Rounded Rectangle</string>
     <string name="module_vflow_file_import_image_desc">Select an image from gallery or files</string>
     <string name="module_vflow_file_import_image_name">Import Image</string>
     <string name="module_vflow_interaction_find_image_desc">Find area on screen that matches template image, return center coordinate of match</string>
@@ -1950,6 +1973,9 @@
     <string name="volume_action_set">Set Volume</string>
     <string name="volume_action_mute">Mute</string>
     <string name="volume_action_unmute">Unmute</string>
+    <string name="summary_vflow_core_volume_action_set">Set %1$s to %2$d%%</string>
+    <string name="summary_vflow_core_volume_action_mute">Mute %1$s</string>
+    <string name="summary_vflow_core_volume_action_unmute">Unmute %1$s</string>
     <string name="refresh_volume_levels">Refresh Current Volumes</string>
 
     <string name="summary_vflow_data_create_anon">Create anonymous </string>
@@ -2158,6 +2184,8 @@
     <string name="module_vflow_system_mobile_data_name">Mobile Data</string>
     <string name="module_vflow_system_mobile_data_desc">Control mobile data switch (enable/disable/toggle) via shell commands.</string>
     <string name="param_vflow_system_mobile_data_action_name">Action</string>
+    <string name="option_vflow_system_mobile_data_enable">Enable</string>
+    <string name="option_vflow_system_mobile_data_disable">Disable</string>
     <string name="output_vflow_system_mobile_data_success_name">Success</string>
     <string name="output_vflow_system_mobile_data_enabled_name">Enabled State</string>
     <string name="output_vflow_system_mobile_data_result_name">Command Output</string>
@@ -2195,9 +2223,24 @@
     <string name="module_vflow_device_text_to_speech_desc">Convert text to speech and speak it aloud using Android\'s built-in TTS engine</string>
     <string name="param_vflow_device_text_to_speech_text_name">Text to Speak</string>
     <string name="param_vflow_device_text_to_speech_language_name">Language</string>
+    <string name="option_vflow_device_text_to_speech_language_auto">Auto</string>
+    <string name="option_vflow_device_text_to_speech_language_zh_cn">Chinese (China)</string>
+    <string name="option_vflow_device_text_to_speech_language_en_us">English (US)</string>
+    <string name="option_vflow_device_text_to_speech_language_en_gb">English (UK)</string>
+    <string name="option_vflow_device_text_to_speech_language_ja_jp">Japanese</string>
+    <string name="option_vflow_device_text_to_speech_language_ko_kr">Korean</string>
+    <string name="option_vflow_device_text_to_speech_language_fr_fr">French</string>
+    <string name="option_vflow_device_text_to_speech_language_de_de">German</string>
+    <string name="option_vflow_device_text_to_speech_language_es_es">Spanish</string>
+    <string name="option_vflow_device_text_to_speech_language_it_it">Italian</string>
+    <string name="option_vflow_device_text_to_speech_language_ru_ru">Russian</string>
+    <string name="option_vflow_device_text_to_speech_language_th_th">Thai</string>
+    <string name="option_vflow_device_text_to_speech_language_ar_sa">Arabic</string>
     <string name="param_vflow_device_text_to_speech_speech_rate_name">Speech Rate</string>
     <string name="param_vflow_device_text_to_speech_pitch_name">Pitch</string>
     <string name="param_vflow_device_text_to_speech_queue_mode_name">Queue Mode</string>
+    <string name="option_vflow_device_text_to_speech_queue_flush">Flush</string>
+    <string name="option_vflow_device_text_to_speech_queue_add">Add</string>
     <string name="param_vflow_device_text_to_speech_await_completion_name">Wait for Completion</string>
     <string name="output_vflow_device_text_to_speech_success_name">Success</string>
     <string name="summary_vflow_device_text_to_speech_prefix">Speak:</string>

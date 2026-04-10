@@ -14,6 +14,14 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class RandomVariableModule : BaseModule() {
+    companion object {
+        private val TYPE_OPTIONS = listOf(CreateVariableModule.TYPE_NUMBER, CreateVariableModule.TYPE_STRING)
+        private val TYPE_LEGACY_MAP = mapOf(
+            "数字" to CreateVariableModule.TYPE_NUMBER,
+            "文本" to CreateVariableModule.TYPE_STRING
+        )
+    }
+
     override val id = "vflow.variable.random"
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_variable_random_name,
@@ -25,22 +33,20 @@ class RandomVariableModule : BaseModule() {
         categoryId = "data"
     )
 
-    private val typeOptions by lazy {
-        listOf(
-            appContext.getString(R.string.option_vflow_variable_random_type_number),
-            appContext.getString(R.string.option_vflow_variable_random_type_string)
-        )
-    }
-
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "type",
             name = "变量类型",
             nameStringRes = R.string.param_vflow_variable_random_type_name,
             staticType = ParameterType.ENUM,
-            defaultValue = typeOptions[0],
-            options = typeOptions,
-            acceptsMagicVariable = false
+            defaultValue = CreateVariableModule.TYPE_NUMBER,
+            options = TYPE_OPTIONS,
+            acceptsMagicVariable = false,
+            optionsStringRes = listOf(
+                R.string.option_vflow_variable_random_type_number,
+                R.string.option_vflow_variable_random_type_string
+            ),
+            legacyValueMap = TYPE_LEGACY_MAP
         ),
         // 可为空，用于存储生成结果的变量名（不带方括号）。
         InputDefinition(
@@ -109,27 +115,35 @@ class RandomVariableModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val inputType = step?.parameters?.get("type") as? String ?: typeOptions[0]
+        val typeInput = getInputs().first { it.id == "type" }
+        val rawType = step?.parameters?.get("type") as? String ?: CreateVariableModule.TYPE_NUMBER
+        val inputType = typeInput.normalizeEnumValue(rawType) ?: rawType
         val outputTypeName = when (inputType) {
-            typeOptions[0] -> VTypeRegistry.NUMBER.id // 数字
-            typeOptions[1] -> VTypeRegistry.STRING.id // 文本
+            CreateVariableModule.TYPE_NUMBER -> VTypeRegistry.NUMBER.id
+            CreateVariableModule.TYPE_STRING -> VTypeRegistry.STRING.id
             else -> VTypeRegistry.NUMBER.id
         }
         return listOf(OutputDefinition("randomVariable", "随机变量", outputTypeName, nameStringRes = R.string.output_vflow_variable_random_randomVariable_name))
     }
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence? {
-        val type = step.parameters["type"] as? String ?: typeOptions[0]
+        val typeInput = getInputs().first { it.id == "type" }
+        val rawType = step.parameters["type"] as? String ?: CreateVariableModule.TYPE_NUMBER
+        val type = typeInput.normalizeEnumValue(rawType) ?: rawType
+        val typeLabel = when (type) {
+            CreateVariableModule.TYPE_STRING -> context.getString(R.string.option_vflow_variable_random_type_string)
+            else -> context.getString(R.string.option_vflow_variable_random_type_number)
+        }
         val varName = step.parameters["variableName"]?.toString()
         val generate = context.getString(R.string.summary_vflow_variable_random_generate)
         val anonymous = context.getString(R.string.summary_vflow_variable_random_anonymous)
         val named = context.getString(R.string.summary_vflow_variable_random_named)
 
         return if (varName.isNullOrEmpty()) {
-            "$generate $anonymous ($type)"
+            "$generate $anonymous ($typeLabel)"
         } else {
             val namePill = PillUtil.Pill("[[$varName]]", "variableName")
-            PillUtil.buildSpannable(context, "$named ", namePill, " ($type)")
+            PillUtil.buildSpannable(context, "$named ", namePill, " ($typeLabel)")
         }
     }
 
@@ -156,11 +170,13 @@ class RandomVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = context.getVariableAsString("type", typeOptions[0])
+        val typeInput = getInputs().first { it.id == "type" }
+        val rawType = context.getVariableAsString("type", CreateVariableModule.TYPE_NUMBER)
+        val type = typeInput.normalizeEnumValue(rawType) ?: rawType
         val varName = context.getVariableAsString("variableName", "")
 
         val resultVariable: VObject = when (type) {
-            typeOptions[0] -> { // 数字
+            CreateVariableModule.TYPE_NUMBER -> {
                 val min = context.getVariableAsString("min", "0").toDoubleOrNull() ?: 0.0
                 val max = context.getVariableAsString("max", "100").toDoubleOrNull() ?: 100.0
                 val step = context.getVariableAsString("step", "1").toDoubleOrNull() ?: 1.0
@@ -192,7 +208,7 @@ class RandomVariableModule : BaseModule() {
                     VNumber(rawResult)
                 }
             }
-            typeOptions[1] -> { // 文本
+            CreateVariableModule.TYPE_STRING -> {
                 val length = context.getVariableAsString("length", "8").toDoubleOrNull()?.toInt() ?: 8
                 val customChars = context.getVariableAsString("custom_chars", "")
 

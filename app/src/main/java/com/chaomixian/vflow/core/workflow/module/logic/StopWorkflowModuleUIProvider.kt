@@ -29,6 +29,8 @@ class StopWorkflowModuleUIProvider : ModuleUIProvider {
         val workflowSelectorContainer: LinearLayout = view.findViewById(R.id.container_workflow_selector)
         val selectedWorkflowText: TextView = view.findViewById(R.id.text_selected_workflow)
         val selectButton: Button = view.findViewById(R.id.button_select_workflow)
+
+        var selectedWorkflowId: String? = null
     }
 
     override fun getHandledInputIds(): Set<String> = setOf("target", "workflow_id")
@@ -45,9 +47,11 @@ class StopWorkflowModuleUIProvider : ModuleUIProvider {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_stop_workflow_editor, parent, false)
         val holder = ViewHolder(view)
         val workflowManager = WorkflowManager(context)
+        val targetInput = StopWorkflowModule().getInputs().first { it.id == "target" }
 
         // 恢复状态：目标模式
-        val target = currentParameters["target"] as? String ?: StopWorkflowModule.TARGET_CURRENT
+        val rawTarget = currentParameters["target"] as? String ?: StopWorkflowModule.TARGET_CURRENT
+        val target = targetInput.normalizeEnumValue(rawTarget) ?: rawTarget
         when (target) {
             StopWorkflowModule.TARGET_CURRENT -> holder.chipTargetCurrent.isChecked = true
             StopWorkflowModule.TARGET_OTHER -> holder.chipTargetOther.isChecked = true
@@ -55,11 +59,12 @@ class StopWorkflowModuleUIProvider : ModuleUIProvider {
 
         // 恢复状态：选中的工作流
         val workflowId = currentParameters["workflow_id"] as? String
+        holder.selectedWorkflowId = workflowId
         fun updateSelectedWorkflowText(id: String?) {
             holder.selectedWorkflowText.text = if (id != null) {
-                workflowManager.getWorkflow(id)?.name ?: "未知/已删除的工作流"
+                workflowManager.getWorkflow(id)?.name ?: context.getString(R.string.summary_unknown_workflow)
             } else {
-                "未选择"
+                context.getString(R.string.summary_no_workflow_selected)
             }
         }
         updateSelectedWorkflowText(workflowId)
@@ -85,12 +90,11 @@ class StopWorkflowModuleUIProvider : ModuleUIProvider {
             val workflowIds = allWorkflows.map { it.id }.toTypedArray()
 
             MaterialAlertDialogBuilder(context)
-                .setTitle("选择要停止的工作流")
+                .setTitle(R.string.dialog_stop_workflow_select_title)
                 .setItems(workflowNames) { _, which ->
                     val selectedId = workflowIds[which]
+                    holder.selectedWorkflowId = selectedId
                     updateSelectedWorkflowText(selectedId)
-                    // 手动更新参数并通知变更
-                    (currentParameters as MutableMap<String, Any?>)["workflow_id"] = selectedId
                     onParametersChanged()
                 }
                 .show()
@@ -107,9 +111,10 @@ class StopWorkflowModuleUIProvider : ModuleUIProvider {
             StopWorkflowModule.TARGET_OTHER
         }
 
-        // workflow_id 在点击对话框时就已经被设置，这里不需要额外读取
-        // 只需要返回 target 参数即可
-        return mapOf("target" to target)
+        return mapOf(
+            "target" to target,
+            "workflow_id" to if (target == StopWorkflowModule.TARGET_OTHER) h.selectedWorkflowId else null
+        )
     }
 
     override fun createPreview(

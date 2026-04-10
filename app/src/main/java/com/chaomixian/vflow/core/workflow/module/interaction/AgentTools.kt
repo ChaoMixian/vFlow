@@ -411,7 +411,9 @@ class AgentTools(private val context: ExecutionContext) {
 
         // 2. 执行截图
         // 使用临时的 Context，避免污染主流程变量
-        val captureContext = context.copy(variables = mutableMapOf("mode" to VObjectFactory.from("自动")))
+        val captureContext = context.copy(
+            variables = mutableMapOf("mode" to VObjectFactory.from("auto"))
+        )
         val captureRes = captureModule.execute(captureContext) { } // 静默执行
 
         val imagePath = if (captureRes is ExecutionResult.Success) {
@@ -425,10 +427,10 @@ class AgentTools(private val context: ExecutionContext) {
 
         // 3. 执行 OCR 查找
         val ocrParams = mutableMapOf<String, Any?>(
-            "mode" to "查找文本",
+            "mode" to "find",
             "target_text" to targetText,
-            "language" to "中英混合",
-            "search_strategy" to "默认 (从上到下)"
+            "language" to "mixed",
+            "search_strategy" to "default"
         )
 
         val ocrMagicVars: MutableMap<String, VObject> = mutableMapOf("image" to VImage(imagePath))

@@ -20,6 +20,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
 class ReadSmsModuleUIProvider : ModuleUIProvider {
+    private data class FilterOption(val value: String, val label: String)
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val filterChipGroup: ChipGroup = view.findViewById(R.id.cg_filter_by)
@@ -49,12 +50,25 @@ class ReadSmsModuleUIProvider : ModuleUIProvider {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_read_sms_editor, parent, false)
         val holder = ViewHolder(view)
         val module = ReadSmsModule()
+        val filterInput = module.getInputs().first { it.id == "filter_by" }
+        val filterOptions = filterInput.options.zip(filterInput.getLocalizedOptions(context))
+            .map { (value, label) -> FilterOption(value, label) }
+
+        for (index in 0 until holder.filterChipGroup.childCount) {
+            val chip = holder.filterChipGroup.getChildAt(index) as? Chip ?: continue
+            val option = filterOptions.getOrNull(index) ?: continue
+            chip.tag = option.value
+            chip.text = option.label
+        }
 
         // 恢复已有参数
-        val filterBy = currentParameters["filter_by"] as? String ?: module.filterOptions.first()
+        val rawFilterBy = currentParameters["filter_by"] as? String
+        val filterBy = filterInput.normalizeEnumValue(rawFilterBy, null)
+            ?: rawFilterBy
+            ?: module.filterOptions.first()
         for (i in 0 until holder.filterChipGroup.childCount) {
             val chip = holder.filterChipGroup.getChildAt(i) as? Chip
-            if (chip?.text == filterBy) {
+            if (chip?.tag == filterBy) {
                 chip.isChecked = true
                 break
             }
@@ -63,19 +77,24 @@ class ReadSmsModuleUIProvider : ModuleUIProvider {
         holder.contentEditText.setText(currentParameters["content"] as? String ?: "")
         val maxScan = (currentParameters["max_scan"] as? Number ?: 20.0).toFloat()
         holder.scanSlider.value = maxScan
-        holder.scanCountText.text = "扫描最近 ${maxScan.toInt()} 条"
+        holder.scanCountText.text = context.getString(R.string.msg_vflow_system_read_sms_scanning, maxScan.toInt())
         holder.extractCodeSwitch.isChecked = currentParameters["extract_code"] as? Boolean ?: false
+
+        fun getSelectedFilter(): String {
+            return holder.filterChipGroup.findViewById<Chip>(holder.filterChipGroup.checkedChipId)
+                ?.tag as? String ?: module.filterOptions.first()
+        }
 
         // 根据筛选方式更新UI可见性
         fun updateUiVisibility() {
-            val selectedFilter = holder.filterChipGroup.findViewById<Chip>(holder.filterChipGroup.checkedChipId)?.text.toString()
+            val selectedFilter = getSelectedFilter()
             val extractCode = holder.extractCodeSwitch.isChecked
 
-            holder.senderLayout.isVisible = selectedFilter == "来自发件人" || selectedFilter == "发件人与内容"
-            holder.contentLayout.isVisible = (selectedFilter == "包含内容" || selectedFilter == "发件人与内容") && !extractCode
-            holder.extractCodeSwitch.isVisible = selectedFilter == "包含内容" || selectedFilter == "发件人与内容"
+            holder.senderLayout.isVisible = selectedFilter == ReadSmsModule.FILTER_SENDER || selectedFilter == ReadSmsModule.FILTER_BOTH
+            holder.contentLayout.isVisible = (selectedFilter == ReadSmsModule.FILTER_CONTENT || selectedFilter == ReadSmsModule.FILTER_BOTH) && !extractCode
+            holder.extractCodeSwitch.isVisible = selectedFilter == ReadSmsModule.FILTER_CONTENT || selectedFilter == ReadSmsModule.FILTER_BOTH
 
-            val isScanRangeVisible = selectedFilter != "最新一条"
+            val isScanRangeVisible = selectedFilter != ReadSmsModule.FILTER_LATEST
             holder.scanTitleText.isVisible = isScanRangeVisible
             holder.scanCountText.isVisible = isScanRangeVisible
             holder.scanSlider.isVisible = isScanRangeVisible
@@ -93,7 +112,7 @@ class ReadSmsModuleUIProvider : ModuleUIProvider {
             onParametersChanged()
         }
         holder.scanSlider.addOnChangeListener { _, value, _ ->
-            holder.scanCountText.text = "扫描最近 ${value.toInt()} 条"
+            holder.scanCountText.text = context.getString(R.string.msg_vflow_system_read_sms_scanning, value.toInt())
             onParametersChanged()
         }
 
@@ -102,7 +121,8 @@ class ReadSmsModuleUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
-        val filterBy = h.filterChipGroup.findViewById<Chip>(h.filterChipGroup.checkedChipId)?.text.toString()
+        val filterBy = h.filterChipGroup.findViewById<Chip>(h.filterChipGroup.checkedChipId)?.tag as? String
+            ?: ReadSmsModule.FILTER_LATEST
 
         return mapOf(
             "filter_by" to filterBy,

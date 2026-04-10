@@ -212,7 +212,9 @@ class UpdateUiComponentModule : BaseModule() {
         }
 
         // 解析可见性参数
-        val visible = context.getVariableAsString("visible", "")
+        val visibleInput = getInputs().first { it.id == "visible" }
+        val rawVisible = context.getVariableAsString("visible", "")
+        val visible = visibleInput.normalizeEnumValue(rawVisible) ?: rawVisible
         if (visible == VISIBILITY_SHOW) payload["visible"] = true
         else if (visible == VISIBILITY_HIDE) payload["visible"] = false
 

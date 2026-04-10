@@ -403,10 +403,11 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     }
 
     private fun checkForAppTrigger(context: Context, packageName: String, className: String, eventType: String) {
-        val normalizedEventType = AppStartTriggerModule.normalizeEvent(eventType) ?: return
+        val eventInput = AppStartTriggerModule().getInputs().first { it.id == "event" }
+        val normalizedEventType = eventInput.normalizeEnumValueOrNull(eventType) ?: return
         listeningTriggers.forEach { trigger ->
             val config = trigger.parameters
-            val configEvent = AppStartTriggerModule.normalizeEvent(config["event"] as? String)
+            val configEvent = eventInput.normalizeEnumValueOrNull(config["event"] as? String)
 
             if (configEvent == normalizedEventType) {
                 @Suppress("UNCHECKED_CAST")

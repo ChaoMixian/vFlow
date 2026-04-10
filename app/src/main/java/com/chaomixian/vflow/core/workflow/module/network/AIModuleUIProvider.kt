@@ -29,12 +29,6 @@ import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 
 class AIModuleUIProvider : ModuleUIProvider {
-    companion object {
-        private const val PROVIDER_OPENAI = "openai"
-        private const val PROVIDER_DEEPSEEK = "deepseek"
-        private const val PROVIDER_CUSTOM = "custom"
-    }
-
     // 实例化 RichTextUIProvider，指定要预览的字段为 "prompt"
     private val richTextUIProvider = RichTextUIProvider("prompt")
 
@@ -88,10 +82,11 @@ class AIModuleUIProvider : ModuleUIProvider {
         holder.allSteps = allSteps
 
         // 恢复参数
-        val provider = currentParameters["provider"] as? String ?: PROVIDER_OPENAI
+        val provider = AIModule.PROVIDER_INPUT_DEFINITION.normalizeEnumValueOrNull(currentParameters["provider"] as? String)
+            ?: AIModule.PROVIDER_OPENAI
         when (provider) {
-            PROVIDER_OPENAI -> holder.chipOpenAI.isChecked = true
-            PROVIDER_DEEPSEEK -> holder.chipDeepSeek.isChecked = true
+            AIModule.PROVIDER_OPENAI -> holder.chipOpenAI.isChecked = true
+            AIModule.PROVIDER_DEEPSEEK -> holder.chipDeepSeek.isChecked = true
             else -> holder.chipCustom.isChecked = true
         }
 
@@ -186,9 +181,9 @@ class AIModuleUIProvider : ModuleUIProvider {
         val h = holder as ViewHolder
 
         val provider = when {
-            h.chipDeepSeek.isChecked -> PROVIDER_DEEPSEEK
-            h.chipCustom.isChecked -> PROVIDER_CUSTOM
-            else -> PROVIDER_OPENAI
+            h.chipDeepSeek.isChecked -> AIModule.PROVIDER_DEEPSEEK
+            h.chipCustom.isChecked -> AIModule.PROVIDER_CUSTOM
+            else -> AIModule.PROVIDER_OPENAI
         }
 
         return mapOf(

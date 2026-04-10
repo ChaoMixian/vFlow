@@ -55,6 +55,10 @@ class FeishuGetMessageHistoryModule : BaseModule() {
             optionsStringRes = listOf(
                 R.string.option_vflow_feishu_get_message_history_container_id_type_chat,
                 R.string.option_vflow_feishu_get_message_history_container_id_type_thread
+            ),
+            legacyValueMap = mapOf(
+                "会话(chat)" to "chat",
+                "话题(thread)" to "thread"
             )
         ),
         InputDefinition(
@@ -103,6 +107,10 @@ class FeishuGetMessageHistoryModule : BaseModule() {
             optionsStringRes = listOf(
                 R.string.option_vflow_feishu_get_message_history_sort_type_asc,
                 R.string.option_vflow_feishu_get_message_history_sort_type_desc
+            ),
+            legacyValueMap = mapOf(
+                "按创建时间升序" to "ByCreateTimeAsc",
+                "按创建时间降序" to "ByCreateTimeDesc"
             ),
             isFolded = true
         ),
@@ -231,12 +239,12 @@ class FeishuGetMessageHistoryModule : BaseModule() {
             return ValidationResult(false, "容器 ID 不能为空")
         }
 
-        val containerIdType = step.parameters["container_id_type"] as? String ?: "chat"
+        val containerIdType = normalizeEnumStepValue(step, "container_id_type", "chat")
         if (containerIdType !in containerIdTypeOptions) {
             return ValidationResult(false, "容器类型无效")
         }
 
-        val sortType = step.parameters["sort_type"] as? String ?: "ByCreateTimeDesc"
+        val sortType = normalizeEnumStepValue(step, "sort_type", "ByCreateTimeDesc")
         if (sortType !in sortTypeOptions) {
             return ValidationResult(false, "排序方式无效")
         }
@@ -257,11 +265,11 @@ class FeishuGetMessageHistoryModule : BaseModule() {
         return withContext(Dispatchers.IO) {
             try {
                 val timeout = resolveLongInput(context, "timeout", 15L).coerceAtLeast(1L)
-                val containerIdType = resolveStringInput(context, "container_id_type", "chat")
+                val containerIdType = resolveEnumInput(context, "container_id_type", "chat")
                 val containerId = resolveStringInput(context, "container_id", "")
                 val startTime = resolveStringInput(context, "start_time", "")
                 val endTime = resolveStringInput(context, "end_time", "")
-                val sortType = resolveStringInput(context, "sort_type", "ByCreateTimeDesc")
+                val sortType = resolveEnumInput(context, "sort_type", "ByCreateTimeDesc")
                 val pageToken = resolveStringInput(context, "page_token", "")
                 val pageSize = resolveStringInput(context, "page_size", "20").toIntOrNull()
                     ?: return@withContext failureResult("参数错误", "分页大小必须是 1 到 50 的整数")
@@ -395,6 +403,18 @@ class FeishuGetMessageHistoryModule : BaseModule() {
     private fun resolveStringInput(context: ExecutionContext, key: String, defaultValue: String): String {
         val rawValue = context.getParameterRaw(key) ?: context.getVariableAsString(key, defaultValue)
         return VariableResolver.resolve(rawValue, context).trim()
+    }
+
+    private fun resolveEnumInput(context: ExecutionContext, key: String, defaultValue: String): String {
+        val input = getInputs().first { it.id == key }
+        val resolvedValue = resolveStringInput(context, key, defaultValue)
+        return input.normalizeEnumValue(resolvedValue, defaultValue) ?: defaultValue
+    }
+
+    private fun normalizeEnumStepValue(step: ActionStep, key: String, defaultValue: String): String {
+        val input = getInputs().first { it.id == key }
+        val rawValue = step.parameters[key] as? String ?: defaultValue
+        return input.normalizeEnumValue(rawValue, defaultValue) ?: defaultValue
     }
 
     private fun resolveLongInput(context: ExecutionContext, key: String, defaultValue: Long): Long {

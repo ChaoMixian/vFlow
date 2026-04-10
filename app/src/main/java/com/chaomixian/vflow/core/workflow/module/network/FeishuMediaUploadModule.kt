@@ -98,6 +98,16 @@ class FeishuMediaUploadModule : BaseModule() {
                 R.string.option_vflow_feishu_upload_parent_type_sheet_file,
                 R.string.option_vflow_feishu_upload_parent_type_bitable_image,
                 R.string.option_vflow_feishu_upload_parent_type_bitable_file
+            ),
+            legacyValueMap = mapOf(
+                "旧版文档图片" to "doc_image",
+                "新版文档图片" to "docx_image",
+                "电子表格图片" to "sheet_image",
+                "旧版文档文件" to "doc_file",
+                "新版文档文件" to "docx_file",
+                "电子表格文件" to "sheet_file",
+                "多维表格图片" to "bitable_image",
+                "多维表格文件" to "bitable_file"
             )
         ),
         InputDefinition(
@@ -165,6 +175,7 @@ class FeishuMediaUploadModule : BaseModule() {
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
         return withContext(Dispatchers.IO) {
             try {
+                val inputsById = getInputs().associateBy { it.id }
                 val timeout = context.getVariableAsLong("timeout") ?: 30
                 val rawAccessToken = context.getVariableAsString("access_token", "")
                 val accessToken = VariableResolver.resolve(rawAccessToken, context)
@@ -211,7 +222,8 @@ class FeishuMediaUploadModule : BaseModule() {
                     )
                 }
 
-                val parentType = context.getVariableAsString("parent_type", "docx_image")
+                val rawParentType = context.getVariableAsString("parent_type", "docx_image")
+                val parentType = inputsById["parent_type"]?.normalizeEnumValue(rawParentType) ?: rawParentType
 
                 val parentNode = context.getVariableAsString("parent_node", "")
                 if (parentNode.isEmpty()) {

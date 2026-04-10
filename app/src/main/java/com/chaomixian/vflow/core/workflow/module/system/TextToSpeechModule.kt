@@ -25,6 +25,63 @@ import kotlin.math.max
  * 使用Android系统自带的TextToSpeech API将文本转换为语音并朗读
  */
 class TextToSpeechModule : BaseModule() {
+    companion object {
+        private const val LANGUAGE_AUTO = "auto"
+        private const val LANGUAGE_ZH_CN = "zh-CN"
+        private const val LANGUAGE_EN_US = "en-US"
+        private const val LANGUAGE_EN_GB = "en-GB"
+        private const val LANGUAGE_JA_JP = "ja-JP"
+        private const val LANGUAGE_KO_KR = "ko-KR"
+        private const val LANGUAGE_FR_FR = "fr-FR"
+        private const val LANGUAGE_DE_DE = "de-DE"
+        private const val LANGUAGE_ES_ES = "es-ES"
+        private const val LANGUAGE_IT_IT = "it-IT"
+        private const val LANGUAGE_RU_RU = "ru-RU"
+        private const val LANGUAGE_TH_TH = "th-TH"
+        private const val LANGUAGE_AR_SA = "ar-SA"
+
+        private const val QUEUE_FLUSH = "flush"
+        private const val QUEUE_ADD = "add"
+
+        private val LANGUAGE_OPTIONS = listOf(
+            LANGUAGE_AUTO,
+            LANGUAGE_ZH_CN,
+            LANGUAGE_EN_US,
+            LANGUAGE_EN_GB,
+            LANGUAGE_JA_JP,
+            LANGUAGE_KO_KR,
+            LANGUAGE_FR_FR,
+            LANGUAGE_DE_DE,
+            LANGUAGE_ES_ES,
+            LANGUAGE_IT_IT,
+            LANGUAGE_RU_RU,
+            LANGUAGE_TH_TH,
+            LANGUAGE_AR_SA
+        )
+
+        private val QUEUE_OPTIONS = listOf(QUEUE_FLUSH, QUEUE_ADD)
+
+        private val LANGUAGE_LEGACY_MAP = mapOf(
+            "自动" to LANGUAGE_AUTO,
+            "中文（中国）" to LANGUAGE_ZH_CN,
+            "英语（美国）" to LANGUAGE_EN_US,
+            "英语（英国）" to LANGUAGE_EN_GB,
+            "日语" to LANGUAGE_JA_JP,
+            "韩语" to LANGUAGE_KO_KR,
+            "法语" to LANGUAGE_FR_FR,
+            "德语" to LANGUAGE_DE_DE,
+            "西班牙语" to LANGUAGE_ES_ES,
+            "意大利语" to LANGUAGE_IT_IT,
+            "俄语" to LANGUAGE_RU_RU,
+            "泰语" to LANGUAGE_TH_TH,
+            "阿拉伯语" to LANGUAGE_AR_SA
+        )
+
+        private val QUEUE_LEGACY_MAP = mapOf(
+            "替换" to QUEUE_FLUSH,
+            "追加" to QUEUE_ADD
+        )
+    }
 
     override val id = "vflow.device.text_to_speech"
 
@@ -58,25 +115,27 @@ class TextToSpeechModule : BaseModule() {
             id = "language",
             name = "语言",
             staticType = ParameterType.ENUM,
-            defaultValue = "自动",
-            options = listOf(
-                "自动",
-                "中文（中国）",
-                "英语（美国）",
-                "英语（英国）",
-                "日语",
-                "韩语",
-                "法语",
-                "德语",
-                "西班牙语",
-                "意大利语",
-                "俄语",
-                "泰语",
-                "阿拉伯语"
-            ),
+            defaultValue = LANGUAGE_AUTO,
+            options = LANGUAGE_OPTIONS,
             inputStyle = InputStyle.CHIP_GROUP,
             isFolded = true,
-            nameStringRes = R.string.param_vflow_device_text_to_speech_language_name
+            nameStringRes = R.string.param_vflow_device_text_to_speech_language_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_device_text_to_speech_language_auto,
+                R.string.option_vflow_device_text_to_speech_language_zh_cn,
+                R.string.option_vflow_device_text_to_speech_language_en_us,
+                R.string.option_vflow_device_text_to_speech_language_en_gb,
+                R.string.option_vflow_device_text_to_speech_language_ja_jp,
+                R.string.option_vflow_device_text_to_speech_language_ko_kr,
+                R.string.option_vflow_device_text_to_speech_language_fr_fr,
+                R.string.option_vflow_device_text_to_speech_language_de_de,
+                R.string.option_vflow_device_text_to_speech_language_es_es,
+                R.string.option_vflow_device_text_to_speech_language_it_it,
+                R.string.option_vflow_device_text_to_speech_language_ru_ru,
+                R.string.option_vflow_device_text_to_speech_language_th_th,
+                R.string.option_vflow_device_text_to_speech_language_ar_sa
+            ),
+            legacyValueMap = LANGUAGE_LEGACY_MAP
         ),
 
         // 高级设置：语速
@@ -108,11 +167,16 @@ class TextToSpeechModule : BaseModule() {
             id = "queueMode",
             name = "排队模式",
             staticType = ParameterType.ENUM,
-            defaultValue = "flush",
-            options = listOf("flush", "add"),
+            defaultValue = QUEUE_FLUSH,
+            options = QUEUE_OPTIONS,
             inputStyle = InputStyle.CHIP_GROUP,
             isFolded = true,
-            nameStringRes = R.string.param_vflow_device_text_to_speech_queue_mode_name
+            nameStringRes = R.string.param_vflow_device_text_to_speech_queue_mode_name,
+            optionsStringRes = listOf(
+                R.string.option_vflow_device_text_to_speech_queue_flush,
+                R.string.option_vflow_device_text_to_speech_queue_add
+            ),
+            legacyValueMap = QUEUE_LEGACY_MAP
         ),
 
         // 高级设置：等待完成
@@ -153,7 +217,6 @@ class TextToSpeechModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val step = context.allSteps[context.currentStepIndex]
         val textObj = context.getVariable("text")
         val text = textObj.asString()
 
@@ -168,11 +231,14 @@ class TextToSpeechModule : BaseModule() {
         val resolvedText = VariableResolver.resolve(text, context)
 
         // 获取高级设置参数
-        val language = step.parameters["language"] as? String ?: "自动"
-        val speechRate = (step.parameters["speechRate"] as? Number)?.toDouble() ?: 1.0
-        val pitch = (step.parameters["pitch"] as? Number)?.toDouble() ?: 1.0
-        val queueMode = step.parameters["queueMode"] as? String ?: "flush"
-        val awaitCompletion = step.parameters["awaitCompletion"] as? Boolean ?: true
+        val inputsById = getInputs().associateBy { it.id }
+        val rawLanguage = context.getVariableAsString("language", LANGUAGE_AUTO)
+        val language = inputsById["language"]?.normalizeEnumValue(rawLanguage) ?: rawLanguage
+        val speechRate = context.getVariableAsNumber("speechRate") ?: 1.0
+        val pitch = context.getVariableAsNumber("pitch") ?: 1.0
+        val rawQueueMode = context.getVariableAsString("queueMode", QUEUE_FLUSH)
+        val queueMode = inputsById["queueMode"]?.normalizeEnumValue(rawQueueMode) ?: rawQueueMode
+        val awaitCompletion = context.getVariableAsBoolean("awaitCompletion") ?: true
 
         // 验证参数范围
         if (speechRate < 0.5 || speechRate > 2.0) {
@@ -203,20 +269,20 @@ class TextToSpeechModule : BaseModule() {
 
         return try {
             // 设置语言
-            if (language != "自动") {
+            if (language != LANGUAGE_AUTO) {
                 val locale = when (language) {
-                    "中文（中国）" -> Locale.CHINA
-                    "英语（美国）" -> Locale.US
-                    "英语（英国）" -> Locale.UK
-                    "日语" -> Locale.JAPAN
-                    "韩语" -> Locale.KOREA
-                    "法语" -> Locale.FRANCE
-                    "德语" -> Locale.GERMANY
-                    "西班牙语" -> Locale("es", "ES")
-                    "意大利语" -> Locale.ITALY
-                    "俄语" -> Locale("ru", "RU")
-                    "泰语" -> Locale("th", "TH")
-                    "阿拉伯语" -> Locale("ar", "SA")
+                    LANGUAGE_ZH_CN -> Locale.CHINA
+                    LANGUAGE_EN_US -> Locale.US
+                    LANGUAGE_EN_GB -> Locale.UK
+                    LANGUAGE_JA_JP -> Locale.JAPAN
+                    LANGUAGE_KO_KR -> Locale.KOREA
+                    LANGUAGE_FR_FR -> Locale.FRANCE
+                    LANGUAGE_DE_DE -> Locale.GERMANY
+                    LANGUAGE_ES_ES -> Locale("es", "ES")
+                    LANGUAGE_IT_IT -> Locale.ITALY
+                    LANGUAGE_RU_RU -> Locale("ru", "RU")
+                    LANGUAGE_TH_TH -> Locale("th", "TH")
+                    LANGUAGE_AR_SA -> Locale("ar", "SA")
                     else -> Locale.getDefault()
                 }
 
@@ -264,7 +330,7 @@ class TextToSpeechModule : BaseModule() {
 
                             val result = tts.speak(
                                 resolvedText,
-                                if (queueMode == "flush") TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD,
+                                if (queueMode == QUEUE_FLUSH) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD,
                                 null,
                                 utteranceId
                             )
@@ -309,7 +375,7 @@ class TextToSpeechModule : BaseModule() {
 
                 tts.speak(
                     resolvedText,
-                    if (queueMode == "flush") TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD,
+                    if (queueMode == QUEUE_FLUSH) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD,
                     null,
                     "vflow_tts_${System.currentTimeMillis()}"
                 )

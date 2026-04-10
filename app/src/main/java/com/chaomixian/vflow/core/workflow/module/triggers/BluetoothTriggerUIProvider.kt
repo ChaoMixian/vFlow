@@ -43,7 +43,7 @@ class BluetoothTriggerUIProvider : ModuleUIProvider {
         val selectedDeviceTv: TextView = view.findViewById(R.id.tv_selected_device)
         val selectDeviceBtn: Button = view.findViewById(R.id.btn_select_device)
 
-        var selectedDeviceAddress: String? = "any"
+        var selectedDeviceAddress: String? = BluetoothTriggerModule.ANY_DEVICE_ADDRESS
     }
 
     override fun getHandledInputIds(): Set<String> = setOf(
@@ -61,23 +61,33 @@ class BluetoothTriggerUIProvider : ModuleUIProvider {
     ): CustomEditorViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_bluetooth_trigger_editor, parent, false)
         val holder = ViewHolder(view)
+        val inputsById = BluetoothTriggerModule().getInputs().associateBy { it.id }
 
         // Restore state
-        val triggerType = currentParameters["trigger_type"] as? String ?: BluetoothTriggerModule.TRIGGER_TYPE_STATE
+        val rawTriggerType = currentParameters["trigger_type"] as? String ?: BluetoothTriggerModule.TRIGGER_TYPE_STATE
+        val triggerType = inputsById["trigger_type"]?.normalizeEnumValue(rawTriggerType) ?: rawTriggerType
         if (triggerType == BluetoothTriggerModule.TRIGGER_TYPE_STATE) {
             holder.stateChangeRb.isChecked = true
         } else {
             holder.deviceConnectionRb.isChecked = true
         }
 
-        val stateEvent = currentParameters["state_event"] as? String ?: BluetoothTriggerModule.STATE_EVENT_ON
+        val rawStateEvent = currentParameters["state_event"] as? String ?: BluetoothTriggerModule.STATE_EVENT_ON
+        val stateEvent = inputsById["state_event"]?.normalizeEnumValue(rawStateEvent) ?: rawStateEvent
         if (stateEvent == BluetoothTriggerModule.STATE_EVENT_ON) holder.stateOnChip.isChecked = true else holder.stateOffChip.isChecked = true
 
-        val deviceEvent = currentParameters["device_event"] as? String ?: BluetoothTriggerModule.DEVICE_EVENT_CONNECTED
+        val rawDeviceEvent = currentParameters["device_event"] as? String ?: BluetoothTriggerModule.DEVICE_EVENT_CONNECTED
+        val deviceEvent = inputsById["device_event"]?.normalizeEnumValue(rawDeviceEvent) ?: rawDeviceEvent
         if (deviceEvent == BluetoothTriggerModule.DEVICE_EVENT_CONNECTED) holder.deviceConnectChip.isChecked = true else holder.deviceDisconnectChip.isChecked = true
 
-        holder.selectedDeviceAddress = currentParameters["device_address"] as? String ?: "any"
-        holder.selectedDeviceTv.text = currentParameters["device_name"] as? String ?: "任何设备"
+        val deviceAddress = currentParameters["device_address"] as? String ?: BluetoothTriggerModule.ANY_DEVICE_ADDRESS
+        val deviceName = currentParameters["device_name"] as? String
+        holder.selectedDeviceAddress = deviceAddress
+        holder.selectedDeviceTv.text = if (deviceAddress == BluetoothTriggerModule.ANY_DEVICE_ADDRESS || (deviceAddress.isNullOrBlank() && deviceName.isNullOrBlank())) {
+            context.getString(R.string.summary_vflow_trigger_bluetooth_any_device)
+        } else {
+            deviceName?.takeIf { it.isNotBlank() } ?: deviceAddress
+        }
 
         updateVisibility(holder)
 
@@ -109,7 +119,7 @@ class BluetoothTriggerUIProvider : ModuleUIProvider {
             "state_event" to if (h.stateOnChip.isChecked) BluetoothTriggerModule.STATE_EVENT_ON else BluetoothTriggerModule.STATE_EVENT_OFF,
             "device_event" to if (h.deviceConnectChip.isChecked) BluetoothTriggerModule.DEVICE_EVENT_CONNECTED else BluetoothTriggerModule.DEVICE_EVENT_DISCONNECTED,
             "device_address" to h.selectedDeviceAddress,
-            "device_name" to h.selectedDeviceTv.text.toString()
+            "device_name" to if (h.selectedDeviceAddress == BluetoothTriggerModule.ANY_DEVICE_ADDRESS) "" else h.selectedDeviceTv.text.toString()
         )
     }
 
@@ -122,7 +132,7 @@ class BluetoothTriggerUIProvider : ModuleUIProvider {
     private fun showDevicePicker(context: Context, holder: ViewHolder, onParametersChanged: () -> Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(context, "需要蓝牙权限才能获取设备列表", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.toast_bluetooth_permission_required, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -130,21 +140,23 @@ class BluetoothTriggerUIProvider : ModuleUIProvider {
         val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
 
         if (bluetoothAdapter == null) {
-            Toast.makeText(context, "该设备不支持蓝牙", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.toast_bluetooth_not_supported, Toast.LENGTH_SHORT).show()
             return
         }
 
         val pairedDevices = bluetoothAdapter.bondedDevices
         val deviceList = mutableListOf<Pair<String, String>>()
-        deviceList.add("任何设备" to "any")
+        deviceList.add(
+            context.getString(R.string.summary_vflow_trigger_bluetooth_any_device) to BluetoothTriggerModule.ANY_DEVICE_ADDRESS
+        )
         pairedDevices.forEach { device ->
-            deviceList.add(device.name to device.address)
+            deviceList.add((device.name ?: device.address) to device.address)
         }
 
         val deviceNames = deviceList.map { it.first }.toTypedArray()
 
         MaterialAlertDialogBuilder(context)
-            .setTitle("选择一个蓝牙设备")
+            .setTitle(R.string.dialog_bluetooth_select_device_title)
             .setItems(deviceNames) { _, which ->
                 val selected = deviceList[which]
                 holder.selectedDeviceTv.text = selected.first

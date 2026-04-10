@@ -75,7 +75,8 @@ class AppStartTriggerUIProvider : ModuleUIProvider {
 
         // 设置事件选项的默认选中状态
         if (hasEventParameter) {
-            val currentEvent = AppStartTriggerModule.normalizeEvent(currentParameters["event"] as? String)
+            val eventInput = AppStartTriggerModule().getInputs().first { it.id == "event" }
+            val currentEvent = eventInput.normalizeEnumValueOrNull(currentParameters["event"] as? String)
                 ?: AppStartTriggerModule.EVENT_OPENED
 
             if (currentEvent == AppStartTriggerModule.EVENT_CLOSED) {

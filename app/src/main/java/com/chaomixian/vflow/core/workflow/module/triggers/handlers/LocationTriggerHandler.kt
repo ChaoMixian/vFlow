@@ -359,12 +359,13 @@ class LocationTriggerHandler : ListeningTriggerHandler() {
      * 检查所有围栏的进入/离开事件
      */
     private suspend fun checkGeofenceEvents(context: Context, location: Location) {
+        val eventInput = LocationTriggerModule().getInputs().first { it.id == "event" }
         listeningTriggers.forEach { trigger ->
             val config = trigger.parameters
             val fenceLat = config["latitude"] as? Double ?: return@forEach
             val fenceLon = config["longitude"] as? Double ?: return@forEach
             val fenceRadius = config["radius"] as? Double ?: return@forEach
-            val configEvent = LocationTriggerModule.normalizeEvent(config["event"] as? String) ?: return@forEach
+            val configEvent = eventInput.normalizeEnumValueOrNull(config["event"] as? String) ?: return@forEach
 
             // 计算当前位置到围栏中心的距离
             val distance = calculateDistance(

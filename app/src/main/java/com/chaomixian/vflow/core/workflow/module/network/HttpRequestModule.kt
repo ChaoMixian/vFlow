@@ -52,15 +52,6 @@ class HttpRequestModule : BaseModule() {
             "文件" to BODY_TYPE_FILE,
             "File" to BODY_TYPE_FILE
         )
-
-        internal fun normalizeBodyType(bodyType: String?): String {
-            val normalized = bodyType?.trim().orEmpty()
-            if (normalized.isEmpty()) return BODY_TYPE_NONE
-            if (normalized in listOf(BODY_TYPE_NONE, BODY_TYPE_JSON, BODY_TYPE_FORM, BODY_TYPE_RAW, BODY_TYPE_FILE)) {
-                return normalized
-            }
-            return LEGACY_BODY_TYPE_ALIASES[normalized] ?: normalized
-        }
     }
 
     override val id = "vflow.network.http_request"
@@ -86,7 +77,7 @@ class HttpRequestModule : BaseModule() {
         InputDefinition("method", "方法", ParameterType.ENUM, "GET", options = methodOptions, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_network_http_request_method_name),
         InputDefinition("headers", "请求头", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_network_http_request_headers_name),
         InputDefinition("query_params", "查询参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_network_http_request_query_params_name),
-        InputDefinition("body_type", "请求体类型", ParameterType.ENUM, BODY_TYPE_NONE, options = bodyTypeOptions, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_network_http_request_body_type_name, optionsStringRes = listOf(R.string.option_vflow_network_http_request_body_none, R.string.option_vflow_network_http_request_body_json, R.string.option_vflow_network_http_request_body_form, R.string.option_vflow_network_http_request_body_raw, R.string.option_vflow_network_http_request_body_file), legacyValueMap = mapOf("无" to BODY_TYPE_NONE, "None" to BODY_TYPE_NONE, "JSON" to BODY_TYPE_JSON, "表单" to BODY_TYPE_FORM, "Form" to BODY_TYPE_FORM, "原始文本" to BODY_TYPE_RAW, "Raw Text" to BODY_TYPE_RAW, "文件" to BODY_TYPE_FILE, "File" to BODY_TYPE_FILE)),
+        InputDefinition("body_type", "请求体类型", ParameterType.ENUM, BODY_TYPE_NONE, options = bodyTypeOptions, acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_network_http_request_body_type_name, optionsStringRes = listOf(R.string.option_vflow_network_http_request_body_none, R.string.option_vflow_network_http_request_body_json, R.string.option_vflow_network_http_request_body_form, R.string.option_vflow_network_http_request_body_raw, R.string.option_vflow_network_http_request_body_file), legacyValueMap = LEGACY_BODY_TYPE_ALIASES),
         InputDefinition("body", "请求体", ParameterType.ANY, acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_network_http_request_body_name),
         InputDefinition("timeout", "超时(秒)", ParameterType.NUMBER, 10.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_network_http_request_timeout_name),
         InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true, nameStringRes = R.string.param_vflow_network_http_request_show_advanced_name)
@@ -99,7 +90,9 @@ class HttpRequestModule : BaseModule() {
      */
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
         val baseInputs = getInputs()
-        val bodyType = normalizeBodyType(step?.parameters?.get("body_type") as? String)
+        val bodyTypeInput = baseInputs.first { it.id == "body_type" }
+        val rawBodyType = step?.parameters?.get("body_type") as? String ?: BODY_TYPE_NONE
+        val bodyType = bodyTypeInput.normalizeEnumValue(rawBodyType) ?: rawBodyType
 
         return baseInputs.map { inputDef ->
             if (inputDef.id == "body") {
@@ -169,7 +162,9 @@ class HttpRequestModule : BaseModule() {
                 val queryParams = resolveMap(rawQueryParams, context)
 
                 // 解析 Body
-                val bodyType = normalizeBodyType(context.getVariableAsString("body_type", BODY_TYPE_NONE))
+                val bodyTypeInput = getInputs().first { it.id == "body_type" }
+                val rawBodyType = context.getVariableAsString("body_type", BODY_TYPE_NONE)
+                val bodyType = bodyTypeInput.normalizeEnumValue(rawBodyType) ?: rawBodyType
                 val bodyDataRaw = context.getVariable("body")
 
                 val bodyData: Any? = when (bodyType) {
@@ -242,6 +237,7 @@ class HttpRequestModule : BaseModule() {
                 val requestBody = when {
                     method == "GET" || method == "DELETE" -> null
                     else -> createRequestBody(context, bodyType, bodyData)
+                        ?: ByteArray(0).toRequestBody(null, 0, 0)
                 }
 
                 val requestBuilder = Request.Builder().url(finalUrl)
@@ -377,7 +373,7 @@ class HttpRequestModule : BaseModule() {
      * - 文件: multipart/form-data（用于上传多个图片）
      */
     private fun createRequestBody(context: ExecutionContext, bodyType: String, bodyData: Any?): RequestBody? {
-        return when (normalizeBodyType(bodyType)) {
+        return when (bodyType) {
             BODY_TYPE_JSON -> {
                 // fixme: VList转字符串后不是Json格式
                 val jsonString = when (bodyData) {

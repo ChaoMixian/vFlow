@@ -15,6 +15,7 @@ import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.FolderManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerModule
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.ui.workflow_list.WorkflowImportHelper
 import kotlinx.coroutines.CoroutineScope
@@ -146,36 +147,15 @@ class ShareReceiverActivity : AppCompatActivity() {
     }
 
     private fun resolveMatchingShareTriggerId(workflow: Workflow, sharedType: String): String? {
+        val acceptedTypeInput = ReceiveShareTriggerModule().getInputs().first { it.id == "acceptedType" }
         return workflow.triggerStepsByType("vflow.trigger.share")
             .firstOrNull { step ->
-                when (normalizeAcceptedShareType(step.parameters["acceptedType"] as? String)) {
+                when (acceptedTypeInput.normalizeEnumValue(step.parameters["acceptedType"] as? String, SHARE_TYPE_ANY)) {
                     SHARE_TYPE_ANY -> true
-                    else -> normalizeAcceptedShareType(step.parameters["acceptedType"] as? String) == sharedType
+                    else -> acceptedTypeInput.normalizeEnumValue(step.parameters["acceptedType"] as? String, SHARE_TYPE_ANY) == sharedType
                 }
             }
             ?.id
-    }
-
-    private fun normalizeAcceptedShareType(value: String?): String {
-        return when (value) {
-            null,
-            "任意",
-            "Any",
-            getString(R.string.option_vflow_trigger_share_type_any) -> SHARE_TYPE_ANY
-            "文本",
-            "Text",
-            getString(R.string.option_vflow_trigger_share_type_text) -> SHARE_TYPE_TEXT
-            "链接",
-            "Link",
-            getString(R.string.option_vflow_trigger_share_type_link) -> SHARE_TYPE_LINK
-            "图片",
-            "Image",
-            getString(R.string.option_vflow_trigger_share_type_image) -> SHARE_TYPE_IMAGE
-            "文件",
-            "File",
-            getString(R.string.option_vflow_trigger_share_type_file) -> SHARE_TYPE_FILE
-            else -> value
-        }
     }
 
     /**

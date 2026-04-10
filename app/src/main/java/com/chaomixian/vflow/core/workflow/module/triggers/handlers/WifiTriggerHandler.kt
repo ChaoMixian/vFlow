@@ -145,13 +145,16 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
 
     private fun findAndExecuteWorkflows(context: Context, triggerType: String, event: String, ssid: String?) {
         triggerScope.launch {
+            val inputsById = WifiTriggerModule().getInputs().associateBy { it.id }
             listeningTriggers.forEach { trigger ->
                 val config = trigger.parameters
-                val configTriggerType = WifiTriggerModule.normalizeTriggerType(config["trigger_type"] as? String)
+                val rawTriggerType = config["trigger_type"] as? String ?: WifiTriggerModule.TRIGGER_TYPE_CONNECTION
+                val configTriggerType = inputsById["trigger_type"]?.normalizeEnumValue(rawTriggerType) ?: rawTriggerType
                 if (configTriggerType != triggerType) return@forEach
 
                 if (triggerType == WifiTriggerModule.TRIGGER_TYPE_CONNECTION) {
-                    val configEvent = WifiTriggerModule.normalizeConnectionEvent(config["connection_event"] as? String)
+                    val rawEvent = config["connection_event"] as? String ?: WifiTriggerModule.CONNECTION_EVENT_CONNECTED
+                    val configEvent = inputsById["connection_event"]?.normalizeEnumValue(rawEvent) ?: rawEvent
                     val configTarget = config["network_target"] as? String
                     val targetMatches = (configTarget == ANY_WIFI_TARGET) || (configTarget.equals(ssid, ignoreCase = true))
                     if (configEvent == event && targetMatches) {
@@ -160,7 +163,8 @@ class WifiTriggerHandler : ListeningTriggerHandler() {
                         executeTrigger(context, trigger, triggerData)
                     }
                 } else { // Wi-Fi状态
-                    val configEvent = WifiTriggerModule.normalizeStateEvent(config["state_event"] as? String)
+                    val rawEvent = config["state_event"] as? String ?: WifiTriggerModule.STATE_EVENT_ON
+                    val configEvent = inputsById["state_event"]?.normalizeEnumValue(rawEvent) ?: rawEvent
                     if (configEvent == event) {
                         DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: Wi-Fi $event")
                         executeTrigger(context, trigger)

@@ -60,27 +60,34 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_input_text_editor, parent, false)
         val holder = ViewHolder(view)
         holder.allSteps = allSteps
+        val module = InputTextModule()
+        val modeInput = module.getInputs().first { it.id == "mode" }
+        val modeValues = modeInput.options
+        val modeLabels = modeInput.getLocalizedOptions(context)
+        val actionInput = module.getInputs().first { it.id == "action_after" }
+        val actionValues = actionInput.options
+        val actionLabels = actionInput.getLocalizedOptions(context)
 
         // 设置富文本编辑器
         setupRichTextEditor(context, holder, currentParameters["text"] as? String ?: "", onMagicVariableRequested)
 
         // 设置模式 Spinner
-        val modes = listOf("自动", "无障碍", "Shell")
-        val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, modes)
+        val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, modeLabels)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         holder.modeSpinner.adapter = adapter
 
-        val currentMode = currentParameters["mode"] as? String ?: "自动"
-        holder.modeSpinner.setSelection(modes.indexOf(currentMode).coerceAtLeast(0))
+        val rawMode = currentParameters["mode"] as? String ?: InputTextModule.MODE_AUTO
+        val currentMode = modeInput.normalizeEnumValue(rawMode) ?: rawMode
+        holder.modeSpinner.setSelection(modeValues.indexOf(currentMode).coerceAtLeast(0))
 
         // 设置操作后按键 Spinner
-        val actions = listOf("无操作", "Enter（回车）", "Tab（制表符）", "下一个（移动焦点）")
-        val actionAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, actions)
+        val actionAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, actionLabels)
         actionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         holder.actionAfterSpinner.adapter = actionAdapter
 
-        val currentAction = currentParameters["action_after"] as? String ?: "无操作"
-        holder.actionAfterSpinner.setSelection(actions.indexOf(currentAction).coerceAtLeast(0))
+        val rawAction = currentParameters["action_after"] as? String ?: InputTextModule.ACTION_NONE
+        val currentAction = actionInput.normalizeEnumValue(rawAction) ?: rawAction
+        holder.actionAfterSpinner.setSelection(actionValues.indexOf(currentAction).coerceAtLeast(0))
 
         // 恢复展开状态
         val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
@@ -146,10 +153,13 @@ class InputTextModuleUIProvider : ModuleUIProvider {
 
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
+        val module = InputTextModule()
+        val modeValues = module.getInputs().first { it.id == "mode" }.options
+        val actionValues = module.getInputs().first { it.id == "action_after" }.options
         return mapOf(
             "text" to (h.richTextView?.getRawText() ?: ""),
-            "mode" to h.modeSpinner.selectedItem.toString(),
-            "action_after" to h.actionAfterSpinner.selectedItem.toString(),
+            "mode" to modeValues.getOrElse(h.modeSpinner.selectedItemPosition) { InputTextModule.MODE_AUTO },
+            "action_after" to actionValues.getOrElse(h.actionAfterSpinner.selectedItemPosition) { InputTextModule.ACTION_NONE },
             "show_advanced" to h.advancedContainer.isVisible
         )
     }

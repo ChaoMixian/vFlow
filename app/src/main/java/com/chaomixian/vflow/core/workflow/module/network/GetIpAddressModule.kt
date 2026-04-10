@@ -113,8 +113,11 @@ class GetIpAddressModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = context.getVariableAsString("type", TYPE_LOCAL)
-        val ipVersion = context.getVariableAsString("ip_version", VERSION_IPV4)
+        val inputsById = getInputs().associateBy { it.id }
+        val rawType = context.getVariableAsString("type", TYPE_LOCAL)
+        val type = inputsById["type"]?.normalizeEnumValue(rawType) ?: rawType
+        val rawIpVersion = context.getVariableAsString("ip_version", VERSION_IPV4)
+        val ipVersion = inputsById["ip_version"]?.normalizeEnumValue(rawIpVersion) ?: rawIpVersion
         onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_network_get_ip_fetching, getTypeDisplayName(type), getIpVersionDisplayName(ipVersion))))
 
         return try {

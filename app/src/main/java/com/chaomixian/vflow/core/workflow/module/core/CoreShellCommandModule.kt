@@ -25,14 +25,6 @@ class CoreShellCommandModule : BaseModule() {
         private const val MODE_AUTO = "auto"
         private const val MODE_SHELL = "shell"
         private const val MODE_ROOT = "root"
-
-        private fun normalizeMode(value: String?): String {
-            return when (value) {
-                MODE_ROOT, "Root权限", "Root Permission", "Root" -> MODE_ROOT
-                MODE_SHELL, "Shell权限", "Shell Permission", "Shell" -> MODE_SHELL
-                else -> MODE_AUTO
-            }
-        }
     }
 
     override val id = "vflow.core.shell_command"
@@ -49,7 +41,7 @@ class CoreShellCommandModule : BaseModule() {
     private val modeOptions = listOf(MODE_SHELL, MODE_ROOT, MODE_AUTO)
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
-        val mode = normalizeMode(step?.parameters?.get("mode") as? String)
+        val mode = getInputs().normalizeEnumValue("mode", step?.parameters?.get("mode") as? String, MODE_AUTO) ?: MODE_AUTO
         return when (mode) {
             MODE_ROOT -> listOf(PermissionManager.CORE_ROOT)
             MODE_SHELL -> listOf(PermissionManager.CORE)
@@ -130,7 +122,7 @@ class CoreShellCommandModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val modeStr = normalizeMode(context.getVariableAsString("mode", MODE_AUTO))
+        val modeStr = getInputs().normalizeEnumValue("mode", context.getVariableAsString("mode", MODE_AUTO), MODE_AUTO) ?: MODE_AUTO
         val rawCommand = context.getVariableAsString("command", "")
         val command = VariableResolver.resolve(rawCommand, context)
         val appContext = context.applicationContext

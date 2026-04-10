@@ -93,10 +93,13 @@ class FindTextUntilModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
+        val inputsById = getInputs().associateBy { it.id }
         val rawTarget = context.getVariableAsString("targetText", "")
         val targetText = VariableResolver.resolve(rawTarget, context)
-        val matchMode = context.getVariableAsString("matchMode", MATCH_CONTAINS)
-        val searchMode = context.getVariableAsString("searchMode", SEARCH_AUTO)
+        val rawMatchMode = context.getVariableAsString("matchMode", MATCH_CONTAINS)
+        val matchMode = inputsById["matchMode"]?.normalizeEnumValue(rawMatchMode) ?: rawMatchMode
+        val rawSearchMode = context.getVariableAsString("searchMode", SEARCH_AUTO)
+        val searchMode = inputsById["searchMode"]?.normalizeEnumValue(rawSearchMode) ?: rawSearchMode
 
         val timeoutSec = context.getVariableAsLong("timeout") ?: 10
         val interval = (context.getVariableAsLong("interval") ?: 1000).coerceAtLeast(100)

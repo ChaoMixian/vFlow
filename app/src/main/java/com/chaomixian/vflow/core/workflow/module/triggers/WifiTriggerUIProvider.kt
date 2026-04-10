@@ -20,6 +20,9 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class WifiTriggerUIProvider : ModuleUIProvider {
+    companion object {
+        private const val MANUAL_INPUT_SENTINEL = "__manual_input__"
+    }
 
     private class EditorViewHolder(view: View) : CustomEditorViewHolder(view) {
         val triggerTypeRg: RadioGroup = view.findViewById(R.id.rg_trigger_type)
@@ -50,19 +53,23 @@ class WifiTriggerUIProvider : ModuleUIProvider {
     ): CustomEditorViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_wifi_trigger_editor, parent, false)
         val holder = EditorViewHolder(view)
+        val inputsById = WifiTriggerModule().getInputs().associateBy { it.id }
 
         // Restore state
-        val triggerType = currentParameters["trigger_type"] as? String ?: WifiTriggerModule.TRIGGER_TYPE_CONNECTION
+        val rawTriggerType = currentParameters["trigger_type"] as? String ?: WifiTriggerModule.TRIGGER_TYPE_CONNECTION
+        val triggerType = inputsById["trigger_type"]?.normalizeEnumValue(rawTriggerType) ?: rawTriggerType
         if (triggerType == WifiTriggerModule.TRIGGER_TYPE_CONNECTION) holder.connectionRb.isChecked = true else holder.stateRb.isChecked = true
 
-        val connectionEvent = currentParameters["connection_event"] as? String ?: WifiTriggerModule.CONNECTION_EVENT_CONNECTED
+        val rawConnectionEvent = currentParameters["connection_event"] as? String ?: WifiTriggerModule.CONNECTION_EVENT_CONNECTED
+        val connectionEvent = inputsById["connection_event"]?.normalizeEnumValue(rawConnectionEvent) ?: rawConnectionEvent
         if (connectionEvent == WifiTriggerModule.CONNECTION_EVENT_CONNECTED) holder.connectChip.isChecked = true else holder.disconnectChip.isChecked = true
 
-        val stateEvent = currentParameters["state_event"] as? String ?: WifiTriggerModule.STATE_EVENT_ON
+        val rawStateEvent = currentParameters["state_event"] as? String ?: WifiTriggerModule.STATE_EVENT_ON
+        val stateEvent = inputsById["state_event"]?.normalizeEnumValue(rawStateEvent) ?: rawStateEvent
         if (stateEvent == WifiTriggerModule.STATE_EVENT_ON) holder.stateOnChip.isChecked = true else holder.stateOffChip.isChecked = true
 
         val currentTarget = currentParameters["network_target"] as? String ?: WifiTriggerHandler.ANY_WIFI_TARGET
-        holder.networkTextView.text = if (currentTarget == WifiTriggerHandler.ANY_WIFI_TARGET) "任意 Wi-Fi" else currentTarget
+        updateSelectedNetworkText(context, holder, currentTarget)
 
         updateVisibility(holder)
 
@@ -83,13 +90,13 @@ class WifiTriggerUIProvider : ModuleUIProvider {
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as EditorViewHolder
         val triggerType = if (h.connectionRb.isChecked) WifiTriggerModule.TRIGGER_TYPE_CONNECTION else WifiTriggerModule.TRIGGER_TYPE_STATE
-        val selectedNetworkText = h.networkTextView.text.toString()
+        val selectedNetworkTarget = h.networkTextView.tag as? String ?: WifiTriggerHandler.ANY_WIFI_TARGET
 
         return mapOf(
             "trigger_type" to triggerType,
             "connection_event" to if (h.connectChip.isChecked) WifiTriggerModule.CONNECTION_EVENT_CONNECTED else WifiTriggerModule.CONNECTION_EVENT_DISCONNECTED,
             "state_event" to if (h.stateOnChip.isChecked) WifiTriggerModule.STATE_EVENT_ON else WifiTriggerModule.STATE_EVENT_OFF,
-            "network_target" to if (selectedNetworkText == "任意 Wi-Fi") WifiTriggerHandler.ANY_WIFI_TARGET else selectedNetworkText
+            "network_target" to selectedNetworkTarget
         )
     }
 
@@ -101,52 +108,64 @@ class WifiTriggerUIProvider : ModuleUIProvider {
 
     @SuppressLint("MissingPermission")
     private fun showNetworkSelectionDialog(context: Context, holder: EditorViewHolder, onParametersChanged: () -> Unit) {
-        val options = mutableListOf("任意 Wi-Fi")
+        val options = mutableListOf(
+            context.getString(R.string.summary_vflow_trigger_wifi_any_wifi) to WifiTriggerHandler.ANY_WIFI_TARGET
+        )
         try {
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             if (wifiManager.isWifiEnabled) {
                 val connectionInfo = wifiManager.connectionInfo
                 val ssid = connectionInfo?.ssid?.trim('"')
                 if (!ssid.isNullOrEmpty() && ssid != "<unknown ssid>") {
-                    options.add(ssid)
+                    options.add(ssid to ssid)
                 }
             }
         } catch (e: Exception) { /* ignore */ }
-        options.add("手动输入...")
+        options.add(context.getString(R.string.option_wifi_trigger_manual_input) to MANUAL_INPUT_SENTINEL)
 
         MaterialAlertDialogBuilder(context)
-            .setTitle("选择网络")
-            .setItems(options.toTypedArray()) { _, which ->
-                when (val selected = options[which]) {
-                    "手动输入..." -> showManualSsidInputDialog(context, holder, onParametersChanged)
-                    else -> {
-                        holder.networkTextView.text = selected
-                        onParametersChanged()
-                    }
+            .setTitle(R.string.button_select_network)
+            .setItems(options.map { it.first }.toTypedArray()) { _, which ->
+                val selected = options[which]
+                if (selected.second == MANUAL_INPUT_SENTINEL) {
+                    showManualSsidInputDialog(context, holder, onParametersChanged)
+                } else {
+                    updateSelectedNetworkText(context, holder, selected.second)
+                    onParametersChanged()
                 }
             }
             .show()
     }
 
     private fun showManualSsidInputDialog(context: Context, holder: EditorViewHolder, onParametersChanged: () -> Unit) {
-        val editText = EditText(context).apply { hint = "输入Wi-Fi名称(SSID)" }
+        val editText = EditText(context).apply {
+            hint = context.getString(R.string.hint_wifi_trigger_manual_ssid)
+        }
         val container = FrameLayout(context).apply {
             setPadding(48, 16, 48, 16)
             addView(editText)
         }
-        // [关键] 使用 MaterialAlertDialogBuilder
         MaterialAlertDialogBuilder(context)
-            .setTitle("手动输入SSID")
+            .setTitle(R.string.dialog_wifi_trigger_manual_ssid_title)
             .setView(container)
-            .setPositiveButton("确定") { _, _ ->
+            .setPositiveButton(android.R.string.ok) { _, _ ->
                 val ssid = editText.text.toString().trim()
                 if (ssid.isNotBlank()) {
-                    holder.networkTextView.text = ssid
+                    updateSelectedNetworkText(context, holder, ssid)
                     onParametersChanged()
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun updateSelectedNetworkText(context: Context, holder: EditorViewHolder, target: String) {
+        holder.networkTextView.tag = target
+        holder.networkTextView.text = if (target == WifiTriggerHandler.ANY_WIFI_TARGET) {
+            context.getString(R.string.summary_vflow_trigger_wifi_any_wifi)
+        } else {
+            target
+        }
     }
 
     override fun getHandledInputIds(): Set<String> = setOf(

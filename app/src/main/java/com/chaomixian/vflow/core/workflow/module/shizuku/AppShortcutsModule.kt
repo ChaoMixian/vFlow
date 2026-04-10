@@ -72,7 +72,9 @@ class AlipayShortcutsModule : BaseShortcutModule() {
     }
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val action = context.getVariableAsString("action", "")
+        val actionInput = getInputs().first { it.id == "action" }
+        val rawAction = context.getVariableAsString("action", "")
+        val action = actionInput.normalizeEnumValue(rawAction) ?: rawAction
         if (action.isEmpty()) {
             return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_shizuku_alipay_shortcuts_no_action))
         }
@@ -116,7 +118,9 @@ class WeChatShortcutsModule : BaseShortcutModule() {
     }
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val action = context.getVariableAsString("action", "")
+        val actionInput = getInputs().first { it.id == "action" }
+        val rawAction = context.getVariableAsString("action", "")
+        val action = actionInput.normalizeEnumValue(rawAction) ?: rawAction
         if (action.isEmpty()) {
             return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_shizuku_alipay_shortcuts_no_action))
         }
@@ -162,7 +166,9 @@ class ColorOSShortcutsModule : BaseShortcutModule() {
     }
 
     override suspend fun execute(context: ExecutionContext, onProgress: suspend (ProgressUpdate) -> Unit): ExecutionResult {
-        val action = context.getVariableAsString("action", "")
+        val actionInput = getInputs().first { it.id == "action" }
+        val rawAction = context.getVariableAsString("action", "")
+        val action = actionInput.normalizeEnumValue(rawAction) ?: rawAction
         if (action.isEmpty()) {
             return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_interaction_operit_param_error), appContext.getString(R.string.error_vflow_shizuku_alipay_shortcuts_no_action))
         }

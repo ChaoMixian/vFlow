@@ -80,7 +80,8 @@ class CallTriggerHandler : ListeningTriggerHandler() {
     private data class FilterMatchResult(val isMatch: Boolean)
 
     private fun checkFilters(callType: String, config: Map<String, Any?>): FilterMatchResult {
-        val configCallType = CallTriggerModule.normalizeCallType(config["call_type"] as? String)
+        val callTypeInput = CallTriggerModule().getInputs().first { it.id == "call_type" }
+        val configCallType = callTypeInput.normalizeEnumValueOrNull(config["call_type"] as? String)
             ?: CallTriggerModule.TYPE_ANY
 
         val callTypeMatches = when (configCallType) {

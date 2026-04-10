@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.workflow.module.triggers.BatteryTriggerModule
 import kotlinx.coroutines.launch
 
 class BatteryTriggerHandler : ListeningTriggerHandler() {
@@ -71,10 +72,12 @@ class BatteryTriggerHandler : ListeningTriggerHandler() {
         lastBatteryPercentage = currentPercentage
 
         triggerScope.launch {
+            val conditionInput = BatteryTriggerModule().getInputs().first { it.id == "above_or_below" }
             listeningTriggers.forEach { trigger ->
                 val config = trigger.parameters
                 val threshold = (config["level"] as? Number)?.toInt() ?: return@forEach
-                val condition = config["above_or_below"] as? String ?: return@forEach
+                val rawCondition = config["above_or_below"] as? String ?: return@forEach
+                val condition = conditionInput.normalizeEnumValue(rawCondition) ?: rawCondition
 
                 // 检查是否跨越了阈值
                 val shouldTrigger = when (condition) {

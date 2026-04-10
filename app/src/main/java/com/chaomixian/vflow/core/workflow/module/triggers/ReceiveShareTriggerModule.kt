@@ -75,7 +75,9 @@ class ReceiveShareTriggerModule : BaseModule() {
      * 根据接收类型，动态定义输出参数
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val type = step?.parameters?.get("acceptedType") as? String ?: TYPE_ANY
+        val input = getInputs().first()
+        val rawType = step?.parameters?.get("acceptedType") as? String
+        val type = input.normalizeEnumValue(rawType) ?: TYPE_ANY
         return when (type) {
             TYPE_TEXT, TYPE_LINK -> listOf(OutputDefinition("shared_content", "分享的文本", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_trigger_share_text_name))
             TYPE_IMAGE -> listOf(OutputDefinition("shared_content", "分享的图片", VTypeRegistry.IMAGE.id, nameStringRes = R.string.output_vflow_trigger_share_image_name))

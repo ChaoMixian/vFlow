@@ -194,7 +194,9 @@ class FileOperationModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val operation = step?.parameters?.get("operation") as? String
+        val operationInput = getInputs().first { it.id == "operation" }
+        val rawOperation = step?.parameters?.get("operation") as? String ?: OP_READ
+        val operation = operationInput.normalizeEnumValue(rawOperation) ?: rawOperation
 
         return when (operation) {
             OP_READ -> listOf(
@@ -292,7 +294,9 @@ class FileOperationModule : BaseModule() {
                 appContext.getString(R.string.error_vflow_data_file_operation_current_step_missing)
             )
 
-        val operation = currentStep.parameters["operation"] as? String ?: OP_READ
+        val operationInput = getInputs().first { it.id == "operation" }
+        val rawOperation = currentStep.parameters["operation"] as? String ?: OP_READ
+        val operation = operationInput.normalizeEnumValue(rawOperation) ?: rawOperation
 
         return when (operation) {
             OP_CREATE -> {

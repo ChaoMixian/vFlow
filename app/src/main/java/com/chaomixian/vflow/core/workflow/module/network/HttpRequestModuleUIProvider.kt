@@ -51,8 +51,12 @@ class HttpRequestViewHolder(view: View) : CustomEditorViewHolder(view) {
     var allSteps: List<ActionStep>? = null
 
     init {
-        view.findViewById<View>(R.id.http_query_params_editor).findViewById<Button>(R.id.button_add_kv_pair).text = "添加参数"
-        view.findViewById<View>(R.id.http_headers_editor).findViewById<Button>(R.id.button_add_kv_pair).text = "添加请求头"
+        view.findViewById<View>(R.id.http_query_params_editor).findViewById<Button>(R.id.button_add_kv_pair).setText(
+            R.string.button_http_add_query_param
+        )
+        view.findViewById<View>(R.id.http_headers_editor).findViewById<Button>(R.id.button_add_kv_pair).setText(
+            R.string.button_http_add_header
+        )
     }
 }
 
@@ -145,7 +149,9 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
         // 恢复其他参数
         (currentParameters["method"] as? String)?.let { holder.methodSpinner.setSelection(module.methodOptions.indexOf(it)) }
-        val normalizedBodyType = HttpRequestModule.normalizeBodyType(currentParameters["body_type"] as? String)
+        val bodyTypeInput = module.getInputs().first { it.id == "body_type" }
+        val rawBodyType = currentParameters["body_type"] as? String ?: BODY_TYPE_NONE
+        val normalizedBodyType = bodyTypeInput.normalizeEnumValue(rawBodyType) ?: rawBodyType
         holder.bodyTypeSpinner.setSelection(module.bodyTypeOptions.indexOf(normalizedBodyType).coerceAtLeast(0))
 
         // 更新 Body 编辑器
@@ -225,7 +231,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.bodyEditorContainer, false)
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_dictionary)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_kv_pair)
-                addButton.text = "添加字段"
+                addButton.setText(R.string.button_http_add_form_field)
 
                 val currentMap = (currentValue as? Map<*, *>)?.map { it.key.toString() to it.value.toString() }?.toMutableList() ?: mutableListOf()
 

@@ -81,7 +81,7 @@ class TimeTriggerUIProvider : ModuleUIProvider {
                 .setTimeFormat(TimeFormat.CLOCK_24H)
                 .setHour(hour)
                 .setMinute(minute)
-                .setTitleText("选择触发时间")
+                .setTitleText(context.getString(R.string.label_trigger_time))
                 .build()
 
             picker.addOnPositiveButtonClickListener {

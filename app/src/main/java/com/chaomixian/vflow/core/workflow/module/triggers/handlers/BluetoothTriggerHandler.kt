@@ -79,22 +79,26 @@ class BluetoothTriggerHandler : ListeningTriggerHandler() {
 
     private fun findAndExecuteWorkflows(context: Context, triggerType: String, event: String, device: BluetoothDevice?) {
         triggerScope.launch {
+            val inputsById = BluetoothTriggerModule().getInputs().associateBy { it.id }
             listeningTriggers.forEach { trigger ->
                 val config = trigger.parameters
-                val configTriggerType = BluetoothTriggerModule.normalizeTriggerType(config["trigger_type"] as? String)
+                val rawTriggerType = config["trigger_type"] as? String ?: BluetoothTriggerModule.TRIGGER_TYPE_STATE
+                val configTriggerType = inputsById["trigger_type"]?.normalizeEnumValue(rawTriggerType) ?: rawTriggerType
 
                 if (configTriggerType != triggerType) return@forEach
 
                 if (triggerType == BluetoothTriggerModule.TRIGGER_TYPE_STATE) {
-                    val configEvent = BluetoothTriggerModule.normalizeStateEvent(config["state_event"] as? String)
+                    val rawEvent = config["state_event"] as? String ?: BluetoothTriggerModule.STATE_EVENT_ON
+                    val configEvent = inputsById["state_event"]?.normalizeEnumValue(rawEvent) ?: rawEvent
                     if (configEvent == event) {
                         DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: 蓝牙 $event")
                         executeTrigger(context, trigger)
                     }
                 } else { // 设备连接
-                    val configEvent = BluetoothTriggerModule.normalizeDeviceEvent(config["device_event"] as? String)
+                    val rawEvent = config["device_event"] as? String ?: BluetoothTriggerModule.DEVICE_EVENT_CONNECTED
+                    val configEvent = inputsById["device_event"]?.normalizeEnumValue(rawEvent) ?: rawEvent
                     val configAddress = config["device_address"] as? String
-                    if (configEvent == event && (configAddress == "any" || configAddress == device?.address)) {
+                    if (configEvent == event && (configAddress == BluetoothTriggerModule.ANY_DEVICE_ADDRESS || configAddress == device?.address)) {
                         DebugLogger.i(TAG, "触发工作流 '${trigger.workflowName}'，事件: $event '${device?.name}'")
                         val triggerData = VDictionary(mapOf(
                             "name" to VString(device?.name ?: ""),

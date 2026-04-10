@@ -141,8 +141,11 @@ class ScreenOperationModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val opType = context.getVariableAsString("operation_type", OP_TAP)
-        val mode = context.getVariableAsString("execution_mode", MODE_AUTO)
+        val inputsById = getInputs().associateBy { it.id }
+        val rawOpType = context.getVariableAsString("operation_type", OP_TAP)
+        val opType = inputsById["operation_type"]?.normalizeEnumValue(rawOpType) ?: rawOpType
+        val rawMode = context.getVariableAsString("execution_mode", MODE_AUTO)
+        val mode = inputsById["execution_mode"]?.normalizeEnumValue(rawMode) ?: rawMode
 
         val durationVal = context.getVariable("duration")
         val duration = (durationVal as? Number)?.toLong() ?:

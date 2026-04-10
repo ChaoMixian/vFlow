@@ -168,7 +168,9 @@ class OCRModule : BaseModule() {
     }
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
-        val mode = step?.parameters?.get("mode") as? String ?: MODE_RECOGNIZE
+        val modeInput = getInputs().first { it.id == "mode" }
+        val rawMode = step?.parameters?.get("mode") as? String ?: MODE_RECOGNIZE
+        val mode = modeInput.normalizeEnumValue(rawMode) ?: rawMode
         return if (mode == MODE_RECOGNIZE) {
             listOf(
                 OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_ocr_success_name),
@@ -206,9 +208,13 @@ class OCRModule : BaseModule() {
         // 获取参数
         val imageVar = context.getVariable("image") as? VImage
             ?: return ExecutionResult.Failure("参数错误", "请提供一张有效的图片。")
-        val mode = context.getVariableAsString("mode", MODE_RECOGNIZE)
-        val language = context.getVariableAsString("language", LANGUAGE_MIXED)
-        val strategy = context.getVariableAsString("search_strategy", STRATEGY_DEFAULT)
+        val inputsById = getInputs().associateBy { it.id }
+        val rawMode = context.getVariableAsString("mode", MODE_RECOGNIZE)
+        val mode = inputsById["mode"]?.normalizeEnumValue(rawMode) ?: rawMode
+        val rawLanguage = context.getVariableAsString("language", LANGUAGE_MIXED)
+        val language = inputsById["language"]?.normalizeEnumValue(rawLanguage) ?: rawLanguage
+        val rawStrategy = context.getVariableAsString("search_strategy", STRATEGY_DEFAULT)
+        val strategy = inputsById["search_strategy"]?.normalizeEnumValue(rawStrategy) ?: rawStrategy
         val rawTargetText = context.getVariableAsString("target_text", "")
         val targetText = VariableResolver.resolve(rawTargetText, context)
 

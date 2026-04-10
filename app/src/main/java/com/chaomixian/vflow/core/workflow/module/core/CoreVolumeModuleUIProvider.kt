@@ -149,6 +149,7 @@ class CoreVolumeModuleUIProvider : ModuleUIProvider {
     ): CustomEditorViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_volume_editor, parent, false)
         val holder = ViewHolder(view)
+        val inputsById = CoreVolumeModule().getInputs().associateBy { it.id }
 
         val configs = listOf(
             holder.musicConfig,
@@ -164,11 +165,12 @@ class CoreVolumeModuleUIProvider : ModuleUIProvider {
             val paramValueId = "${config.streamName}_value"
 
             // 恢复操作类型
-            val action = currentParameters[paramActionId] as? String ?: "keep"
+            val rawAction = currentParameters[paramActionId] as? String ?: CoreVolumeModule.ACTION_KEEP
+            val action = inputsById[paramActionId]?.normalizeEnumValue(rawAction) ?: rawAction
             when (action) {
-                "set" -> config.btnSet.isChecked = true
-                "mute" -> config.btnMute.isChecked = true
-                "unmute" -> config.btnUnmute.isChecked = true
+                CoreVolumeModule.ACTION_SET -> config.btnSet.isChecked = true
+                CoreVolumeModule.ACTION_MUTE -> config.btnMute.isChecked = true
+                CoreVolumeModule.ACTION_UNMUTE -> config.btnUnmute.isChecked = true
                 else -> config.btnKeep.isChecked = true
             }
 
@@ -252,10 +254,10 @@ class CoreVolumeModuleUIProvider : ModuleUIProvider {
             val valueParamId = "${streamName}_value"
 
             val action = when {
-                config.btnSet.isChecked -> "set"
-                config.btnMute.isChecked -> "mute"
-                config.btnUnmute.isChecked -> "unmute"
-                else -> "keep"
+                config.btnSet.isChecked -> CoreVolumeModule.ACTION_SET
+                config.btnMute.isChecked -> CoreVolumeModule.ACTION_MUTE
+                config.btnUnmute.isChecked -> CoreVolumeModule.ACTION_UNMUTE
+                else -> CoreVolumeModule.ACTION_KEEP
             }
 
             params[actionParamId] = action

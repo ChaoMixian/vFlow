@@ -126,7 +126,7 @@ class AdjustImageModuleUIProvider : ModuleUIProvider {
         val imageVar = currentParameters[AdjustImageModule.INPUT_IMAGE] as? String
         if (imageVar != null && imageVar.isMagicVariable()) {
             val pill = inflater.inflate(R.layout.magic_variable_pill, holder.sourceImagePillContainer, false)
-            pill.findViewById<TextView>(R.id.pill_text).text = "已连接变量"
+            pill.findViewById<TextView>(R.id.pill_text).setText(R.string.magic_variable_connected)
             holder.sourceImagePillContainer.addView(pill)
         }
 

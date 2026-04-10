@@ -41,6 +41,12 @@ class VibrationModule : BaseModule() {
         const val MODE_PATTERN = "pattern"     // 自定义模式
         const val MODE_NOTIFICATION = "notification"  // 通知模式
         const val MODE_RINGTONE = "ringtone"   // 铃声模式
+        private val MODE_LEGACY_MAP = mapOf(
+            "单次振动" to MODE_ONCE,
+            "通知模式" to MODE_NOTIFICATION,
+            "铃声模式" to MODE_RINGTONE,
+            "自定义模式" to MODE_PATTERN
+        )
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -57,6 +63,7 @@ class VibrationModule : BaseModule() {
                 R.string.option_vflow_device_vibration_ringtone,
                 R.string.option_vflow_device_vibration_pattern
             ),
+            legacyValueMap = MODE_LEGACY_MAP,
             inputStyle = InputStyle.CHIP_GROUP,
             nameStringRes = R.string.param_vflow_device_vibration_mode_name
         ),
@@ -120,10 +127,11 @@ class VibrationModule : BaseModule() {
     )
 
     override fun getDynamicInputs(step: ActionStep?, allSteps: List<ActionStep>?): List<InputDefinition> {
-        val mode = step?.parameters?.get("mode") as? String ?: MODE_ONCE
+        val inputs = getInputs()
+        val mode = inputs.normalizeEnumValue("mode", step?.parameters?.get("mode") as? String) ?: MODE_ONCE
         val isPatternMode = mode == MODE_PATTERN
 
-        return getInputs().map { input ->
+        return inputs.map { input ->
             when (input.id) {
                 "duration" -> input.copy(isHidden = mode != MODE_ONCE)
                 "patternVibrate", "patternPause", "patternRepeat" -> input.copy(isHidden = !isPatternMode)
@@ -142,7 +150,7 @@ class VibrationModule : BaseModule() {
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val mode = step.parameters["mode"] as? String ?: MODE_ONCE
+        val mode = getInputs().normalizeEnumValue("mode", step.parameters["mode"] as? String) ?: MODE_ONCE
 
         val modeText = when (mode) {
             MODE_ONCE -> {
@@ -169,7 +177,7 @@ class VibrationModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val step = context.allSteps[context.currentStepIndex]
-        val mode = step.parameters["mode"] as? String ?: MODE_ONCE
+        val mode = getInputs().normalizeEnumValue("mode", step.parameters["mode"] as? String) ?: MODE_ONCE
 
         // 获取 Vibrator 实例
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

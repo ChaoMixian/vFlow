@@ -118,7 +118,9 @@ class InvokeModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val mode = context.getVariableAsString("mode", MODE_URI)
+        val modeInput = getInputs().first { it.id == "mode" }
+        val rawMode = context.getVariableAsString("mode", MODE_URI)
+        val mode = modeInput.normalizeEnumValue(rawMode) ?: rawMode
 
         // 解析所有参数
         val rawUri = context.getVariableAsString("uri", "")

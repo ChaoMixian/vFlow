@@ -15,6 +15,7 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
+import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 
 /**
@@ -35,7 +36,8 @@ class VariableValueUIProvider : ModuleUIProvider {
         allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): View? {
-        val type = step.parameters["type"] as? String
+        val type = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["type"]?.toString())
+            ?: CreateVariableModule.TYPE_STRING
         val value = step.parameters["value"]
 
         if (value is String && (value.isMagicVariable() || value.isNamedVariable())) {
@@ -50,7 +52,7 @@ class VariableValueUIProvider : ModuleUIProvider {
 
 
         when (type) {
-            "字典" -> {
+            CreateVariableModule.TYPE_DICTIONARY -> {
                 @Suppress("UNCHECKED_CAST")
                 val map = value as? Map<String, Any?> ?: emptyMap()
                 if (map.isEmpty()) return null
@@ -62,7 +64,7 @@ class VariableValueUIProvider : ModuleUIProvider {
                     previewContainer.addView(textView)
                 }
             }
-            "列表" -> {
+            CreateVariableModule.TYPE_LIST -> {
                 @Suppress("UNCHECKED_CAST")
                 val list = value as? List<Any?> ?: emptyList()
                 if (list.isEmpty()) return null

@@ -89,8 +89,9 @@ class WifiModule : BaseModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val appContext = context.applicationContext
-        // 现在 variables 是 Map<String, VObject>，使用 getVariableAsString 获取
-        val state = context.getVariableAsString("state", STATE_TOGGLE)
+        val stateInput = getInputs().first { it.id == "state" }
+        val rawState = context.getVariableAsString("state", STATE_TOGGLE)
+        val state = stateInput.normalizeEnumValue(rawState) ?: rawState
         onProgress(ProgressUpdate("正在尝试 $state Wi-Fi..."))
 
         // 1. 优先尝试 Shell (Root 或 Shizuku)

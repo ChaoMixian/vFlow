@@ -4,6 +4,7 @@ package com.chaomixian.vflow.core.workflow.module.logic
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableType
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
@@ -49,9 +50,17 @@ class WhileModule : BaseBlockModule() {
             getOperatorsForVariableType(input1TypeName)
         }
 
-        dynamicInputs.add(staticInputs.first { it.id == "operator" }.copy(options = availableOperators))
+        val operatorInput = staticInputs.first { it.id == "operator" }
+        dynamicInputs.add(
+            operatorInput.copy(
+                options = availableOperators,
+                optionsStringRes = availableOperators.mapNotNull(CONDITION_OPERATOR_OPTION_RES_ID_MAP::get),
+                legacyValueMap = CONDITION_OPERATOR_LEGACY_MAP
+            )
+        )
 
-        val selectedOperator = currentParameters["operator"] as? String ?: OP_EXISTS
+        val rawOperator = currentParameters["operator"] as? String ?: OP_EXISTS
+        val selectedOperator = operatorInput.normalizeEnumValue(rawOperator) ?: rawOperator
 
         if (OPERATORS_REQUIRING_ONE_INPUT.contains(selectedOperator)) {
             dynamicInputs.add(staticInputs.first { it.id == "value1" })
@@ -68,7 +77,7 @@ class WhileModule : BaseBlockModule() {
     }
 
     private fun getOperatorsForVariableType(variableTypeName: String?): List<String> {
-        return when (variableTypeName) {
+        val allowedOperators = when (variableTypeName) {
             VTypeRegistry.STRING.id, VTypeRegistry.SCREEN_ELEMENT.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT
             VTypeRegistry.NUMBER.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_NUMBER
             VTypeRegistry.BOOLEAN.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_BOOLEAN
@@ -76,7 +85,8 @@ class WhileModule : BaseBlockModule() {
             VTypeRegistry.COORDINATE.id, VTypeRegistry.IMAGE.id, VTypeRegistry.TIME.id, VTypeRegistry.DATE.id, VTypeRegistry.NOTIFICATION.id -> OPERATORS_FOR_ANY
             null -> OPERATORS_FOR_ANY
             else -> OPERATORS_FOR_ANY
-        }.distinct()
+        }.toSet()
+        return ALL_OPERATORS.filter(allowedOperators::contains)
     }
 
     /**
@@ -114,22 +124,13 @@ class WhileModule : BaseBlockModule() {
      * 辅助函数，映射UI类型到内部类型。
      */
     private fun userTypeToInternalName(userType: String?): String? {
-        return when (userType) {
-            "文本" -> VTypeRegistry.STRING.id
-            "数字" -> VTypeRegistry.NUMBER.id
-            "布尔" -> VTypeRegistry.BOOLEAN.id
-            "字典" -> VTypeRegistry.DICTIONARY.id
-            "列表" -> VTypeRegistry.LIST.id
-            "图像" -> VTypeRegistry.IMAGE.id
-            "坐标" -> VTypeRegistry.COORDINATE.id
-            else -> null
-        }
+        return VariableType.fromStoredValue(userType)?.typeId
     }
 
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(id = "input1", nameStringRes = R.string.param_vflow_logic_while_start_input1_name, name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.BOOLEAN.id, VTypeRegistry.NUMBER.id, VTypeRegistry.STRING.id, VTypeRegistry.DICTIONARY.id, VTypeRegistry.LIST.id, VTypeRegistry.SCREEN_ELEMENT.id)),
-        InputDefinition(id = "operator", nameStringRes = R.string.param_vflow_logic_while_start_operator_name, name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
+        InputDefinition(id = "operator", nameStringRes = R.string.param_vflow_logic_while_start_operator_name, name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false, optionsStringRes = CONDITION_OPERATOR_OPTION_RES_IDS, legacyValueMap = CONDITION_OPERATOR_LEGACY_MAP),
         InputDefinition(id = "value1", nameStringRes = R.string.param_vflow_logic_while_start_value1_name, name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.NUMBER.id, VTypeRegistry.BOOLEAN.id)),
         InputDefinition(id = "value2", nameStringRes = R.string.param_vflow_logic_while_start_value2_name, name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
     )
@@ -192,7 +193,8 @@ class WhileModule : BaseBlockModule() {
     ): ExecutionResult {
         // 优先从 magicVariables 中获取已解析的值
         val input1 = context.getVariable("input1")
-        val operator = context.getVariableAsString("operator", OP_EXISTS)
+        val rawOperator = context.getVariableAsString("operator", OP_EXISTS)
+        val operator = getInputs().first { it.id == "operator" }.normalizeEnumValue(rawOperator) ?: rawOperator
         val value1 = context.getVariable("value1")
         val value2 = context.getVariable("value2")
 

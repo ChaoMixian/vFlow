@@ -314,6 +314,7 @@
     <string name="output_vflow_trigger_bluetooth_device_address_name">设备地址</string>
     <string name="summary_vflow_trigger_bluetooth_state_prefix">当蓝牙 </string>
     <string name="summary_vflow_trigger_bluetooth_device_prefix">当 </string>
+    <string name="summary_vflow_trigger_bluetooth_any_device">任何设备</string>
     <string name="msg_vflow_trigger_bluetooth_triggered">蓝牙事件已触发</string>
     <string name="option_vflow_trigger_bluetooth_type_state">蓝牙状态</string>
     <string name="option_vflow_trigger_bluetooth_type_device">设备连接</string>
@@ -344,6 +345,8 @@
     <string name="module_vflow_trigger_backtap_name">轻敲背面触发</string>
     <string name="module_vflow_trigger_backtap_desc">通过敲击手机背面触发工作流（双击/三击）</string>
     <string name="param_vflow_trigger_backtap_mode_name">模式</string>
+    <string name="option_vflow_trigger_backtap_mode_double_tap">双击</string>
+    <string name="option_vflow_trigger_backtap_mode_triple_tap">三击</string>
     <string name="module_vflow_trigger_notification_name">通知触发</string>
     <string name="module_vflow_trigger_notification_desc">当收到符合条件的通知时触发工作流</string>
     <string name="param_vflow_trigger_notification_app_filter_name">应用包名</string>
@@ -757,6 +760,7 @@
     <string name="module_vflow_file_import_image_desc">从相册或文件中选择一张图片</string>
     <string name="module_vflow_file_apply_mask_name">应用蒙版</string>
     <string name="module_vflow_file_apply_mask_desc">为图片应用 Material You 风格圆角矩形蒙版</string>
+    <string name="option_vflow_file_apply_mask_shape_rounded_rect">圆角矩形</string>
     <string name="module_vflow_ai_autoglm_name">AutoGLM 智能体</string>
     <string name="module_vflow_ai_autoglm_desc">复刻 AutoGLM 项目。基于思维链(CoT)和自定义指令协议，执行复杂的手机操作任务</string>
     <string name="module_vflow_ai_agent_name">AI 智能体</string>
@@ -955,6 +959,25 @@
     <string name="module_vflow_logic_while_end_name">结束循环</string>
     <string name="module_vflow_logic_while_start_desc">当条件为真时重复，直到条件不满足</string>
     <string name="module_vflow_logic_while_start_name">循环直到</string>
+    <string name="option_vflow_logic_condition_exists">存在</string>
+    <string name="option_vflow_logic_condition_not_exists">不存在</string>
+    <string name="option_vflow_logic_condition_is_empty">为空</string>
+    <string name="option_vflow_logic_condition_is_not_empty">不为空</string>
+    <string name="option_vflow_logic_condition_equals">等于</string>
+    <string name="option_vflow_logic_condition_strict_equals">严格等于</string>
+    <string name="option_vflow_logic_condition_not_equals">不等于</string>
+    <string name="option_vflow_logic_condition_contains">包含</string>
+    <string name="option_vflow_logic_condition_not_contains">不包含</string>
+    <string name="option_vflow_logic_condition_starts_with">开头是</string>
+    <string name="option_vflow_logic_condition_ends_with">结尾是</string>
+    <string name="option_vflow_logic_condition_matches_regex">匹配正则</string>
+    <string name="option_vflow_logic_condition_number_gt">大于</string>
+    <string name="option_vflow_logic_condition_number_gte">大于等于</string>
+    <string name="option_vflow_logic_condition_number_lt">小于</string>
+    <string name="option_vflow_logic_condition_number_lte">小于等于</string>
+    <string name="option_vflow_logic_condition_number_between">介于</string>
+    <string name="option_vflow_logic_condition_is_true">为真</string>
+    <string name="option_vflow_logic_condition_is_false">为假</string>
     <string name="module_vflow_notification_find_desc">查找当前状态栏中所有可见的通知。</string>
     <string name="module_vflow_notification_find_name">查找通知</string>
     <string name="module_vflow_notification_remove_desc">从状态栏移除一个或多个通知。</string>
@@ -1772,6 +1795,9 @@
     <string name="volume_action_set">设置音量</string>
     <string name="volume_action_mute">静音</string>
     <string name="volume_action_unmute">取消静音</string>
+    <string name="summary_vflow_core_volume_action_set">%1$s设为%2$d%%</string>
+    <string name="summary_vflow_core_volume_action_mute">%1$s静音</string>
+    <string name="summary_vflow_core_volume_action_unmute">%1$s取消静音</string>
     <string name="refresh_volume_levels">刷新当前音量</string>
 
     <!-- Data Module Summaries -->
@@ -2026,6 +2052,8 @@
     <string name="module_vflow_system_mobile_data_name">移动数据</string>
     <string name="module_vflow_system_mobile_data_desc">通过 shell 命令控制移动数据开关（开启/关闭/切换）。</string>
     <string name="param_vflow_system_mobile_data_action_name">操作</string>
+    <string name="option_vflow_system_mobile_data_enable">开启</string>
+    <string name="option_vflow_system_mobile_data_disable">关闭</string>
     <string name="output_vflow_system_mobile_data_success_name">是否成功</string>
     <string name="output_vflow_system_mobile_data_enabled_name">切换后的状态</string>
     <string name="output_vflow_system_mobile_data_result_name">命令输出</string>
@@ -2063,9 +2091,24 @@
     <string name="module_vflow_device_text_to_speech_desc">使用Android系统自带的TTS引擎将文本转换为语音并朗读</string>
     <string name="param_vflow_device_text_to_speech_text_name">要朗读的文本</string>
     <string name="param_vflow_device_text_to_speech_language_name">语言</string>
+    <string name="option_vflow_device_text_to_speech_language_auto">自动</string>
+    <string name="option_vflow_device_text_to_speech_language_zh_cn">中文（中国）</string>
+    <string name="option_vflow_device_text_to_speech_language_en_us">英语（美国）</string>
+    <string name="option_vflow_device_text_to_speech_language_en_gb">英语（英国）</string>
+    <string name="option_vflow_device_text_to_speech_language_ja_jp">日语</string>
+    <string name="option_vflow_device_text_to_speech_language_ko_kr">韩语</string>
+    <string name="option_vflow_device_text_to_speech_language_fr_fr">法语</string>
+    <string name="option_vflow_device_text_to_speech_language_de_de">德语</string>
+    <string name="option_vflow_device_text_to_speech_language_es_es">西班牙语</string>
+    <string name="option_vflow_device_text_to_speech_language_it_it">意大利语</string>
+    <string name="option_vflow_device_text_to_speech_language_ru_ru">俄语</string>
+    <string name="option_vflow_device_text_to_speech_language_th_th">泰语</string>
+    <string name="option_vflow_device_text_to_speech_language_ar_sa">阿拉伯语</string>
     <string name="param_vflow_device_text_to_speech_speech_rate_name">语速</string>
     <string name="param_vflow_device_text_to_speech_pitch_name">语调</string>
     <string name="param_vflow_device_text_to_speech_queue_mode_name">排队模式</string>
+    <string name="option_vflow_device_text_to_speech_queue_flush">替换</string>
+    <string name="option_vflow_device_text_to_speech_queue_add">追加</string>
     <string name="param_vflow_device_text_to_speech_await_completion_name">等待朗读完成</string>
     <string name="output_vflow_device_text_to_speech_success_name">是否成功</string>
     <string name="summary_vflow_device_text_to_speech_prefix">朗读:</string>

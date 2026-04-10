@@ -103,7 +103,9 @@ class GetAppUsageStatsModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val intervalStr = context.getVariableAsString("interval", INTERVAL_TODAY)
+        val intervalInput = getInputs().first { it.id == "interval" }
+        val rawIntervalStr = context.getVariableAsString("interval", INTERVAL_TODAY)
+        val intervalStr = intervalInput.normalizeEnumValue(rawIntervalStr) ?: rawIntervalStr
         // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
         val maxResults = context.getVariableAsInt("max_results") ?: 10
 

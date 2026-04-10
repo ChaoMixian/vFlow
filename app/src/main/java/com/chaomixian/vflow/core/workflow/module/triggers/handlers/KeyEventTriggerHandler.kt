@@ -93,7 +93,11 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
         val devicePath = params["device"] as? String ?: return null
         val keyCodeValue = params["key_code"] as? String ?: return null
         val rawActionType = params["action_type"] as? String ?: return null
-        val actionType = normalizeActionType(rawActionType) ?: return null
+        val actionType = KeyEventTriggerModule.actionTypeInputDefinition().normalizeEnumValueOrNull(rawActionType)
+            ?: run {
+                DebugLogger.w(TAG, "不支持的按键动作类型: $rawActionType")
+                return null
+            }
         val keyCode = parseKeyCode(keyCodeValue) ?: return null
 
         return ResolvedKeyEventTrigger(
@@ -266,39 +270,6 @@ class KeyEventTriggerHandler : BaseTriggerHandler() {
             KeyEventTriggerModule.ACTION_SWIPE_DOWN,
             KeyEventTriggerModule.ACTION_SWIPE_UP -> "--slider"
             else -> null
-        }
-    }
-
-    private fun normalizeActionType(actionType: String): String? {
-        return when (actionType) {
-            KeyEventTriggerModule.ACTION_SINGLE_CLICK,
-            "单击",
-            "Single Click" -> KeyEventTriggerModule.ACTION_SINGLE_CLICK
-
-            KeyEventTriggerModule.ACTION_DOUBLE_CLICK,
-            "双击",
-            "Double Click" -> KeyEventTriggerModule.ACTION_DOUBLE_CLICK
-
-            KeyEventTriggerModule.ACTION_LONG_PRESS,
-            "长按",
-            "Long Press" -> KeyEventTriggerModule.ACTION_LONG_PRESS
-
-            KeyEventTriggerModule.ACTION_SHORT_PRESS,
-            "短按 (立即触发)",
-            "Short Press (Immediate)" -> KeyEventTriggerModule.ACTION_SHORT_PRESS
-
-            KeyEventTriggerModule.ACTION_SWIPE_DOWN,
-            "向下滑动",
-            "Swipe Down" -> KeyEventTriggerModule.ACTION_SWIPE_DOWN
-
-            KeyEventTriggerModule.ACTION_SWIPE_UP,
-            "向上滑动",
-            "Swipe Up" -> KeyEventTriggerModule.ACTION_SWIPE_UP
-
-            else -> {
-                DebugLogger.w(TAG, "不支持的按键动作类型: $actionType")
-                null
-            }
         }
     }
 

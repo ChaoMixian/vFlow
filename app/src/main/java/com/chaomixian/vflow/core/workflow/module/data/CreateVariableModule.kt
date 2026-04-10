@@ -25,55 +25,23 @@ class CreateVariableModule : BaseModule() {
         const val TYPE_IMAGE = "image"
         const val TYPE_COORDINATE = "coordinate"
 
-        fun normalizeType(value: String?): String {
-            return when (value) {
-                "文本", "Text", TYPE_STRING -> TYPE_STRING
-                "数字", "Number", TYPE_NUMBER -> TYPE_NUMBER
-                "布尔", "Boolean", TYPE_BOOLEAN -> TYPE_BOOLEAN
-                "字典", "Dictionary", TYPE_DICTIONARY -> TYPE_DICTIONARY
-                "列表", "List", TYPE_LIST -> TYPE_LIST
-                "图像", "Image", TYPE_IMAGE -> TYPE_IMAGE
-                "坐标", "Coordinate", TYPE_COORDINATE -> TYPE_COORDINATE
-                else -> TYPE_STRING
-            }
-        }
+        val TYPE_OPTIONS = listOf(
+            TYPE_STRING,
+            TYPE_NUMBER,
+            TYPE_BOOLEAN,
+            TYPE_DICTIONARY,
+            TYPE_LIST,
+            TYPE_IMAGE,
+            TYPE_COORDINATE
+        )
 
-        fun getTypeLabel(context: Context, value: String?): String {
-            return when (normalizeType(value)) {
-                TYPE_STRING -> context.getString(R.string.option_vflow_variable_create_type_string)
-                TYPE_NUMBER -> context.getString(R.string.option_vflow_variable_create_type_number)
-                TYPE_BOOLEAN -> context.getString(R.string.option_vflow_variable_create_type_boolean)
-                TYPE_DICTIONARY -> context.getString(R.string.option_vflow_variable_create_type_dictionary)
-                TYPE_LIST -> context.getString(R.string.option_vflow_variable_create_type_list)
-                TYPE_IMAGE -> context.getString(R.string.option_vflow_variable_create_type_image)
-                TYPE_COORDINATE -> context.getString(R.string.option_vflow_variable_create_type_coordinate)
-                else -> context.getString(R.string.option_vflow_variable_create_type_string)
-            }
-        }
-    }
-    override val id = "vflow.variable.create"
-    override val metadata = ActionMetadata(
-        nameStringRes = R.string.module_vflow_variable_create_name,
-        descriptionStringRes = R.string.module_vflow_variable_create_desc,
-        name = "创建变量",
-        description = "创建一个新的变量，可选择为其命名以便后续修改或读取。",
-        iconRes = R.drawable.rounded_add_24,
-        category = "数据",
-        categoryId = "data"
-    )
-    private val typeOptions = listOf(TYPE_STRING, TYPE_NUMBER, TYPE_BOOLEAN, TYPE_DICTIONARY, TYPE_LIST, TYPE_IMAGE, TYPE_COORDINATE)
-
-    override val uiProvider: ModuleUIProvider? = VariableModuleUIProvider(typeOptions)
-
-    override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition("variableName", "变量名称 (可选)", ParameterType.STRING, defaultValue = "", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_variable_create_variableName_name),
-        InputDefinition(
+        val TYPE_INPUT_DEFINITION = InputDefinition(
             id = "type",
             nameStringRes = R.string.param_vflow_variable_create_type_name,
             name = "变量类型",
             staticType = ParameterType.ENUM,
             defaultValue = TYPE_STRING,
-            options = typeOptions,
+            options = TYPE_OPTIONS,
             acceptsMagicVariable = false,
             optionsStringRes = listOf(
                 R.string.option_vflow_variable_create_type_string,
@@ -96,11 +64,43 @@ class CreateVariableModule : BaseModule() {
                 "列表" to TYPE_LIST,
                 "List" to TYPE_LIST,
                 "图像" to TYPE_IMAGE,
+                "图片" to TYPE_IMAGE,
                 "Image" to TYPE_IMAGE,
                 "坐标" to TYPE_COORDINATE,
                 "Coordinate" to TYPE_COORDINATE
             )
-        ),
+        )
+
+        fun getTypeLabel(context: Context, value: String?): String {
+            val normalizedType = TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(value) ?: TYPE_STRING
+            return when (normalizedType) {
+                TYPE_STRING -> context.getString(R.string.option_vflow_variable_create_type_string)
+                TYPE_NUMBER -> context.getString(R.string.option_vflow_variable_create_type_number)
+                TYPE_BOOLEAN -> context.getString(R.string.option_vflow_variable_create_type_boolean)
+                TYPE_DICTIONARY -> context.getString(R.string.option_vflow_variable_create_type_dictionary)
+                TYPE_LIST -> context.getString(R.string.option_vflow_variable_create_type_list)
+                TYPE_IMAGE -> context.getString(R.string.option_vflow_variable_create_type_image)
+                TYPE_COORDINATE -> context.getString(R.string.option_vflow_variable_create_type_coordinate)
+                else -> context.getString(R.string.option_vflow_variable_create_type_string)
+            }
+        }
+    }
+    override val id = "vflow.variable.create"
+    override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_variable_create_name,
+        descriptionStringRes = R.string.module_vflow_variable_create_desc,
+        name = "创建变量",
+        description = "创建一个新的变量，可选择为其命名以便后续修改或读取。",
+        iconRes = R.drawable.rounded_add_24,
+        category = "数据",
+        categoryId = "data"
+    )
+
+    override val uiProvider: ModuleUIProvider? = VariableModuleUIProvider(TYPE_OPTIONS)
+
+    override fun getInputs(): List<InputDefinition> = listOf(
+        InputDefinition("variableName", "变量名称 (可选)", ParameterType.STRING, defaultValue = "", acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_variable_create_variableName_name),
+        TYPE_INPUT_DEFINITION,
         InputDefinition(
             id = "value",
             nameStringRes = R.string.param_vflow_variable_create_value_name,
@@ -114,7 +114,7 @@ class CreateVariableModule : BaseModule() {
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> {
         if (step == null) return emptyList()
-        val selectedType = normalizeType(step.parameters["type"] as? String)
+        val selectedType = TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["type"] as? String) ?: TYPE_STRING
         val outputTypeName = when (selectedType) {
             TYPE_STRING -> VTypeRegistry.STRING.id
             TYPE_NUMBER -> VTypeRegistry.NUMBER.id
@@ -137,7 +137,7 @@ class CreateVariableModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val name = step.parameters["variableName"] as? String
-        val type = normalizeType(step.parameters["type"]?.toString())
+        val type = TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["type"]?.toString()) ?: TYPE_STRING
         val typeLabel = getTypeLabel(context, type)
         val value = step.parameters["value"]
         val rawText = value?.toString() ?: ""
@@ -195,7 +195,7 @@ class CreateVariableModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val type = normalizeType(context.getVariableAsString("type", TYPE_STRING))
+        val type = TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(context.getVariableAsString("type", TYPE_STRING)) ?: TYPE_STRING
         val rawValue = context.getVariable("value")  // 现在直接返回 VObject
         val variableName = context.getVariableAsString("variableName", "")
 

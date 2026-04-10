@@ -165,6 +165,7 @@ class AgentModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
+        val inputsById = getInputs().associateBy { it.id }
         // 获取参数
         val baseUrl = context.getVariableAsString("base_url", "")
         val apiKey = context.getVariableAsString("api_key", "")
@@ -172,7 +173,8 @@ class AgentModule : BaseModule() {
         val instruction = VariableResolver.resolve(context.getVariableAsString("instruction", ""), context)
         // 现在 variables 是 Map<String, VObject>，使用 getVariableAsInt 获取
         val maxSteps = context.getVariableAsInt("max_steps") ?: 15
-        val displayMode = context.getVariableAsString("display_mode", DISPLAY_MODE_MAIN)
+        val rawDisplayMode = context.getVariableAsString("display_mode", DISPLAY_MODE_MAIN)
+        val displayMode = inputsById["display_mode"]?.normalizeEnumValue(rawDisplayMode) ?: rawDisplayMode
 
         if (apiKey.isBlank()) return ExecutionResult.Failure("配置错误", "API Key 不能为空")
 

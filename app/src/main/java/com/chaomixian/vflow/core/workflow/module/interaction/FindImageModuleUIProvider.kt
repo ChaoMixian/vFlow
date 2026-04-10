@@ -19,6 +19,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
+import com.chaomixian.vflow.core.module.normalizeEnumValue
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -28,6 +29,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.FileOutputStream
@@ -96,8 +98,10 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         holder.templateUri = templateUri
         updateImagePreview(context, holder, templateUri)
 
+        val inputs = FindImageModule().getInputs()
+
         // 恢复相似度设置
-        val threshold = normalizeThreshold(currentParameters["threshold"] as? String)
+        val threshold = inputs.normalizeEnumValue("threshold", currentParameters["threshold"] as? String, THRESHOLD_80) ?: THRESHOLD_80
         when {
             threshold == THRESHOLD_90 -> holder.chipThreshold90.isChecked = true
             threshold == THRESHOLD_80 -> holder.chipThreshold80.isChecked = true
@@ -106,7 +110,8 @@ class FindImageModuleUIProvider : ModuleUIProvider {
             else -> holder.chipThreshold80.isChecked = true
         }
 
-        val outputFormat = normalizeOutputFormat(currentParameters["output_format"] as? String)
+        val outputFormat = inputs.normalizeEnumValue("output_format", currentParameters["output_format"] as? String, OUTPUT_FORMAT_COORDINATE)
+            ?: OUTPUT_FORMAT_COORDINATE
         holder.chipOutputCoordinate.isChecked = outputFormat == OUTPUT_FORMAT_COORDINATE
 
         // 点击图片预览区域也可以选择图片
@@ -160,30 +165,17 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         )
     }
 
-    private fun normalizeThreshold(value: String?): String {
-        return when (value) {
-            THRESHOLD_90, "90% (精确)", "90% (Precise)" -> THRESHOLD_90
-            THRESHOLD_70, "70% (宽松)", "70% (Loose)" -> THRESHOLD_70
-            THRESHOLD_60, "60% (模糊)", "60% (Fuzzy)" -> THRESHOLD_60
-            else -> THRESHOLD_80
-        }
-    }
-
-    private fun normalizeOutputFormat(value: String?): String {
-        return when (value) {
-            OUTPUT_FORMAT_COORDINATE, "坐标", "Coordinate" -> OUTPUT_FORMAT_COORDINATE
-            else -> OUTPUT_FORMAT_COORDINATE
-        }
-    }
-
     private fun showImageSourceDialog(
         context: Context,
         holder: ViewHolder,
         onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ) {
-        val options = arrayOf("从相册选择", "截图选取")
-        android.app.AlertDialog.Builder(context)
-            .setTitle("选择图片来源")
+        val options = arrayOf(
+            context.getString(R.string.button_select_from_gallery),
+            context.getString(R.string.button_screenshot_select)
+        )
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.dialog_find_image_source_title)
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> pickImageFromGallery(context, holder, onStartActivityForResult)
@@ -199,7 +191,7 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ) {
         if (onStartActivityForResult == null) {
-            Toast.makeText(context, "无法启动图片选择器", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.toast_find_image_picker_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -226,7 +218,7 @@ class FindImageModuleUIProvider : ModuleUIProvider {
                             holder.templateUri = oldUri
                             updateImagePreview(context, holder, oldUri)
                             holder.onParametersChangedCallback?.invoke()
-                            Toast.makeText(context, "图片编码失败", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, R.string.toast_find_image_encode_failed, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -249,7 +241,7 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         // 检查悬浮窗权限
         if (!PermissionManager.isGranted(context, PermissionManager.OVERLAY)) {
             DebugLogger.w("FindImageModuleUIProvider", "悬浮窗权限未授予")
-            Toast.makeText(context, "需要悬浮窗权限才能截图", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.toast_find_image_overlay_permission_required, Toast.LENGTH_SHORT).show()
             return
         }
         DebugLogger.i("FindImageModuleUIProvider", "悬浮窗权限检查通过")
@@ -259,7 +251,7 @@ class FindImageModuleUIProvider : ModuleUIProvider {
         val hasShellPermission = shellPermissions.all { PermissionManager.isGranted(context, it) }
         if (!hasShellPermission) {
             DebugLogger.w("FindImageModuleUIProvider", "Shell 权限未授予: $shellPermissions")
-            Toast.makeText(context, "需要 Shizuku 或 Root 权限才能截图", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.toast_find_image_shell_permission_required, Toast.LENGTH_SHORT).show()
             return
         }
         DebugLogger.i("FindImageModuleUIProvider", "Shell 权限检查通过")
@@ -304,7 +296,12 @@ class FindImageModuleUIProvider : ModuleUIProvider {
                 DebugLogger.e("FindImageModuleUIProvider", "截图失败", e)
                 withContext(Dispatchers.Main) {
                     contextRef.get()?.let {
-                        Toast.makeText(it, "截图失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                        val detail = e.message ?: it.getString(R.string.error_vflow_core_capture_screen_failed)
+                            Toast.makeText(
+                                it,
+                                it.getString(R.string.toast_find_image_capture_failed, detail),
+                                Toast.LENGTH_SHORT
+                            ).show()
                     }
                 }
             }

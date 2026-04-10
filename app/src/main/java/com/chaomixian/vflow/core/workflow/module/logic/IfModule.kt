@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
+import com.chaomixian.vflow.core.execution.VariableType
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -19,25 +20,93 @@ const val IF_START_ID = "vflow.logic.if.start"
 const val ELSE_ID = "vflow.logic.if.middle"
 const val IF_END_ID = "vflow.logic.if.end"
 
-const val OP_EXISTS = "存在"
-const val OP_NOT_EXISTS = "不存在"
-const val OP_IS_EMPTY = "为空"
-const val OP_IS_NOT_EMPTY = "不为空"
-const val OP_EQUALS = "等于"              // 弱类型，自动类型转换
-const val OP_STRICT_EQUALS = "严格等于"    // 强类型，类型和值都必须相同
-const val OP_NOT_EQUALS = "不等于"
-const val OP_CONTAINS = "包含"
-const val OP_NOT_CONTAINS = "不包含"
-const val OP_STARTS_WITH = "开头是"
-const val OP_ENDS_WITH = "结尾是"
-const val OP_MATCHES_REGEX = "匹配正则"
-const val OP_NUM_GT = "大于"
-const val OP_NUM_GTE = "大于等于"
-const val OP_NUM_LT = "小于"
-const val OP_NUM_LTE = "小于等于"
-const val OP_NUM_BETWEEN = "介于"
-const val OP_IS_TRUE = "为真"
-const val OP_IS_FALSE = "为假"
+const val OP_EXISTS = "exists"
+const val OP_NOT_EXISTS = "not_exists"
+const val OP_IS_EMPTY = "is_empty"
+const val OP_IS_NOT_EMPTY = "is_not_empty"
+const val OP_EQUALS = "equals"
+const val OP_STRICT_EQUALS = "strict_equals"
+const val OP_NOT_EQUALS = "not_equals"
+const val OP_CONTAINS = "contains"
+const val OP_NOT_CONTAINS = "not_contains"
+const val OP_STARTS_WITH = "starts_with"
+const val OP_ENDS_WITH = "ends_with"
+const val OP_MATCHES_REGEX = "matches_regex"
+const val OP_NUM_GT = "number_gt"
+const val OP_NUM_GTE = "number_gte"
+const val OP_NUM_LT = "number_lt"
+const val OP_NUM_LTE = "number_lte"
+const val OP_NUM_BETWEEN = "number_between"
+const val OP_IS_TRUE = "is_true"
+const val OP_IS_FALSE = "is_false"
+
+val CONDITION_OPERATOR_OPTION_RES_IDS = listOf(
+    R.string.option_vflow_logic_condition_exists,
+    R.string.option_vflow_logic_condition_not_exists,
+    R.string.option_vflow_logic_condition_is_empty,
+    R.string.option_vflow_logic_condition_is_not_empty,
+    R.string.option_vflow_logic_condition_equals,
+    R.string.option_vflow_logic_condition_strict_equals,
+    R.string.option_vflow_logic_condition_not_equals,
+    R.string.option_vflow_logic_condition_contains,
+    R.string.option_vflow_logic_condition_not_contains,
+    R.string.option_vflow_logic_condition_starts_with,
+    R.string.option_vflow_logic_condition_ends_with,
+    R.string.option_vflow_logic_condition_matches_regex,
+    R.string.option_vflow_logic_condition_number_gt,
+    R.string.option_vflow_logic_condition_number_gte,
+    R.string.option_vflow_logic_condition_number_lt,
+    R.string.option_vflow_logic_condition_number_lte,
+    R.string.option_vflow_logic_condition_number_between,
+    R.string.option_vflow_logic_condition_is_true,
+    R.string.option_vflow_logic_condition_is_false
+)
+
+val ALL_OPERATORS = listOf(
+    OP_EXISTS,
+    OP_NOT_EXISTS,
+    OP_IS_EMPTY,
+    OP_IS_NOT_EMPTY,
+    OP_EQUALS,
+    OP_STRICT_EQUALS,
+    OP_NOT_EQUALS,
+    OP_CONTAINS,
+    OP_NOT_CONTAINS,
+    OP_STARTS_WITH,
+    OP_ENDS_WITH,
+    OP_MATCHES_REGEX,
+    OP_NUM_GT,
+    OP_NUM_GTE,
+    OP_NUM_LT,
+    OP_NUM_LTE,
+    OP_NUM_BETWEEN,
+    OP_IS_TRUE,
+    OP_IS_FALSE
+)
+
+val CONDITION_OPERATOR_OPTION_RES_ID_MAP = ALL_OPERATORS.zip(CONDITION_OPERATOR_OPTION_RES_IDS).toMap()
+
+val CONDITION_OPERATOR_LEGACY_MAP = mapOf(
+    "存在" to OP_EXISTS,
+    "不存在" to OP_NOT_EXISTS,
+    "为空" to OP_IS_EMPTY,
+    "不为空" to OP_IS_NOT_EMPTY,
+    "等于" to OP_EQUALS,
+    "严格等于" to OP_STRICT_EQUALS,
+    "不等于" to OP_NOT_EQUALS,
+    "包含" to OP_CONTAINS,
+    "不包含" to OP_NOT_CONTAINS,
+    "开头是" to OP_STARTS_WITH,
+    "结尾是" to OP_ENDS_WITH,
+    "匹配正则" to OP_MATCHES_REGEX,
+    "大于" to OP_NUM_GT,
+    "大于等于" to OP_NUM_GTE,
+    "小于" to OP_NUM_LT,
+    "小于等于" to OP_NUM_LTE,
+    "介于" to OP_NUM_BETWEEN,
+    "为真" to OP_IS_TRUE,
+    "为假" to OP_IS_FALSE
+)
 
 val OPERATORS_REQUIRING_ONE_INPUT = setOf(
     OP_EQUALS, OP_NOT_EQUALS, OP_CONTAINS, OP_NOT_CONTAINS,
@@ -51,7 +120,6 @@ val OPERATORS_FOR_TEXT = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY, OP_EQUALS, OP_NOT_
 val OPERATORS_FOR_NUMBER = listOf(OP_EQUALS, OP_STRICT_EQUALS, OP_NOT_EQUALS, OP_NUM_GT, OP_NUM_GTE, OP_NUM_LT, OP_NUM_LTE, OP_NUM_BETWEEN)
 val OPERATORS_FOR_BOOLEAN = listOf(OP_IS_TRUE, OP_IS_FALSE)
 val OPERATORS_FOR_COLLECTION = listOf(OP_IS_EMPTY, OP_IS_NOT_EMPTY)
-val ALL_OPERATORS = (OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT + OPERATORS_FOR_NUMBER + OPERATORS_FOR_BOOLEAN + OPERATORS_FOR_COLLECTION).distinct()
 
 /**
  * "如果" (If) 模块。
@@ -73,7 +141,7 @@ class IfModule : BaseBlockModule() {
     /** 获取静态输入参数定义。 */
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(id = "input1", nameStringRes = R.string.param_vflow_logic_if_start_input1_name, name = "输入", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.BOOLEAN.id, VTypeRegistry.NUMBER.id, VTypeRegistry.STRING.id, VTypeRegistry.DICTIONARY.id, VTypeRegistry.LIST.id, VTypeRegistry.SCREEN_ELEMENT.id)),
-        InputDefinition(id = "operator", nameStringRes = R.string.param_vflow_logic_if_start_operator_name, name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false),
+        InputDefinition(id = "operator", nameStringRes = R.string.param_vflow_logic_if_start_operator_name, name = "条件", staticType = ParameterType.ENUM, defaultValue = OP_EXISTS, options = ALL_OPERATORS, acceptsMagicVariable = false, optionsStringRes = CONDITION_OPERATOR_OPTION_RES_IDS, legacyValueMap = CONDITION_OPERATOR_LEGACY_MAP),
         InputDefinition(id = "value1", nameStringRes = R.string.param_vflow_logic_if_start_value1_name, name = "比较值 1", staticType = ParameterType.ANY, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id, VTypeRegistry.NUMBER.id, VTypeRegistry.BOOLEAN.id)),
         InputDefinition(id = "value2", nameStringRes = R.string.param_vflow_logic_if_start_value2_name, name = "比较值 2", staticType = ParameterType.NUMBER, acceptsMagicVariable = true, acceptsNamedVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id))
     )
@@ -101,9 +169,17 @@ class IfModule : BaseBlockModule() {
             getOperatorsForVariableType(input1TypeName)
         }
 
-        dynamicInputs.add(staticInputs.first { it.id == "operator" }.copy(options = availableOperators))
+        val operatorInput = staticInputs.first { it.id == "operator" }
+        dynamicInputs.add(
+            operatorInput.copy(
+                options = availableOperators,
+                optionsStringRes = availableOperators.mapNotNull(CONDITION_OPERATOR_OPTION_RES_ID_MAP::get),
+                legacyValueMap = CONDITION_OPERATOR_LEGACY_MAP
+            )
+        )
 
-        val selectedOperator = currentParameters["operator"] as? String ?: OP_EXISTS
+        val rawOperator = currentParameters["operator"] as? String ?: OP_EXISTS
+        val selectedOperator = operatorInput.normalizeEnumValue(rawOperator) ?: rawOperator
 
         if (OPERATORS_REQUIRING_ONE_INPUT.contains(selectedOperator)) {
             dynamicInputs.add(staticInputs.first { it.id == "value1" })
@@ -169,7 +245,8 @@ class IfModule : BaseBlockModule() {
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
         val input1 = context.getVariable("input1")
-        val operator = context.getVariableAsString("operator", OP_EXISTS)
+        val rawOperator = context.getVariableAsString("operator", OP_EXISTS)
+        val operator = getInputs().first { it.id == "operator" }.normalizeEnumValue(rawOperator) ?: rawOperator
         val value1 = context.getVariable("value1")
         val value2 = context.getVariable("value2")
 
@@ -189,7 +266,7 @@ class IfModule : BaseBlockModule() {
     }
 
     private fun getOperatorsForVariableType(variableTypeName: String?): List<String> {
-        return when (variableTypeName) {
+        val allowedOperators = when (variableTypeName) {
             VTypeRegistry.STRING.id, VTypeRegistry.SCREEN_ELEMENT.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_TEXT
             VTypeRegistry.NUMBER.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_NUMBER
             VTypeRegistry.BOOLEAN.id -> OPERATORS_FOR_ANY + OPERATORS_FOR_BOOLEAN
@@ -197,7 +274,8 @@ class IfModule : BaseBlockModule() {
             VTypeRegistry.COORDINATE.id, VTypeRegistry.IMAGE.id, VTypeRegistry.TIME.id, VTypeRegistry.DATE.id, VTypeRegistry.NOTIFICATION.id -> OPERATORS_FOR_ANY
             null -> OPERATORS_FOR_ANY
             else -> OPERATORS_FOR_ANY
-        }.distinct()
+        }.toSet()
+        return ALL_OPERATORS.filter(allowedOperators::contains)
     }
 
     private fun resolveVariableType(variableReference: String?, allSteps: List<ActionStep>?, currentStep: ActionStep?): String? {
@@ -254,16 +332,7 @@ class IfModule : BaseBlockModule() {
     }
 
     private fun userTypeToInternalName(userType: String?): String? {
-        return when (userType) {
-            "文本" -> VTypeRegistry.STRING.id
-            "数字" -> VTypeRegistry.NUMBER.id
-            "布尔" -> VTypeRegistry.BOOLEAN.id
-            "字典" -> VTypeRegistry.DICTIONARY.id
-            "列表" -> VTypeRegistry.LIST.id
-            "图像" -> VTypeRegistry.IMAGE.id
-            "坐标" -> VTypeRegistry.COORDINATE.id
-            else -> null
-        }
+        return VariableType.fromStoredValue(userType)?.typeId
     }
 
     /**

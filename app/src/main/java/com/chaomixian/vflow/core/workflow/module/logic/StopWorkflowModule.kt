@@ -33,6 +33,10 @@ class StopWorkflowModule : BaseModule() {
     companion object {
         const val TARGET_CURRENT = "current"
         const val TARGET_OTHER = "other"
+        private val TARGET_LEGACY_MAP = mapOf(
+            "当前工作流" to TARGET_CURRENT,
+            "指定工作流" to TARGET_OTHER
+        )
     }
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -47,6 +51,7 @@ class StopWorkflowModule : BaseModule() {
                 R.string.option_vflow_logic_stop_workflow_target_current,
                 R.string.option_vflow_logic_stop_workflow_target_other
             ),
+            legacyValueMap = TARGET_LEGACY_MAP,
             acceptsMagicVariable = false,
             acceptsNamedVariable = false
         ),
@@ -64,7 +69,9 @@ class StopWorkflowModule : BaseModule() {
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val target = step.parameters["target"] as? String ?: TARGET_CURRENT
+        val targetInput = getInputs().first { it.id == "target" }
+        val rawTarget = step.parameters["target"] as? String ?: TARGET_CURRENT
+        val target = targetInput.normalizeEnumValue(rawTarget) ?: rawTarget
         return when (target) {
             TARGET_CURRENT -> context.getString(R.string.summary_vflow_logic_stop_workflow_current)
             TARGET_OTHER -> {
@@ -86,7 +93,9 @@ class StopWorkflowModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val target = context.getVariableAsString("target") ?: TARGET_CURRENT
+        val targetInput = getInputs().first { it.id == "target" }
+        val rawTarget = context.getVariableAsString("target", TARGET_CURRENT)
+        val target = targetInput.normalizeEnumValue(rawTarget) ?: rawTarget
 
         return when (target) {
             TARGET_CURRENT -> {
