@@ -262,6 +262,13 @@
     <string name="summary_vflow_notification_send_notification_prefix">发送通知:</string>
     <string name="msg_vflow_notification_send_notification_sent">已发送通知: %s</string>
     <string name="channel_vflow_notification_custom">自定义通知</string>
+    <string name="summary_vflow_notification_find_prefix">查找</string>
+    <string name="summary_vflow_notification_find_from">来自 </string>
+    <string name="summary_vflow_notification_find_title_contains"> 标题含 </string>
+    <string name="summary_vflow_notification_find_content_contains"> 内容含 </string>
+    <string name="summary_vflow_notification_find_and"> 且</string>
+    <string name="summary_vflow_notification_find_suffix"> 的通知</string>
+    <string name="summary_vflow_notification_find_all">查找所有可见的通知</string>
     <string name="module_vflow_trigger_time_name">定时触发</string>
     <string name="module_vflow_trigger_time_desc">在指定的时间和日期触发工作流，类似闹钟</string>
     <string name="param_vflow_trigger_time_time_name">触发时间</string>

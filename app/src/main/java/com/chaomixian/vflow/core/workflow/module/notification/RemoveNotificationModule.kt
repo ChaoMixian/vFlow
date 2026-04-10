@@ -7,6 +7,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.*
+import com.chaomixian.vflow.core.types.complex.VNotification
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.NotificationTriggerHandler
 import com.chaomixian.vflow.permissions.PermissionManager
@@ -50,23 +51,34 @@ class RemoveNotificationModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
+        val appContext = context.applicationContext
         val listener = NotificationTriggerHandler.notificationListener
-            ?: return ExecutionResult.Failure("服务未连接", "需要通知使用权才能移除通知。")
+            ?: return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_notification_remove_service_unavailable),
+                appContext.getString(R.string.error_vflow_notification_remove_need_permission)
+            )
 
         val target = context.getVariable("target")
 
         val notificationsToRemove = when (target) {
-            is NotificationObject -> listOf(target)
-            is VList -> target.raw.filterIsInstance<NotificationObject>()
-            is VNull -> emptyList()
-            else -> emptyList()
+            is VNotification -> listOf(target.notification)
+            is VList -> target.raw.mapNotNull { item ->
+                when (item) {
+                    is VNotification -> item.notification
+                    else -> item.raw as? NotificationObject
+                }
+            }
+            else -> listOfNotNull(target.raw as? NotificationObject)
         }
 
         if (notificationsToRemove.isEmpty()) {
-            return ExecutionResult.Failure("参数错误", "输入不是有效的通知对象或通知列表。")
+            return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_notification_remove_invalid_param),
+                appContext.getString(R.string.error_vflow_notification_remove_invalid_target)
+            )
         }
 
-        onProgress(ProgressUpdate("正在移除 ${notificationsToRemove.size} 条通知..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_notification_remove_removing, notificationsToRemove.size)))
 
         notificationsToRemove.forEach {
             listener.cancelNotification(it.id)

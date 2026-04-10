@@ -46,33 +46,33 @@ class FindNotificationModule : BaseModule() {
         val titleFilter = step.parameters["title_filter"]
         val contentFilter = step.parameters["content_filter"]
 
-        val parts = mutableListOf<Any>("查找")
+        val parts = mutableListOf<Any>(context.getString(R.string.summary_vflow_notification_find_prefix))
         var hasCondition = false
 
         if (appFilter is String && appFilter.isNotBlank()) {
-            parts.add("来自 ")
+            parts.add(context.getString(R.string.summary_vflow_notification_find_from))
             parts.add(PillUtil.createPillFromParam(appFilter, getInputs().find { it.id == "app_filter" }))
             hasCondition = true
         }
 
         if (titleFilter is String && titleFilter.isNotBlank()) {
-            if (hasCondition) parts.add(" 且")
-            parts.add(" 标题含 ")
+            if (hasCondition) parts.add(context.getString(R.string.summary_vflow_notification_find_and))
+            parts.add(context.getString(R.string.summary_vflow_notification_find_title_contains))
             parts.add(PillUtil.createPillFromParam(titleFilter, getInputs().find { it.id == "title_filter" }))
             hasCondition = true
         }
 
         if (contentFilter is String && contentFilter.isNotBlank()) {
-            if (hasCondition) parts.add(" 且")
-            parts.add(" 内容含 ")
+            if (hasCondition) parts.add(context.getString(R.string.summary_vflow_notification_find_and))
+            parts.add(context.getString(R.string.summary_vflow_notification_find_content_contains))
             parts.add(PillUtil.createPillFromParam(contentFilter, getInputs().find { it.id == "content_filter" }))
             hasCondition = true
         }
 
         if (hasCondition) {
-            parts.add(" 的通知")
+            parts.add(context.getString(R.string.summary_vflow_notification_find_suffix))
         } else {
-            return "查找所有可见的通知"
+            return context.getString(R.string.summary_vflow_notification_find_all)
         }
 
         return PillUtil.buildSpannable(context, *parts.toTypedArray())
@@ -83,15 +83,19 @@ class FindNotificationModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
+        val appContext = context.applicationContext
         val listener = NotificationTriggerHandler.notificationListener
-            ?: return ExecutionResult.Failure("服务未连接", "需要通知使用权才能查找通知。")
+            ?: return ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_notification_find_service_unavailable),
+                appContext.getString(R.string.error_vflow_notification_find_need_permission)
+            )
 
         // 现在 variables 是 Map<String, VObject>，统一使用 getVariableAsString 获取
         val appFilter = context.getVariableAsString("app_filter", "")
         val titleFilter = context.getVariableAsString("title_filter", "")
         val contentFilter = context.getVariableAsString("content_filter", "")
 
-        onProgress(ProgressUpdate("正在查找通知..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_notification_find_searching)))
 
         val foundNotifications = listener.activeNotifications.mapNotNull { sbn ->
             val notification = sbn.notification
@@ -115,15 +119,15 @@ class FindNotificationModule : BaseModule() {
             // 返回 Failure，让用户通过"异常处理策略"选择行为
             // 用户可以选择：重试（通知可能稍后到达）、忽略错误继续、停止工作流
             return ExecutionResult.Failure(
-                "未找到通知",
-                "没有符合过滤条件的通知",
+                appContext.getString(R.string.error_vflow_notification_find_not_found),
+                appContext.getString(R.string.error_vflow_notification_find_no_match),
                 partialOutputs = mapOf(
                     "notifications" to emptyList<Any>()   // 空列表（语义化）
                 )
             )
         }
 
-        onProgress(ProgressUpdate("找到了 ${foundNotifications.size} 条通知。"))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_notification_find_found, foundNotifications.size)))
         return ExecutionResult.Success(mapOf("notifications" to VList(foundNotifications.map { VNotification(it) })))
     }
 }

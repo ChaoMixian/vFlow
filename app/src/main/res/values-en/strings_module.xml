@@ -298,6 +298,13 @@
     <string name="summary_vflow_notification_send_notification_prefix">Send notification:</string>
     <string name="msg_vflow_notification_send_notification_sent">Notification sent: %s</string>
     <string name="channel_vflow_notification_custom">Custom Notifications</string>
+    <string name="summary_vflow_notification_find_prefix">Find</string>
+    <string name="summary_vflow_notification_find_from"> from </string>
+    <string name="summary_vflow_notification_find_title_contains"> title contains </string>
+    <string name="summary_vflow_notification_find_content_contains"> content contains </string>
+    <string name="summary_vflow_notification_find_and"> and</string>
+    <string name="summary_vflow_notification_find_suffix"> notifications</string>
+    <string name="summary_vflow_notification_find_all">Find all visible notifications</string>
 
     <!-- vflow.trigger.time - Time Trigger Module -->
     <string name="module_vflow_trigger_time_name">Timed Trigger</string>

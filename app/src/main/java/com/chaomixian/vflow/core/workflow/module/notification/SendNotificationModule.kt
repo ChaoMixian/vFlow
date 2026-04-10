@@ -82,9 +82,9 @@ class SendNotificationModule : BaseModule() {
         )
 
         return PillUtil.buildSpannable(context,
-            "发送通知: ",
+            context.getString(R.string.summary_vflow_notification_send_prefix),
             titlePill,
-            " - ",
+            context.getString(R.string.summary_vflow_notification_send_separator),
             messagePill
         )
     }
@@ -125,7 +125,7 @@ class SendNotificationModule : BaseModule() {
         val notificationId = System.currentTimeMillis().toInt()
         notificationManager.notify(notificationId, notification)
 
-        onProgress(ProgressUpdate("已发送通知: $title"))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_notification_send_notification_sent, title)))
 
         return ExecutionResult.Success(mapOf("success" to VBoolean(true)))
     }
