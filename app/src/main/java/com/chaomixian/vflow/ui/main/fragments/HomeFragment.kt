@@ -33,9 +33,11 @@ import com.chaomixian.vflow.ui.home.LogViewerSheet
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.divider.MaterialDivider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.collections.ArrayList
 
 class HomeFragment : Fragment() {
@@ -76,6 +78,7 @@ class HomeFragment : Fragment() {
 
     // Core 状态自动刷新
     private var coreStatusRefreshJob: kotlinx.coroutines.Job? = null
+    private var permissionHealthRefreshJob: kotlinx.coroutines.Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -127,6 +130,7 @@ class HomeFragment : Fragment() {
 
         // 启动Core状态自动刷新
         startCoreStatusAutoRefresh()
+        startPermissionHealthAutoRefresh()
     }
 
     override fun onPause() {
@@ -134,6 +138,8 @@ class HomeFragment : Fragment() {
         // 停止Core状态自动刷新
         coreStatusRefreshJob?.cancel()
         coreStatusRefreshJob = null
+        permissionHealthRefreshJob?.cancel()
+        permissionHealthRefreshJob = null
     }
 
     private fun updateStatistics() {
@@ -209,24 +215,6 @@ class HomeFragment : Fragment() {
      * 实现权限健康检查的逻辑
      */
     private fun updatePermissionHealthCheck() {
-        val allWorkflows = workflowManager.getAllWorkflows()
-        val requiredPermissions = allWorkflows
-            .flatMap { it.allSteps }
-            .mapNotNull { step ->
-                ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step) }
-            .flatten()
-            .distinct()
-
-        val missingPermissions = requiredPermissions.filter { !PermissionManager.isGranted(requireContext(), it) }
-
-        if (missingPermissions.isEmpty()) {
-            permissionHealthDesc.text = getString(R.string.home_permission_good)
-            permissionHealthDesc.setTextColor(MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, 0))
-        } else {
-            permissionHealthDesc.text = getString(R.string.home_permission_missing, missingPermissions.size)
-            permissionHealthDesc.setTextColor(MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorError, 0))
-        }
-
         permissionHealthCard.setOnClickListener {
             val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
                 putParcelableArrayListExtra(
@@ -235,6 +223,66 @@ class HomeFragment : Fragment() {
                 )
             }
             startActivity(intent)
+        }
+
+        lifecycleScope.launch {
+            val missingPermissionCount = withContext(Dispatchers.IO) {
+                getMissingPermissionCount()
+            }
+            if (!isAdded) return@launch
+            renderPermissionHealth(missingPermissionCount)
+        }
+    }
+
+    private fun startPermissionHealthAutoRefresh() {
+        permissionHealthRefreshJob?.cancel()
+        permissionHealthRefreshJob = lifecycleScope.launch {
+            repeat(20) {
+                delay(500)
+                val missingPermissionCount = withContext(Dispatchers.IO) {
+                    getMissingPermissionCount()
+                }
+                if (!isAdded) return@launch
+                renderPermissionHealth(missingPermissionCount)
+                if (missingPermissionCount == 0) {
+                    return@launch
+                }
+            }
+        }
+    }
+
+    private fun getMissingPermissionCount(): Int {
+        val allWorkflows = workflowManager.getAllWorkflows()
+        val requiredPermissions = allWorkflows
+            .flatMap { it.allSteps }
+            .mapNotNull { step ->
+                ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step)
+            }
+            .flatten()
+            .distinct()
+
+        return requiredPermissions.count { !PermissionManager.isGranted(requireContext(), it) }
+    }
+
+    private fun renderPermissionHealth(missingPermissionCount: Int) {
+        if (missingPermissionCount == 0) {
+            permissionHealthDesc.text = getString(R.string.home_permission_good)
+            permissionHealthDesc.setTextColor(
+                MaterialColors.getColor(
+                    requireContext(),
+                    com.google.android.material.R.attr.colorPrimary,
+                    0
+                )
+            )
+        } else {
+            permissionHealthDesc.text = getString(R.string.home_permission_missing, missingPermissionCount)
+            permissionHealthDesc.setTextColor(
+                MaterialColors.getColor(
+                    requireContext(),
+                    com.google.android.material.R.attr.colorError,
+                    0
+                )
+            )
         }
     }
 
@@ -396,8 +444,11 @@ class HomeFragment : Fragment() {
             repeat(16) {
                 delay(500)
 
-                // 重新ping并检查状态
-                if (VFlowCoreBridge.ping() && VFlowCoreBridge.isConnected) {
+                // 重新 ping，但把阻塞式检查放到 IO 线程避免卡住主线程。
+                val isCoreConnected = withContext(Dispatchers.IO) {
+                    VFlowCoreBridge.ping() && VFlowCoreBridge.isConnected
+                }
+                if (isCoreConnected) {
                     // Core已连接，更新UI
                     updateCoreStatus()
                     // 停止轮询

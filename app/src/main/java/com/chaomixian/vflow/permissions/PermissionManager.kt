@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
@@ -31,6 +32,8 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 object PermissionManager {
 
     private const val TAG = "PermissionManager"
+
+    private fun isMainThread(): Boolean = Looper.myLooper() == Looper.getMainLooper()
 
     // --- 权限定义 ---
     /**
@@ -518,8 +521,12 @@ object PermissionManager {
     /** vFlow Core 策略 (Shell 或 Root 均可) */
     private val coreStrategy = object : PermissionStrategy {
         override fun isGranted(context: Context, permission: Permission): Boolean {
-            // 快速检查，不阻塞 UI
-            val isRunning = VFlowCoreBridge.ping()
+            // 主线程上只读取缓存状态，避免 localhost 连接超时时卡住 UI。
+            val isRunning = if (isMainThread()) {
+                VFlowCoreBridge.isConnected
+            } else {
+                VFlowCoreBridge.ping()
+            }
             if (!isRunning) {
                 DebugLogger.d("PermissionManager", "CORE 权限检查：vFlowCore 未运行")
             }
@@ -537,8 +544,13 @@ object PermissionManager {
     /** vFlow Core Root 策略 (必须 Root) */
     private val coreRootStrategy = object : PermissionStrategy {
         override fun isGranted(context: Context, permission: Permission): Boolean {
-            // 快速检查 Core 是否运行
-            if (!VFlowCoreBridge.ping()) {
+            // 主线程上只读取缓存状态，避免 localhost 连接超时时卡住 UI。
+            val isRunning = if (isMainThread()) {
+                VFlowCoreBridge.isConnected
+            } else {
+                VFlowCoreBridge.ping()
+            }
+            if (!isRunning) {
                 DebugLogger.d("PermissionManager", "CORE_ROOT 权限检查失败：vFlowCore 未运行")
                 return false
             }
