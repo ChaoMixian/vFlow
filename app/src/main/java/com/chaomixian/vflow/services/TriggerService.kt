@@ -110,7 +110,7 @@ class TriggerService : Service() {
                 if (isShellReady) {
                     DebugLogger.d(TAG, "Shell 环境就绪，正在应用启动设置...")
                     if (autoEnableAccessibility) {
-                        val success = ShellManager.enableAccessibilityService(this@TriggerService)
+                        val success = ShellManager.ensureAccessibilityServiceRunning(this@TriggerService)
                         if (success) {
                             DebugLogger.d(TAG, "已在启动时自动启用无障碍服务。")
                         } else {

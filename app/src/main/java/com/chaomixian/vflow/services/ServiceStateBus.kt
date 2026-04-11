@@ -4,6 +4,7 @@ package com.chaomixian.vflow.services
 import android.content.Context
 import android.content.Intent
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import java.lang.ref.WeakReference
@@ -40,13 +41,23 @@ object ServiceStateBus {
      * 当无障碍服务连接或断开时，由服务自身调用此方法来更新状态。
      */
     fun onAccessibilityServiceConnected(context: Context, service: AccessibilityService) {
+        val previousRef = accessibilityServiceRef?.get()
         accessibilityServiceRef = WeakReference(service)
+        DebugLogger.d(
+            "ServiceStateBus",
+            "无障碍服务状态更新: connected=true previous=${previousRef?.javaClass?.simpleName}@${previousRef?.let { Integer.toHexString(System.identityHashCode(it)) } ?: "null"} current=${service.javaClass.simpleName}@${Integer.toHexString(System.identityHashCode(service))}"
+        )
         sendBroadcast(context, true)
     }
 
     fun onAccessibilityServiceDisconnected(context: Context) {
+        val previousRef = accessibilityServiceRef?.get()
         accessibilityServiceRef?.clear()
         accessibilityServiceRef = null
+        DebugLogger.w(
+            "ServiceStateBus",
+            "无障碍服务状态更新: connected=false previous=${previousRef?.javaClass?.simpleName}@${previousRef?.let { Integer.toHexString(System.identityHashCode(it)) } ?: "null"}"
+        )
         sendBroadcast(context, false)
     }
 

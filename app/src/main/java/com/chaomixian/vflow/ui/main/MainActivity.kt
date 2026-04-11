@@ -223,7 +223,7 @@ class MainActivity : BaseActivity() {
                 if (isShellReady) {
                     if (autoEnableAccessibility) {
                         // 自动启用无障碍服务，这里不显示 Toast 以避免打扰
-                        ShellManager.enableAccessibilityService(this@MainActivity)
+                        ShellManager.ensureAccessibilityServiceRunning(this@MainActivity)
                     }
                     if (forceKeepAlive && ShellManager.isShizukuActive(this@MainActivity)) {
                         // 自动启动守护，仅支持 Shizuku

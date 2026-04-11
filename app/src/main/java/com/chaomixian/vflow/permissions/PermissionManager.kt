@@ -12,12 +12,10 @@ import android.os.Environment
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
-import android.text.TextUtils
 import androidx.core.content.ContextCompat
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.chaomixian.vflow.services.AccessibilityService
-import com.chaomixian.vflow.services.ServiceStateBus
+import com.chaomixian.vflow.services.AccessibilityServiceStatus
 import com.chaomixian.vflow.services.ShellManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -282,18 +280,13 @@ object PermissionManager {
     /** 无障碍服务策略 */
     private val accessibilityStrategy = object : PermissionStrategy {
         override fun isGranted(context: Context, permission: Permission): Boolean {
-            // 优先检查服务是否实际在运行（更可靠）
-            if (ServiceStateBus.isAccessibilityServiceRunning()) {
-                return true
-            }
-            // 如果服务未运行，检查设置中的启用状态
-            return isAccessibilityServiceEnabledInSettings(context)
+            return AccessibilityServiceStatus.isRunning(context)
         }
         override fun createRequestIntent(context: Context, permission: Permission) =
             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
 
         override suspend fun autoGrant(context: Context): Boolean {
-            return ShellManager.enableAccessibilityService(context)
+            return ShellManager.ensureAccessibilityServiceRunning(context)
         }
     }
 
@@ -701,20 +694,7 @@ object PermissionManager {
      * 检查无障碍服务是否在系统设置中被启用。
      */
     fun isAccessibilityServiceEnabledInSettings(context: Context): Boolean {
-        val expectedServiceName = "${context.packageName}/${AccessibilityService::class.java.name}"
-        val enabledServicesSetting = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-
-        val splitter = TextUtils.SimpleStringSplitter(':')
-        splitter.setString(enabledServicesSetting)
-        while (splitter.hasNext()) {
-            if (splitter.next().equals(expectedServiceName, ignoreCase = true)) {
-                return true
-            }
-        }
-        return false
+        return AccessibilityServiceStatus.isEnabledInSettings(context)
     }
 
 }

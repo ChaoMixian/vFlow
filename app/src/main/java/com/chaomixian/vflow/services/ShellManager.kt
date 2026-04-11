@@ -356,7 +356,7 @@ object ShellManager {
      * @return 返回操作是否成功。
      */
     suspend fun enableAccessibilityService(context: Context): Boolean {
-        val serviceName = "${context.packageName}/${com.chaomixian.vflow.services.AccessibilityService::class.java.name}"
+        val serviceName = AccessibilityServiceStatus.getServiceId(context)
         // 1. 读取当前已启用的服务列表
         val currentServices = execShellCommand(context, "settings get secure enabled_accessibility_services")
         if (currentServices.startsWith("Error:")) {
@@ -390,13 +390,26 @@ object ShellManager {
         return true
     }
 
+    suspend fun ensureAccessibilityServiceRunning(context: Context): Boolean {
+        if (AccessibilityServiceStatus.isRunning(context)) {
+            return true
+        }
+
+        return if (AccessibilityServiceStatus.isEnabledInSettings(context)) {
+            DebugLogger.w(TAG, "无障碍服务在设置中已启用但未正常运行，尝试强制重载。")
+            restartAccessibilityService(context)
+        } else {
+            enableAccessibilityService(context)
+        }
+    }
+
     /**
      * 通过 Shell 关闭无障碍服务。
      * 使用 AUTO 模式，自动适配 Root 或 Shizuku。
      * @return 返回操作是否成功。
      */
     suspend fun disableAccessibilityService(context: Context): Boolean {
-        val serviceName = "${context.packageName}/${com.chaomixian.vflow.services.AccessibilityService::class.java.name}"
+        val serviceName = AccessibilityServiceStatus.getServiceId(context)
         // 1. 读取当前服务列表
         val currentServices = execShellCommand(context, "settings get secure enabled_accessibility_services")
         if (currentServices.startsWith("Error:") || currentServices == "null" || currentServices.isBlank()) {
@@ -420,6 +433,14 @@ object ShellManager {
         }
         DebugLogger.d(TAG, "已通过 Shell 尝试禁用无障碍服务。")
         return true
+    }
+
+    private suspend fun restartAccessibilityService(context: Context): Boolean {
+        if (!disableAccessibilityService(context)) {
+            return false
+        }
+        delay(400)
+        return enableAccessibilityService(context)
     }
 
     /**
