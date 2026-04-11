@@ -172,6 +172,7 @@ object ModuleRegistry {
         register(GetAppUsageStatsModule(), context)
         register(InvokeModule(), context)
         register(SystemInfoModule(), context)
+        register(LocationRangeCheckModule(), context)
         register(PlayAudioModule(), context)
         register(TextToSpeechModule(), context)
         register(CallPhoneModule(), context)

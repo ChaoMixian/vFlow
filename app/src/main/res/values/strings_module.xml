@@ -462,6 +462,20 @@
     <string name="option_vflow_trigger_location_event_enter">进入时</string>
     <string name="option_vflow_trigger_location_event_exit">离开时</string>
 
+    <string name="module_vflow_system_location_range_check_name">位置范围判断</string>
+    <string name="module_vflow_system_location_range_check_desc">获取当前位置并判断是否在设定坐标半径内</string>
+    <string name="param_vflow_system_location_range_check_latitude_name">纬度</string>
+    <string name="param_vflow_system_location_range_check_longitude_name">经度</string>
+    <string name="param_vflow_system_location_range_check_radius_name">半径（米）</string>
+    <string name="param_vflow_system_location_range_check_location_name_name">位置名称</string>
+    <string name="output_vflow_system_location_range_check_inside_name">是否在范围内</string>
+    <string name="output_vflow_system_location_range_check_latitude_name">当前纬度</string>
+    <string name="output_vflow_system_location_range_check_longitude_name">当前经度</string>
+    <string name="output_vflow_system_location_range_check_accuracy_name">定位精度</string>
+    <string name="output_vflow_system_location_range_check_distance_name">距离目标点</string>
+    <string name="summary_vflow_system_location_range_check_prefix">检查当前位置是否在</string>
+    <string name="summary_vflow_system_location_range_check_coordinates">%.6f, %.6f (%d米)</string>
+
     <string name="module_vflow_variable_create_name">创建变量</string>
     <string name="module_vflow_variable_create_desc">创建一个新的变量，可选择为其命名以便后续修改或读取</string>
     <string name="module_vflow_variable_load_name">载入变量</string>
