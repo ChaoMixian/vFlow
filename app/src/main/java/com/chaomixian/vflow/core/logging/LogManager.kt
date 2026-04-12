@@ -105,9 +105,9 @@ object LogManager {
         return if (json != null) {
             val type = object : TypeToken<List<LogEntry>>() {}.type
             try {
-                // 在反序列化后，过滤掉任何可能导致崩溃的不完整条目
+                // Gson 可能反序列化出字段为 null 的脏数据，这里统一过滤掉。
                 val logs: List<LogEntry?>? = gson.fromJson(json, type)
-                logs?.filterNotNull() ?: emptyList()
+                logs?.mapNotNull(::sanitizeLogEntry) ?: emptyList()
             } catch (e: Exception) {
                 // 如果解析失败，返回空列表以避免崩溃
                 emptyList()
@@ -115,5 +115,21 @@ object LogManager {
         } else {
             emptyList()
         }
+    }
+
+    private fun sanitizeLogEntry(entry: LogEntry?): LogEntry? {
+        if (entry == null) return null
+        return runCatching {
+            LogEntry(
+                workflowId = entry.workflowId,
+                workflowName = entry.workflowName,
+                timestamp = entry.timestamp,
+                status = entry.status,
+                message = entry.message,
+                detailedLog = entry.detailedLog,
+                messageKey = entry.messageKey,
+                messageArgs = entry.messageArgs
+            )
+        }.getOrNull()
     }
 }

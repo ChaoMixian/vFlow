@@ -53,12 +53,12 @@ class LogAdapter(
                 DateUtils.MINUTE_IN_MILLIS
             )
 
-            when (log.status) {
+            when (runCatching { log.status }.getOrNull()) {
                 LogStatus.SUCCESS -> {
                     iconView.setImageResource(R.drawable.ic_log_success)
                     iconView.setColorFilter(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, 0))
                 }
-                LogStatus.FAILURE, LogStatus.CANCELLED -> {
+                LogStatus.FAILURE, LogStatus.CANCELLED, null -> {
                     iconView.setImageResource(R.drawable.ic_log_failure)
                     iconView.setColorFilter(MaterialColors.getColor(context, com.google.android.material.R.attr.colorError, 0))
                 }
