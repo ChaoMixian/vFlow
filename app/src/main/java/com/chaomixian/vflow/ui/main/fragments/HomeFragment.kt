@@ -158,7 +158,9 @@ class HomeFragment : Fragment() {
      * 更新 vFlow Core 状态卡片
      */
     private fun updateCoreStatus() {
-        val privilegeMode = VFlowCoreBridge.privilegeMode
+        val privilegeMode: VFlowCoreBridge.PrivilegeMode? = runCatching {
+            VFlowCoreBridge.privilegeMode
+        }.getOrNull()
         val isConnected = VFlowCoreBridge.isConnected
         val context = requireContext()
 
@@ -167,6 +169,7 @@ class HomeFragment : Fragment() {
             VFlowCoreBridge.PrivilegeMode.ROOT -> getString(R.string.home_privilege_root)
             VFlowCoreBridge.PrivilegeMode.SHELL -> getString(R.string.home_privilege_shell)
             VFlowCoreBridge.PrivilegeMode.NONE -> getString(R.string.home_privilege_none)
+            null -> getString(R.string.home_privilege_none)
         }
         coreModeText.text = getString(R.string.home_core_mode, modeString)
 
