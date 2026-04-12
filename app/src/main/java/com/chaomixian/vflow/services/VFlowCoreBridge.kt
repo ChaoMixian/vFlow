@@ -67,6 +67,11 @@ object VFlowCoreBridge {
         AUTO     // 根据用户的默认 shell 偏好自动选择
     }
 
+    data class CoreOperationResult(
+        val success: Boolean,
+        val error: String? = null
+    )
+
     val privilegeMode: PrivilegeMode
         get() = when {
             !isConnected -> PrivilegeMode.NONE
@@ -372,6 +377,52 @@ object VFlowCoreBridge {
                 .put("x2", x2).put("y2", y2)
                 .put("duration", duration))
         return sendRaw(req)?.optBoolean("success") ?: false
+    }
+
+    fun performUinputTap(x: Int, y: Int): CoreOperationResult {
+        val req = JSONObject()
+            .put("target", "uinput")
+            .put("method", "tap")
+            .put("params", JSONObject()
+                .put("x", x)
+                .put("y", y))
+        val res = sendRaw(req)
+        return CoreOperationResult(
+            success = res?.optBoolean("success") == true,
+            error = res?.optString("error")?.takeIf { it.isNotBlank() }
+        )
+    }
+
+    fun performUinputLongPress(x: Int, y: Int, duration: Long): CoreOperationResult {
+        val req = JSONObject()
+            .put("target", "uinput")
+            .put("method", "longPress")
+            .put("params", JSONObject()
+                .put("x", x)
+                .put("y", y)
+                .put("duration", duration))
+        val res = sendRaw(req)
+        return CoreOperationResult(
+            success = res?.optBoolean("success") == true,
+            error = res?.optString("error")?.takeIf { it.isNotBlank() }
+        )
+    }
+
+    fun performUinputSwipe(x1: Int, y1: Int, x2: Int, y2: Int, duration: Long): CoreOperationResult {
+        val req = JSONObject()
+            .put("target", "uinput")
+            .put("method", "swipe")
+            .put("params", JSONObject()
+                .put("x1", x1)
+                .put("y1", y1)
+                .put("x2", x2)
+                .put("y2", y2)
+                .put("duration", duration))
+        val res = sendRaw(req)
+        return CoreOperationResult(
+            success = res?.optBoolean("success") == true,
+            error = res?.optString("error")?.takeIf { it.isNotBlank() }
+        )
     }
 
     fun inputText(text: String): Boolean {

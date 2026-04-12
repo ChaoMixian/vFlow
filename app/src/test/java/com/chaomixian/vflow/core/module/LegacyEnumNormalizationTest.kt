@@ -12,6 +12,7 @@ import com.chaomixian.vflow.core.workflow.module.logic.IF_START_ID
 import com.chaomixian.vflow.core.workflow.module.logic.IfModule
 import com.chaomixian.vflow.core.workflow.module.logic.WHILE_START_ID
 import com.chaomixian.vflow.core.workflow.module.logic.WhileModule
+import com.chaomixian.vflow.core.workflow.module.core.CoreUinputScreenOperationModule
 import com.chaomixian.vflow.core.workflow.module.network.AIModule
 import com.chaomixian.vflow.core.workflow.module.system.DarkModeModule
 import com.chaomixian.vflow.core.workflow.module.system.FlashlightModule
@@ -125,6 +126,22 @@ class LegacyEnumNormalizationTest {
     @Test
     fun `ai provider input definition normalizes legacy provider`() {
         assertEquals(AIModule.PROVIDER_OPENAI, AIModule.PROVIDER_INPUT_DEFINITION.normalizeEnumValueOrNull("OpenAI"))
+    }
+
+    @Test
+    fun `core uinput screen operation normalizes localized operation type`() {
+        val operationType = CoreUinputScreenOperationModule()
+            .getInputs()
+            .normalizeEnumValue("operation_type", "长按")
+
+        assertEquals(CoreUinputScreenOperationModule.OP_LONG_PRESS, operationType)
+    }
+
+    @Test
+    fun `core uinput screen operation requires core root permission`() {
+        val permissions = CoreUinputScreenOperationModule().getRequiredPermissions(null)
+
+        assertEquals(listOf(com.chaomixian.vflow.permissions.PermissionManager.CORE_ROOT), permissions)
     }
 
     @Test

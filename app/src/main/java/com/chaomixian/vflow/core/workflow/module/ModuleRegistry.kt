@@ -197,6 +197,7 @@ object ModuleRegistry {
         register(CoreCaptureScreenModule(), context)       // 截屏（Core）
         // 输入交互组
         register(CoreScreenOperationModule(), context)     // 屏幕操作（点击/滑动）
+        register(CoreUinputScreenOperationModule(), context) // 屏幕操作（uinput/Root）
         register(CoreInputTextModule(), context)           // 输入文本
         register(CorePressKeyModule(), context)            // 按键
         register(CoreTouchReplayModule(), context)         // 触摸回放

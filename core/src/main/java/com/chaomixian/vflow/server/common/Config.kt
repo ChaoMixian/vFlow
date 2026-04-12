@@ -60,6 +60,7 @@ object Config {
         "screenshot" to PORT_WORKER_SHELL,
 
         // 必须 Root 权限
+        "uinput" to PORT_WORKER_ROOT,
         "system_root" to PORT_WORKER_ROOT
     )
 

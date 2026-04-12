@@ -1621,6 +1621,11 @@
     <string name="error_vflow_core_screen_operation_click_failed">vFlow Core tap operation failed</string>
     <string name="error_vflow_core_screen_operation_long_press_failed">vFlow Core long press operation failed</string>
     <string name="error_vflow_core_screen_operation_swipe_failed">vFlow Core swipe operation failed</string>
+    <string name="error_vflow_core_uinput_screen_operation_permission_denied">Insufficient Privileges</string>
+    <string name="error_vflow_core_uinput_screen_operation_root_required">This action requires Root privileges because it creates a uinput device, but vFlow Core is currently running with Shell privileges.</string>
+    <string name="error_vflow_core_uinput_screen_operation_click_failed">vFlow Core uinput tap failed: %1$s</string>
+    <string name="error_vflow_core_uinput_screen_operation_long_press_failed">vFlow Core uinput long press failed: %1$s</string>
+    <string name="error_vflow_core_uinput_screen_operation_swipe_failed">vFlow Core uinput swipe failed: %1$s</string>
     <string name="module_vflow_ai_agent_desc">Fully autonomous AI assistant. Understands screen content based on vision and UI structure to automatically complete tasks</string>
     <string name="module_vflow_ai_agent_name">AI Agent</string>
     <string name="module_vflow_ai_autoglm_desc">Replicate AutoGLM project. Execute complex mobile operation tasks based on Chain of Thought (CoT) and custom instruction protocols</string>
@@ -1633,6 +1638,8 @@
     <string name="module_vflow_core_input_text_name">Input Text</string>
     <string name="module_vflow_core_screen_operation_desc">Use vFlow Core to perform tap, long press, or swipe operations, faster and more stable than accessibility service.</string>
     <string name="module_vflow_core_screen_operation_name">Screen Operation</string>
+    <string name="module_vflow_core_uinput_screen_operation_desc">Create a virtual touch device through vFlow Core and perform tap, long press, or swipe operations via uinput. Root is required.</string>
+    <string name="module_vflow_core_uinput_screen_operation_name">uinput Screen Operation</string>
     <string name="module_vflow_core_set_clipboard_desc">Use vFlow Core to set clipboard content.</string>
     <string name="module_vflow_core_set_clipboard_name">Set Clipboard</string>
     <string name="module_vflow_device_send_key_event_desc">Execute system-level operations such as back, home, open notification, etc.</string>
@@ -1730,6 +1737,12 @@
     <string name="msg_vflow_core_screen_operation_long_pressing" formatted="false">Long pressing coordinate (%d, %d) for %dms via vFlow Core...</string>
     <string name="msg_vflow_core_screen_operation_swipe_success">Swiped successfully</string>
     <string name="msg_vflow_core_screen_operation_swiping" formatted="false">Swiping via vFlow Core: (%d, %d) → (%d, %d) for %dms...</string>
+    <string name="msg_vflow_core_uinput_screen_operation_clicking" formatted="false">Tapping coordinate (%d, %d) via vFlow Core (uinput)...</string>
+    <string name="msg_vflow_core_uinput_screen_operation_click_success">uinput tap succeeded</string>
+    <string name="msg_vflow_core_uinput_screen_operation_long_pressing" formatted="false">Long pressing coordinate (%d, %d) for %dms via vFlow Core (uinput)...</string>
+    <string name="msg_vflow_core_uinput_screen_operation_long_press_success">uinput long press succeeded</string>
+    <string name="msg_vflow_core_uinput_screen_operation_swiping" formatted="false">Swiping via vFlow Core (uinput): (%d, %d) → (%d, %d) for %dms...</string>
+    <string name="msg_vflow_core_uinput_screen_operation_swipe_success">uinput swipe succeeded</string>
     <string name="msg_vflow_core_screen_status_reading">Reading screen status via vFlow Core...</string>
     <string name="msg_vflow_core_set_clipboard_setting">Setting clipboard via vFlow Core...</string>
     <string name="msg_vflow_core_set_clipboard_success">Clipboard set successfully</string>
@@ -1815,6 +1828,12 @@
 
     <string name="summary_vflow_core_screen_operation_swipe">Core Swipe </string>
     <string name="summary_vflow_core_screen_operation_swipe_suffix">Core Swipe</string>
+    <string name="summary_vflow_core_uinput_screen_operation_click">Core uinput Tap </string>
+    <string name="summary_vflow_core_uinput_screen_operation_click_suffix">Core uinput Tap</string>
+    <string name="summary_vflow_core_uinput_screen_operation_long_press">Core uinput Long Press </string>
+    <string name="summary_vflow_core_uinput_screen_operation_long_press_suffix">Core uinput Long Press</string>
+    <string name="summary_vflow_core_uinput_screen_operation_swipe">Core uinput Swipe </string>
+    <string name="summary_vflow_core_uinput_screen_operation_swipe_suffix">Core uinput Swipe</string>
 
     <string name="summary_vflow_core_screen_status">Read Screen Status</string>
     <string name="summary_vflow_core_set_clipboard">vFlow Core Set Clipboard: %s</string>
