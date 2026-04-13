@@ -469,6 +469,7 @@ class WorkflowEditorActivity : BaseActivity() {
      * @param isError 是否为错误高亮。
      */
     private fun smoothScrollToPositionAndHighlight(stepIndex: Int, animatorRes: Int, isError: Boolean = false) {
+        val adapterPosition = stepIndex + 1
         val smoothScroller = object : LinearSmoothScroller(this) {
             // 重写此方法以调整滚动速度
             override fun calculateSpeedPerPixel(displayMetrics: DisplayMetrics): Float {
@@ -496,7 +497,7 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
 
-        smoothScroller.targetPosition = stepIndex
+        smoothScroller.targetPosition = adapterPosition
         recyclerView.layoutManager?.startSmoothScroll(smoothScroller)
     }
 
@@ -529,12 +530,20 @@ class WorkflowEditorActivity : BaseActivity() {
         executionAnimator?.cancel()
         executionAnimator = null
         currentlyExecutingViewHolder?.itemView?.let {
-            // 恢复所有可能被动画修改的属性
-            it.alpha = 1.0f
-            it.scaleX = 1.0f
-            it.scaleY = 1.0f
             val cardView = it.findViewById<MaterialCardView>(R.id.step_card_view)
-            cardView?.setCardBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, 0))
+            cardView?.apply {
+                alpha = 1.0f
+                scaleX = 1.0f
+                scaleY = 1.0f
+                translationX = 0f
+                setCardBackgroundColor(
+                    MaterialColors.getColor(
+                        this@WorkflowEditorActivity,
+                        com.google.android.material.R.attr.colorSurface,
+                        0
+                    )
+                )
+            }
         }
         currentlyExecutingViewHolder = null
     }
