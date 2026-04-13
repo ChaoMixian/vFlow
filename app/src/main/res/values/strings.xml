@@ -1136,6 +1136,9 @@
     <string name="key_tester_event">事件</string>
     <string name="key_tester_shell_not_available">Shizuku/Root 不可用，无法监听按键</string>
     <string name="key_tester_initializing">正在初始化监听脚本...</string>
+    <string name="key_tester_deploying">正在部署按键监听器...</string>
+    <string name="key_tester_deploy_failed">部署失败: %s</string>
+    <string name="key_tester_deploy_tmp_failed">部署到 /data/local/tmp 失败: %s</string>
     <string name="key_tester_listening_hint">监听中... 按下任意物理按键</string>
     <string name="key_tester_error">监听出错: %s</string>
 

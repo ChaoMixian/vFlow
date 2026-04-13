@@ -1136,6 +1136,9 @@
     <string name="key_tester_event">Event</string>
     <string name="key_tester_shell_not_available">Shizuku/Root not available, cannot listen to keys</string>
     <string name="key_tester_initializing">Initializing listener script...</string>
+    <string name="key_tester_deploying">Deploying key listener...</string>
+    <string name="key_tester_deploy_failed">Deployment failed: %s</string>
+    <string name="key_tester_deploy_tmp_failed">Failed to deploy to /data/local/tmp: %s</string>
     <string name="key_tester_listening_hint">Listening... Press any physical key</string>
     <string name="key_tester_error">Error: %s</string>
 

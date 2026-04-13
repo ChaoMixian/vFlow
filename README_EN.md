@@ -17,7 +17,7 @@ English | [简体中文](README.md)
 [![GitHub Issues](https://img.shields.io/github/issues/ChaoMixian/vFlow?style=flat-square)](https://github.com/ChaoMixian/vFlow/issues)
 [![License](https://img.shields.io/github/license/ChaoMixian/vFlow?style=flat-square)](LICENSE)
 [![API](https://img.shields.io/badge/API-21%2B-brightgreen?style=flat-square)](https://android-arsenal.com/api?level=21)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.0-blue?style=flat-square&logo=kotlin)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-blue?style=flat-square&logo=kotlin)](https://kotlinlang.org)
 
 **vFlow** is a powerful and highly extensible automation tool designed for the Android platform. It allows you to freely combine a series of "action modules" into powerful "workflows" through a graphical interface, automating various daily and repetitive screen operation tasks.
 

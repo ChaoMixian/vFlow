@@ -30,11 +30,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.services.ShellManager
@@ -48,6 +50,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import com.chaomixian.vflow.R
 
 /**
  * 按键事件数据类
@@ -66,6 +69,12 @@ data class KeyEventData(
  */
 class KeyTesterActivity : ComponentActivity() {
 
+    override fun attachBaseContext(newBase: Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        super.attachBaseContext(context)
+    }
+
     private var listenerJob: Job? = null
     private val timeFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
 
@@ -79,7 +88,8 @@ class KeyTesterActivity : ComponentActivity() {
             if (intent?.action == ACTION_KEY_TEST_EVENT) {
                 val gestureType = intent.getStringExtra("gesture_type") ?: return
                 val keyCode = intent.getIntExtra("key_code", -1)
-                val devicePath = intent.getStringExtra("device_path") ?: "Unknown"
+                val devicePath = intent.getStringExtra("device_path")
+                    ?: getString(R.string.api_settings_unknown_device)
                 if (keyCode == -1) return
 
                 DebugLogger.d(TAG, "KeyTesterActivity 按键事件: gesture=$gestureType, key_code=$keyCode, device=$devicePath")
@@ -110,7 +120,7 @@ class KeyTesterActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             var isListening by remember { mutableStateOf(false) }
-            var statusMessage by remember { mutableStateOf("准备就绪") }
+            var statusMessage by remember { mutableStateOf(getString(R.string.key_tester_status_ready)) }
             val keyEvents = remember { mutableStateListOf<KeyEventData>() }
 
             // 设置事件回调
@@ -165,7 +175,7 @@ class KeyTesterActivity : ComponentActivity() {
                                 if (isListening) {
                                     stopKeyListening()
                                     isListening = false
-                                    statusMessage = "已停止监听"
+                                    statusMessage = getString(R.string.key_tester_status_stopped)
                                 } else {
                                     startKeyListening(
                                         onStatusChange = { statusMessage = it }
@@ -218,11 +228,11 @@ class KeyTesterActivity : ComponentActivity() {
         onStatusChange: (String) -> Unit
     ) {
         if (!ShellManager.isShizukuActive(this) && !ShellManager.isRootAvailable()) {
-            onStatusChange("Shizuku/Root 不可用，无法监听按键")
+            onStatusChange(getString(R.string.key_tester_shell_not_available))
             return
         }
 
-        onStatusChange("正在初始化...")
+        onStatusChange(getString(R.string.key_tester_initializing))
 
         listenerJob = lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -230,7 +240,7 @@ class KeyTesterActivity : ComponentActivity() {
                 ShellManager.execShellCommand(this@KeyTesterActivity, "killall key_event_tester")
                 ShellManager.execShellCommand(this@KeyTesterActivity, "rm -f /data/local/tmp/key_event_tester")
 
-                onStatusChange("正在部署按键监听器...")
+                onStatusChange(getString(R.string.key_tester_deploying))
 
                 // 1. 部署 key_event_trigger_handler 到 /data/local/tmp
                 val deviceAbi = getDeviceAbi()
@@ -247,7 +257,7 @@ class KeyTesterActivity : ComponentActivity() {
                     DebugLogger.d(TAG, "Binary copied to temp: ${tempFile.absolutePath}")
                 } catch (e: Exception) {
                     DebugLogger.e(TAG, "Failed to copy binary", e)
-                    onStatusChange("部署失败: ${e.message}")
+                    onStatusChange(getString(R.string.key_tester_deploy_failed, e.message ?: ""))
                     return@launch
                 }
 
@@ -259,12 +269,12 @@ class KeyTesterActivity : ComponentActivity() {
                 )
                 if (!deployResult.success) {
                     DebugLogger.e(TAG, "部署 key_event_tester 失败: ${deployResult.output}")
-                    onStatusChange("部署到 /data/local/tmp 失败: ${deployResult.output}")
+                    onStatusChange(getString(R.string.key_tester_deploy_tmp_failed, deployResult.output))
                     return@launch
                 }
 
                 withContext(Dispatchers.Main) {
-                    onStatusChange("监听中... 按下任意物理按键")
+                    onStatusChange(getString(R.string.key_tester_listening_hint))
                 }
 
                 // 3. 启动 C++ 二进制（测试模式）
@@ -277,7 +287,7 @@ class KeyTesterActivity : ComponentActivity() {
             } catch (e: Exception) {
                 DebugLogger.e(TAG, "监听出错: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    onStatusChange("监听出错: ${e.message}")
+                    onStatusChange(getString(R.string.key_tester_error, e.message ?: ""))
                 }
             }
         }
@@ -321,12 +331,12 @@ fun KeyTesterTopBar(
         title = {
             Column {
                 Text(
-                    "按键测试器",
+                    stringResource(R.string.key_tester_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "查找物理按键的设备路径和按键码",
+                    stringResource(R.string.key_tester_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -336,7 +346,7 @@ fun KeyTesterTopBar(
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "返回"
+                    contentDescription = stringResource(R.string.key_tester_back)
                 )
             }
         },
@@ -345,7 +355,7 @@ fun KeyTesterTopBar(
             IconButton(onClick = onClear) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "清除",
+                    contentDescription = stringResource(R.string.key_tester_clear),
                     tint = if (isListening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -357,7 +367,11 @@ fun KeyTesterTopBar(
             ) {
                 Icon(
                     imageVector = if (isListening) Icons.Default.Stop else Icons.Default.PlayArrow,
-                    contentDescription = if (isListening) "停止" else "开始",
+                    contentDescription = if (isListening) {
+                        stringResource(R.string.key_tester_stop)
+                    } else {
+                        stringResource(R.string.key_tester_start)
+                    },
                     tint = if (isListening) Color(0xFFFF5252) else Color(0xFF4CAF50)
                 )
             }
@@ -421,7 +435,11 @@ fun StatusCard(
 
                 Column {
                     Text(
-                        text = if (isListening) "监听中" else "已停止",
+                        text = if (isListening) {
+                            stringResource(R.string.key_tester_status_listening)
+                        } else {
+                            stringResource(R.string.key_tester_status_stopped)
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = statusColor
@@ -475,14 +493,18 @@ fun EmptyState(
             )
 
             Text(
-                text = if (isListening) "按下任意物理按键" else "点击开始按钮开始监听",
+                text = if (isListening) {
+                    stringResource(R.string.key_tester_press_any_key)
+                } else {
+                    stringResource(R.string.key_tester_click_to_start)
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             if (isListening) {
                 Text(
-                    text = "按键信息将显示在这里",
+                    text = stringResource(R.string.key_tester_info_placeholder),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
@@ -545,9 +567,13 @@ fun KeyEventCard(event: KeyEventData) {
             .clickable {
                 // 复制到剪贴板
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("按键信息", event.rawString)
+                val clip = ClipData.newPlainText(context.getString(R.string.key_tester_key_info), event.rawString)
                 clipboard.setPrimaryClip(clip)
-                Toast.makeText(context, "已复制: ${event.keyCode}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.key_tester_copied, event.keyCode.toString()),
+                    Toast.LENGTH_SHORT
+                ).show()
             },
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(
@@ -599,7 +625,7 @@ fun KeyEventCard(event: KeyEventData) {
             // 设备路径
             InfoRow(
                 icon = Icons.Default.Storage,
-                label = "设备路径",
+                label = stringResource(R.string.key_tester_device_path),
                 value = event.devicePath,
                 color = Color(0xFF8D68F5)
             )
@@ -609,7 +635,7 @@ fun KeyEventCard(event: KeyEventData) {
             // 按键码
             InfoRow(
                 icon = Icons.Default.Code,
-                label = "按键码",
+                label = stringResource(R.string.key_tester_key_code),
                 value = event.keyCode.toString(),
                 color = Color(0xFFFF9800)
             )
@@ -619,7 +645,7 @@ fun KeyEventCard(event: KeyEventData) {
             // 操作类型
             InfoRow(
                 icon = Icons.Default.TouchApp,
-                label = "操作",
+                label = stringResource(R.string.key_tester_action),
                 value = event.action,
                 color = getActionColor(event.action)
             )
@@ -627,7 +653,7 @@ fun KeyEventCard(event: KeyEventData) {
             // 复制提示
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "点击复制",
+                text = stringResource(R.string.key_tester_click_to_copy),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.End)
