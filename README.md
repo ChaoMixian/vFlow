@@ -2,7 +2,7 @@
 [English](README_EN.md) | 简体中文
 <div>
 
-  <a href="https://discord.gg/WkuUcSWB" target="_blank">
+  <a href="https://discord.gg/7AMqhjdUH6" target="_blank">
     <img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord"/>
   </a>
   <a href="https://qm.qq.com/q/5OhnIUNHzO" target="_blank" style="margin-left: 6px;">
