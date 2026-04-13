@@ -457,6 +457,20 @@
     <string name="repo_author">作者: %s</string>
     <string name="repo_module_permissions_count">权限: %d 项</string>
     <string name="repo_workflow_tags">标签: %s</string>
+    <string name="overlay_ui_quick_view_title">快速查看</string>
+    <string name="overlay_ui_image_preview_title">图片预览</string>
+    <string name="overlay_ui_input_time_title">请选择时间</string>
+    <string name="overlay_ui_input_date_title">请选择日期</string>
+    <string name="overlay_ui_input_text_title">请输入</string>
+    <string name="overlay_ui_share_no_content">没有可分享的内容</string>
+    <string name="overlay_ui_share_image_failed">分享图片失败: %s</string>
+    <string name="overlay_ui_share_type_unsupported">不支持的分享类型</string>
+    <string name="overlay_ui_share_chooser_title">分享内容</string>
+    <string name="overlay_ui_clip_label_image">vFlow 图片</string>
+    <string name="overlay_ui_clip_label_text">vFlow 文本</string>
+    <string name="overlay_ui_image_copied">图片已复制到剪贴板</string>
+    <string name="overlay_ui_copy_image_failed">复制图片失败: %s</string>
+    <string name="overlay_ui_workflow_chooser_title">选择要执行的工作流</string>
 
     <!-- WorkflowRepoFragment -->
     <string name="text_no_workflows">暂无工作流</string>

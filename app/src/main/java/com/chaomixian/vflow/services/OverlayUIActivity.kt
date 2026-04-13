@@ -78,12 +78,12 @@ class OverlayUIActivity : AppCompatActivity() {
         when (requestType) {
             "quick_view" -> {
                 val content = intent.getStringExtra("content") ?: ""
-                showQuickViewDialog(title ?: "快速查看", content)
+                showQuickViewDialog(title ?: getString(R.string.overlay_ui_quick_view_title), content)
             }
             "quick_view_image" -> {
                 val imageUri = intent.getStringExtra("content")
                 if (imageUri != null) {
-                    showQuickViewImageDialog(title ?: "图片预览", imageUri)
+                    showQuickViewImageDialog(title ?: getString(R.string.overlay_ui_image_preview_title), imageUri)
                 } else {
                     finishWithError()
                 }
@@ -91,9 +91,9 @@ class OverlayUIActivity : AppCompatActivity() {
             "input" -> {
                 val inputType = intent.getStringExtra("input_type")
                 when {
-                    isTimeInputType(inputType) -> showTimePickerDialog(title ?: "请选择时间")
-                    isDateInputType(inputType) -> showDatePickerDialog(title ?: "请选择日期")
-                    else -> showTextInputDialog(title ?: "请输入", inputType)
+                    isTimeInputType(inputType) -> showTimePickerDialog(title ?: getString(R.string.overlay_ui_input_time_title))
+                    isDateInputType(inputType) -> showDatePickerDialog(title ?: getString(R.string.overlay_ui_input_date_title))
+                    else -> showTextInputDialog(title ?: getString(R.string.overlay_ui_input_text_title), inputType)
                 }
             }
             "pick_image" -> pickImageLauncher.launch("image/*")
@@ -149,9 +149,9 @@ class OverlayUIActivity : AppCompatActivity() {
         val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setView(dialogView)
-            .setPositiveButton("关闭") { _, _ -> complete(true) }
-            .setNeutralButton("复制", null)
-            .setNegativeButton("分享", null)
+            .setPositiveButton(R.string.common_close) { _, _ -> complete(true) }
+            .setNeutralButton(R.string.common_copy, null)
+            .setNegativeButton(R.string.common_share, null)
             .setOnCancelListener { cancel() }
             .show()
 
@@ -178,7 +178,7 @@ class OverlayUIActivity : AppCompatActivity() {
      */
     private fun shareContent(shareType: String?, shareContent: String?) {
         if (shareContent.isNullOrEmpty()) {
-            Toast.makeText(this, "没有可分享的内容", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.overlay_ui_share_no_content, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -199,16 +199,20 @@ class OverlayUIActivity : AppCompatActivity() {
                     shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(this, "分享图片失败: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this,
+                        getString(R.string.overlay_ui_share_image_failed, e.message ?: getString(R.string.error_unknown_error)),
+                        Toast.LENGTH_LONG
+                    ).show()
                     return
                 }
             }
             else -> {
-                Toast.makeText(this, "不支持的分享类型", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.overlay_ui_share_type_unsupported, Toast.LENGTH_SHORT).show()
                 return
             }
         }
-        val chooser = Intent.createChooser(shareIntent, "分享内容")
+        val chooser = Intent.createChooser(shareIntent, getString(R.string.overlay_ui_share_chooser_title))
         startActivity(chooser)
     }
 
@@ -221,11 +225,15 @@ class OverlayUIActivity : AppCompatActivity() {
             val imageFile = File(java.net.URI(imageUriString))
             val authority = "$packageName.provider"
             val safeUri = FileProvider.getUriForFile(this, authority, imageFile)
-            val clip = ClipData.newUri(contentResolver, "vFlow Image", safeUri)
+            val clip = ClipData.newUri(contentResolver, getString(R.string.overlay_ui_clip_label_image), safeUri)
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(this, "图片已复制到剪贴板", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.overlay_ui_image_copied, Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "复制图片失败: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                getString(R.string.overlay_ui_copy_image_failed, e.message ?: getString(R.string.error_unknown_error)),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -233,7 +241,7 @@ class OverlayUIActivity : AppCompatActivity() {
         val items = workflows.values.toTypedArray()
         val itemIds = workflows.keys.toTypedArray()
         MaterialAlertDialogBuilder(this)
-            .setTitle("选择要执行的工作流")
+            .setTitle(R.string.overlay_ui_workflow_chooser_title)
             .setItems(items) { _, which -> complete(itemIds[which]) }
             .setOnCancelListener { cancel() }
             .show()
@@ -251,16 +259,16 @@ class OverlayUIActivity : AppCompatActivity() {
         val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setView(dialogView)
-            .setPositiveButton("关闭") { _, _ -> complete(true) }
-            .setNeutralButton("复制", null)
-            .setNegativeButton("分享", null)
+            .setPositiveButton(R.string.common_close) { _, _ -> complete(true) }
+            .setNeutralButton(R.string.common_copy, null)
+            .setNegativeButton(R.string.common_share, null)
             .setOnCancelListener { cancel() }
             .show()
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("vFlow Text", content)
+            val clip = ClipData.newPlainText(getString(R.string.overlay_ui_clip_label_text), content)
             clipboard.setPrimaryClip(clip)
-            Toast.makeText(applicationContext, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
         }
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
             shareContent("text", content)
@@ -278,12 +286,12 @@ class OverlayUIActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setView(editText)
-            .setPositiveButton("确定") { _, _ ->
+            .setPositiveButton(R.string.common_ok) { _, _ ->
                 val inputText = editText.text.toString()
                 val result: Any? = if (isNumberInputType(type)) inputText.toDoubleOrNull() else inputText
                 complete(result)
             }
-            .setNegativeButton("取消") { _, _ -> cancel() }
+            .setNegativeButton(R.string.common_cancel) { _, _ -> cancel() }
             .setOnCancelListener { cancel() }
             .show()
     }

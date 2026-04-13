@@ -472,6 +472,20 @@
     <string name="repo_author">Author: %s</string>
     <string name="repo_module_permissions_count">%d permissions</string>
     <string name="repo_workflow_tags">Tags: %s</string>
+    <string name="overlay_ui_quick_view_title">Quick View</string>
+    <string name="overlay_ui_image_preview_title">Image Preview</string>
+    <string name="overlay_ui_input_time_title">Select Time</string>
+    <string name="overlay_ui_input_date_title">Select Date</string>
+    <string name="overlay_ui_input_text_title">Enter Input</string>
+    <string name="overlay_ui_share_no_content">No content to share</string>
+    <string name="overlay_ui_share_image_failed">Failed to share image: %s</string>
+    <string name="overlay_ui_share_type_unsupported">Unsupported share type</string>
+    <string name="overlay_ui_share_chooser_title">Share Content</string>
+    <string name="overlay_ui_clip_label_image">vFlow Image</string>
+    <string name="overlay_ui_clip_label_text">vFlow Text</string>
+    <string name="overlay_ui_image_copied">Image copied to clipboard</string>
+    <string name="overlay_ui_copy_image_failed">Failed to copy image: %s</string>
+    <string name="overlay_ui_workflow_chooser_title">Choose Workflow to Run</string>
 
     <!-- WorkflowRepoFragment -->
     <string name="text_no_workflows">No workflows available</string>
