@@ -341,7 +341,7 @@ private fun CoreManagementScreen(
                 isRunning = isServerRunning,
                 isChecking = isChecking,
                 statusDetail = statusDetail,
-                privilegeMode = runCatching { VFlowCoreBridge.privilegeMode }.getOrNull()
+                privilegeMode = VFlowCoreBridge.privilegeMode
             )
 
             // 启动方式卡片组
@@ -707,7 +707,7 @@ private fun StatusCard(
     isRunning: Boolean?,
     isChecking: Boolean,
     statusDetail: String,
-    privilegeMode: VFlowCoreBridge.PrivilegeMode?
+    privilegeMode: VFlowCoreBridge.PrivilegeMode
 ) {
     val statusColor = when {
         isChecking -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -727,14 +727,12 @@ private fun StatusCard(
         VFlowCoreBridge.PrivilegeMode.ROOT -> stringResource(R.string.mode_root)
         VFlowCoreBridge.PrivilegeMode.SHELL -> stringResource(R.string.mode_shell)
         VFlowCoreBridge.PrivilegeMode.NONE -> stringResource(R.string.status_not_connected)
-        null -> stringResource(R.string.status_not_connected)
     }
 
     val modeColor = when (privilegeMode) {
         VFlowCoreBridge.PrivilegeMode.ROOT -> MaterialTheme.colorScheme.tertiary
         VFlowCoreBridge.PrivilegeMode.SHELL -> MaterialTheme.colorScheme.primary
         VFlowCoreBridge.PrivilegeMode.NONE -> MaterialTheme.colorScheme.onSurfaceVariant
-        null -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     ElevatedCard(
