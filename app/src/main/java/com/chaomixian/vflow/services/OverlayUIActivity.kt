@@ -2,30 +2,47 @@
 // 添加了对 MediaProjection 的支持
 package com.chaomixian.vflow.ui.common
 
+import android.Manifest
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.text.InputType
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.widget.doAfterTextChanged
 import coil.load
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.workflow.module.system.InputModule
+import com.chaomixian.vflow.core.workflow.module.system.SpeechRecognitionErrorResult
+import com.chaomixian.vflow.core.workflow.module.system.SpeechRecognitionStartRequest
+import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextOverlayContract
+import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextOverlayRequest
+import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextOverlaySession
+import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextResult
 import com.chaomixian.vflow.services.ExecutionUIService
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import com.google.gson.Gson
@@ -34,6 +51,15 @@ import java.io.File
 import java.util.*
 
 class OverlayUIActivity : AppCompatActivity() {
+
+    private var pendingSpeechRequest: SpeechToTextOverlayRequest? = null
+    private var speechSession: SpeechToTextOverlaySession? = null
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var speechTitleView: TextView? = null
+    private var speechStatusView: TextView? = null
+    private var speechResultEditText: TextInputEditText? = null
+    private var speechHoldButton: MaterialButton? = null
+    private var speechSendButton: MaterialButton? = null
 
     override fun attachBaseContext(newBase: Context) {
         val languageCode = LocaleManager.getLanguage(newBase)
@@ -61,6 +87,17 @@ class OverlayUIActivity : AppCompatActivity() {
             ExecutionUIService.inputCompletable?.complete(null)
         }
         finish()
+    }
+
+    private val microphonePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            pendingSpeechRequest?.let(::showSpeechToTextOverlay)
+                ?: finishWithSpeechError(getString(R.string.overlay_ui_speech_not_available))
+        } else {
+            finishWithSpeechError(getString(R.string.overlay_ui_speech_permission_denied))
+        }
     }
 
     private val gson = Gson()
@@ -96,6 +133,7 @@ class OverlayUIActivity : AppCompatActivity() {
                     else -> showTextInputDialog(title ?: getString(R.string.overlay_ui_input_text_title), inputType)
                 }
             }
+            SpeechToTextOverlayContract.REQUEST_TYPE -> handleSpeechToTextRequest(title)
             "pick_image" -> pickImageLauncher.launch("image/*")
             "media_projection" -> {
                 val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -130,6 +168,180 @@ class OverlayUIActivity : AppCompatActivity() {
             }
             else -> finishWithError()
         }
+    }
+
+    private fun handleSpeechToTextRequest(title: String?) {
+        val fallbackTitle = title ?: getString(R.string.overlay_ui_speech_default_title)
+        pendingSpeechRequest = SpeechToTextOverlayContract.fromIntent(intent, fallbackTitle)
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            finishWithSpeechError(getString(R.string.overlay_ui_speech_not_available))
+            return
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+
+        showSpeechToTextOverlay(pendingSpeechRequest ?: SpeechToTextOverlayRequest(fallbackTitle, "auto", false))
+    }
+
+    private fun showSpeechToTextOverlay(request: SpeechToTextOverlayRequest) {
+        pendingSpeechRequest = request
+        speechSession = SpeechToTextOverlaySession(request).also { it.onOverlayShown() }
+
+        setContentView(R.layout.activity_overlay_speech_to_text)
+        speechTitleView = findViewById<TextView>(R.id.text_speech_title).apply {
+            text = request.title
+        }
+        speechStatusView = findViewById<TextView>(R.id.text_speech_status)
+        speechResultEditText = findViewById(R.id.edit_speech_result)
+        speechHoldButton = findViewById(R.id.button_hold_to_record)
+        speechSendButton = findViewById(R.id.button_speech_send)
+        speechResultEditText?.doAfterTextChanged {
+            updateSpeechSendButtonState()
+        }
+
+        findViewById<MaterialButton>(R.id.button_speech_cancel).setOnClickListener {
+            cancel()
+        }
+        speechSendButton?.setOnClickListener {
+            val text = speechResultEditText?.text?.toString()?.trim().orEmpty()
+            if (text.isNotBlank() && speechSession?.canSend(text) == true) {
+                complete(SpeechToTextResult(text = text))
+            }
+        }
+        speechHoldButton?.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    startSpeechRecognition()
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    stopSpeechRecognition()
+                    true
+                }
+                else -> true
+            }
+        }
+
+        onBackPressedDispatcher.addCallback(this) {
+            cancel()
+        }
+
+        initializeSpeechRecognizer()
+        renderSpeechUi()
+    }
+
+    private fun initializeSpeechRecognizer() {
+        speechRecognizer?.destroy()
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+            setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {
+                    speechSession?.onReadyForSpeech()
+                    renderSpeechUi()
+                }
+
+                override fun onBeginningOfSpeech() = Unit
+
+                override fun onRmsChanged(rmsdB: Float) = Unit
+
+                override fun onBufferReceived(buffer: ByteArray?) = Unit
+
+                override fun onEndOfSpeech() {
+                    speechSession?.onEndOfSpeech()
+                    renderSpeechUi()
+                }
+
+                override fun onError(error: Int) {
+                    val result: SpeechRecognitionErrorResult = speechSession?.onError(error) ?: return
+                    if (result.shouldFinishWithError) {
+                        finishWithSpeechError(speechSession?.statusText(this@OverlayUIActivity).orEmpty())
+                        return
+                    }
+                    renderSpeechUi()
+                }
+
+                override fun onResults(results: Bundle?) {
+                    speechSession?.onResults(extractBestSpeechResult(results))
+                    renderSpeechUi()
+                }
+
+                override fun onPartialResults(partialResults: Bundle?) {
+                    speechSession?.onPartialResult(extractBestSpeechResult(partialResults))
+                    renderSpeechUi()
+                }
+
+                override fun onEvent(eventType: Int, params: Bundle?) = Unit
+            })
+        }
+    }
+
+    private fun startSpeechRecognition() {
+        val session = speechSession ?: return
+        if (speechRecognizer == null) return
+
+        val request: SpeechRecognitionStartRequest = session.startRecognition(
+            currentEditorText = speechResultEditText?.text?.toString().orEmpty(),
+            deviceLanguageTag = Locale.getDefault().toLanguageTag()
+        ) ?: return
+
+        renderSpeechUi()
+
+        val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, request.languageTag)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, request.preferOffline)
+        }
+
+        try {
+            speechRecognizer?.startListening(recognizerIntent)
+        } catch (e: Exception) {
+            session.onStartFailure(e.message ?: getString(R.string.error_unknown_error))
+            renderSpeechUi()
+        }
+    }
+
+    private fun stopSpeechRecognition() {
+        val session = speechSession ?: return
+        if (!session.stopRecognitionRequested()) return
+
+        renderSpeechUi()
+
+        try {
+            speechRecognizer?.stopListening()
+        } catch (e: Exception) {
+            session.onStopFailure(e.message ?: getString(R.string.error_unknown_error))
+            renderSpeechUi()
+        }
+    }
+
+    private fun extractBestSpeechResult(bundle: Bundle?): String? {
+        return bundle
+            ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            ?.firstOrNull()
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    private fun renderSpeechUi() {
+        speechStatusView?.text = speechSession?.statusText(this).orEmpty()
+
+        val editText = speechResultEditText ?: return
+        val currentText = speechSession?.currentText().orEmpty()
+        if (editText.text?.toString() != currentText) {
+            editText.setText(currentText)
+            editText.setSelection(currentText.length)
+        }
+        speechHoldButton?.text = speechSession?.holdButtonText(this)
+        speechHoldButton?.isEnabled = speechSession?.isHoldButtonEnabled() == true
+        updateSpeechSendButtonState()
+    }
+
+    private fun updateSpeechSendButtonState() {
+        val currentEditorText = speechResultEditText?.text?.toString().orEmpty()
+        speechSendButton?.isEnabled = speechSession?.canSend(currentEditorText) == true
     }
 
     /**
@@ -371,8 +583,19 @@ class OverlayUIActivity : AppCompatActivity() {
         finish()
     }
 
+    private fun finishWithSpeechError(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        complete(SpeechToTextResult(error = message))
+    }
+
     private fun applyDynamicTheme() {
         val themeResId = ThemeUtils.getThemeResId(this, transparent = true)
         setTheme(themeResId)
+    }
+
+    override fun onDestroy() {
+        speechRecognizer?.destroy()
+        speechRecognizer = null
+        super.onDestroy()
     }
 }

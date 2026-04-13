@@ -150,6 +150,7 @@ object ModuleRegistry {
         // 应用与系统
         register(DelayModule(), context)
         register(InputModule(), context)
+        register(SpeechToTextModule(), context)
         register(QuickViewModule(), context)
         register(ToastModule(), context)
         register(LuaModule(), context)

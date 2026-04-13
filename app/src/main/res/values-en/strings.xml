@@ -486,6 +486,30 @@
     <string name="overlay_ui_image_copied">Image copied to clipboard</string>
     <string name="overlay_ui_copy_image_failed">Failed to copy image: %s</string>
     <string name="overlay_ui_workflow_chooser_title">Choose Workflow to Run</string>
+    <string name="overlay_ui_speech_notification_content">Tap to start speech to text</string>
+    <string name="overlay_ui_speech_default_title">Speech to Text</string>
+    <string name="overlay_ui_speech_placeholder">Hold the button below to start speaking</string>
+    <string name="overlay_ui_speech_status_idle">Hold the button to record, release to stop.</string>
+    <string name="overlay_ui_speech_status_idle_offline">Offline recognition mode: hold the button to record, release to stop.</string>
+    <string name="overlay_ui_speech_status_recording">Listening, keep speaking…</string>
+    <string name="overlay_ui_speech_status_processing">Processing recognition result…</string>
+    <string name="overlay_ui_speech_status_ready">Recognition complete. Hold again to continue or send now.</string>
+    <string name="overlay_ui_speech_status_no_match">No speech recognized. Hold to try again.</string>
+    <string name="overlay_ui_speech_status_switched_offline">Online recognition failed. Switched to offline recognition, please try again.</string>
+    <string name="overlay_ui_speech_button_hold">Hold to Talk</string>
+    <string name="overlay_ui_speech_button_release">Release to Stop</string>
+    <string name="overlay_ui_speech_button_processing">Recognizing…</string>
+    <string name="overlay_ui_speech_send">Send</string>
+    <string name="overlay_ui_speech_not_available">Speech recognition is not available on this device</string>
+    <string name="overlay_ui_speech_permission_denied">Microphone permission not granted</string>
+    <string name="overlay_ui_speech_error_audio">Recording failed. Check microphone access.</string>
+    <string name="overlay_ui_speech_error_network">Network error. Speech recognition failed.</string>
+    <string name="overlay_ui_speech_error_busy">Speech recognition is busy. Try again later.</string>
+    <string name="overlay_ui_speech_error_server">Speech recognition service error</string>
+    <string name="overlay_ui_speech_error_timeout">Speech timeout. Try again.</string>
+    <string name="overlay_ui_speech_error_unknown">Speech recognition failed: %s</string>
+    <string name="overlay_ui_speech_offline_pack_missing_title">Offline speech pack missing</string>
+    <string name="overlay_ui_speech_offline_pack_missing_message">The selected language does not have an offline speech pack installed. Download it in system voice settings and try again.</string>
 
     <!-- WorkflowRepoFragment -->
     <string name="text_no_workflows">No workflows available</string>
@@ -927,6 +951,8 @@
     <string name="permission_desc_accessibility">Required for core automation features like clicks, find, and input.</string>
     <string name="permission_name_notifications">Notification Permission</string>
     <string name="permission_desc_notifications">Used to display Toast messages and send task result notifications.</string>
+    <string name="permission_name_microphone">Microphone Permission</string>
+    <string name="permission_desc_microphone">Used for voice input features such as speech-to-text.</string>
     <string name="permission_name_overlay">Overlay Permission</string>
     <string name="permission_desc_overlay">Allows the app to display input boxes and other windows while running in the background, essential for complex automation flows.</string>
     <string name="permission_name_notification_listener">Notification Listener</string>

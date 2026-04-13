@@ -471,6 +471,30 @@
     <string name="overlay_ui_image_copied">图片已复制到剪贴板</string>
     <string name="overlay_ui_copy_image_failed">复制图片失败: %s</string>
     <string name="overlay_ui_workflow_chooser_title">选择要执行的工作流</string>
+    <string name="overlay_ui_speech_notification_content">点击开始语音转文字</string>
+    <string name="overlay_ui_speech_default_title">语音转文字</string>
+    <string name="overlay_ui_speech_placeholder">按住下方按钮开始说话</string>
+    <string name="overlay_ui_speech_status_idle">按住按钮开始录音，松手停止。</string>
+    <string name="overlay_ui_speech_status_idle_offline">本地识别模式：按住按钮开始录音，松手停止。</string>
+    <string name="overlay_ui_speech_status_recording">正在聆听，请继续说话…</string>
+    <string name="overlay_ui_speech_status_processing">正在整理识别结果…</string>
+    <string name="overlay_ui_speech_status_ready">识别完成，可以继续按住补充或直接发送。</string>
+    <string name="overlay_ui_speech_status_no_match">没有识别到有效语音，按住重试。</string>
+    <string name="overlay_ui_speech_status_switched_offline">在线识别失败，已自动切换到本地识别，请重试。</string>
+    <string name="overlay_ui_speech_button_hold">按住说话</string>
+    <string name="overlay_ui_speech_button_release">松开结束</string>
+    <string name="overlay_ui_speech_button_processing">识别中…</string>
+    <string name="overlay_ui_speech_send">发送</string>
+    <string name="overlay_ui_speech_not_available">当前设备不支持语音识别</string>
+    <string name="overlay_ui_speech_permission_denied">未授予麦克风权限</string>
+    <string name="overlay_ui_speech_error_audio">录音失败，请检查麦克风</string>
+    <string name="overlay_ui_speech_error_network">网络异常，语音识别失败</string>
+    <string name="overlay_ui_speech_error_busy">语音识别服务忙，请稍后重试</string>
+    <string name="overlay_ui_speech_error_server">语音识别服务异常</string>
+    <string name="overlay_ui_speech_error_timeout">说话超时，请重试</string>
+    <string name="overlay_ui_speech_error_unknown">语音识别失败: %s</string>
+    <string name="overlay_ui_speech_offline_pack_missing_title">缺少离线语音包</string>
+    <string name="overlay_ui_speech_offline_pack_missing_message">当前语言未安装离线语音包，请前往系统语音设置下载后重试。</string>
 
     <!-- WorkflowRepoFragment -->
     <string name="text_no_workflows">暂无工作流</string>
@@ -912,6 +936,8 @@
     <string name="permission_desc_accessibility">实现自动化点击、查找、输入等核心功能所必需的权限。</string>
     <string name="permission_name_notifications">通知权限</string>
     <string name="permission_desc_notifications">用于显示Toast提示、发送任务结果通知等。</string>
+    <string name="permission_name_microphone">麦克风权限</string>
+    <string name="permission_desc_microphone">用于语音转文字等语音输入功能。</string>
     <string name="permission_name_overlay">悬浮窗权限</string>
     <string name="permission_desc_overlay">允许应用在后台执行时显示输入框等窗口，这是实现复杂自动化流程的关键。</string>
     <string name="permission_name_notification_listener">通知使用权</string>

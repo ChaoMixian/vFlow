@@ -138,6 +138,20 @@
     <string name="option_vflow_data_input_type_number">Number</string>
     <string name="option_vflow_data_input_type_time">Time</string>
     <string name="option_vflow_data_input_type_date">Date</string>
+    <string name="module_vflow_device_speech_to_text_name">Speech to Text</string>
+    <string name="module_vflow_device_speech_to_text_desc">Show a hold-to-talk overlay and transcribe speech to text in real time.</string>
+    <string name="param_vflow_device_speech_to_text_prompt_name">Prompt</string>
+    <string name="param_vflow_device_speech_to_text_prompt_default">Hold to talk</string>
+    <string name="param_vflow_device_speech_to_text_language_name">Language</string>
+    <string name="param_vflow_device_speech_to_text_prefer_offline_name">Offline Recognition</string>
+    <string name="output_vflow_device_speech_to_text_text_name">Transcript</string>
+    <string name="error_vflow_device_speech_to_text_service_missing">Service missing</string>
+    <string name="error_vflow_device_speech_to_text_user_cancelled">User cancelled</string>
+    <string name="error_vflow_device_speech_to_text_failed">Speech recognition failed</string>
+    <string name="error_vflow_device_speech_to_text_empty">No valid speech content was captured</string>
+    <string name="summary_vflow_device_speech_to_text_prefix">Speech to text, prompt is</string>
+    <string name="msg_vflow_device_speech_to_text_waiting">Waiting for speech input...</string>
+    <string name="msg_vflow_device_speech_to_text_received">Speech recognition result received</string>
 
     <!-- vflow.device.click - Click Module -->
     <string name="module_vflow_device_click_name">Click</string>

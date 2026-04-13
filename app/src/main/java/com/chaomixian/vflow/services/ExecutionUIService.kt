@@ -13,6 +13,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextOverlayContract
+import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextOverlayRequest
+import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextResult
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.ui.common.OverlayUIActivity
 import com.google.gson.Gson
@@ -176,6 +179,22 @@ class ExecutionUIService(private val context: Context) {
             putExtra("title", title)
         }
         return startActivityAndAwaitResult(intent, title, "点击这里输入 $type").await()
+    }
+
+    suspend fun requestSpeechToText(
+        request: SpeechToTextOverlayRequest
+    ): SpeechToTextResult? {
+        val intent = Intent(context, OverlayUIActivity::class.java).apply {
+            putExtra("request_type", SpeechToTextOverlayContract.REQUEST_TYPE)
+            putExtra("title", request.title)
+            putExtra(SpeechToTextOverlayContract.EXTRA_LANGUAGE, request.languageTag)
+            putExtra(SpeechToTextOverlayContract.EXTRA_FORCE_OFFLINE, request.forceOffline)
+        }
+        return startActivityAndAwaitResult(
+            intent,
+            request.title,
+            context.getString(R.string.overlay_ui_speech_notification_content)
+        ).await() as? SpeechToTextResult
     }
 
     /**
