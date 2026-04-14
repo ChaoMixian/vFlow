@@ -65,7 +65,8 @@ object StandardControlFactory {
                 context,
                 currentValue?.toString() ?: "",
                 allSteps,
-                inputDef.id  // 使用 inputId 作为 tag，便于后续查找
+                inputDef.id,  // 使用 inputId 作为 tag，便于后续查找
+                inputDef.getLocalizedHint(context)
             )
             isVariableReference(currentValue) -> createVariablePill(
                 context,
@@ -150,7 +151,7 @@ object StandardControlFactory {
                 context,
                 inputDef.staticType == ParameterType.NUMBER,
                 currentValue,
-                inputDef.hint
+                inputDef.getLocalizedHint(context)
             )
         }
     }
@@ -397,11 +398,14 @@ object StandardControlFactory {
         context: Context,
         initialText: String,
         allSteps: List<ActionStep>?,
-        tag: String?
+        tag: String?,
+        hint: String? = null
     ): View {
         val richEditorLayout = LayoutInflater.from(context)
             .inflate(R.layout.rich_text_editor, null, false)
+        val textInputLayout = richEditorLayout as? TextInputLayout
         val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
+        textInputLayout?.hint = hint ?: context.getString(R.string.label_value)
         richTextView.minHeight = (80 * context.resources.displayMetrics.density).toInt()
 
         // 设置初始文本，并将变量引用渲染成"药丸"

@@ -545,7 +545,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 context = requireContext(),
                 currentValue = currentParameters[inputDef.id],
                 pickerType = inputDef.pickerType,
-                hint = inputDef.hint,
+                hint = inputDef.getLocalizedHint(requireContext()),
                 onPickerClicked = {
                     onPickerRequested?.invoke(inputDef)
                 }
