@@ -1,11 +1,14 @@
-// 文件: WakeScreenModule.kt
 package com.chaomixian.vflow.core.workflow.module.system
 
 import android.content.Context
 import android.os.PowerManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
-import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.module.ActionMetadata
+import com.chaomixian.vflow.core.module.BaseModule
+import com.chaomixian.vflow.core.module.ExecutionResult
+import com.chaomixian.vflow.core.module.OutputDefinition
+import com.chaomixian.vflow.core.module.ProgressUpdate
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -15,10 +18,8 @@ import kotlinx.coroutines.delay
 
 /**
  * "唤醒屏幕" 模块。
- * 在息屏状态下点亮屏幕，并解除非安全锁屏（如滑动解锁）。
- *
- * 注意：此模块无法绕过安全锁屏（PIN、密码、图案、指纹等）。
- * 仅适用于未设置密码的设备。
+ * 点亮息屏状态的屏幕，不处理锁屏界面的解锁动作。
+ * 需要 Shizuku 或 Root 权限。
  */
 class WakeScreenModule : BaseModule() {
 
@@ -26,8 +27,8 @@ class WakeScreenModule : BaseModule() {
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_system_wake_screen_name,
         descriptionStringRes = R.string.module_vflow_system_wake_screen_desc,
-        name = "唤醒屏幕（无密码）",  // Fallback
-        description = "点亮息屏状态的屏幕并解除滑动锁屏。仅适用于未设置密码的设备，需要 Shizuku 或 Root 权限。",  // Fallback
+        name = "唤醒屏幕",
+        description = "点亮息屏状态的屏幕，不执行解锁操作。需要 Shizuku 或 Root 权限。",
         iconRes = R.drawable.rounded_brightness_5_24,
         category = "应用与系统",
         categoryId = "device"
@@ -37,18 +38,18 @@ class WakeScreenModule : BaseModule() {
         return ShellManager.getRequiredPermissions(com.chaomixian.vflow.core.logging.LogManager.applicationContext)
     }
 
-    override fun getInputs(): List<InputDefinition> = emptyList()
+    override fun getInputs() = emptyList<com.chaomixian.vflow.core.module.InputDefinition>()
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition(
             id = "success",
-            name = "是否成功",  // Fallback
+            name = "是否成功",
             typeName = VTypeRegistry.BOOLEAN.id,
             nameStringRes = R.string.output_vflow_system_wake_screen_success_name
         ),
         OutputDefinition(
             id = "screen_on",
-            name = "屏幕是否点亮",  // Fallback
+            name = "屏幕是否点亮",
             typeName = VTypeRegistry.BOOLEAN.id,
             nameStringRes = R.string.output_vflow_system_wake_screen_screen_on_name
         )
@@ -62,27 +63,27 @@ class WakeScreenModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        onProgress(ProgressUpdate("正在唤醒屏幕..."))
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_wake_screen_running)))
 
         return try {
             val appContext = context.applicationContext
             val powerManager = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
-
             val success = wakeScreenViaShell(appContext, onProgress)
 
-            // 短暂延迟后检查屏幕状态
             delay(500)
             val isScreenOn = powerManager.isInteractive
 
             if (success) {
-                ExecutionResult.Success(mapOf(
-                    "success" to VBoolean(true),
-                    "screen_on" to VBoolean(isScreenOn)
-                ))
+                ExecutionResult.Success(
+                    mapOf(
+                        "success" to VBoolean(true),
+                        "screen_on" to VBoolean(isScreenOn)
+                    )
+                )
             } else {
                 ExecutionResult.Failure(
                     appContext.getString(R.string.error_vflow_system_wake_screen_failed),
-                    "无法唤醒屏幕，请检查 Shizuku 或 Root 权限。"
+                    appContext.getString(R.string.error_vflow_system_wake_screen_permission_hint)
                 )
             }
         } catch (e: Exception) {
@@ -97,50 +98,16 @@ class WakeScreenModule : BaseModule() {
         context: Context,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): Boolean {
-        // 使用 input keyevent 命令唤醒屏幕
-        // KEYCODE_WAKEUP = 224
         val wakeResult = ShellManager.execShellCommand(context, "input keyevent 224")
 
         if (wakeResult.startsWith("Error:")) {
-            // 尝试使用 KEYCODE_POWER (26) 作为备选
             val powerResult = ShellManager.execShellCommand(context, "input keyevent 26")
             if (powerResult.startsWith("Error:")) {
                 return false
             }
         }
 
-        onProgress(ProgressUpdate("屏幕已唤醒"))
-
-        // 解除锁屏
-        onProgress(ProgressUpdate("正在尝试解除锁屏..."))
-        // 使用 Shell 命令解除锁屏
-        // KEYCODE_MENU = 82，某些设备上可以解除滑动锁屏
-        ShellManager.execShellCommand(context, "input keyevent 82")
-
-        // 短暂延迟后尝试滑动解锁
-        delay(300)
-
-        // 获取屏幕尺寸并执行滑动解锁手势
-        val displayResult = ShellManager.execShellCommand(context, "wm size")
-        if (!displayResult.startsWith("Error:")) {
-            // 解析屏幕尺寸，格式如 "Physical size: 1080x2400"
-            val sizeMatch = Regex("(\\d+)x(\\d+)").find(displayResult)
-            if (sizeMatch != null) {
-                val width = sizeMatch.groupValues[1].toIntOrNull() ?: 1080
-                val height = sizeMatch.groupValues[2].toIntOrNull() ?: 1920
-
-                // 从屏幕底部中央向上滑动
-                val startX = width / 2
-                val startY = height * 4 / 5
-                val endY = height / 3
-
-                ShellManager.execShellCommand(
-                    context,
-                    "input swipe $startX $startY $startX $endY 300"
-                )
-            }
-        }
-
+        onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_wake_screen_done)))
         return true
     }
 }

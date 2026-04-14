@@ -110,16 +110,32 @@
     <string name="msg_vflow_system_sleep_screen_done">Screen turned off</string>
 
     <!-- vflow.system.wake_screen - Wake Screen Module -->
-    <string name="module_vflow_system_wake_screen_name">Wake Screen (No Password)</string>
-    <string name="module_vflow_system_wake_screen_desc">Wake up screen and dismiss swipe lock. Only for devices without password. Requires Shizuku or Root permission.</string>
+    <string name="module_vflow_system_wake_screen_name">Wake Screen</string>
+    <string name="module_vflow_system_wake_screen_desc">Wake up the screen without performing any unlock action. Requires Shizuku or Root permission.</string>
     <string name="output_vflow_system_wake_screen_success_name">Success</string>
     <string name="output_vflow_system_wake_screen_screen_on_name">Screen On</string>
     <string name="error_vflow_system_wake_screen_failed">Wake failed</string>
     <string name="error_vflow_system_wake_screen_exec_failed">Execution failed</string>
-    <string name="summary_vflow_system_wake_screen">Wake screen and dismiss lock</string>
+    <string name="error_vflow_system_wake_screen_permission_hint">Unable to wake the screen. Check Shizuku or Root permission.</string>
+    <string name="summary_vflow_system_wake_screen">Wake screen</string>
     <string name="msg_vflow_system_wake_screen_running">Waking screen...</string>
     <string name="msg_vflow_system_wake_screen_done">Screen awakened</string>
-    <string name="msg_vflow_system_wake_screen_unlocking">Attempting to dismiss lock...</string>
+    <string name="module_vflow_system_wake_and_unlock_screen_name">Wake Screen and Unlock</string>
+    <string name="module_vflow_system_wake_and_unlock_screen_desc">Wake up the screen and optionally enter a PIN or password to unlock. Pattern lock and biometrics are not supported. Requires Shizuku or Root permission.</string>
+    <string name="param_vflow_system_wake_and_unlock_screen_unlock_password_name">Lock Password / PIN</string>
+    <string name="hint_vflow_system_wake_and_unlock_screen_unlock_password">Leave empty to only try swipe unlock</string>
+    <string name="text_vflow_system_wake_and_unlock_screen_unlock_help">You can enter the device PIN or password for automatic unlock. Pattern lock, fingerprint, and face unlock are not supported.</string>
+    <string name="error_vflow_system_wake_and_unlock_screen_failed">Wake failed</string>
+    <string name="error_vflow_system_wake_and_unlock_screen_exec_failed">Execution failed</string>
+    <string name="error_vflow_system_wake_and_unlock_screen_password_charset">Only ASCII PINs or passwords are currently supported for automatic entry.</string>
+    <string name="error_vflow_system_wake_and_unlock_screen_still_locked_without_password">The device is still locked. If it uses a PIN or password, configure it in this module and try again.</string>
+    <string name="error_vflow_system_wake_and_unlock_screen_still_locked_with_password">The device is still locked. Check that the password is correct and the lock method is not pattern or biometric verification.</string>
+    <string name="summary_vflow_system_wake_and_unlock_screen">Wake screen and dismiss lock</string>
+    <string name="summary_vflow_system_wake_and_unlock_screen_with_password">Wake screen and unlock with password</string>
+    <string name="msg_vflow_system_wake_and_unlock_screen_running">Waking screen...</string>
+    <string name="msg_vflow_system_wake_and_unlock_screen_done">Screen awakened</string>
+    <string name="msg_vflow_system_wake_and_unlock_screen_unlocking">Attempting to dismiss lock...</string>
+    <string name="msg_vflow_system_wake_and_unlock_screen_entering_password">Entering lock password...</string>
 
     <!-- vflow.data.input - Request Input Module -->
     <string name="module_vflow_data_input_name">Request Input</string>

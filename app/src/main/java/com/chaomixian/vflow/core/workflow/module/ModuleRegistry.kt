@@ -170,6 +170,7 @@ object ModuleRegistry {
         register(BrightnessModule(), context)
         register(MobileDataModule(), context)
         register(WakeScreenModule(), context)
+        register(WakeAndUnlockScreenModule(), context)
         register(SleepScreenModule(), context)
         register(ReadSmsModule(), context)
         register(FindNotificationModule(), context)
