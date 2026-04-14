@@ -349,6 +349,8 @@
     <string name="editor_toast_ui_inspector_started">UI Inspector started, drag icon to select controls</string>
     <string name="editor_toast_click_module_inserted">Inserted click module: %1$s</string>
     <string name="editor_toast_click_module_insert_failed">Failed to insert click module</string>
+    <string name="editor_toast_module_inserted">Inserted module: %1$s</string>
+    <string name="editor_toast_module_insert_failed">Failed to insert module</string>
     <string name="editor_group_named_variables">Named Variables</string>
     <string name="variable_type_text">Text</string>
     <string name="variable_named_variable">Named Variable</string>
@@ -1118,6 +1120,7 @@
     <string name="ui_inspector_float_permission_error">Cannot display floating window, please check permissions</string>
     <string name="ui_inspector_copied">Copied %s</string>
     <string name="ui_inspector_click_module_inserted">Insert request sent: %1$s</string>
+    <string name="ui_inspector_insert_request_sent">Insert request sent</string>
     <string name="ui_inspector_service_closed">UI Inspector closed</string>
     <string name="ui_inspector_selected">Selected</string>
     <string name="ui_inspector_yes">Yes</string>

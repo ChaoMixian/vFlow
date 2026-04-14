@@ -35,6 +35,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.workflow_editor.inspector.WorkflowInspectorInsertRequest
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.ShapeAppearanceModel
@@ -49,9 +50,6 @@ class UiInspectorService : Service() {
     companion object {
         private const val INSPECT_THROTTLE_MS = 32L
         private const val COORD_LABEL_MARGIN_DP = 8
-        const val ACTION_INSERT_CLICK_MODULE = "com.chaomixian.vflow.action.INSERT_CLICK_MODULE"
-        const val EXTRA_ENABLE_WORKFLOW_INSERT = "enable_workflow_insert"
-        const val EXTRA_CLICK_TARGET = "click_target"
     }
 
     private lateinit var windowManager: WindowManager
@@ -82,7 +80,11 @@ class UiInspectorService : Service() {
     // 用于列表展示的数据结构
     private sealed class InspectorItem {
         data class Header(val title: String) : InspectorItem()
-        data class Property(val label: String, val value: String) : InspectorItem()
+        data class Property(
+            val label: String,
+            val value: String,
+            val insertRequest: WorkflowInspectorInsertRequest? = null
+        ) : InspectorItem()
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -94,7 +96,10 @@ class UiInspectorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        enableWorkflowInsert = intent?.getBooleanExtra(EXTRA_ENABLE_WORKFLOW_INSERT, false) == true
+        enableWorkflowInsert = intent?.getBooleanExtra(
+            WorkflowInspectorInsertRequest.EXTRA_ENABLE_WORKFLOW_INSERT,
+            false
+        ) == true
         Toast.makeText(this, getString(R.string.ui_inspector_service_started), Toast.LENGTH_SHORT).show()
         return START_NOT_STICKY
     }
@@ -446,7 +451,7 @@ class UiInspectorService : Service() {
         if (enableWorkflowInsert) {
             builder.setCustomTitle(
                 createDialogTitleView(dialogContext, getString(R.string.ui_inspector_properties_title)) {
-                    insertClickModule(node)
+                    sendInsertRequest(buildClickInsertRequest(node))
                     dialog.dismiss()
                 }
             )
@@ -479,22 +484,31 @@ class UiInspectorService : Service() {
         } catch (e: Exception) { }
 
         val currentActivity = ServiceStateBus.lastWindowClassName ?: getString(R.string.ui_inspector_unknown)
+        val currentAppInsertRequest = buildLaunchAppInsertRequest(packageName)
+        val currentPageInsertRequest = buildLaunchActivityInsertRequest(packageName, currentActivity)
+        val controlId = node.viewIdResourceName ?: getString(R.string.ui_inspector_none)
+        val controlText = node.text?.toString() ?: ""
+        val gkdSelector = generateGkdSelector(node)
+        val topLeftCoordinate = "${rect.left},${rect.top}"
+        val bottomRightCoordinate = "${rect.right},${rect.bottom}"
+        val centerCoordinate = "${rect.centerX()},${rect.centerY()}"
+        val currentCoordinate = "$currentProbeX,$currentProbeY"
 
         list.add(InspectorItem.Header(getString(R.string.ui_inspector_basic_info)))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_app), "$appName ($packageName)"))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_page), currentActivity))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_id), node.viewIdResourceName ?: getString(R.string.ui_inspector_none)))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_text), node.text?.toString() ?: ""))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_app), "$appName ($packageName)", currentAppInsertRequest))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_page), currentActivity, currentPageInsertRequest))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_id), controlId, buildClickInsertRequest(controlId)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_text), controlText, buildFindTextInsertRequest(controlText)))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_type), node.className?.toString() ?: getString(R.string.ui_inspector_unknown)))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_gkd_selector), generateGkdSelector(node)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_gkd_selector), gkdSelector, buildUiSelectorInsertRequest(gkdSelector)))
 
         list.add(InspectorItem.Header(getString(R.string.ui_inspector_layout_coordinates)))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_coordinate), "$currentProbeX,$currentProbeY"))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_top_left), "${rect.left},${rect.top}"))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_bottom_right), "${rect.right},${rect.bottom}"))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_center_point), "${rect.centerX()},${rect.centerY()}"))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_coord_x), rect.left.toString()))
-        list.add(InspectorItem.Property(getString(R.string.ui_inspector_coord_y), rect.top.toString()))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_coordinate), currentCoordinate, WorkflowInspectorInsertRequest.click(currentCoordinate)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_top_left), topLeftCoordinate, WorkflowInspectorInsertRequest.click(topLeftCoordinate)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_bottom_right), bottomRightCoordinate, WorkflowInspectorInsertRequest.click(bottomRightCoordinate)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_center_point), centerCoordinate, WorkflowInspectorInsertRequest.click(centerCoordinate)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_coord_x), rect.left.toString(), WorkflowInspectorInsertRequest.click(topLeftCoordinate)))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_coord_y), rect.top.toString(), WorkflowInspectorInsertRequest.click(topLeftCoordinate)))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_width), rect.width().toString()))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_height), rect.height().toString()))
 
@@ -574,18 +588,46 @@ class UiInspectorService : Service() {
         return titleContainer
     }
 
-    private fun insertClickModule(node: AccessibilityNodeInfo) {
-        val target = buildClickTarget(node)
+    private fun buildClickInsertRequest(node: AccessibilityNodeInfo): WorkflowInspectorInsertRequest {
+        return WorkflowInspectorInsertRequest.click(buildClickTarget(node))
+    }
+
+    private fun buildClickInsertRequest(target: String): WorkflowInspectorInsertRequest? {
+        if (!isInsertableValue(target)) return null
+        return WorkflowInspectorInsertRequest.click(target)
+    }
+
+    private fun buildUiSelectorInsertRequest(selector: String): WorkflowInspectorInsertRequest? {
+        if (!isInsertableValue(selector)) return null
+        return WorkflowInspectorInsertRequest.uiSelector(selector)
+    }
+
+    private fun buildFindTextInsertRequest(text: String): WorkflowInspectorInsertRequest? {
+        if (!isInsertableValue(text)) return null
+        return WorkflowInspectorInsertRequest.findText(text)
+    }
+
+    private fun buildLaunchAppInsertRequest(packageName: String): WorkflowInspectorInsertRequest? {
+        if (!isInsertableValue(packageName)) return null
+        return WorkflowInspectorInsertRequest.launchApp(packageName)
+    }
+
+    private fun buildLaunchActivityInsertRequest(
+        packageName: String,
+        activityName: String
+    ): WorkflowInspectorInsertRequest? {
+        if (!isInsertableValue(packageName) || !isInsertableValue(activityName)) return null
+        return WorkflowInspectorInsertRequest.launchActivity(packageName, activityName)
+    }
+
+    private fun sendInsertRequest(request: WorkflowInspectorInsertRequest?) {
+        if (!enableWorkflowInsert || request == null) return
         LocalBroadcastManager.getInstance(this).sendBroadcast(
-            Intent(ACTION_INSERT_CLICK_MODULE).apply {
-                putExtra(EXTRA_CLICK_TARGET, target)
+            Intent(WorkflowInspectorInsertRequest.ACTION_INSERT_REQUEST).apply {
+                putExtra(WorkflowInspectorInsertRequest.EXTRA_INSERT_REQUEST, request)
             }
         )
-        Toast.makeText(
-            this,
-            getString(R.string.ui_inspector_click_module_inserted, target),
-            Toast.LENGTH_SHORT
-        ).show()
+        Toast.makeText(this, R.string.ui_inspector_insert_request_sent, Toast.LENGTH_SHORT).show()
     }
 
     private fun buildClickTarget(node: AccessibilityNodeInfo): String {
@@ -595,6 +637,13 @@ class UiInspectorService : Service() {
         }
         refreshCurrentProbeCoordinate()
         return "$currentProbeX,$currentProbeY"
+    }
+
+    private fun isInsertableValue(value: String?): Boolean {
+        if (value.isNullOrBlank()) return false
+        val trimmed = value.trim()
+        return trimmed != getString(R.string.ui_inspector_unknown) &&
+                trimmed != getString(R.string.ui_inspector_none)
     }
 
     /**
@@ -659,6 +708,13 @@ class UiInspectorService : Service() {
 
             isClickable = true
             setOnClickListener { copyToClipboard(item.label, item.value) }
+            if (enableWorkflowInsert && item.insertRequest != null) {
+                isLongClickable = true
+                setOnLongClickListener {
+                    sendInsertRequest(item.insertRequest)
+                    true
+                }
+            }
             setPadding(48, 16, 24, 16)
         }
 
@@ -695,6 +751,12 @@ class UiInspectorService : Service() {
             imageTintList = ColorStateList.valueOf(resolveThemeColor(context, com.google.android.material.R.attr.colorPrimary))
             setPadding(24, 24, 24, 24)
             setOnClickListener { copyToClipboard(item.label, item.value) }
+            if (enableWorkflowInsert && item.insertRequest != null) {
+                setOnLongClickListener {
+                    sendInsertRequest(item.insertRequest)
+                    true
+                }
+            }
         }
 
         rowLayout.addView(textContainer)

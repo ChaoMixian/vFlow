@@ -357,6 +357,8 @@
     <string name="editor_toast_ui_inspector_started">UI 检查器已开启，拖动图标选择控件</string>
     <string name="editor_toast_click_module_inserted">已插入点击模块：%1$s</string>
     <string name="editor_toast_click_module_insert_failed">插入点击模块失败</string>
+    <string name="editor_toast_module_inserted">已插入模块：%1$s</string>
+    <string name="editor_toast_module_insert_failed">插入模块失败</string>
     <string name="editor_group_named_variables">命名变量</string>
     <string name="variable_type_text">文本</string>
     <string name="variable_named_variable">命名变量</string>
@@ -1118,6 +1120,7 @@
     <string name="ui_inspector_float_permission_error">无法显示悬浮窗，请检查权限</string>
     <string name="ui_inspector_copied">已复制 %s</string>
     <string name="ui_inspector_click_module_inserted">已发送插入请求：%1$s</string>
+    <string name="ui_inspector_insert_request_sent">已发送插入请求</string>
     <string name="ui_inspector_service_closed">UI 检查器已关闭</string>
     <string name="ui_inspector_selected">已选择</string>
     <string name="ui_inspector_yes">是</string>
