@@ -7,7 +7,9 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.View
@@ -25,6 +27,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearSmoothScroller
@@ -99,6 +102,12 @@ class WorkflowEditorActivity : BaseActivity() {
     private var dragBreathAnimator: Animator? = null
     private var executionAnimator: Animator? = null
     private var currentlyExecutingViewHolder: RecyclerView.ViewHolder? = null
+    private val uiInspectorInsertReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            val target = intent?.getStringExtra(UiInspectorService.EXTRA_CLICK_TARGET) ?: return
+            insertClickModuleFromInspector(target)
+        }
+    }
 
 
     // 用于保存和恢复状态的常量
@@ -223,6 +232,10 @@ class WorkflowEditorActivity : BaseActivity() {
         })
 
         setupRecyclerView()
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            uiInspectorInsertReceiver,
+            IntentFilter(UiInspectorService.ACTION_INSERT_CLICK_MODULE)
+        )
 
         // 点击内容区域时清除标题输入框焦点并关闭键盘
         recyclerView.setOnTouchListener { _, _ ->
@@ -1377,6 +1390,11 @@ class WorkflowEditorActivity : BaseActivity() {
         maybePromptEnumMigration()
     }
 
+    override fun onDestroy() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(uiInspectorInsertReceiver)
+        super.onDestroy()
+    }
+
     private fun updateExecuteButton(isRunning: Boolean) {
         if (isRunning) {
             executeButton.text = getString(R.string.editor_button_stop)
@@ -1534,6 +1552,33 @@ class WorkflowEditorActivity : BaseActivity() {
         actionStepAdapter.notifyDataSetChanged()
     }
 
+    private fun insertClickModuleFromInspector(target: String) {
+        val module = ModuleRegistry.getModule("vflow.device.click")
+        if (module == null) {
+            toast(R.string.editor_toast_click_module_insert_failed)
+            return
+        }
+
+        val stepsToAdd = module.createSteps()
+        if (stepsToAdd.isEmpty()) {
+            toast(R.string.editor_toast_click_module_insert_failed)
+            return
+        }
+
+        val firstStep = stepsToAdd.first()
+        val updatedParameters = module.onParameterUpdated(firstStep, "target", target)
+        actionSteps.add(firstStep.copy(parameters = updatedParameters))
+        if (stepsToAdd.size > 1) {
+            actionSteps.addAll(stepsToAdd.drop(1))
+        }
+
+        recalculateAndNotify()
+        recyclerView.post {
+            recyclerView.smoothScrollToPosition((actionStepAdapter.itemCount - 1).coerceAtLeast(0))
+        }
+        toast(getString(R.string.editor_toast_click_module_inserted, target))
+    }
+
     private fun maybePromptEnumMigration() {
         val preview = WorkflowEnumMigration.scan(getCurrentWorkflowState()) ?: return
 
@@ -1648,7 +1693,9 @@ class WorkflowEditorActivity : BaseActivity() {
         sheet.onUiInspectorClicked = {
             dismissAllSheets()
             // 启动 UI 检查器服务
-            val intent = Intent(this, UiInspectorService::class.java)
+            val intent = Intent(this, UiInspectorService::class.java).apply {
+                putExtra(UiInspectorService.EXTRA_ENABLE_WORKFLOW_INSERT, true)
+            }
             startService(intent)
             toast(R.string.editor_toast_ui_inspector_started)
         }

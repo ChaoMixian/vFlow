@@ -11,6 +11,7 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.graphics.drawable.RippleDrawable
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -29,11 +30,14 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.AttrRes
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.shape.MaterialShapeDrawable
+import com.google.android.material.shape.ShapeAppearanceModel
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -45,6 +49,9 @@ class UiInspectorService : Service() {
     companion object {
         private const val INSPECT_THROTTLE_MS = 32L
         private const val COORD_LABEL_MARGIN_DP = 8
+        const val ACTION_INSERT_CLICK_MODULE = "com.chaomixian.vflow.action.INSERT_CLICK_MODULE"
+        const val EXTRA_ENABLE_WORKFLOW_INSERT = "enable_workflow_insert"
+        const val EXTRA_CLICK_TARGET = "click_target"
     }
 
     private lateinit var windowManager: WindowManager
@@ -66,6 +73,7 @@ class UiInspectorService : Service() {
     private var pendingInspectX = 0
     private var pendingInspectY = 0
     private var isInspectScheduled = false
+    private var enableWorkflowInsert = false
     private val inspectRunnable = Runnable {
         isInspectScheduled = false
         performNodeInspection(pendingInspectX, pendingInspectY)
@@ -86,6 +94,7 @@ class UiInspectorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        enableWorkflowInsert = intent?.getBooleanExtra(EXTRA_ENABLE_WORKFLOW_INSERT, false) == true
         Toast.makeText(this, getString(R.string.ui_inspector_service_started), Toast.LENGTH_SHORT).show()
         return START_NOT_STICKY
     }
@@ -419,8 +428,7 @@ class UiInspectorService : Service() {
 
         val detailsView = createDetailsListView(dialogContext, items)
 
-        val dialog = MaterialAlertDialogBuilder(dialogContext)
-            .setTitle(getString(R.string.ui_inspector_properties_title))
+        val builder = MaterialAlertDialogBuilder(dialogContext)
             .setView(detailsView)
             .setPositiveButton(getString(R.string.ui_inspector_copy_all)) { _, _ ->
                 val fullText = items.joinToString("\n") { item ->
@@ -433,7 +441,20 @@ class UiInspectorService : Service() {
             }
             .setNeutralButton(getString(R.string.ui_inspector_close_service)) { _, _ -> stopSelf() }
             .setNegativeButton(getString(R.string.ui_inspector_close), null)
-            .create()
+
+        lateinit var dialog: androidx.appcompat.app.AlertDialog
+        if (enableWorkflowInsert) {
+            builder.setCustomTitle(
+                createDialogTitleView(dialogContext, getString(R.string.ui_inspector_properties_title)) {
+                    insertClickModule(node)
+                    dialog.dismiss()
+                }
+            )
+        } else {
+            builder.setTitle(getString(R.string.ui_inspector_properties_title))
+        }
+
+        dialog = builder.create()
 
         dialog.window?.setType(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -498,6 +519,82 @@ class UiInspectorService : Service() {
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_enabled_status), node.isEnabled.toString()))
 
         return list
+    }
+
+    private fun createDialogTitleView(
+        context: Context,
+        title: String,
+        onInsertClick: () -> Unit
+    ): View {
+        val titleContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(24), dp(20), dp(24), dp(4))
+        }
+
+        val titleView = TextView(context).apply {
+            text = title
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(resolveThemeColor(context, com.google.android.material.R.attr.colorOnSurface))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val insertButton = ImageButton(context).apply {
+            setImageResource(R.drawable.rounded_variable_insert_24)
+            val backgroundDrawable = MaterialShapeDrawable(
+                ShapeAppearanceModel.builder()
+                    .setAllCornerSizes(dp(14).toFloat())
+                    .build()
+            ).apply {
+                initializeElevationOverlay(context)
+                fillColor = ColorStateList.valueOf(
+                    resolveThemeColor(context, com.google.android.material.R.attr.colorSecondaryContainer)
+                )
+            }
+            background = RippleDrawable(
+                ColorStateList.valueOf(
+                    resolveThemeColor(context, com.google.android.material.R.attr.colorControlHighlight)
+                ),
+                backgroundDrawable,
+                null
+            )
+            imageTintList = ColorStateList.valueOf(
+                resolveThemeColor(context, com.google.android.material.R.attr.colorOnSecondaryContainer)
+            )
+            scaleType = ImageView.ScaleType.CENTER
+            minimumWidth = dp(40)
+            minimumHeight = dp(40)
+            contentDescription = context.getString(R.string.ui_inspector_insert_click_module)
+            setOnClickListener { onInsertClick() }
+        }
+
+        titleContainer.addView(titleView)
+        titleContainer.addView(insertButton)
+        return titleContainer
+    }
+
+    private fun insertClickModule(node: AccessibilityNodeInfo) {
+        val target = buildClickTarget(node)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(
+            Intent(ACTION_INSERT_CLICK_MODULE).apply {
+                putExtra(EXTRA_CLICK_TARGET, target)
+            }
+        )
+        Toast.makeText(
+            this,
+            getString(R.string.ui_inspector_click_module_inserted, target),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun buildClickTarget(node: AccessibilityNodeInfo): String {
+        val viewId = node.viewIdResourceName?.takeIf { it.isNotBlank() }
+        if (viewId != null) {
+            return viewId
+        }
+        refreshCurrentProbeCoordinate()
+        return "$currentProbeX,$currentProbeY"
     }
 
     /**
