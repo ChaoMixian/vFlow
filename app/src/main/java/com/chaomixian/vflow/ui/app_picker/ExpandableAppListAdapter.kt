@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.google.android.material.chip.Chip
 import java.util.Locale
 
 /**
@@ -39,6 +40,7 @@ class ExpandableAppListAdapter(
     private val expandedApps = mutableSetOf<String>()
     private val appActivities = mutableMapOf<String, List<ActivityItem>>()
     private var searchQuery: String = ""
+    private var showUserChip: Boolean = false
 
     // 用于展平显示的数据
     private val displayItems = mutableListOf<DisplayItem>()
@@ -55,6 +57,12 @@ class ExpandableAppListAdapter(
         notifyDataSetChanged()
     }
 
+    fun setShowUserChip(show: Boolean) {
+        if (showUserChip == show) return
+        showUserChip = show
+        notifyDataSetChanged()
+    }
+
     fun setSearchQuery(query: String) {
         searchQuery = query
         rebuildDisplayItems()
@@ -62,21 +70,21 @@ class ExpandableAppListAdapter(
     }
 
     fun isExpanded(appInfo: AppInfo): Boolean {
-        return expandedApps.contains(appInfo.packageName)
+        return expandedApps.contains(appInfo.stableId)
     }
 
     fun expand(appInfo: AppInfo, activities: List<ActivityItem>) {
-        appActivities[appInfo.packageName] = activities
-        expandedApps.add(appInfo.packageName)
+        appActivities[appInfo.stableId] = activities
+        expandedApps.add(appInfo.stableId)
         rebuildDisplayItems()
         notifyDataSetChanged()
     }
 
     fun expandAll(appsToExpand: List<AppInfo>, activitiesMap: Map<String, List<ActivityItem>>) {
         for (app in appsToExpand) {
-            expandedApps.add(app.packageName)
-            activitiesMap[app.packageName]?.let {
-                appActivities[app.packageName] = it
+            expandedApps.add(app.stableId)
+            activitiesMap[app.stableId]?.let {
+                appActivities[app.stableId] = it
             }
         }
         rebuildDisplayItems()
@@ -84,7 +92,7 @@ class ExpandableAppListAdapter(
     }
 
     fun collapse(appInfo: AppInfo) {
-        expandedApps.remove(appInfo.packageName)
+        expandedApps.remove(appInfo.stableId)
         rebuildDisplayItems()
         notifyDataSetChanged()
     }
@@ -102,9 +110,10 @@ class ExpandableAppListAdapter(
         for (app in apps) {
             val appMatches = lowercaseQuery.isEmpty() ||
                     app.appName.lowercase(Locale.getDefault()).contains(lowercaseQuery) ||
-                    app.packageName.lowercase(Locale.getDefault()).contains(lowercaseQuery)
+                    app.packageName.lowercase(Locale.getDefault()).contains(lowercaseQuery) ||
+                    app.userLabel.lowercase(Locale.getDefault()).contains(lowercaseQuery)
 
-            val activities = appActivities[app.packageName] ?: emptyList()
+            val activities = appActivities[app.stableId] ?: emptyList()
 
             // 过滤 Activity（如果有搜索词）
             val filteredActivities = if (lowercaseQuery.isEmpty()) {
@@ -130,7 +139,7 @@ class ExpandableAppListAdapter(
             if (showApp) {
                 displayItems.add(DisplayItem(VIEW_TYPE_APP, appInfo = app))
                 // 如果有匹配的 Activity 或者应用匹配，展开显示
-                if (mode == AppPickerMode.SELECT_ACTIVITY && expandedApps.contains(app.packageName)) {
+                if (mode == AppPickerMode.SELECT_ACTIVITY && expandedApps.contains(app.stableId)) {
                     for (activity in filteredActivities) {
                         displayItems.add(DisplayItem(VIEW_TYPE_ACTIVITY, appInfo = app, activityItem = activity))
                     }
@@ -175,12 +184,15 @@ class ExpandableAppListAdapter(
     inner class AppViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val appIcon: ImageView = itemView.findViewById(R.id.app_icon)
         private val appName: TextView = itemView.findViewById(R.id.app_name)
+        private val userChip: Chip? = itemView.findViewWithTag("user_chip")
         private val packageName: TextView = itemView.findViewById(R.id.package_name)
         private val expandIcon: ImageView = itemView.findViewById(R.id.expand_icon)
 
         fun bind(appInfo: AppInfo, isExpanded: Boolean) {
             appIcon.setImageDrawable(appInfo.icon)
             appName.text = appInfo.appName
+            userChip?.isVisible = showUserChip
+            userChip?.text = appInfo.userLabel
             packageName.text = appInfo.packageName
 
             // 根据模式显示展开图标

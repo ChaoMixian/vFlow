@@ -14,5 +14,10 @@ import android.graphics.drawable.Drawable
 data class AppInfo(
     val appName: String,
     val packageName: String,
-    val icon: Drawable
-)
+    val icon: Drawable,
+    val userId: Int,
+    val userLabel: String
+) {
+    val stableId: String
+        get() = "$packageName@$userId"
+}

@@ -4,6 +4,7 @@ package com.chaomixian.vflow.ui.app_picker
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Bundle
@@ -49,6 +50,7 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
 
     // 是否显示系统应用
     private var showSystemApps = false
+    private var showAllUsers = false
 
     // 回调
     private var onResultCallback: ((Intent) -> Unit)? = null
@@ -57,6 +59,7 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
         const val EXTRA_MODE = "extra_mode"
         const val EXTRA_SELECTED_PACKAGE_NAME = "selected_package_name"
         const val EXTRA_SELECTED_ACTIVITY_NAME = "selected_activity_name"
+        const val EXTRA_SELECTED_USER_ID = "selected_user_id"
 
         fun newInstance(mode: AppPickerMode = AppPickerMode.SELECT_ACTIVITY): UnifiedAppPickerSheet {
             return UnifiedAppPickerSheet().apply {
@@ -109,6 +112,17 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
             }
         }
 
+        binding.root.findViewWithTag<Chip>("all_users_chip")?.apply {
+            isChecked = showAllUsers
+            setOnCheckedChangeListener { _, isChecked ->
+                if (showAllUsers != isChecked) {
+                    showAllUsers = isChecked
+                    appAdapter.setShowUserChip(isChecked)
+                    loadApps()
+                }
+            }
+        }
+
         // 返回按钮
         binding.backButton.setOnClickListener {
             dismiss()
@@ -124,6 +138,7 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
                         // 直接返回包名
                         val resultIntent = Intent().apply {
                             putExtra(EXTRA_SELECTED_PACKAGE_NAME, appInfo.packageName)
+                            putExtra(EXTRA_SELECTED_USER_ID, appInfo.userId)
                         }
                         onResultCallback?.invoke(resultIntent)
                         dismiss()
@@ -145,11 +160,14 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
                 val resultIntent = Intent().apply {
                     putExtra(EXTRA_SELECTED_PACKAGE_NAME, appInfo.packageName)
                     putExtra(EXTRA_SELECTED_ACTIVITY_NAME, activityName)
+                    putExtra(EXTRA_SELECTED_USER_ID, appInfo.userId)
                 }
                 onResultCallback?.invoke(resultIntent)
                 dismiss()
             }
         )
+
+        appAdapter.setShowUserChip(showAllUsers)
 
         binding.recyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -172,7 +190,9 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
         CoroutineScope(Dispatchers.IO).launch {
             val pm = requireContext().packageManager
 
-            val appList = if (showSystemApps) {
+            val appList = if (showAllUsers) {
+                loadAppsForAllUsers(pm)
+            } else if (showSystemApps) {
                 val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
                 installedApps.mapNotNull { appInfo ->
                     val label = appInfo.loadLabel(pm).toString()
@@ -180,7 +200,9 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
                         AppInfo(
                             appName = label,
                             packageName = appInfo.packageName,
-                            icon = appInfo.loadIcon(pm)
+                            icon = appInfo.loadIcon(pm),
+                            userId = AppUserSupport.getCurrentUserId(),
+                            userLabel = AppUserSupport.getUserLabel(requireContext(), AppUserSupport.getCurrentUserId())
                         )
                     } else null
                 }
@@ -204,44 +226,144 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
                     AppInfo(
                         appName = appInfo.loadLabel(pm).toString(),
                         packageName = appInfo.packageName,
-                        icon = appInfo.loadIcon(pm)
+                        icon = appInfo.loadIcon(pm),
+                        userId = AppUserSupport.getCurrentUserId(),
+                        userLabel = AppUserSupport.getUserLabel(requireContext(), AppUserSupport.getCurrentUserId())
                     )
                 }
             }.sortedBy { it.appName.lowercase(Locale.getDefault()) }
 
             withContext(Dispatchers.Main) {
                 allApps = appList
+                appAdapter.setShowUserChip(showAllUsers)
                 appAdapter.updateData(allApps)
             }
         }
     }
 
-    private fun loadActivitiesForApp(appInfo: AppInfo, onLoaded: (List<ActivityItem>) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val pm = requireContext().packageManager
-            val activities = mutableListOf<ActivityItem>()
+    private suspend fun loadAppsForAllUsers(pm: PackageManager): List<AppInfo> {
+        val context = requireContext()
+        val launcherApps = context.getSystemService(LauncherApps::class.java)
+        val appsByUser = linkedMapOf<String, AppInfo>()
+        val currentUserId = AppUserSupport.getCurrentUserId()
+        val defaultIcon = pm.defaultActivityIcon
 
-            try {
-                val packageInfo = pm.getPackageInfo(
-                    appInfo.packageName,
-                    PackageManager.GET_ACTIVITIES
+        val currentLaunchableApps = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }.let { mainIntent ->
+            pm.queryIntentActivities(
+                mainIntent,
+                PackageManager.MATCH_ALL or PackageManager.GET_RESOLVED_FILTER
+            )
+        }.map { it.activityInfo.applicationInfo }
+            .associateBy { it.packageName }
+
+        val currentInstalledApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            .associateBy { it.packageName }
+
+        val users = try {
+            AppUserSupport.getAvailableUsersForPicker(context)
+        } catch (_: Exception) {
+            AppUserSupport.getAvailableUsers(context)
+        }
+
+        for (user in users) {
+            val launcherActivities = if (launcherApps != null && user.handle != null) {
+                try {
+                    launcherApps.getActivityList(null, user.handle)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            } else {
+                emptyList()
+            }
+
+            launcherActivities.forEach { activityInfo ->
+                val appInfo = activityInfo.applicationInfo
+                val label = activityInfo.label?.toString()?.takeIf { it.isNotBlank() }
+                    ?: appInfo.loadLabel(pm).toString().takeIf { it.isNotBlank() }
+                    ?: appInfo.packageName
+                val key = "${appInfo.packageName}@${user.userId}"
+                appsByUser.putIfAbsent(
+                    key,
+                    AppInfo(
+                        appName = label,
+                        packageName = appInfo.packageName,
+                        icon = activityInfo.getBadgedIcon(0),
+                        userId = user.userId,
+                        userLabel = AppUserSupport.getUserLabel(context, user.userId)
+                    )
                 )
+            }
 
-                // 添加"启动应用"选项
-                activities.add(ActivityItem(name = "LAUNCH", label = getString(R.string.text_launch_app), isExported = true))
-
-                packageInfo.activities?.forEach { activityInfo ->
-                    activities.add(
-                        ActivityItem(
-                            name = activityInfo.name,
-                            label = activityInfo.loadLabel(pm).toString(),
-                            isExported = activityInfo.exported
+            if (user.userId == currentUserId) {
+                val currentUserApps = if (showSystemApps) currentInstalledApps.values else currentLaunchableApps.values
+                currentUserApps.forEach { appInfo ->
+                    val label = appInfo.loadLabel(pm).toString().takeIf { it.isNotBlank() }
+                        ?: return@forEach
+                    val key = "${appInfo.packageName}@${user.userId}"
+                    appsByUser.putIfAbsent(
+                        key,
+                        AppInfo(
+                            appName = label,
+                            packageName = appInfo.packageName,
+                            icon = appInfo.loadIcon(pm),
+                            userId = user.userId,
+                            userLabel = AppUserSupport.getUserLabel(context, user.userId)
                         )
                     )
                 }
-            } catch (e: Exception) {
-                // 忽略错误
+                continue
             }
+
+            if (launcherActivities.isNotEmpty()) {
+                continue
+            }
+
+            val shellPackages = try {
+                AppUserSupport.listPackagesForUser(context, user.userId)
+            } catch (_: Exception) {
+                emptySet()
+            }
+
+            if (shellPackages.isEmpty()) {
+                continue
+            }
+
+            val visiblePackages = if (showSystemApps) {
+                shellPackages
+            } else {
+                shellPackages.filterTo(linkedSetOf()) { currentLaunchableApps.containsKey(it) }
+            }
+
+            visiblePackages.forEach { packageName ->
+                val currentUserAppInfo = currentInstalledApps[packageName] ?: currentLaunchableApps[packageName]
+                val label = currentUserAppInfo?.loadLabel(pm)?.toString()?.takeIf { it.isNotBlank() }
+                    ?: packageName
+                val icon = currentUserAppInfo?.loadIcon(pm) ?: defaultIcon
+                val key = "$packageName@${user.userId}"
+                appsByUser.putIfAbsent(
+                    key,
+                    AppInfo(
+                        appName = label,
+                        packageName = packageName,
+                        icon = icon,
+                        userId = user.userId,
+                        userLabel = AppUserSupport.getUserLabel(context, user.userId)
+                    )
+                )
+            }
+        }
+
+        return appsByUser.values.sortedWith(
+            compareBy<AppInfo> { it.appName.lowercase(Locale.getDefault()) }
+                .thenBy { it.userId }
+        )
+    }
+
+    private fun loadActivitiesForApp(appInfo: AppInfo, onLoaded: (List<ActivityItem>) -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val activities = loadActivitiesForAppInternal(appInfo)
 
             withContext(Dispatchers.Main) {
                 onLoaded(activities)
@@ -283,38 +405,71 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             val activitiesMap = mutableMapOf<String, List<ActivityItem>>()
-            val pm = requireContext().packageManager
 
             for (app in apps) {
-                try {
-                    val packageInfo = pm.getPackageInfo(
-                        app.packageName,
-                        PackageManager.GET_ACTIVITIES
-                    )
-
-                    val activities = mutableListOf<ActivityItem>()
-                    // 添加"启动应用"选项
-                    activities.add(ActivityItem(name = "LAUNCH", label = getString(R.string.text_launch_app), isExported = true))
-
-                    packageInfo.activities?.forEach { activityInfo ->
-                        activities.add(
-                            ActivityItem(
-                                name = activityInfo.name,
-                                label = activityInfo.loadLabel(pm).toString(),
-                                isExported = activityInfo.exported
-                            )
-                        )
-                    }
-                    activitiesMap[app.packageName] = activities
-                } catch (e: Exception) {
-                    // 忽略错误
-                }
+                activitiesMap[app.stableId] = loadActivitiesForAppInternal(app)
             }
 
             withContext(Dispatchers.Main) {
                 onLoaded(activitiesMap)
             }
         }
+    }
+
+    private fun loadActivitiesForAppInternal(appInfo: AppInfo): List<ActivityItem> {
+        val context = requireContext()
+        val pm = context.packageManager
+        val activities = mutableListOf<ActivityItem>()
+        activities.add(
+            ActivityItem(
+                name = "LAUNCH",
+                label = getString(R.string.text_launch_app),
+                isExported = true
+            )
+        )
+
+        val manifestActivities = try {
+            val packageInfo = pm.getPackageInfo(appInfo.packageName, PackageManager.GET_ACTIVITIES)
+            packageInfo.activities
+                ?.distinctBy { it.name }
+                ?.map { activityInfo ->
+                    ActivityItem(
+                        name = activityInfo.name,
+                        label = activityInfo.loadLabel(pm).toString(),
+                        isExported = activityInfo.exported
+                    )
+                }
+                .orEmpty()
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+        if (manifestActivities.isNotEmpty()) {
+            activities.addAll(manifestActivities)
+            return activities
+        }
+
+        val userHandle = AppUserSupport.findUserHandle(context, appInfo.userId) ?: return activities
+        val launcherApps = context.getSystemService(LauncherApps::class.java) ?: return activities
+        val launcherActivities = try {
+            launcherApps.getActivityList(appInfo.packageName, userHandle)
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+        launcherActivities
+            .distinctBy { it.componentName.className }
+            .forEach { launcherActivity ->
+                activities.add(
+                    ActivityItem(
+                        name = launcherActivity.componentName.className,
+                        label = launcherActivity.label?.toString().orEmpty(),
+                        isExported = true
+                    )
+                )
+            }
+
+        return activities
     }
 
     fun setOnResultCallback(callback: (Intent) -> Unit) {

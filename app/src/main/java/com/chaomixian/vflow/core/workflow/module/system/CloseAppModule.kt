@@ -2,17 +2,16 @@
 package com.chaomixian.vflow.core.workflow.module.system
 
 import android.content.Context
-import android.content.pm.PackageManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
-import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.services.ShellManager
+import com.chaomixian.vflow.ui.app_picker.AppUserSupport
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 /**
@@ -56,6 +55,14 @@ class CloseAppModule : BaseModule() {
             defaultValue = "",
             acceptsMagicVariable = false,
             isHidden = true
+        ),
+        InputDefinition(
+            id = "userId",
+            name = "用户 ID",
+            staticType = ParameterType.NUMBER,
+            defaultValue = null,
+            acceptsMagicVariable = false,
+            isHidden = true
         )
     )
 
@@ -69,17 +76,17 @@ class CloseAppModule : BaseModule() {
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val packageName = step.parameters["packageName"] as? String
+        val userId = (step.parameters["userId"] as? Number)?.toInt()
 
         if (packageName.isNullOrEmpty()) {
             return context.getString(R.string.summary_close_app_select)
         }
 
-        val pm = context.packageManager
-        val appName = try {
-            val appInfo = pm.getApplicationInfo(packageName, 0)
-            appInfo.loadLabel(pm).toString()
-        } catch (e: PackageManager.NameNotFoundException) {
-            packageName // 如果找不到应用，显示包名
+        val appName = AppUserSupport.loadAppLabel(context, packageName, userId) ?: packageName
+        val displayName = if (userId != null && userId != AppUserSupport.getCurrentUserId()) {
+            "$appName (${AppUserSupport.getUserLabel(context, userId)})"
+        } else {
+            appName
         }
 
         val prefixResId = R.string.summary_close_app_prefix
@@ -87,7 +94,7 @@ class CloseAppModule : BaseModule() {
 
         return PillUtil.buildSpannable(context,
             "$prefix ",
-            PillUtil.Pill(appName, "packageName")
+            PillUtil.Pill(displayName, "packageName")
         )
     }
 
@@ -97,6 +104,7 @@ class CloseAppModule : BaseModule() {
     ): ExecutionResult {
         // 现在 variables 是 Map<String, VObject>，统一使用 getVariableAsString 获取
         val packageName = context.getVariableAsString("packageName", "")
+        val userId = context.getVariableAsInt("userId")
 
         if (packageName.isNullOrBlank()) {
             return ExecutionResult.Failure(
@@ -108,7 +116,8 @@ class CloseAppModule : BaseModule() {
         onProgress(ProgressUpdate("正在停止应用: $packageName"))
 
         // 执行 Shell 命令
-        val command = "am force-stop $packageName"
+        val userArg = if (userId != null) " --user $userId" else ""
+        val command = "am force-stop$userArg $packageName"
         val result = ShellManager.execShellCommand(context.applicationContext, command, ShellManager.ShellMode.AUTO)
 
         if (result.startsWith("Error")) {
