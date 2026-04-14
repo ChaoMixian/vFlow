@@ -33,7 +33,7 @@ class TextProcessingModule : BaseModule() {
         categoryId = "data"
     )
 
-    override val uiProvider: ModuleUIProvider? = TextProcessingModuleUIProvider()
+    override val uiProvider: ModuleUIProvider? = null
 
     // 定义所有支持的操作
     private val operationOptions = listOf(OP_JOIN, OP_SPLIT, OP_REPLACE, OP_REGEX)
@@ -41,20 +41,20 @@ class TextProcessingModule : BaseModule() {
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition("operation", "操作", ParameterType.ENUM, OP_JOIN, options = operationOptions, optionsStringRes = listOf(R.string.option_vflow_data_text_processing_operation_join, R.string.option_vflow_data_text_processing_operation_split, R.string.option_vflow_data_text_processing_operation_replace, R.string.option_vflow_data_text_processing_operation_regex), legacyValueMap = mapOf("拼接" to OP_JOIN, "Join" to OP_JOIN, "分割" to OP_SPLIT, "Split" to OP_SPLIT, "替换" to OP_REPLACE, "Replace" to OP_REPLACE, "正则提取" to OP_REGEX, "Regex Extract" to OP_REGEX), acceptsMagicVariable = false, nameStringRes = R.string.param_vflow_data_text_processing_operation_name),
         // --- 拼接 ---
-        InputDefinition("join_prefix", "前缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_join_prefix_name),
-        InputDefinition("join_list", "列表", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.LIST.id), nameStringRes = R.string.param_vflow_data_text_processing_join_list_name),
-        InputDefinition("join_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_join_delimiter_name),
-        InputDefinition("join_suffix", "后缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_join_suffix_name),
+        InputDefinition("join_prefix", "前缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_JOIN), nameStringRes = R.string.param_vflow_data_text_processing_join_prefix_name),
+        InputDefinition("join_list", "列表", ParameterType.ANY, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.LIST.id), visibility = InputVisibility.whenEquals("operation", OP_JOIN), nameStringRes = R.string.param_vflow_data_text_processing_join_list_name),
+        InputDefinition("join_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_JOIN), nameStringRes = R.string.param_vflow_data_text_processing_join_delimiter_name),
+        InputDefinition("join_suffix", "后缀", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_JOIN), nameStringRes = R.string.param_vflow_data_text_processing_join_suffix_name),
         // --- 通用文本输入 ---
-        InputDefinition("source_text", "源文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_source_text_name),
+        InputDefinition("source_text", "源文本", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenIn("operation", listOf(OP_SPLIT, OP_REPLACE, OP_REGEX)), nameStringRes = R.string.param_vflow_data_text_processing_source_text_name),
         // --- 分割 ---
-        InputDefinition("split_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_split_delimiter_name),
+        InputDefinition("split_delimiter", "分隔符", ParameterType.STRING, ",", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_SPLIT), nameStringRes = R.string.param_vflow_data_text_processing_split_delimiter_name),
         // --- 替换 ---
-        InputDefinition("replace_from", "查找", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_replace_from_name),
-        InputDefinition("replace_to", "替换为", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_replace_to_name),
+        InputDefinition("replace_from", "查找", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_REPLACE), nameStringRes = R.string.param_vflow_data_text_processing_replace_from_name),
+        InputDefinition("replace_to", "替换为", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_REPLACE), nameStringRes = R.string.param_vflow_data_text_processing_replace_to_name),
         // --- 正则 ---
-        InputDefinition("regex_pattern", "正则表达式", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_data_text_processing_regex_pattern_name),
-        InputDefinition("regex_group", "匹配组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), nameStringRes = R.string.param_vflow_data_text_processing_regex_group_name)
+        InputDefinition("regex_pattern", "正则表达式", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_REGEX), nameStringRes = R.string.param_vflow_data_text_processing_regex_pattern_name),
+        InputDefinition("regex_group", "匹配组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), visibility = InputVisibility.whenEquals("operation", OP_REGEX), nameStringRes = R.string.param_vflow_data_text_processing_regex_group_name)
     )
 
     /**
@@ -79,7 +79,8 @@ class TextProcessingModule : BaseModule() {
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val inputs = getInputs()
-        val operation = step.parameters["operation"]?.toString() ?: OP_JOIN
+        val rawOperation = step.parameters["operation"]?.toString() ?: OP_JOIN
+        val operation = inputs.first { it.id == "operation" }.normalizeEnumValue(rawOperation) ?: rawOperation
 
         return when (operation) {
             OP_JOIN -> {
