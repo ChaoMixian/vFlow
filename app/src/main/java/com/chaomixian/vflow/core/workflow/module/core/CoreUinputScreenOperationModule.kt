@@ -1,5 +1,6 @@
 package com.chaomixian.vflow.core.workflow.module.core
 
+import android.content.Intent
 import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
@@ -7,6 +8,7 @@ import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ActionMetadata
 import com.chaomixian.vflow.core.module.BaseModule
+import com.chaomixian.vflow.core.module.EditorAction
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleUIProvider
@@ -22,6 +24,7 @@ import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.services.UiInspectorService
 import com.chaomixian.vflow.services.VFlowCoreBridge
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +55,14 @@ class CoreUinputScreenOperationModule : BaseModule() {
     }
 
     override val uiProvider: ModuleUIProvider = CoreScreenOperationModuleUIProvider()
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(
+            EditorAction(labelStringRes = R.string.settings_button_ui_inspector) { context ->
+                context.startService(Intent(context, UiInspectorService::class.java))
+            }
+        )
+    }
 
     private val operationTypeOptions = listOf(OP_CLICK, OP_LONG_PRESS, OP_SWIPE)
 

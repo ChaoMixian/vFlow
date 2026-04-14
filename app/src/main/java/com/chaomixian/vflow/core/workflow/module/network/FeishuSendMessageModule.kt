@@ -6,6 +6,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.ActionMetadata
 import com.chaomixian.vflow.core.module.BaseModule
+import com.chaomixian.vflow.core.module.EditorAction
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.InputVisibility
@@ -17,6 +18,7 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.integration.feishu.FeishuEditorActions
 import com.chaomixian.vflow.integration.feishu.FeishuModuleConfig
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.gson.Gson
@@ -57,6 +59,10 @@ class FeishuSendMessageModule : BaseModule() {
         "share_user",
         "system"
     )
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(FeishuEditorActions.openModuleConfigAction())
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(

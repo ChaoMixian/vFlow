@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -63,6 +64,9 @@ import java.util.Date
 class ModuleConfigActivity : BaseActivity() {
 
     companion object {
+        const val EXTRA_INITIAL_SECTION = "initial_section"
+        const val SECTION_BACKTAP = "backtap"
+        const val SECTION_FEISHU = "feishu"
         const val PREFS_NAME = "module_config_prefs"
         const val KEY_BACKTAP_SENSITIVITY = "backtap_sensitivity"
         const val KEY_FEISHU_APP_ID = "feishu_app_id"
@@ -97,6 +101,12 @@ class ModuleConfigActivity : BaseActivity() {
                 else -> "极难"
             }
         }
+
+        fun createIntent(context: Context, initialSection: String? = null): Intent {
+            return Intent(context, ModuleConfigActivity::class.java).apply {
+                initialSection?.let { putExtra(EXTRA_INITIAL_SECTION, it) }
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,7 +116,10 @@ class ModuleConfigActivity : BaseActivity() {
             MaterialTheme(
                 colorScheme = ThemeUtils.getAppColorScheme()
             ) {
-                ModuleConfigScreen(onBack = { finish() })
+                ModuleConfigScreen(
+                    initialSection = intent?.getStringExtra(EXTRA_INITIAL_SECTION),
+                    onBack = { finish() }
+                )
             }
         }
     }
@@ -114,9 +127,10 @@ class ModuleConfigActivity : BaseActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ModuleConfigScreen(onBack: () -> Unit) {
+fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences(ModuleConfigActivity.PREFS_NAME, Context.MODE_PRIVATE)
+    val scrollState = rememberScrollState()
 
     var sensitivityValue by remember {
         mutableFloatStateOf(
@@ -192,245 +206,258 @@ fun ModuleConfigScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
-            ModuleConfigSection(title = stringResource(R.string.module_config_section_backtap)) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.module_config_backtap_sensitivity),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = ModuleConfigActivity.getSensitivityDisplayValue(sensitivityValue) +
-                                String.format(" (%.2f)", sensitivityValue),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Slider(
-                        value = sliderPosition,
-                        onValueChange = { newPosition ->
-                            sensitivityValue = ModuleConfigActivity.MIN_SENSITIVITY_VALUE +
-                                    (newPosition / 10f) *
-                                    (ModuleConfigActivity.MAX_SENSITIVITY_VALUE - ModuleConfigActivity.MIN_SENSITIVITY_VALUE)
-                        },
-                        onValueChangeFinished = {
-                            prefs.edit {
-                                putFloat(ModuleConfigActivity.KEY_BACKTAP_SENSITIVITY, sensitivityValue)
-                            }
-                        },
-                        valueRange = 0f..10f,
-                        steps = 9,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+            val renderBacktapSection: @Composable () -> Unit = {
+                ModuleConfigSection(title = stringResource(R.string.module_config_section_backtap)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
                     ) {
                         Text(
-                            text = "灵敏",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = stringResource(R.string.module_config_backtap_sensitivity),
+                            style = MaterialTheme.typography.bodyLarge
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         Text(
-                            text = "难触发",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = ModuleConfigActivity.getSensitivityDisplayValue(sensitivityValue) +
+                                    String.format(" (%.2f)", sensitivityValue),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Slider(
+                            value = sliderPosition,
+                            onValueChange = { newPosition ->
+                                sensitivityValue = ModuleConfigActivity.MIN_SENSITIVITY_VALUE +
+                                        (newPosition / 10f) *
+                                        (ModuleConfigActivity.MAX_SENSITIVITY_VALUE - ModuleConfigActivity.MIN_SENSITIVITY_VALUE)
+                            },
+                            onValueChangeFinished = {
+                                prefs.edit {
+                                    putFloat(ModuleConfigActivity.KEY_BACKTAP_SENSITIVITY, sensitivityValue)
+                                }
+                            },
+                            valueRange = 0f..10f,
+                            steps = 9,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "灵敏",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "难触发",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
 
-            ModuleConfigSection(title = stringResource(R.string.module_config_section_feishu)) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.module_config_feishu_app_id),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = feishuAppId,
-                        onValueChange = {
-                            feishuAppId = it
-                            prefs.edit {
-                                putString(ModuleConfigActivity.KEY_FEISHU_APP_ID, it.trim())
-                            }
-                            onFeishuCredentialChanged()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.module_config_feishu_app_id)) },
-                        placeholder = { Text(stringResource(R.string.module_config_feishu_app_id_hint)) },
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = stringResource(R.string.module_config_feishu_app_secret),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = feishuAppSecret,
-                        onValueChange = {
-                            feishuAppSecret = it
-                            prefs.edit {
-                                putString(ModuleConfigActivity.KEY_FEISHU_APP_SECRET, it.trim())
-                            }
-                            onFeishuCredentialChanged()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.module_config_feishu_app_secret)) },
-                        placeholder = { Text(stringResource(R.string.module_config_feishu_app_secret_hint)) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = stringResource(R.string.module_config_feishu_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = stringResource(R.string.module_config_feishu_user_auth_title),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = buildFeishuUserAuthStatusLine(userAuthorizationStatus, authUiState),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = buildFeishuUserAuthDetailLine(userAuthorizationStatus, authUiState),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = stringResource(R.string.module_config_feishu_user_redirect_label),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    SelectionContainer {
+            val renderFeishuSection: @Composable () -> Unit = {
+                ModuleConfigSection(title = stringResource(R.string.module_config_section_feishu)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
                         Text(
-                            text = redirectUri,
+                            text = stringResource(R.string.module_config_feishu_app_id),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = feishuAppId,
+                            onValueChange = {
+                                feishuAppId = it
+                                prefs.edit {
+                                    putString(ModuleConfigActivity.KEY_FEISHU_APP_ID, it.trim())
+                                }
+                                onFeishuCredentialChanged()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.module_config_feishu_app_id)) },
+                            placeholder = { Text(stringResource(R.string.module_config_feishu_app_id_hint)) },
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_feishu_app_secret),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = feishuAppSecret,
+                            onValueChange = {
+                                feishuAppSecret = it
+                                prefs.edit {
+                                    putString(ModuleConfigActivity.KEY_FEISHU_APP_SECRET, it.trim())
+                                }
+                                onFeishuCredentialChanged()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.module_config_feishu_app_secret)) },
+                            placeholder = { Text(stringResource(R.string.module_config_feishu_app_secret_hint)) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_feishu_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_feishu_user_auth_title),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = buildFeishuUserAuthStatusLine(userAuthorizationStatus, authUiState),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = buildFeishuUserAuthDetailLine(userAuthorizationStatus, authUiState),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_feishu_user_redirect_label),
                             style = MaterialTheme.typography.bodyMedium
                         )
-                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = stringResource(R.string.module_config_feishu_user_redirect_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                when (val result = FeishuOAuthManager.startAuthorization(context)) {
-                                    is FeishuOAuthManager.StartResult.Failure -> {
-                                        Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
-                                    }
-
-                                    is FeishuOAuthManager.StartResult.OpenBrowser -> {
-                                        try {
-                                            context.startActivity(Intent(Intent.ACTION_VIEW, result.url.toUri()))
-                                        } catch (_: Exception) {
-                                            val message = "无法打开浏览器，请检查系统是否安装了可用浏览器。"
-                                            FeishuOAuthManager.cancelAuthorization(message)
-                                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = feishuAppId.isNotBlank() && feishuAppSecret.isNotBlank() && !isAuthInProgress,
-                            modifier = Modifier.weight(1f)
-                        ) {
+                        SelectionContainer {
                             Text(
-                                text = stringResource(
-                                    when {
-                                        isAuthInProgress -> R.string.module_config_feishu_user_auth_in_progress
-                                        userAuthorizationStatus.isAuthorized -> R.string.module_config_feishu_user_auth_restart
-                                        else -> R.string.module_config_feishu_user_auth_start
-                                    }
-                                )
+                                text = redirectUri,
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
 
-                        OutlinedButton(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Feishu Redirect URI", redirectUri))
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.copied_to_clipboard),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            },
-                            modifier = Modifier.weight(1f)
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_feishu_user_redirect_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(stringResource(R.string.module_config_feishu_user_auth_copy_redirect))
+                            Button(
+                                onClick = {
+                                    when (val result = FeishuOAuthManager.startAuthorization(context)) {
+                                        is FeishuOAuthManager.StartResult.Failure -> {
+                                            Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                                        }
+
+                                        is FeishuOAuthManager.StartResult.OpenBrowser -> {
+                                            try {
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, result.url.toUri()))
+                                            } catch (_: Exception) {
+                                                val message = "无法打开浏览器，请检查系统是否安装了可用浏览器。"
+                                                FeishuOAuthManager.cancelAuthorization(message)
+                                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    }
+                                },
+                                enabled = feishuAppId.isNotBlank() && feishuAppSecret.isNotBlank() && !isAuthInProgress,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        when {
+                                            isAuthInProgress -> R.string.module_config_feishu_user_auth_in_progress
+                                            userAuthorizationStatus.isAuthorized -> R.string.module_config_feishu_user_auth_restart
+                                            else -> R.string.module_config_feishu_user_auth_start
+                                        }
+                                    )
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Feishu Redirect URI", redirectUri))
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.copied_to_clipboard),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.module_config_feishu_user_auth_copy_redirect))
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        TextButton(
+                            onClick = {
+                                FeishuOAuthManager.resetUiState()
+                                clearFeishuUserAuthorization()
+                            },
+                            enabled = !isAuthInProgress &&
+                                    (userAuthorizationStatus.isAuthorized || authUiState.phase != FeishuOAuthManager.Phase.Idle)
+                        ) {
+                            Text(stringResource(R.string.module_config_feishu_user_auth_clear))
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_feishu_user_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    TextButton(
-                        onClick = {
-                            FeishuOAuthManager.resetUiState()
-                            clearFeishuUserAuthorization()
-                        },
-                        enabled = !isAuthInProgress &&
-                                (userAuthorizationStatus.isAuthorized || authUiState.phase != FeishuOAuthManager.Phase.Idle)
-                    ) {
-                        Text(stringResource(R.string.module_config_feishu_user_auth_clear))
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = stringResource(R.string.module_config_feishu_user_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
+
+            renderBacktapSection()
+            renderFeishuSection()
+        }
+    }
+
+    LaunchedEffect(initialSection, scrollState.maxValue) {
+        if (initialSection == ModuleConfigActivity.SECTION_FEISHU && scrollState.maxValue > 0) {
+            scrollState.animateScrollTo(scrollState.maxValue)
         }
     }
 }

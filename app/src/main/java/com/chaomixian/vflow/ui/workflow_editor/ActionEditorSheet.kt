@@ -16,6 +16,7 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.common.ModuleDetailDialog
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
@@ -49,6 +50,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     private var customUiContainer: LinearLayout? = null
     private var genericInputsCard: MaterialCardView? = null
     private var genericInputsContainer: LinearLayout? = null
+    private var editorActionsCard: MaterialCardView? = null
+    private var editorActionsContainer: LinearLayout? = null
 
     // 异常处理 UI 组件
     private var errorSettingsContent: LinearLayout? = null
@@ -120,6 +123,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         customUiContainer = view.findViewById(R.id.container_custom_ui)
         genericInputsCard = view.findViewById(R.id.card_generic_inputs)
         genericInputsContainer = view.findViewById(R.id.container_generic_inputs)
+        editorActionsCard = view.findViewById(R.id.card_editor_actions)
+        editorActionsContainer = view.findViewById(R.id.container_editor_actions)
 
         // 绑定错误处理容器
         errorSettingsContent = view.findViewById(R.id.container_execution_settings_content)
@@ -275,6 +280,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         // 清空所有容器
         customUiContainer?.removeAllViews()
         genericInputsContainer?.removeAllViews()
+        editorActionsContainer?.removeAllViews()
         inputViews.clear()
         customEditorHolder = null
 
@@ -299,6 +305,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         val uiProvider = module.uiProvider
+        val editorActions = module.getEditorActions(stepForUi, allSteps)
         val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
 
         // 构建自定义 UI
@@ -316,10 +323,8 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 onStartActivityForResult = onStartActivityForResult
             )
             customUiContainer?.addView(customEditorHolder!!.view)
-            customUiCard?.isVisible = true
-        } else {
-            customUiCard?.isVisible = false
         }
+        customUiCard?.isVisible = uiProvider != null && uiProvider !is RichTextUIProvider
 
         /**
          * 检查输入参数是否应该显示。
@@ -379,6 +384,45 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
         // 只有当有通用参数（普通或折叠）时才显示卡片
         genericInputsCard?.isVisible = normalInputs.isNotEmpty() || foldedInputs.isNotEmpty()
+
+        if (editorActions.isNotEmpty()) {
+            editorActionsContainer?.addView(createEditorActionsSection(editorActions))
+            editorActionsCard?.isVisible = true
+        } else {
+            editorActionsCard?.isVisible = false
+        }
+    }
+
+    private fun createEditorActionsSection(actions: List<EditorAction>): View {
+        val context = requireContext()
+        val density = resources.displayMetrics.density
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                (16 * density).toInt(),
+                (16 * density).toInt(),
+                (16 * density).toInt(),
+                (16 * density).toInt()
+            )
+            actions.forEachIndexed { index, action ->
+                addView(
+                    MaterialButton(
+                        context,
+                        null,
+                        com.google.android.material.R.attr.materialButtonOutlinedStyle
+                    ).apply {
+                        text = action.getLocalizedLabel(context)
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            if (index > 0) topMargin = (12 * density).toInt()
+                        }
+                        setOnClickListener { action.onClick(context) }
+                    }
+                )
+            }
+        }
     }
 
     /**

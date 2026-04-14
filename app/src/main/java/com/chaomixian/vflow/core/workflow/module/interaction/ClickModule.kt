@@ -2,6 +2,7 @@ package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.accessibilityservice.AccessibilityService // Android 框架类
 import android.accessibilityservice.GestureDescription
+import android.content.Intent
 import android.content.Context
 import android.graphics.Path
 import android.graphics.Rect
@@ -20,6 +21,7 @@ import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.permissions.PermissionManager
 // 为项目内的 AccessibilityService 设置别名，以区分 Android 框架的同名类
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
+import com.chaomixian.vflow.services.UiInspectorService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.CompletableDeferred
 
@@ -47,6 +49,14 @@ class ClickModule : BaseModule() {
     )
     // 此模块需要的权限列表
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(
+            EditorAction(labelStringRes = R.string.settings_button_ui_inspector) { context ->
+                context.startService(Intent(context, UiInspectorService::class.java))
+            }
+        )
+    }
 
     /**
      * 定义模块的输入参数。

@@ -27,6 +27,7 @@
     <string name="module_config_backtap_title">Module Config</string>
     <string name="module_config_backtap_desc">Tap the button below to configure back tap sensitivity and detection parameters</string>
     <string name="module_config_backtap_button">Open Module Config</string>
+    <string name="module_editor_action_open_feishu_config">Open Feishu Config</string>
     <string name="module_config_section_feishu">Feishu</string>
     <string name="module_config_feishu_app_id">App ID</string>
     <string name="module_config_feishu_app_id_hint">Enter the app_id of your Feishu custom app</string>

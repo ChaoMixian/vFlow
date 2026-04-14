@@ -55,6 +55,16 @@ data class ActionMetadata(
     }
 }
 
+data class EditorAction(
+    val label: String = "",
+    val labelStringRes: Int? = null,
+    val onClick: (Context) -> Unit
+) {
+    fun getLocalizedLabel(context: Context): String {
+        return if (labelStringRes != null) context.getString(labelStringRes) else label
+    }
+}
+
 /**
  * 自定义编辑器视图的 ViewHolder 基类。
  * 用于持有模块参数编辑界面的视图引用，方便管理。

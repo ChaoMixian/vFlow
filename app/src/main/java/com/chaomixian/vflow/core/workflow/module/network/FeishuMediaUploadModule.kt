@@ -11,6 +11,7 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.integration.feishu.FeishuEditorActions
 import com.chaomixian.vflow.integration.feishu.FeishuModuleConfig
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,10 @@ class FeishuMediaUploadModule : BaseModule() {
         "bitable_image" to "多维表格图片",
         "bitable_file" to "多维表格文件"
     )
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(FeishuEditorActions.openModuleConfigAction())
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(

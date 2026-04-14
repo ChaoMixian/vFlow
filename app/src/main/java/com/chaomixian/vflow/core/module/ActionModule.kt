@@ -78,6 +78,12 @@ interface ActionModule {
     val uiProvider: ModuleUIProvider?
 
     /**
+     * 模块编辑器中的附加功能按钮。
+     * 用于提供跳转配置页、打开选择器等非参数型操作。
+     */
+    fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction>
+
+    /**
      * [即将移除]
      * 声明模块运行所需的Android权限列表。
      * 执行引擎会在执行前检查并请求这些权限。

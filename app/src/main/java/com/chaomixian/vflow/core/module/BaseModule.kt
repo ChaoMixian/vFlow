@@ -140,4 +140,8 @@ abstract class BaseModule : ActionModule {
     // 编辑器将基于 getInputs() 定义自动生成标准输入控件。
     override val uiProvider: ModuleUIProvider?
         get() = null // 默认不提供自定义编辑器UI
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return emptyList()
+    }
 }

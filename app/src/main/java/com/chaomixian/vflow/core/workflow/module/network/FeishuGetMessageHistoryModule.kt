@@ -6,6 +6,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.ActionMetadata
 import com.chaomixian.vflow.core.module.BaseModule
+import com.chaomixian.vflow.core.module.EditorAction
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.InputVisibility
@@ -15,6 +16,7 @@ import com.chaomixian.vflow.core.module.ProgressUpdate
 import com.chaomixian.vflow.core.module.ValidationResult
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.integration.feishu.FeishuEditorActions
 import com.chaomixian.vflow.integration.feishu.FeishuModuleConfig
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.gson.JsonArray
@@ -43,6 +45,10 @@ class FeishuGetMessageHistoryModule : BaseModule() {
 
     private val containerIdTypeOptions = listOf("chat", "thread")
     private val sortTypeOptions = listOf("ByCreateTimeAsc", "ByCreateTimeDesc")
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(FeishuEditorActions.openModuleConfigAction())
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(

@@ -3,6 +3,7 @@
 package com.chaomixian.vflow.core.workflow.module.triggers
 
 import android.content.Context
+import android.content.Intent
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.logging.LogManager
@@ -10,6 +11,7 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.*
 import com.chaomixian.vflow.services.ShellManager
+import com.chaomixian.vflow.ui.settings.KeyTesterActivity
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class KeyEventTriggerModule : BaseModule() {
@@ -79,6 +81,14 @@ class KeyEventTriggerModule : BaseModule() {
 
     override val requiredPermissions: List<Permission>
         get() = ShellManager.getRequiredPermissions(LogManager.applicationContext)
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(
+            EditorAction(labelStringRes = R.string.settings_button_key_tester) { context ->
+                context.startActivity(Intent(context, KeyTesterActivity::class.java))
+            }
+        )
+    }
 
     override fun onParameterUpdated(
         step: ActionStep,

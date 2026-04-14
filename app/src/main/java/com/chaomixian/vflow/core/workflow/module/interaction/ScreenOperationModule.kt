@@ -3,6 +3,7 @@ package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
+import android.content.Intent
 import android.content.Context
 import android.graphics.Path
 import android.graphics.Point
@@ -22,6 +23,7 @@ import com.chaomixian.vflow.permissions.Permission
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ServiceStateBus
 import com.chaomixian.vflow.services.ShellManager
+import com.chaomixian.vflow.services.UiInspectorService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import kotlinx.coroutines.CompletableDeferred
 import java.util.regex.Pattern
@@ -55,6 +57,14 @@ class ScreenOperationModule : BaseModule() {
     override val uiProvider: ModuleUIProvider = ScreenOperationModuleUIProvider()
 
     val executionModeOptions = listOf(MODE_AUTO, MODE_ACCESSIBILITY, MODE_SHELL)
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(
+            EditorAction(labelStringRes = R.string.settings_button_ui_inspector) { context ->
+                context.startService(Intent(context, UiInspectorService::class.java))
+            }
+        )
+    }
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         val mode = step?.parameters?.get("execution_mode") as? String ?: MODE_AUTO
