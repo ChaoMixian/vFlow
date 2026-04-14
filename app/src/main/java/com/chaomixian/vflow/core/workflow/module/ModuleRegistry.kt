@@ -142,6 +142,10 @@ object ModuleRegistry {
         // 网络
         register(GetIpAddressModule(), context)
         register(HttpRequestModule(), context)
+        register(BarkPushModule(), context)
+        register(DiscordPushModule(), context)
+        register(WebhookPushModule(), context)
+        register(TelegramPushModule(), context)
         register(AIModule(), context)
         register(FeishuSendMessageModule(), context)
         register(FeishuGetMessageHistoryModule(), context)
