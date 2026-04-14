@@ -295,6 +295,9 @@
     <string name="settings_update_available">New version available v%s</string>
     <string name="settings_switch_background_service">Show Background Service Notification</string>
     <string name="settings_switch_background_service_desc">Shows a permanent notification in the status bar when running in the background. Disabling this may cause the background service to be killed by the system, affecting trigger stability.</string>
+    <string name="trigger_service_notification_channel_name">Background Trigger Service</string>
+    <string name="trigger_service_notification_title">vFlow Background Service</string>
+    <string name="trigger_service_notification_text">Listening for automation triggers...</string>
     <string name="settings_switch_auto_enable_accessibility">Auto Enable Accessibility Service</string>
     <string name="settings_switch_auto_enable_accessibility_desc">Automatically re-enables the accessibility service when it closes unexpectedly via Shizuku / Root. This feature requires Shizuku / Root permissions.</string>
     <string name="settings_switch_enable_type_filter">Enable Variable Type Filter</string>
@@ -913,6 +916,12 @@
     <string name="status_stopping_core">Stopping vFlow Core...</string>
     <string name="toast_core_stopped">vFlow Core stopped</string>
     <string name="status_core_not_running">vFlow Core is not running</string>
+    <string name="core_autostart_notification_channel_name">vFlow Core Auto Start</string>
+    <string name="core_autostart_notification_channel_description">vFlow Core auto start status notifications</string>
+    <string name="core_autostart_failed_title">vFlow Core Auto Start Failed</string>
+    <string name="core_autostart_failed_message">The saved startup mode (%1$s) is currently unavailable. Please start vFlow Core manually.</string>
+    <string name="core_autostart_title">vFlow Core Auto Start</string>
+    <string name="core_autostart_no_preference_message">Please start vFlow Core manually once to record your startup preference.</string>
     <string name="toast_core_still_running">vFlow Core is still running</string>
     <string name="status_core_still_running">vFlow Core is still running</string>
     <string name="button_refresh_status">Refresh Status</string>

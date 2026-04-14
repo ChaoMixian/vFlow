@@ -351,12 +351,16 @@ class TriggerService : Service() {
 
     private fun createNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "后台触发器服务", NotificationManager.IMPORTANCE_LOW)
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                getString(R.string.trigger_service_notification_channel_name),
+                NotificationManager.IMPORTANCE_LOW
+            )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("vFlow 后台服务")
-            .setContentText("正在监听自动化触发器...")
+            .setContentTitle(getString(R.string.trigger_service_notification_title))
+            .setContentText(getString(R.string.trigger_service_notification_text))
             .setSmallIcon(R.drawable.ic_workflows)
             .build()
     }

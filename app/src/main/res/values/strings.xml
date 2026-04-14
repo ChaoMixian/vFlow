@@ -303,6 +303,9 @@
     <string name="settings_update_available">发现新版本 v%s</string>
     <string name="settings_switch_background_service">显示后台服务通知</string>
     <string name="settings_switch_background_service_desc">在状态栏显示后台常驻通知。关闭此项可能会导致后台服务被系统杀掉，影响触发器稳定性。</string>
+    <string name="trigger_service_notification_channel_name">后台触发器服务</string>
+    <string name="trigger_service_notification_title">vFlow 后台服务</string>
+    <string name="trigger_service_notification_text">正在监听自动化触发器...</string>
     <string name="settings_switch_auto_enable_accessibility">自动开启无障碍服务</string>
     <string name="settings_switch_auto_enable_accessibility_desc">当服务意外关闭时，通过 Shizuku / Root 自动重新启用无障碍服务。此功能需要 Shizuku / Root权限。</string>
     <string name="settings_switch_enable_type_filter">启用变量类型限制</string>
@@ -903,6 +906,12 @@
     <string name="button_refresh_status">刷新状态</string>
     <string name="status_refreshing">正在刷新状态...</string>
     <string name="status_core_running">vFlow Core 正常运行中</string>
+    <string name="core_autostart_notification_channel_name">vFlow Core 自动启动</string>
+    <string name="core_autostart_notification_channel_description">vFlow Core 自动启动状态通知</string>
+    <string name="core_autostart_failed_title">vFlow Core 自动启动失败</string>
+    <string name="core_autostart_failed_message">保存的启动方式 (%1$s) 当前不可用，请手动启动 vFlow Core</string>
+    <string name="core_autostart_title">vFlow Core 自动启动</string>
+    <string name="core_autostart_no_preference_message">请先手动启动一次 vFlow Core 以记录您的启动偏好</string>
     <string name="title_core_logs">vFlow Core 日志</string>
     <string name="text_tap_to_expand">点击展开查看</string>
     <string name="action_reload">重新加载</string>

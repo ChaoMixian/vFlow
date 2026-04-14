@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.utils.StorageManager
@@ -172,20 +173,20 @@ class CoreManagementService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "vFlow Core 自动启动",
+                getString(R.string.core_autostart_notification_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "vFlow Core 自动启动状态通知"
+                description = getString(R.string.core_autostart_notification_channel_description)
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
 
         val modeName = if (savedMode == "shizuku") "Shizuku" else "Root"
-        val message = "保存的启动方式 ($modeName) 当前不可用，请手动启动 vFlow Core"
+        val message = getString(R.string.core_autostart_failed_message, modeName)
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("vFlow Core 自动启动失败")
+            .setContentTitle(getString(R.string.core_autostart_failed_title))
             .setContentText(message)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -206,18 +207,18 @@ class CoreManagementService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "vFlow Core 自动启动",
+                getString(R.string.core_autostart_notification_channel_name),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "vFlow Core 自动启动状态通知"
+                description = getString(R.string.core_autostart_notification_channel_description)
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
 
         val notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("vFlow Core 自动启动")
-            .setContentText("请先手动启动一次 vFlow Core 以记录您的启动偏好")
+            .setContentTitle(getString(R.string.core_autostart_title))
+            .setContentText(getString(R.string.core_autostart_no_preference_message))
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
