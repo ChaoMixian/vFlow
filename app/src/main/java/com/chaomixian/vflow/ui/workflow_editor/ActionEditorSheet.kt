@@ -9,12 +9,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.common.ModuleDetailDialog
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
@@ -776,24 +776,22 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
     private fun createBaseViewForInputType(inputDef: InputDefinition, currentValue: Any?): View {
-        val view = StandardControlFactory.createBaseViewForInputType(requireContext(), inputDef, currentValue)
+        val view = StandardControlFactory.createBaseViewForInputType(
+            requireContext(),
+            inputDef,
+            currentValue,
+            onItemSelectedCallback = { selectedValue ->
+                if (currentParameters[inputDef.id] != selectedValue) {
+                    parameterUpdated(inputDef.id, selectedValue)
+                }
+            }
+        )
 
         // 添加参数变更监听器
         when (view) {
-            is SwitchCompat -> {
+            is MaterialSwitch -> {
                 view.setOnCheckedChangeListener { _, isChecked ->
                     parameterUpdated(inputDef.id, isChecked)
-                }
-            }
-            is Spinner -> {
-                view.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
-                        val selectedValue = inputDef.options.getOrNull(position)
-                        if (currentParameters[inputDef.id] != selectedValue) {
-                            parameterUpdated(inputDef.id, selectedValue)
-                        }
-                    }
-                    override fun onNothingSelected(p0: AdapterView<*>?) {}
                 }
             }
         }

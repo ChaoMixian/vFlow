@@ -8,7 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.widget.SwitchCompat
+import android.view.ContextThemeWrapper
 import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.InputDefinition
@@ -19,6 +19,8 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -159,8 +161,8 @@ object StandardControlFactory {
     /**
      * 创建开关控件。
      */
-    fun createSwitch(context: Context, isChecked: Boolean): SwitchCompat {
-        return SwitchCompat(context).apply { this.isChecked = isChecked }
+    fun createSwitch(context: Context, isChecked: Boolean): MaterialSwitch {
+        return MaterialSwitch(context).apply { this.isChecked = isChecked }
     }
 
     /**
@@ -320,7 +322,7 @@ object StandardControlFactory {
         selectedValue: String?,
         onItemSelectedCallback: ((String) -> Unit)? = null,
         optionsStringRes: List<Int>? = null
-    ): Spinner {
+    ): TextInputLayout {
         // 使用本地化选项（如果有），否则使用原始选项值
         val displayOptions = if (optionsStringRes != null && optionsStringRes.size == options.size) {
             optionsStringRes.map { context.getString(it) }
@@ -328,33 +330,43 @@ object StandardControlFactory {
             options
         }
 
-        return Spinner(context).apply {
-            adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, displayOptions).also {
-                it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            }
-            val selectionIndex = options.indexOf(selectedValue)
-            if (selectionIndex != -1) setSelection(selectionIndex)
+        val selectedIndex = options.indexOf(selectedValue).takeIf { it >= 0 } ?: 0
+        val themedContext = ContextThemeWrapper(
+            context,
+            com.google.android.material.R.style.Widget_Material3_TextInputLayout_OutlinedBox_ExposedDropdownMenu
+        )
 
-            // 延迟设置监听器，避免初始化时触发
-            post {
-                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                        // 返回序列化值，而不是显示文本
-                        val selectedItem = options[position]
-                        // 只在值真正改变时才触发回调
-                        if (tag != selectedItem) {
-                            tag = selectedItem  // 用 tag 记录当前值
-                            onItemSelectedCallback?.invoke(selectedItem)
-                        }
-                    }
+        return TextInputLayout(themedContext, null).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            isHintEnabled = false
 
-                    override fun onNothingSelected(parent: AdapterView<*>?) {
-                        // 不需要处理
-                    }
+            val autoCompleteTextView = MaterialAutoCompleteTextView(themedContext).apply {
+                setSimpleItems(displayOptions.toTypedArray())
+                inputType = InputType.TYPE_NULL
+                isFocusable = false
+                isClickable = true
+                isCursorVisible = false
+                keyListener = null
+
+                val selectedDisplayValue = displayOptions.getOrNull(selectedIndex).orEmpty()
+                setText(selectedDisplayValue, false)
+                tag = options.getOrNull(selectedIndex) ?: selectedValue
+
+                setOnClickListener { showDropDown() }
+                setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) showDropDown()
                 }
-                // 设置初始 tag 值
-                tag = selectedValue
+                setOnItemClickListener { _, _, position, _ ->
+                    val serializedValue = options.getOrNull(position) ?: return@setOnItemClickListener
+                    tag = serializedValue
+                    onItemSelectedCallback?.invoke(serializedValue)
+                }
             }
+
+            addView(autoCompleteTextView)
         }
     }
 
@@ -367,9 +379,18 @@ object StandardControlFactory {
         currentValue: Any?,
         hint: String? = null
     ): TextInputLayout {
-        return TextInputLayout(context).apply {
+        val density = context.resources.displayMetrics.density
+        val verticalPadding = (10 * density).toInt()
+        val horizontalPadding = (12 * density).toInt()
+        val minFieldHeight = (48 * density).toInt()
+        val themedContext = ContextThemeWrapper(
+            context,
+            com.google.android.material.R.style.Widget_Material3_TextInputLayout_OutlinedBox
+        )
+
+        return TextInputLayout(themedContext, null).apply {
             this.hint = hint ?: context.getString(R.string.label_value)
-            val editText = TextInputEditText(context).apply {
+            val editText = TextInputEditText(themedContext).apply {
                 val valueToDisplay = when (currentValue) {
                     is Number -> if (currentValue.toDouble() == currentValue.toLong().toDouble()) {
                         currentValue.toLong().toString()
@@ -386,6 +407,8 @@ object StandardControlFactory {
                 } else {
                     InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 }
+                minHeight = minFieldHeight
+                setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding)
             }
             addView(editText)
         }
@@ -529,16 +552,15 @@ object StandardControlFactory {
      */
     private fun findValueInViewTree(view: View, inputDef: InputDefinition): Any? {
         return when (view) {
-            is TextInputLayout -> view.editText?.text?.toString()
-            is SwitchCompat -> view.isChecked
-            is Spinner -> {
-                val selectedIndex = view.selectedItemPosition
-                if (selectedIndex in inputDef.options.indices) {
-                    inputDef.options[selectedIndex]
+            is TextInputLayout -> {
+                val editText = view.editText
+                if (editText is MaterialAutoCompleteTextView && inputDef.staticType == ParameterType.ENUM) {
+                    editText.tag as? String ?: editText.text?.toString()
                 } else {
-                    view.tag as? String ?: view.selectedItem?.toString()
+                    editText?.text?.toString()
                 }
             }
+            is MaterialSwitch -> view.isChecked
             is Slider -> {
                 when (inputDef.staticType) {
                     ParameterType.NUMBER -> view.value.toInt()
