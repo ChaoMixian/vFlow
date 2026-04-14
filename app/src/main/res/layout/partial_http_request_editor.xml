@@ -11,11 +11,18 @@
         android:layout_height="wrap_content"
         android:text="@string/label_request_method"
         android:textAppearance="?attr/textAppearanceLabelLarge" />
-    <Spinner
-        android:id="@+id/http_spinner_method"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_http_method"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="8dp">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/http_spinner_method"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.divider.MaterialDivider
         android:layout_width="match_parent"
@@ -94,11 +101,18 @@
                     android:layout_marginTop="16dp"
                     android:text="@string/label_request_body"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
-                <Spinner
-                    android:id="@+id/http_spinner_body_type"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layout_http_body_type"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/http_spinner_body_type"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </com.google.android.material.textfield.TextInputLayout>
                 <FrameLayout
                     android:id="@+id/http_body_editor_container"
                     android:layout_width="match_parent"

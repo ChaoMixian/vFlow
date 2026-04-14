@@ -6,22 +6,19 @@ import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
+import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
+import com.google.android.material.textfield.TextInputLayout
 
 class InputTextModuleUIProvider : ModuleUIProvider {
 
@@ -32,8 +29,8 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
         val advancedContainer: LinearLayout = view.findViewById(R.id.container_advanced)
         val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
-        val modeSpinner: Spinner = view.findViewById(R.id.spinner_mode)
-        val actionAfterSpinner: Spinner = view.findViewById(R.id.spinner_action_after)
+        val modeSpinner: TextInputLayout = view.findViewById(R.id.layout_mode)
+        val actionAfterSpinner: TextInputLayout = view.findViewById(R.id.layout_action_after)
 
         var richTextView: RichTextView? = null
         var allSteps: List<ActionStep>? = null
@@ -71,23 +68,38 @@ class InputTextModuleUIProvider : ModuleUIProvider {
         // 设置富文本编辑器
         setupRichTextEditor(context, holder, currentParameters["text"] as? String ?: "", onMagicVariableRequested)
 
-        // 设置模式 Spinner
-        val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, modeLabels)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        holder.modeSpinner.adapter = adapter
-
+        // 设置模式下拉框
         val rawMode = currentParameters["mode"] as? String ?: InputTextModule.MODE_AUTO
         val currentMode = modeInput.normalizeEnumValue(rawMode) ?: rawMode
-        holder.modeSpinner.setSelection(modeValues.indexOf(currentMode).coerceAtLeast(0))
-
-        // 设置操作后按键 Spinner
-        val actionAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, actionLabels)
-        actionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        holder.actionAfterSpinner.adapter = actionAdapter
+        StandardControlFactory.bindDropdown(
+            textInputLayout = holder.modeSpinner,
+            options = modeValues,
+            selectedValue = currentMode,
+            onItemSelectedCallback = {
+                if (holder.modeSpinner.tag != it) {
+                    holder.modeSpinner.tag = it
+                    onParametersChanged()
+                }
+            },
+            optionsStringRes = modeInput.optionsStringRes
+        )
+        holder.modeSpinner.tag = currentMode
 
         val rawAction = currentParameters["action_after"] as? String ?: InputTextModule.ACTION_NONE
         val currentAction = actionInput.normalizeEnumValue(rawAction) ?: rawAction
-        holder.actionAfterSpinner.setSelection(actionValues.indexOf(currentAction).coerceAtLeast(0))
+        StandardControlFactory.bindDropdown(
+            textInputLayout = holder.actionAfterSpinner,
+            options = actionValues,
+            selectedValue = currentAction,
+            onItemSelectedCallback = {
+                if (holder.actionAfterSpinner.tag != it) {
+                    holder.actionAfterSpinner.tag = it
+                    onParametersChanged()
+                }
+            },
+            optionsStringRes = actionInput.optionsStringRes
+        )
+        holder.actionAfterSpinner.tag = currentAction
 
         // 恢复展开状态
         val showAdvanced = currentParameters["show_advanced"] as? Boolean ?: false
@@ -101,28 +113,6 @@ class InputTextModuleUIProvider : ModuleUIProvider {
             holder.expandArrow.animate().rotation(if (!isVisible) 180f else 0f).setDuration(200).start()
             onParametersChanged() // 触发保存 show_advanced 状态
         }
-
-        holder.modeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
-                if (holder.modeSpinner.tag != position) {
-                    holder.modeSpinner.tag = position
-                    onParametersChanged()
-                }
-            }
-            override fun onNothingSelected(p0: AdapterView<*>?) {}
-        }
-        holder.modeSpinner.tag = holder.modeSpinner.selectedItemPosition
-
-        holder.actionAfterSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
-                if (holder.actionAfterSpinner.tag != position) {
-                    holder.actionAfterSpinner.tag = position
-                    onParametersChanged()
-                }
-            }
-            override fun onNothingSelected(p0: AdapterView<*>?) {}
-        }
-        holder.actionAfterSpinner.tag = holder.actionAfterSpinner.selectedItemPosition
 
         return holder
     }
@@ -154,12 +144,10 @@ class InputTextModuleUIProvider : ModuleUIProvider {
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as ViewHolder
         val module = InputTextModule()
-        val modeValues = module.getInputs().first { it.id == "mode" }.options
-        val actionValues = module.getInputs().first { it.id == "action_after" }.options
         return mapOf(
             "text" to (h.richTextView?.getRawText() ?: ""),
-            "mode" to modeValues.getOrElse(h.modeSpinner.selectedItemPosition) { InputTextModule.MODE_AUTO },
-            "action_after" to actionValues.getOrElse(h.actionAfterSpinner.selectedItemPosition) { InputTextModule.ACTION_NONE },
+            "mode" to (StandardControlFactory.getDropdownValue(h.modeSpinner) ?: InputTextModule.MODE_AUTO),
+            "action_after" to (StandardControlFactory.getDropdownValue(h.actionAfterSpinner) ?: InputTextModule.ACTION_NONE),
             "show_advanced" to h.advancedContainer.isVisible
         )
     }

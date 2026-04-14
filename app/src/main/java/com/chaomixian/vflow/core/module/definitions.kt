@@ -139,7 +139,7 @@ enum class ParameterType {
  * 用于声明式地指定输入参数在编辑器中的显示方式。
  */
 enum class InputStyle {
-    /** 默认风格 - 根据类型自动选择（Spinner/Switch/TextInput） */
+    /** 默认风格 - 根据类型自动选择（Dropdown/Switch/TextInput） */
     DEFAULT,
     /** 芯片按钮组 - 适合少量选项的选择（如过滤器条件） */
     CHIP_GROUP,

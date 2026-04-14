@@ -321,16 +321,9 @@ object StandardControlFactory {
         options: List<String>,
         selectedValue: String?,
         onItemSelectedCallback: ((String) -> Unit)? = null,
-        optionsStringRes: List<Int>? = null
+        optionsStringRes: List<Int>? = null,
+        displayOptions: List<String>? = null
     ): TextInputLayout {
-        // 使用本地化选项（如果有），否则使用原始选项值
-        val displayOptions = if (optionsStringRes != null && optionsStringRes.size == options.size) {
-            optionsStringRes.map { context.getString(it) }
-        } else {
-            options
-        }
-
-        val selectedIndex = options.indexOf(selectedValue).takeIf { it >= 0 } ?: 0
         val themedContext = ContextThemeWrapper(
             context,
             com.google.android.material.R.style.Widget_Material3_TextInputLayout_OutlinedBox_ExposedDropdownMenu
@@ -341,32 +334,82 @@ object StandardControlFactory {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            isHintEnabled = false
+            bindDropdown(
+                textInputLayout = this,
+                options = options,
+                selectedValue = selectedValue,
+                onItemSelectedCallback = onItemSelectedCallback,
+                optionsStringRes = optionsStringRes,
+                displayOptions = displayOptions
+            )
+        }
+    }
 
-            val autoCompleteTextView = MaterialAutoCompleteTextView(themedContext).apply {
-                setSimpleItems(displayOptions.toTypedArray())
-                inputType = InputType.TYPE_NULL
-                isFocusable = false
-                isClickable = true
-                isCursorVisible = false
-                keyListener = null
+    fun bindDropdown(
+        textInputLayout: TextInputLayout,
+        options: List<String>,
+        selectedValue: String?,
+        onItemSelectedCallback: ((String) -> Unit)? = null,
+        optionsStringRes: List<Int>? = null,
+        displayOptions: List<String>? = null
+    ) {
+        val resolvedDisplayOptions = displayOptions ?: if (optionsStringRes != null && optionsStringRes.size == options.size) {
+            optionsStringRes.map { textInputLayout.context.getString(it) }
+        } else {
+            options
+        }
+        val selectedIndex = options.indexOf(selectedValue).takeIf { it >= 0 } ?: 0
 
-                val selectedDisplayValue = displayOptions.getOrNull(selectedIndex).orEmpty()
-                setText(selectedDisplayValue, false)
-                tag = options.getOrNull(selectedIndex) ?: selectedValue
+        textInputLayout.isHintEnabled = false
+        textInputLayout.endIconMode = TextInputLayout.END_ICON_DROPDOWN_MENU
+        textInputLayout.boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
 
-                setOnClickListener { showDropDown() }
-                setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) showDropDown()
-                }
-                setOnItemClickListener { _, _, position, _ ->
-                    val serializedValue = options.getOrNull(position) ?: return@setOnItemClickListener
-                    tag = serializedValue
-                    onItemSelectedCallback?.invoke(serializedValue)
-                }
-            }
+        val autoCompleteTextView = ensureDropdownEditText(textInputLayout)
+        autoCompleteTextView.setSimpleItems(resolvedDisplayOptions.toTypedArray())
+        autoCompleteTextView.inputType = InputType.TYPE_NULL
+        autoCompleteTextView.isFocusable = false
+        autoCompleteTextView.isClickable = true
+        autoCompleteTextView.isCursorVisible = false
+        autoCompleteTextView.keyListener = null
 
-            addView(autoCompleteTextView)
+        val selectedDisplayValue = resolvedDisplayOptions.getOrNull(selectedIndex).orEmpty()
+        autoCompleteTextView.setText(selectedDisplayValue, false)
+        autoCompleteTextView.tag = options.getOrNull(selectedIndex) ?: selectedValue
+        autoCompleteTextView.setOnClickListener { autoCompleteTextView.showDropDown() }
+        autoCompleteTextView.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) autoCompleteTextView.showDropDown()
+        }
+        autoCompleteTextView.setOnItemClickListener { _, _, position, _ ->
+            val serializedValue = options.getOrNull(position) ?: return@setOnItemClickListener
+            autoCompleteTextView.tag = serializedValue
+            onItemSelectedCallback?.invoke(serializedValue)
+        }
+    }
+
+    fun getDropdownValue(textInputLayout: TextInputLayout): String? {
+        val autoCompleteTextView = textInputLayout.editText as? MaterialAutoCompleteTextView ?: return null
+        return autoCompleteTextView.tag as? String ?: autoCompleteTextView.text?.toString()
+    }
+
+    private fun ensureDropdownEditText(textInputLayout: TextInputLayout): MaterialAutoCompleteTextView {
+        val existing = textInputLayout.editText as? MaterialAutoCompleteTextView
+        if (existing != null) return existing
+
+        val density = textInputLayout.resources.displayMetrics.density
+        return MaterialAutoCompleteTextView(
+            textInputLayout.context,
+            null,
+            com.google.android.material.R.attr.autoCompleteTextViewStyle
+        ).also {
+            it.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            val horizontalPadding = (16 * density).toInt()
+            val verticalPadding = (14 * density).toInt()
+            it.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding)
+            it.minHeight = (56 * density).toInt()
+            textInputLayout.addView(it)
         }
     }
 
@@ -379,10 +422,6 @@ object StandardControlFactory {
         currentValue: Any?,
         hint: String? = null
     ): TextInputLayout {
-        val density = context.resources.displayMetrics.density
-        val verticalPadding = (10 * density).toInt()
-        val horizontalPadding = (12 * density).toInt()
-        val minFieldHeight = (48 * density).toInt()
         val themedContext = ContextThemeWrapper(
             context,
             com.google.android.material.R.style.Widget_Material3_TextInputLayout_OutlinedBox
@@ -407,8 +446,6 @@ object StandardControlFactory {
                 } else {
                     InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 }
-                minHeight = minFieldHeight
-                setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding)
             }
             addView(editText)
         }

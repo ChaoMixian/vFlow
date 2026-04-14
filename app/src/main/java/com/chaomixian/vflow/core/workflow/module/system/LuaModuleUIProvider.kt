@@ -51,9 +51,11 @@ class LuaModuleUIProvider : ModuleUIProvider {
         onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
     ): CustomEditorViewHolder {
         val inflater = LayoutInflater.from(context)
+        val padding = (16 * context.resources.displayMetrics.density).toInt()
         val view = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setPadding(padding, padding, padding, padding)
         }
 
         val scriptInputLayout = TextInputLayout(context).apply {

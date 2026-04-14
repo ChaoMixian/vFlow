@@ -23,17 +23,18 @@ import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
+import com.google.android.material.textfield.TextInputLayout
 
 // ViewHolder 用于缓存视图引用
 class HttpRequestViewHolder(view: View) : CustomEditorViewHolder(view) {
-    val methodSpinner: Spinner = view.findViewById(R.id.http_spinner_method)
+    val methodSpinner: TextInputLayout = view.findViewById(R.id.layout_http_method)
 
     val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
     val advancedContainer: LinearLayout = view.findViewById(R.id.http_advanced_container)
     val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
 
     val bodySectionContainer: LinearLayout = view.findViewById(R.id.http_body_section_container)
-    val bodyTypeSpinner: Spinner = view.findViewById(R.id.http_spinner_body_type)
+    val bodyTypeSpinner: TextInputLayout = view.findViewById(R.id.layout_http_body_type)
     val bodyEditorContainer: FrameLayout = view.findViewById(R.id.http_body_editor_container)
 
     // 引用 RecyclerView，以便在 createEditor 中绑定 Adapter
@@ -111,17 +112,7 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
         // URL 由标准控件处理，不在自定义UI中创建
 
-        // 初始化 Method Spinner
-        holder.methodSpinner.adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, module.methodOptions).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        val bodyTypeLabels = listOf(
-            context.getString(R.string.option_vflow_network_http_request_body_none),
-            context.getString(R.string.option_vflow_network_http_request_body_json),
-            context.getString(R.string.option_vflow_network_http_request_body_form),
-            context.getString(R.string.option_vflow_network_http_request_body_raw),
-            context.getString(R.string.option_vflow_network_http_request_body_file)
-        )
-        holder.bodyTypeSpinner.adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, bodyTypeLabels).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-
+        // 初始化请求方法下拉框
         // 初始化 Query Params Adapter
         val currentQueryParams = (currentParameters["query_params"] as? Map<*, *>)
             ?.map { it.key.toString() to it.value.toString() }?.toMutableList() ?: mutableListOf()
@@ -149,11 +140,34 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
         holder.headersAddButton.setOnClickListener { holder.headersAdapter?.addItem() }
 
         // 恢复其他参数
-        (currentParameters["method"] as? String)?.let { holder.methodSpinner.setSelection(module.methodOptions.indexOf(it)) }
+        val method = currentParameters["method"] as? String ?: module.methodOptions.firstOrNull()
+        StandardControlFactory.bindDropdown(
+            textInputLayout = holder.methodSpinner,
+            options = module.methodOptions,
+            selectedValue = method,
+            onItemSelectedCallback = {
+                holder.bodySectionContainer.isVisible = it == "POST" || it == "PUT" || it == "PATCH"
+                onParametersChanged()
+            }
+        )
+        holder.bodySectionContainer.isVisible = method == "POST" || method == "PUT" || method == "PATCH"
         val bodyTypeInput = module.getInputs().first { it.id == "body_type" }
         val rawBodyType = currentParameters["body_type"] as? String ?: BODY_TYPE_NONE
         val normalizedBodyType = bodyTypeInput.normalizeEnumValue(rawBodyType) ?: rawBodyType
-        holder.bodyTypeSpinner.setSelection(module.bodyTypeOptions.indexOf(normalizedBodyType).coerceAtLeast(0))
+        StandardControlFactory.bindDropdown(
+            textInputLayout = holder.bodyTypeSpinner,
+            options = module.bodyTypeOptions,
+            selectedValue = normalizedBodyType,
+            onItemSelectedCallback = {
+                if (holder.bodyTypeSpinner.tag != it) {
+                    holder.bodyTypeSpinner.tag = it
+                    updateBodyEditor(context, holder, it, null, onMagicVariableRequested)
+                    onParametersChanged()
+                }
+            },
+            optionsStringRes = bodyTypeInput.optionsStringRes
+        )
+        holder.bodyTypeSpinner.tag = normalizedBodyType
 
         // 更新 Body 编辑器
         updateBodyEditor(context, holder, normalizedBodyType, currentParameters["body"], onMagicVariableRequested)
@@ -171,27 +185,6 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
             onParametersChanged()
         }
 
-        holder.methodSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                val method = module.methodOptions[p2]
-                holder.bodySectionContainer.isVisible = method == "POST" || method == "PUT" || method == "PATCH"
-                onParametersChanged()
-            }
-            override fun onNothingSelected(p0: AdapterView<*>?) {}
-        }
-
-        holder.bodyTypeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-                if (holder.bodyTypeSpinner.tag != p2) {
-                    holder.bodyTypeSpinner.tag = p2
-                    updateBodyEditor(context, holder, module.bodyTypeOptions[p2], null, onMagicVariableRequested)
-                    onParametersChanged()
-                }
-            }
-            override fun onNothingSelected(p0: AdapterView<*>?) {}
-        }
-        holder.bodyTypeSpinner.tag = holder.bodyTypeSpinner.selectedItemPosition
-
         return holder
     }
 
@@ -200,14 +193,14 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
         // URL 由标准控件处理，不在这里读取
 
-        val selectedBodyType = HttpRequestModule().bodyTypeOptions.getOrElse(h.bodyTypeSpinner.selectedItemPosition) { BODY_TYPE_NONE }
+        val selectedBodyType = StandardControlFactory.getDropdownValue(h.bodyTypeSpinner) ?: BODY_TYPE_NONE
         val body = when(selectedBodyType) {
             BODY_TYPE_FORM -> h.bodyAdapter?.getItemsAsMap()
             BODY_TYPE_JSON, BODY_TYPE_RAW, BODY_TYPE_FILE -> h.rawBodyRichTextView?.getRawText()
             else -> null
         }
         return mapOf(
-            "method" to h.methodSpinner.selectedItem.toString(),
+            "method" to (StandardControlFactory.getDropdownValue(h.methodSpinner) ?: HttpRequestModule().methodOptions.first()),
             "headers" to (h.headersAdapter?.getItemsAsMap() ?: emptyMap<String, String>()),
             "query_params" to (h.queryParamsAdapter?.getItemsAsMap() ?: emptyMap<String, String>()),
             "body_type" to selectedBodyType,

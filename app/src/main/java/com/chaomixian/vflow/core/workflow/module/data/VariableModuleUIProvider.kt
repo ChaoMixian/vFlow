@@ -8,7 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,14 +24,16 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
+import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.chaomixian.vflow.ui.workflow_editor.VariableValueUIProvider
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
 // ViewHolder 和接口定义保持不变
 class VariableEditorViewHolder(
     view: View, // ViewHolder 的根视图
-    val typeSpinner: Spinner, // 用于选择变量类型的 Spinner
+    val typeSpinner: TextInputLayout, // 用于选择变量类型的下拉框
     val valueContainer: LinearLayout // 用于动态添加值输入视图的容器
 ) : CustomEditorViewHolder(view) {
     var valueInputView: View? = null // 当前值输入视图的引用
@@ -101,10 +102,23 @@ class VariableModuleUIProvider(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            setPadding(padding, padding, padding, padding)
+            setPadding(0, padding, 0, padding)
         }
 
-        val typeSpinner = Spinner(context)
+        val typeSpinner = StandardControlFactory.createSpinner(
+            context = context,
+            options = typeOptions,
+            selectedValue = null,
+            optionsStringRes = null
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginStart = padding
+                marginEnd = padding
+            }
+        }
         val valueContainer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, (16 * context.resources.displayMetrics.density).toInt(), 0, 0)
@@ -114,30 +128,25 @@ class VariableModuleUIProvider(
         holder.onMagicVariableRequested = onMagicVariableRequested
         holder.allSteps = allSteps
 
-        val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, getTypeLabels(context))
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        typeSpinner.adapter = adapter
-
         val currentType = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(currentParameters["type"] as? String)
             ?: typeOptions.first()
-        val selectionIndex = typeOptions.indexOf(currentType)
-        if (selectionIndex != -1) typeSpinner.setSelection(selectionIndex)
-
-        updateValueInputView(context, holder, currentType, currentParameters["value"])
-
-        typeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parentView: AdapterView<*>?, selectedItemView: View?, position: Int, id: Long) {
-                val selectedType = typeOptions[position]
-                val oldType = (holder.typeSpinner.tag as? String) ?: currentType
+        StandardControlFactory.bindDropdown(
+            textInputLayout = typeSpinner,
+            options = typeOptions,
+            selectedValue = currentType,
+            onItemSelectedCallback = { selectedType ->
+                val oldType = holder.typeSpinner.tag as? String ?: currentType
                 if (selectedType != oldType) {
                     holder.typeSpinner.tag = selectedType
                     updateValueInputView(context, holder, selectedType, null)
                     onParametersChanged()
                 }
-            }
-            override fun onNothingSelected(parentView: AdapterView<*>?) {}
-        }
+            },
+            displayOptions = getTypeLabels(context)
+        )
         holder.typeSpinner.tag = currentType
+
+        updateValueInputView(context, holder, currentType, currentParameters["value"])
 
         view.addView(typeSpinner)
         view.addView(valueContainer)
@@ -148,7 +157,7 @@ class VariableModuleUIProvider(
     // readFromEditor 的代码保持不变
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val h = holder as VariableEditorViewHolder
-        val selectedType = typeOptions.getOrElse(h.typeSpinner.selectedItemPosition) { typeOptions.first() }
+        val selectedType = StandardControlFactory.getDropdownValue(h.typeSpinner) ?: typeOptions.first()
 
         // 检查 valueContainer 的 tag，如果是变量引用字符串，直接返回该变量
         val variableRef = h.valueContainer.tag as? String
@@ -190,7 +199,7 @@ class VariableModuleUIProvider(
 
                 mapOf("x" to x, "y" to y)
             }
-            CreateVariableModule.TYPE_BOOLEAN -> (h.valueInputView as? SwitchCompat)?.isChecked ?: false
+            CreateVariableModule.TYPE_BOOLEAN -> (h.valueInputView as? MaterialSwitch)?.isChecked ?: false
             CreateVariableModule.TYPE_NUMBER -> {
                 // 检查是否是变量引用（通过容器 tag）
                 val variableRef = h.valueContainer.tag as? String
@@ -233,6 +242,7 @@ class VariableModuleUIProvider(
         holder.coordYInput = null
         holder.coordXVariable = null
         holder.coordYVariable = null
+        val horizontalSpacing = (16 * context.resources.displayMetrics.density).toInt()
 
         // 检查是否为整个列表/字典/坐标赋值了变量
         if (type != CreateVariableModule.TYPE_STRING && currentValue is String && (currentValue.isMagicVariable() || currentValue.isNamedVariable())) {
@@ -272,6 +282,13 @@ class VariableModuleUIProvider(
             }
             CreateVariableModule.TYPE_DICTIONARY -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_dictionary_editor, holder.valueContainer, false)
+                editorView.layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = horizontalSpacing
+                    marginEnd = horizontalSpacing
+                }
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_dictionary)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_kv_pair)
 
@@ -301,6 +318,13 @@ class VariableModuleUIProvider(
             }
             CreateVariableModule.TYPE_LIST -> {
                 val editorView = LayoutInflater.from(context).inflate(R.layout.partial_list_editor, holder.valueContainer, false)
+                editorView.layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = horizontalSpacing
+                    marginEnd = horizontalSpacing
+                }
                 val recyclerView = editorView.findViewById<RecyclerView>(R.id.recycler_view_list)
                 val addButton = editorView.findViewById<Button>(R.id.button_add_list_item)
 
@@ -369,11 +393,16 @@ class VariableModuleUIProvider(
                         setText(currentX)
                         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
                     }
-                    val xInputLayout = TextInputLayout(context).apply {
-                        addView(xInput)
-                    }
+                    val xInputLayout = StandardControlFactory.createTextInputLayout(
+                        context = context,
+                        isNumber = true,
+                        currentValue = currentX,
+                        hint = "X 坐标"
+                    )
+                    (xInputLayout.editText as? TextInputEditText)?.inputType =
+                        InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
                     xValueContainer.addView(xInputLayout)
-                    holder.coordXInput = xInput
+                    holder.coordXInput = xInputLayout.editText as? TextInputEditText
                 }
 
                 coordContainer.addView(xRow)
@@ -405,19 +434,30 @@ class VariableModuleUIProvider(
                         setText(currentY)
                         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
                     }
-                    val yInputLayout = TextInputLayout(context).apply {
-                        addView(yInput)
-                    }
+                    val yInputLayout = StandardControlFactory.createTextInputLayout(
+                        context = context,
+                        isNumber = true,
+                        currentValue = currentY,
+                        hint = "Y 坐标"
+                    )
+                    (yInputLayout.editText as? TextInputEditText)?.inputType =
+                        InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
                     yValueContainer.addView(yInputLayout)
-                    holder.coordYInput = yInput
+                    holder.coordYInput = yInputLayout.editText as? TextInputEditText
                 }
 
                 coordContainer.addView(yRow)
                 coordContainer
             }
-            CreateVariableModule.TYPE_BOOLEAN -> SwitchCompat(context).apply {
+            CreateVariableModule.TYPE_BOOLEAN -> StandardControlFactory.createSwitch(context, (currentValue as? Boolean) ?: false).apply {
                 text = "值"
-                isChecked = (currentValue as? Boolean) ?: false
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = (16 * context.resources.displayMetrics.density).toInt()
+                    marginEnd = (16 * context.resources.displayMetrics.density).toInt()
+                }
             }
             CreateVariableModule.TYPE_NUMBER -> {
                 // 数字类型也使用 row_editor_input 布局，支持变量选择
@@ -433,13 +473,12 @@ class VariableModuleUIProvider(
 
                 // 清除默认的 EditText，添加数字输入框
                 valueContainer.removeAllViews()
-                val editText = TextInputEditText(context).apply {
-                    setText(currentValue?.toString() ?: "")
-                    inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED
-                }
-                val inputLayout = TextInputLayout(context).apply {
-                    addView(editText)
-                }
+                val inputLayout = StandardControlFactory.createTextInputLayout(
+                    context = context,
+                    isNumber = true,
+                    currentValue = currentValue,
+                    hint = "值"
+                )
                 valueContainer.addView(inputLayout)
                 row
             }
@@ -457,21 +496,21 @@ class VariableModuleUIProvider(
 
                 // 清除默认的 EditText，添加文本输入框
                 valueContainer.removeAllViews()
-                val editText = TextInputEditText(context).apply {
-                    setText(currentValue?.toString() ?: "")
-                }
-                val inputLayout = TextInputLayout(context).apply {
-                    addView(editText)
-                }
+                val inputLayout = StandardControlFactory.createTextInputLayout(
+                    context = context,
+                    isNumber = false,
+                    currentValue = currentValue,
+                    hint = "值"
+                )
                 valueContainer.addView(inputLayout)
                 row
             }
-            else -> TextInputLayout(context).apply {
+            else -> StandardControlFactory.createTextInputLayout(
+                context = context,
+                isNumber = false,
+                currentValue = currentValue,
                 hint = "值"
-                val editText = TextInputEditText(this.context)
-                editText.setText(currentValue?.toString() ?: "")
-                addView(editText)
-            }
+            )
         }
         holder.valueInputView = valueView
         holder.valueContainer.addView(valueView)

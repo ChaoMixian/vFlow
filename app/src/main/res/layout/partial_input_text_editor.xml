@@ -75,11 +75,18 @@
                 android:text="@string/label_execution_mode"
                 android:textAppearance="?attr/textAppearanceLabelMedium" />
 
-            <Spinner
-                android:id="@+id/spinner_mode"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_mode"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp" />
+                android:layout_marginTop="4dp">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/spinner_mode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -88,11 +95,18 @@
                 android:text="@string/param_vflow_interaction_input_text_action_after_name"
                 android:textAppearance="?attr/textAppearanceLabelMedium" />
 
-            <Spinner
-                android:id="@+id/spinner_action_after"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_action_after"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp" />
+                android:layout_marginTop="4dp">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/spinner_action_after"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

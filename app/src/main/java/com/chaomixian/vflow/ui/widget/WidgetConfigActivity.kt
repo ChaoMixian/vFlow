@@ -6,9 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,9 +14,11 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.ui.common.BaseActivity
+import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputLayout
 
 /**
  * 小组件配置页面。允许用户选择工作流并配置布局。
@@ -98,30 +97,22 @@ class WidgetConfigActivity : BaseActivity() {
         setSupportActionBar(toolbar)
 
         // 设置布局选择下拉框
-        val layoutSpinner = findViewById<Spinner>(R.id.spinner_layout)
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, layoutOptions.map { it.displayName })
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        layoutSpinner.adapter = adapter
-
-        // 设置当前选中的布局
-        val currentLayoutIndex = layoutOptions.indexOfFirst { it.layoutType == selectedLayout }
-        if (currentLayoutIndex >= 0) {
-            layoutSpinner.setSelection(currentLayoutIndex)
-        }
-
-        // 布局选择监听
-        layoutSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val newLayout = layoutOptions[position]
+        val layoutSpinner = findViewById<TextInputLayout>(R.id.layout_widget_layout)
+        StandardControlFactory.bindDropdown(
+            textInputLayout = layoutSpinner,
+            options = layoutOptions.map { it.layoutType },
+            selectedValue = selectedLayout,
+            onItemSelectedCallback = { selectedLayoutType ->
+                val newLayout = layoutOptions.find { it.layoutType == selectedLayoutType } ?: return@bindDropdown
                 if (newLayout.layoutType != selectedLayout) {
                     selectedLayout = newLayout.layoutType
                     currentSlotCount = newLayout.slotCount
                     updateSlotButtonsVisibility()
+                    updateSlotButtonTexts()
                 }
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
+            },
+            displayOptions = layoutOptions.map { it.displayName }
+        )
 
         // 初始化插槽按钮
         updateSlotButtonsVisibility()

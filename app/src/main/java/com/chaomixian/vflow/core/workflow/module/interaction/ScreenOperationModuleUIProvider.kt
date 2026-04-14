@@ -19,6 +19,7 @@ import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.module.normalizeEnumValue
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
+import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.slider.Slider
@@ -51,7 +52,7 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         val advancedHeader: LinearLayout = view.findViewById(R.id.layout_advanced_header)
         val advancedContainer: LinearLayout = view.findViewById(R.id.container_advanced_options)
         val expandArrow: ImageView = view.findViewById(R.id.iv_expand_arrow)
-        val modeSpinner: Spinner = view.findViewById(R.id.spinner_execution_mode)
+        val modeSpinner: TextInputLayout = view.findViewById(R.id.layout_execution_mode)
 
         // 动态创建的输入框引用
         var startInputView: View? = null
@@ -114,18 +115,23 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         holder.expandArrow.rotation = if (showAdvanced) 180f else 0f
 
         val executionModeOptions = module.executionModeOptions
-        val executionModeLabels = module.getInputs()
-            .find { it.id == "execution_mode" }
-            ?.optionsStringRes
-            ?.map(context::getString)
-            ?: executionModeOptions
+        val executionModeInput = module.getInputs().find { it.id == "execution_mode" }
         val executionMode = module.getInputs()
             .normalizeEnumValue("execution_mode", currentParameters["execution_mode"] as? String, MODE_AUTO)
             ?: MODE_AUTO
-        val modeAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, executionModeLabels)
-        modeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        holder.modeSpinner.adapter = modeAdapter
-        holder.modeSpinner.setSelection(executionModeOptions.indexOf(executionMode).coerceAtLeast(0))
+        StandardControlFactory.bindDropdown(
+            textInputLayout = holder.modeSpinner,
+            options = executionModeOptions,
+            selectedValue = executionMode,
+            onItemSelectedCallback = {
+                if (holder.modeSpinner.tag != it) {
+                    holder.modeSpinner.tag = it
+                    onParametersChanged()
+                }
+            },
+            optionsStringRes = executionModeInput?.optionsStringRes
+        )
+        holder.modeSpinner.tag = executionMode
 
         // 更新 UI 状态
         fun updateUiState() {
@@ -167,18 +173,6 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
             onParametersChanged()
         }
 
-        holder.modeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
-                if (holder.modeSpinner.tag != position) {
-                    holder.modeSpinner.tag = position
-                    onParametersChanged()
-                }
-            }
-            override fun onNothingSelected(p0: AdapterView<*>?) {}
-        }
-
-        holder.modeSpinner.tag = holder.modeSpinner.selectedItemPosition
-
         return holder
     }
 
@@ -194,7 +188,7 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         val params = mutableMapOf<String, Any?>()
         params["operation_type"] = type
         params["duration"] = h.durationSlider.value.toDouble()
-        params["execution_mode"] = executionModeOptions.getOrElse(h.modeSpinner.selectedItemPosition) { MODE_AUTO }
+        params["execution_mode"] = StandardControlFactory.getDropdownValue(h.modeSpinner) ?: MODE_AUTO
         params["show_advanced"] = h.advancedContainer.isVisible
         readInputValue(h.startInputView)?.let { params["target"] = it }
         if (type == OP_SWIPE) {
@@ -233,16 +227,15 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
             valueContainer.addView(pill)
         } else {
             // 普通输入框
-            val textInputLayout = TextInputLayout(context).apply {
+            val textInputLayout = StandardControlFactory.createTextInputLayout(
+                context = context,
+                isNumber = false,
+                currentValue = valStr ?: "",
                 hint = "输入坐标 x,y"
-                boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
-            }
-            val editText = TextInputEditText(context).apply {
-                setText(valStr ?: "")
-                inputType = InputType.TYPE_CLASS_TEXT
-                maxLines = 1
-            }
-            textInputLayout.addView(editText)
+            )
+            val editText = textInputLayout.editText as? TextInputEditText
+            editText?.inputType = InputType.TYPE_CLASS_TEXT
+            editText?.maxLines = 1
             valueContainer.addView(textInputLayout)
         }
         return row
