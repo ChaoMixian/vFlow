@@ -1,0 +1,115 @@
+name: Android Release
+
+on:
+  push:
+    branches:
+      - "**"
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    name: Build and publish APKs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+
+      - name: Compute release metadata
+        id: meta
+        shell: bash
+        run: |
+          short_sha="${GITHUB_SHA::8}"
+          release_name="vFlow_${short_sha}"
+          release_tag="ci-${short_sha}"
+          echo "short_sha=${short_sha}" >> "${GITHUB_OUTPUT}"
+          echo "release_name=${release_name}" >> "${GITHUB_OUTPUT}"
+          echo "release_tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Restore release signing files
+        shell: bash
+        env:
+          ENCODED_KEYSTORE: ${{ secrets.KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [[ -n "${ENCODED_KEYSTORE}" ]]; then
+            echo "${ENCODED_KEYSTORE}" | base64 --decode > key.jks
+            {
+              echo "KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}"
+              echo "KEYSTORE_ALIAS=${KEYSTORE_ALIAS}"
+              echo "KEY_PASSWORD=${KEY_PASSWORD}"
+            } > signing.properties
+          else
+            echo "Release signing secrets not configured; release APKs will use the unsigned/default path."
+          fi
+
+      - name: Restore local debug signing files
+        shell: bash
+        env:
+          ENCODED_DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
+        run: |
+          mkdir -p "${HOME}/.android"
+
+          if [[ -n "${ENCODED_DEBUG_KEYSTORE}" ]]; then
+            echo "${ENCODED_DEBUG_KEYSTORE}" | base64 --decode > "${HOME}/.android/debug.keystore"
+          elif [[ -f debug.keystore ]]; then
+            cp debug.keystore "${HOME}/.android/debug.keystore"
+          else
+            echo "Custom debug keystore not configured; debug APKs will use the runner default debug signing."
+          fi
+
+      - name: Build APKs
+        run: ./gradlew --stacktrace :app:assembleDebug :app:assembleRelease
+
+      - name: Collect APK assets
+        id: collect_apks
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          find app/build/outputs/apk -type f -name "*.apk" \
+            ! -name "*-androidTest.apk" \
+            \( -path "*/debug/*" -o -path "*/release/*" \) \
+            -exec cp "{}" release-assets/ \;
+
+          apk_count=$(find release-assets -maxdepth 1 -type f -name "*.apk" | wc -l | tr -d ' ')
+          echo "apk_count=${apk_count}" >> "${GITHUB_OUTPUT}"
+
+          if [[ "${apk_count}" == "0" ]]; then
+            echo "No APKs were produced." >&2
+            exit 1
+          fi
+
+          ls -1 release-assets
+
+      - name: Publish draft prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.meta.outputs.release_name }}
+          body: |
+            Commit: `${{ github.sha }}`
+            Branch: `${{ github.ref_name }}`
+          draft: true
+          prerelease: true
+          files: release-assets/*.apk
+          fail_on_unmatched_files: true
+          make_latest: false
