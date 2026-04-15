@@ -43,7 +43,7 @@ android {
         }
 
         create("release") {
-            val keystoreFile = rootProject.file("key.jks")
+            val keystoreFile = rootProject.file("vFlow.jks")
             val signingPropsFile = rootProject.file("signing.properties")
 
             if (keystoreFile.exists() && signingPropsFile.exists()) {
@@ -74,7 +74,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (rootProject.file("key.jks").exists() && rootProject.file("signing.properties").exists()) {
+            if (rootProject.file("vFlow.jks").exists() && rootProject.file("signing.properties").exists()) {
                 signingConfig = signingConfigs.getByName("release")
             } else {
                 println("⚠️ Release 签名文件未找到")

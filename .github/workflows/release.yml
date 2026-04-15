@@ -51,7 +51,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           if [[ -n "${ENCODED_KEYSTORE}" ]]; then
-            echo "${ENCODED_KEYSTORE}" | base64 --decode > key.jks
+            echo "${ENCODED_KEYSTORE}" | base64 --decode > vFlow.jks
             {
               echo "KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}"
               echo "KEYSTORE_ALIAS=${KEYSTORE_ALIAS}"
