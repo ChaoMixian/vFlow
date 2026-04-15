@@ -331,8 +331,12 @@ class RegionSelectionOverlay(
         } catch (e: Exception) {
             // 忽略
         }
-        screenshotBitmap?.recycle()
+        fab = null
+        cropView = null
+        // WindowManager 移除视图后仍可能发生尾帧绘制，这里不能手动 recycle 位图。
         screenshotBitmap = null
+        screenshotUri = null
+        resultDeferred = null
     }
 
     private fun getOverlayType(): Int {
