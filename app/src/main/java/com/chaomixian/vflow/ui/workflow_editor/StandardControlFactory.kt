@@ -399,7 +399,7 @@ object StandardControlFactory {
         return MaterialAutoCompleteTextView(
             textInputLayout.context,
             null,
-            com.google.android.material.R.attr.autoCompleteTextViewStyle
+            android.R.attr.autoCompleteTextViewStyle
         ).also {
             it.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,

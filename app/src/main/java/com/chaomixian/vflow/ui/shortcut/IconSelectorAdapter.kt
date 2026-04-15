@@ -231,7 +231,7 @@ class IconSelectorAdapter(
             if (isSelected) {
                 val accentColor = MaterialColors.getColor(
                     itemView.context,
-                    com.google.android.material.R.attr.colorPrimary,
+                    android.R.attr.colorPrimary,
                     0
                 )
                 cardView.strokeColor = accentColor

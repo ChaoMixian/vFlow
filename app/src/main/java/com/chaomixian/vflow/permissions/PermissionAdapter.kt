@@ -48,13 +48,13 @@ class PermissionAdapter(
 
         if (isGranted) {
             holder.status.text = context.getString(R.string.permission_status_granted)
-            holder.status.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, 0))
+            holder.status.setTextColor(MaterialColors.getColor(context, android.R.attr.colorPrimary, 0))
             holder.grantButton.text = context.getString(R.string.permission_button_granted)
             holder.grantButton.alpha = 0.7f
             holder.grantButton.setOnClickListener { onGrantClick(permission) }
         } else {
             holder.status.text = context.getString(R.string.permission_status_denied)
-            holder.status.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorError, 0))
+            holder.status.setTextColor(MaterialColors.getColor(context, android.R.attr.colorError, 0))
             holder.grantButton.text = context.getString(R.string.permission_button_grant)
             holder.grantButton.alpha = 1.0f
             holder.grantButton.setOnClickListener { onGrantClick(permission) }

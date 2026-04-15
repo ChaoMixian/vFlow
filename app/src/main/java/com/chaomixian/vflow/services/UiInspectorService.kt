@@ -128,7 +128,7 @@ class UiInspectorService : Service() {
 
     private fun createSelectionFrame() {
         val themedContext = ThemeUtils.createThemedContext(this)
-        val strokeColor = resolveThemeColor(themedContext, com.google.android.material.R.attr.colorError)
+        val strokeColor = resolveThemeColor(themedContext, android.R.attr.colorError)
 
         selectionFrameView = View(this).apply {
             background = GradientDrawable().apply {
@@ -568,7 +568,7 @@ class UiInspectorService : Service() {
             }
             background = RippleDrawable(
                 ColorStateList.valueOf(
-                    resolveThemeColor(context, com.google.android.material.R.attr.colorControlHighlight)
+                    resolveThemeColor(context, android.R.attr.colorControlHighlight)
                 ),
                 backgroundDrawable,
                 null
@@ -690,7 +690,7 @@ class UiInspectorService : Service() {
             setTypeface(null, Typeface.BOLD)
 
             // 使用 Primary 颜色
-            setTextColor(resolveThemeColor(context, com.google.android.material.R.attr.colorPrimary))
+            setTextColor(resolveThemeColor(context, android.R.attr.colorPrimary))
 
             setPadding(48, 32, 48, 16)
         }
@@ -748,7 +748,7 @@ class UiInspectorService : Service() {
             val outValue = TypedValue()
             context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             setBackgroundResource(outValue.resourceId)
-            imageTintList = ColorStateList.valueOf(resolveThemeColor(context, com.google.android.material.R.attr.colorPrimary))
+            imageTintList = ColorStateList.valueOf(resolveThemeColor(context, android.R.attr.colorPrimary))
             setPadding(24, 24, 24, 24)
             setOnClickListener { copyToClipboard(item.label, item.value) }
             if (enableWorkflowInsert && item.insertRequest != null) {

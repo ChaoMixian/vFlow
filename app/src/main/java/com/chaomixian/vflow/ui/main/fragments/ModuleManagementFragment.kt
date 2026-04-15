@@ -244,7 +244,7 @@ class ModuleManagementFragment : Fragment() {
                 view.setPadding(32, 32, 32, 16)
                 val tv = view.findViewById<TextView>(android.R.id.text1)
                 tv.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium)
-                tv.setTextColor(parent.context.resolveThemeColor(com.google.android.material.R.attr.colorPrimary))
+                tv.setTextColor(parent.context.resolveThemeColor(android.R.attr.colorPrimary))
                 object : RecyclerView.ViewHolder(view) {}
             } else {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_module, parent, false)

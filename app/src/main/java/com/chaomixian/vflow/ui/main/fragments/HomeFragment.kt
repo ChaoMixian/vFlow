@@ -270,7 +270,7 @@ class HomeFragment : Fragment() {
             permissionHealthDesc.setTextColor(
                 MaterialColors.getColor(
                     requireContext(),
-                    com.google.android.material.R.attr.colorPrimary,
+                    android.R.attr.colorPrimary,
                     0
                 )
             )
@@ -279,7 +279,7 @@ class HomeFragment : Fragment() {
             permissionHealthDesc.setTextColor(
                 MaterialColors.getColor(
                     requireContext(),
-                    com.google.android.material.R.attr.colorError,
+                    android.R.attr.colorError,
                     0
                 )
             )
@@ -319,11 +319,11 @@ class HomeFragment : Fragment() {
             when (runCatching { log.status }.getOrNull()) {
                 LogStatus.SUCCESS -> {
                     iconView.setImageResource(R.drawable.ic_log_success)
-                    iconView.setColorFilter(MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, 0))
+                    iconView.setColorFilter(MaterialColors.getColor(requireContext(), android.R.attr.colorPrimary, 0))
                 }
                 LogStatus.FAILURE, LogStatus.CANCELLED, null -> {
                     iconView.setImageResource(R.drawable.ic_log_failure)
-                    iconView.setColorFilter(MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorError, 0))
+                    iconView.setColorFilter(MaterialColors.getColor(requireContext(), android.R.attr.colorError, 0))
                 }
             }
 

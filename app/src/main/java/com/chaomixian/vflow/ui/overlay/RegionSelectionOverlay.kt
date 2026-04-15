@@ -272,7 +272,7 @@ class RegionSelectionOverlay(
             }
         }
 
-        val btnCancel = MaterialButton(context, null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
+        val btnCancel = MaterialButton(context, null, android.R.attr.borderlessButtonStyle).apply {
             text = "取消"
             setTextColor(Color.WHITE)
             setOnClickListener {

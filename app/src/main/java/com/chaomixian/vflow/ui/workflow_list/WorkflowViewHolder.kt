@@ -10,6 +10,7 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
@@ -25,9 +26,9 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.ShortcutHelper
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.materialswitch.MaterialSwitch
 import androidx.core.view.isNotEmpty
 
 /**
@@ -37,7 +38,8 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     val name: TextView = itemView.findViewById(R.id.text_view_workflow_name)
     val infoChipGroup: ChipGroup = itemView.findViewById(R.id.chip_group_info)
     val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
-    val executeButton: FloatingActionButton = itemView.findViewById(R.id.button_execute_workflow)
+    val executeButton: MaterialCardView = itemView.findViewById(R.id.button_execute_workflow)
+    private val executeIcon: ImageView = itemView.findViewById(R.id.image_execute_workflow)
     val clickableWrapper: ConstraintLayout = itemView.findViewById(R.id.clickable_wrapper)
     val enabledSwitch: MaterialSwitch = itemView.findViewById(R.id.switch_workflow_enabled)
     val favoriteButton: ImageButton = itemView.findViewById(R.id.button_favorite)
@@ -174,7 +176,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         enabledSwitch.isVisible = hasAutoTriggers
 
         if (isManualTrigger) {
-            executeButton.setImageResource(
+            executeIcon.setImageResource(
                 if (WorkflowExecutor.isRunning(workflow.id)) R.drawable.rounded_pause_24 else R.drawable.ic_play_arrow
             )
             executeButton.setOnClickListener { callbacks.onExecute?.invoke(workflow) }

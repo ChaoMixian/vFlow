@@ -22,7 +22,7 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 class RichTextView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = com.google.android.material.R.attr.editTextStyle
+    defStyleAttr: Int = android.R.attr.editTextStyle
 ) : TextInputEditText(context, attrs, defStyleAttr) {
 
     // 保存 allSteps 引用，用于 insertVariable 方法

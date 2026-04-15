@@ -152,7 +152,7 @@ class AgentOverlayManager(private val context: Context) {
         }
 
         // 取消按钮 (红色警告色)
-        btnCancel = MaterialButton(themedContext, null, com.google.android.material.R.attr.borderlessButtonStyle).apply {
+        btnCancel = MaterialButton(themedContext, null, android.R.attr.borderlessButtonStyle).apply {
             text = "结束"
             setTextColor(Color.RED)
             //iconTint = android.content.res.ColorStateList.valueOf(Color.RED)
