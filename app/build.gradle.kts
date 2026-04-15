@@ -93,7 +93,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material3:material3:1.5.0-alpha17")
 
     // 扩展图标库
     implementation("androidx.compose.material:material-icons-extended")
@@ -139,6 +139,7 @@ dependencies {
 
     // 网络库
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.apache.commons:commons-compress:1.27.1")
 
     // Web 服务器
     implementation("org.nanohttpd:nanohttpd-webserver:2.3.1")

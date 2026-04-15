@@ -22,7 +22,7 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.addCallback
+import androidx.lifecycle.lifecycleScope
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -39,6 +39,9 @@ import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextOverlayContr
 import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextOverlayRequest
 import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextOverlaySession
 import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextResult
+import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextModule
+import com.chaomixian.vflow.speech.SherpaNcnnModelManager
+import com.chaomixian.vflow.speech.SherpaNcnnStreamingRecognizer
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -49,17 +52,22 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
 import java.util.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class OverlayUIActivity : AppCompatActivity() {
-
     private var pendingSpeechRequest: SpeechToTextOverlayRequest? = null
     private var speechSession: SpeechToTextOverlaySession? = null
+    private var speechDialog: AlertDialog? = null
     private var speechRecognizer: SpeechRecognizer? = null
     private var speechTitleView: TextView? = null
     private var speechStatusView: TextView? = null
     private var speechResultEditText: TextInputEditText? = null
     private var speechHoldButton: MaterialButton? = null
     private var speechSendButton: MaterialButton? = null
+    private var sherpaRecognizer: SherpaNcnnStreamingRecognizer? = null
+    private var sherpaPreparationJob: Job? = null
+    private val sherpaModelManager by lazy { SherpaNcnnModelManager(this) }
 
     override fun attachBaseContext(newBase: Context) {
         val languageCode = LocaleManager.getLanguage(newBase)
@@ -93,8 +101,7 @@ class OverlayUIActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            pendingSpeechRequest?.let(::showSpeechToTextOverlay)
-                ?: finishWithSpeechError(getString(R.string.overlay_ui_speech_not_available))
+            continueSpeechToTextRequest()
         } else {
             finishWithSpeechError(getString(R.string.overlay_ui_speech_permission_denied))
         }
@@ -173,7 +180,7 @@ class OverlayUIActivity : AppCompatActivity() {
     private fun handleSpeechToTextRequest(title: String?) {
         val fallbackTitle = title ?: getString(R.string.overlay_ui_speech_default_title)
         pendingSpeechRequest = SpeechToTextOverlayContract.fromIntent(intent, fallbackTitle)
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+        if (usesSystemSpeechRecognizer() && !SpeechRecognizer.isRecognitionAvailable(this)) {
             finishWithSpeechError(getString(R.string.overlay_ui_speech_not_available))
             return
         }
@@ -183,26 +190,46 @@ class OverlayUIActivity : AppCompatActivity() {
             return
         }
 
-        showSpeechToTextOverlay(pendingSpeechRequest ?: SpeechToTextOverlayRequest(fallbackTitle, "auto", false))
+        continueSpeechToTextRequest()
+    }
+
+    private fun continueSpeechToTextRequest() {
+        val request = pendingSpeechRequest
+            ?: return finishWithSpeechError(getString(R.string.overlay_ui_speech_not_available))
+        if (request.engine == SpeechToTextModule.ENGINE_SHERPA_NCNN) {
+            val languageTag = resolvedLocalLanguageTag(request)
+            if (!sherpaModelManager.isModelInstalled(languageTag)) {
+                finishWithSpeechError(sherpaModelMissingMessage())
+                return
+            }
+        }
+        showSpeechToTextOverlay(request)
     }
 
     private fun showSpeechToTextOverlay(request: SpeechToTextOverlayRequest) {
         pendingSpeechRequest = request
         speechSession = SpeechToTextOverlaySession(request).also { it.onOverlayShown() }
+        releaseSherpaRecognizer()
 
-        setContentView(R.layout.activity_overlay_speech_to_text)
-        speechTitleView = findViewById<TextView>(R.id.text_speech_title).apply {
+        dismissSpeechDialog()
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.activity_overlay_speech_to_text, null)
+        speechDialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .setOnCancelListener { cancel() }
+            .show()
+
+        speechTitleView = dialogView.findViewById<TextView>(R.id.text_speech_title).apply {
             text = request.title
         }
-        speechStatusView = findViewById<TextView>(R.id.text_speech_status)
-        speechResultEditText = findViewById(R.id.edit_speech_result)
-        speechHoldButton = findViewById(R.id.button_hold_to_record)
-        speechSendButton = findViewById(R.id.button_speech_send)
+        speechStatusView = dialogView.findViewById(R.id.text_speech_status)
+        speechResultEditText = dialogView.findViewById(R.id.edit_speech_result)
+        speechHoldButton = dialogView.findViewById(R.id.button_hold_to_record)
+        speechSendButton = dialogView.findViewById(R.id.button_speech_send)
         speechResultEditText?.doAfterTextChanged {
             updateSpeechSendButtonState()
         }
 
-        findViewById<MaterialButton>(R.id.button_speech_cancel).setOnClickListener {
+        dialogView.findViewById<MaterialButton>(R.id.button_speech_cancel).setOnClickListener {
             cancel()
         }
         speechSendButton?.setOnClickListener {
@@ -225,11 +252,11 @@ class OverlayUIActivity : AppCompatActivity() {
             }
         }
 
-        onBackPressedDispatcher.addCallback(this) {
-            cancel()
+        if (usesSystemSpeechRecognizer()) {
+            initializeSpeechRecognizer()
+        } else {
+            ensureSherpaRecognizerPrepared()
         }
-
-        initializeSpeechRecognizer()
         renderSpeechUi()
     }
 
@@ -279,6 +306,10 @@ class OverlayUIActivity : AppCompatActivity() {
 
     private fun startSpeechRecognition() {
         val session = speechSession ?: return
+        if (!usesSystemSpeechRecognizer()) {
+            startLocalSpeechRecognition(session)
+            return
+        }
         if (speechRecognizer == null) return
 
         val request: SpeechRecognitionStartRequest = session.startRecognition(
@@ -309,6 +340,19 @@ class OverlayUIActivity : AppCompatActivity() {
 
         renderSpeechUi()
 
+        if (!usesSystemSpeechRecognizer()) {
+            lifecycleScope.launch {
+                try {
+                    val text = sherpaRecognizer?.stopListening().orEmpty()
+                    speechSession?.onResults(text)
+                } catch (e: Exception) {
+                    session.onStopFailure(e.message ?: getString(R.string.error_unknown_error))
+                }
+                renderSpeechUi()
+            }
+            return
+        }
+
         try {
             speechRecognizer?.stopListening()
         } catch (e: Exception) {
@@ -337,6 +381,91 @@ class OverlayUIActivity : AppCompatActivity() {
         speechHoldButton?.text = speechSession?.holdButtonText(this)
         speechHoldButton?.isEnabled = speechSession?.isHoldButtonEnabled() == true
         updateSpeechSendButtonState()
+    }
+
+    private fun startLocalSpeechRecognition(session: SpeechToTextOverlaySession) {
+        val localRecognizer = sherpaRecognizer
+        if (localRecognizer == null || !localRecognizer.isPrepared) {
+            ensureSherpaRecognizerPrepared()
+            return
+        }
+
+        session.startRecognition(
+            currentEditorText = speechResultEditText?.text?.toString().orEmpty(),
+            deviceLanguageTag = Locale.getDefault().toLanguageTag(),
+        ) ?: return
+
+        renderSpeechUi()
+        lifecycleScope.launch {
+            try {
+                localRecognizer.startListening { partialText ->
+                    runOnUiThread {
+                        speechSession?.onPartialResult(partialText)
+                        renderSpeechUi()
+                    }
+                }
+                session.onReadyForSpeech()
+            } catch (e: Exception) {
+                session.onStartFailure(e.message ?: getString(R.string.error_unknown_error))
+            }
+            renderSpeechUi()
+        }
+    }
+
+    private fun ensureSherpaRecognizerPrepared() {
+        val request = pendingSpeechRequest ?: return
+        if (request.engine != SpeechToTextModule.ENGINE_SHERPA_NCNN) return
+        val existingRecognizer = sherpaRecognizer
+        if (existingRecognizer != null && existingRecognizer.isPrepared) {
+            speechSession?.onLocalPreparationFinished()
+            renderSpeechUi()
+            return
+        }
+        if (sherpaPreparationJob?.isActive == true) return
+
+        val resolvedLanguageTag = resolvedLocalLanguageTag(request)
+        if (sherpaRecognizer == null) {
+            sherpaRecognizer = SherpaNcnnStreamingRecognizer(this)
+        }
+
+        speechSession?.onLocalPreparationStarted()
+        renderSpeechUi()
+
+        sherpaPreparationJob = lifecycleScope.launch {
+            try {
+                sherpaRecognizer?.prepare(resolvedLanguageTag)
+                speechSession?.onLocalPreparationFinished()
+            } catch (e: Exception) {
+                speechSession?.onStartFailure(e.message ?: getString(R.string.error_unknown_error))
+            }
+            renderSpeechUi()
+        }
+    }
+
+    private fun usesSystemSpeechRecognizer(): Boolean {
+        return pendingSpeechRequest?.engine != SpeechToTextModule.ENGINE_SHERPA_NCNN
+    }
+
+    private fun resolvedLocalLanguageTag(request: SpeechToTextOverlayRequest): String {
+        return if (request.languageTag == "auto") {
+            Locale.getDefault().toLanguageTag()
+        } else {
+            request.languageTag
+        }
+    }
+
+    private fun sherpaModelMissingMessage(): String {
+        return getString(R.string.overlay_ui_sherpa_model_missing)
+    }
+
+    private fun releaseSherpaRecognizer() {
+        sherpaPreparationJob?.cancel()
+        sherpaPreparationJob = null
+        val recognizer = sherpaRecognizer ?: return
+        sherpaRecognizer = null
+        lifecycleScope.launch {
+            recognizer.release()
+        }
     }
 
     private fun updateSpeechSendButtonState() {
@@ -569,16 +698,19 @@ class OverlayUIActivity : AppCompatActivity() {
     }
 
     private fun complete(result: Any?) {
+        dismissSpeechDialog()
         ExecutionUIService.inputCompletable?.complete(result)
         finish()
     }
 
     private fun cancel() {
+        dismissSpeechDialog()
         ExecutionUIService.inputCompletable?.complete(null)
         finish()
     }
 
     private fun finishWithError() {
+        dismissSpeechDialog()
         ExecutionUIService.inputCompletable?.complete(null)
         finish()
     }
@@ -594,8 +726,24 @@ class OverlayUIActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        dismissSpeechDialog()
         speechRecognizer?.destroy()
         speechRecognizer = null
+        releaseSherpaRecognizer()
         super.onDestroy()
+    }
+
+    private fun dismissSpeechDialog() {
+        val dialog = speechDialog ?: return
+        speechDialog = null
+        dialog.setOnCancelListener(null)
+        if (dialog.isShowing) {
+            dialog.dismiss()
+        }
+        speechTitleView = null
+        speechStatusView = null
+        speechResultEditText = null
+        speechHoldButton = null
+        speechSendButton = null
     }
 }

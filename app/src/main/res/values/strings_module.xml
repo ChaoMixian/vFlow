@@ -139,8 +139,11 @@
     <string name="module_vflow_device_speech_to_text_desc">弹出按住说话的悬浮输入界面，实时将语音转成文本。</string>
     <string name="param_vflow_device_speech_to_text_prompt_name">提示信息</string>
     <string name="param_vflow_device_speech_to_text_prompt_default">按住说话</string>
+    <string name="param_vflow_device_speech_to_text_engine_name">识别引擎</string>
     <string name="param_vflow_device_speech_to_text_language_name">语言</string>
     <string name="param_vflow_device_speech_to_text_prefer_offline_name">离线识别</string>
+    <string name="option_vflow_device_speech_to_text_engine_system">系统语音识别</string>
+    <string name="option_vflow_device_speech_to_text_engine_sherpa_ncnn">本地 Sherpa-ncnn</string>
     <string name="output_vflow_device_speech_to_text_text_name">识别文本</string>
     <string name="error_vflow_device_speech_to_text_service_missing">服务缺失</string>
     <string name="error_vflow_device_speech_to_text_user_cancelled">用户取消</string>

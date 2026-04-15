@@ -10,6 +10,7 @@ import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.InputStyle
+import com.chaomixian.vflow.core.module.InputVisibility
 import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.module.ProgressUpdate
@@ -22,6 +23,10 @@ import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class SpeechToTextModule : BaseModule() {
     companion object {
+        const val ENGINE_SYSTEM = "SYSTEM"
+        const val ENGINE_SHERPA_NCNN = "SHERPA_NCNN"
+        private const val SHERPA_LANGUAGE_INPUT_ID = "sherpaLanguage"
+
         private const val LANGUAGE_AUTO = "auto"
         private const val LANGUAGE_ZH_CN = "zh-CN"
         private const val LANGUAGE_EN_US = "en-US"
@@ -36,7 +41,7 @@ class SpeechToTextModule : BaseModule() {
         private const val LANGUAGE_TH_TH = "th-TH"
         private const val LANGUAGE_AR_SA = "ar-SA"
 
-        private val LANGUAGE_OPTIONS = listOf(
+        private val SYSTEM_LANGUAGE_OPTIONS = listOf(
             LANGUAGE_AUTO,
             LANGUAGE_ZH_CN,
             LANGUAGE_EN_US,
@@ -51,7 +56,90 @@ class SpeechToTextModule : BaseModule() {
             LANGUAGE_TH_TH,
             LANGUAGE_AR_SA
         )
+        private val SHERPA_LANGUAGE_OPTIONS = listOf(
+            LANGUAGE_AUTO,
+            LANGUAGE_ZH_CN,
+            LANGUAGE_EN_US,
+        )
+        private val SYSTEM_LANGUAGE_OPTION_STRING_RES = listOf(
+            R.string.option_vflow_device_text_to_speech_language_auto,
+            R.string.option_vflow_device_text_to_speech_language_zh_cn,
+            R.string.option_vflow_device_text_to_speech_language_en_us,
+            R.string.option_vflow_device_text_to_speech_language_en_gb,
+            R.string.option_vflow_device_text_to_speech_language_ja_jp,
+            R.string.option_vflow_device_text_to_speech_language_ko_kr,
+            R.string.option_vflow_device_text_to_speech_language_fr_fr,
+            R.string.option_vflow_device_text_to_speech_language_de_de,
+            R.string.option_vflow_device_text_to_speech_language_es_es,
+            R.string.option_vflow_device_text_to_speech_language_it_it,
+            R.string.option_vflow_device_text_to_speech_language_ru_ru,
+            R.string.option_vflow_device_text_to_speech_language_th_th,
+            R.string.option_vflow_device_text_to_speech_language_ar_sa,
+        )
+        private val SHERPA_LANGUAGE_OPTION_STRING_RES = listOf(
+            R.string.option_vflow_device_text_to_speech_language_auto,
+            R.string.option_vflow_device_text_to_speech_language_zh_cn,
+            R.string.option_vflow_device_text_to_speech_language_en_us,
+        )
 
+        val ENGINE_INPUT_DEFINITION = InputDefinition(
+            id = "engine",
+            name = "识别引擎",
+            nameStringRes = R.string.param_vflow_device_speech_to_text_engine_name,
+            staticType = ParameterType.ENUM,
+            defaultValue = ENGINE_SYSTEM,
+            options = listOf(ENGINE_SYSTEM, ENGINE_SHERPA_NCNN),
+            optionsStringRes = listOf(
+                R.string.option_vflow_device_speech_to_text_engine_system,
+                R.string.option_vflow_device_speech_to_text_engine_sherpa_ncnn,
+            ),
+            inputStyle = InputStyle.CHIP_GROUP,
+            acceptsMagicVariable = false,
+            legacyValueMap = mapOf(
+                "系统语音识别" to ENGINE_SYSTEM,
+                "System Speech Recognizer" to ENGINE_SYSTEM,
+                "本地 Sherpa-ncnn" to ENGINE_SHERPA_NCNN,
+                "Sherpa-ncnn" to ENGINE_SHERPA_NCNN,
+            ),
+        )
+        val SYSTEM_LANGUAGE_INPUT_DEFINITION = InputDefinition(
+            id = "language",
+            name = "语言",
+            nameStringRes = R.string.param_vflow_device_speech_to_text_language_name,
+            staticType = ParameterType.ENUM,
+            defaultValue = LANGUAGE_AUTO,
+            options = SYSTEM_LANGUAGE_OPTIONS,
+            optionsStringRes = SYSTEM_LANGUAGE_OPTION_STRING_RES,
+            inputStyle = InputStyle.CHIP_GROUP,
+            isFolded = true,
+            acceptsMagicVariable = false,
+            visibility = InputVisibility.whenEquals("engine", ENGINE_SYSTEM),
+        )
+        val SHERPA_LANGUAGE_INPUT_DEFINITION = InputDefinition(
+            id = SHERPA_LANGUAGE_INPUT_ID,
+            name = "语言",
+            nameStringRes = R.string.param_vflow_device_speech_to_text_language_name,
+            staticType = ParameterType.ENUM,
+            defaultValue = LANGUAGE_AUTO,
+            options = SHERPA_LANGUAGE_OPTIONS,
+            optionsStringRes = SHERPA_LANGUAGE_OPTION_STRING_RES,
+            inputStyle = InputStyle.CHIP_GROUP,
+            isFolded = true,
+            acceptsMagicVariable = false,
+            visibility = InputVisibility.whenEquals("engine", ENGINE_SHERPA_NCNN),
+        )
+
+        fun resolveRequestedLanguage(
+            engine: String,
+            rawLanguage: String?,
+            rawSherpaLanguage: String?,
+        ): String {
+            return if (engine == ENGINE_SHERPA_NCNN) {
+                SHERPA_LANGUAGE_INPUT_DEFINITION.normalizeEnumValueOrNull(rawSherpaLanguage) ?: LANGUAGE_AUTO
+            } else {
+                SYSTEM_LANGUAGE_INPUT_DEFINITION.normalizeEnumValueOrNull(rawLanguage) ?: LANGUAGE_AUTO
+            }
+        }
     }
 
     override val id = "vflow.device.speech_to_text"
@@ -72,6 +160,7 @@ class SpeechToTextModule : BaseModule() {
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(
+        ENGINE_INPUT_DEFINITION,
         InputDefinition(
             id = "prompt",
             name = "提示信息",
@@ -81,32 +170,8 @@ class SpeechToTextModule : BaseModule() {
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id)
         ),
-        InputDefinition(
-            id = "language",
-            name = "语言",
-            nameStringRes = R.string.param_vflow_device_speech_to_text_language_name,
-            staticType = ParameterType.ENUM,
-            defaultValue = LANGUAGE_AUTO,
-            options = LANGUAGE_OPTIONS,
-            optionsStringRes = listOf(
-                R.string.option_vflow_device_text_to_speech_language_auto,
-                R.string.option_vflow_device_text_to_speech_language_zh_cn,
-                R.string.option_vflow_device_text_to_speech_language_en_us,
-                R.string.option_vflow_device_text_to_speech_language_en_gb,
-                R.string.option_vflow_device_text_to_speech_language_ja_jp,
-                R.string.option_vflow_device_text_to_speech_language_ko_kr,
-                R.string.option_vflow_device_text_to_speech_language_fr_fr,
-                R.string.option_vflow_device_text_to_speech_language_de_de,
-                R.string.option_vflow_device_text_to_speech_language_es_es,
-                R.string.option_vflow_device_text_to_speech_language_it_it,
-                R.string.option_vflow_device_text_to_speech_language_ru_ru,
-                R.string.option_vflow_device_text_to_speech_language_th_th,
-                R.string.option_vflow_device_text_to_speech_language_ar_sa
-            ),
-            inputStyle = InputStyle.CHIP_GROUP,
-            isFolded = true,
-            acceptsMagicVariable = false
-        ),
+        SYSTEM_LANGUAGE_INPUT_DEFINITION,
+        SHERPA_LANGUAGE_INPUT_DEFINITION,
         InputDefinition(
             id = "preferOffline",
             name = "离线识别",
@@ -115,7 +180,8 @@ class SpeechToTextModule : BaseModule() {
             defaultValue = false,
             inputStyle = InputStyle.SWITCH,
             isFolded = true,
-            acceptsMagicVariable = false
+            acceptsMagicVariable = false,
+            visibility = InputVisibility.whenEquals("engine", ENGINE_SYSTEM),
         )
     )
 
@@ -153,11 +219,13 @@ class SpeechToTextModule : BaseModule() {
 
         val prompt = context.getVariableAsString("prompt")
             .ifBlank { appContext.getString(R.string.param_vflow_device_speech_to_text_prompt_default) }
-        val rawLanguage = context.getVariableAsString("language", LANGUAGE_AUTO)
-        val language = getInputs()
-            .firstOrNull { it.id == "language" }
-            ?.normalizeEnumValueOrNull(rawLanguage)
-            ?: LANGUAGE_AUTO
+        val rawEngine = context.getVariableAsString("engine", ENGINE_SYSTEM)
+        val engine = ENGINE_INPUT_DEFINITION.normalizeEnumValueOrNull(rawEngine) ?: ENGINE_SYSTEM
+        val language = resolveRequestedLanguage(
+            engine = engine,
+            rawLanguage = context.getVariableAsString("language", LANGUAGE_AUTO),
+            rawSherpaLanguage = context.getVariableAsString(SHERPA_LANGUAGE_INPUT_ID),
+        )
         val preferOffline = context.getVariableAsBoolean("preferOffline") ?: false
 
         onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_device_speech_to_text_waiting)))
@@ -166,7 +234,8 @@ class SpeechToTextModule : BaseModule() {
             SpeechToTextOverlayRequest(
                 title = prompt,
                 languageTag = language,
-                forceOffline = preferOffline
+                forceOffline = preferOffline,
+                engine = engine,
             )
         )
             ?: return ExecutionResult.Failure(
@@ -202,19 +271,24 @@ data class SpeechToTextResult(
 data class SpeechToTextOverlayRequest(
     val title: String,
     val languageTag: String,
-    val forceOffline: Boolean
+    val forceOffline: Boolean,
+    val engine: String = SpeechToTextModule.ENGINE_SYSTEM,
 )
 
 object SpeechToTextOverlayContract {
     const val REQUEST_TYPE = "speech_to_text"
     const val EXTRA_LANGUAGE = "speech_language"
     const val EXTRA_FORCE_OFFLINE = "speech_force_offline"
+    const val EXTRA_ENGINE = "speech_engine"
 
     fun fromIntent(intent: Intent, fallbackTitle: String): SpeechToTextOverlayRequest {
         return SpeechToTextOverlayRequest(
             title = intent.getStringExtra("title") ?: fallbackTitle,
             languageTag = intent.getStringExtra(EXTRA_LANGUAGE) ?: "auto",
-            forceOffline = intent.getBooleanExtra(EXTRA_FORCE_OFFLINE, false)
+            forceOffline = intent.getBooleanExtra(EXTRA_FORCE_OFFLINE, false),
+            engine = SpeechToTextModule.ENGINE_INPUT_DEFINITION.normalizeEnumValueOrNull(
+                intent.getStringExtra(EXTRA_ENGINE)
+            ) ?: SpeechToTextModule.ENGINE_SYSTEM,
         )
     }
 }
@@ -222,6 +296,7 @@ object SpeechToTextOverlayContract {
 private enum class SpeechToTextStatus {
     IDLE,
     IDLE_OFFLINE,
+    PREPARING_LOCAL,
     RECORDING,
     PROCESSING,
     READY,
@@ -253,6 +328,7 @@ class SpeechToTextOverlaySession(
     private var partialText = ""
     private var isRecording = false
     private var isAwaitingResult = false
+    private var isPreparingLocalRecognizer = false
     private var shouldCommitPartialOnClientError = false
     private var offlineFallbackActivated = false
     private var attemptedOffline = false
@@ -265,11 +341,23 @@ class SpeechToTextOverlaySession(
     }
 
     fun onReadyForSpeech() {
+        isPreparingLocalRecognizer = false
         status = SpeechToTextStatus.RECORDING
     }
 
+    fun onLocalPreparationStarted() {
+        isPreparingLocalRecognizer = true
+        status = SpeechToTextStatus.PREPARING_LOCAL
+    }
+
+    fun onLocalPreparationFinished() {
+        isPreparingLocalRecognizer = false
+        unknownErrorDetail = null
+        status = idleStatus()
+    }
+
     fun startRecognition(currentEditorText: String, deviceLanguageTag: String): SpeechRecognitionStartRequest? {
-        if (isRecording || isAwaitingResult) return null
+        if (isRecording || isAwaitingResult || isPreparingLocalRecognizer) return null
 
         committedText = currentEditorText.trim()
         partialText = ""
@@ -312,6 +400,7 @@ class SpeechToTextOverlaySession(
         partialText = ""
         isRecording = false
         isAwaitingResult = false
+        isPreparingLocalRecognizer = false
         shouldCommitPartialOnClientError = false
         unknownErrorDetail = null
         status = if (currentText().isBlank()) {
@@ -332,6 +421,7 @@ class SpeechToTextOverlaySession(
         partialText = ""
         isRecording = false
         isAwaitingResult = false
+        isPreparingLocalRecognizer = false
         shouldCommitPartialOnClientError = false
         unknownErrorDetail = null
 
@@ -367,6 +457,7 @@ class SpeechToTextOverlaySession(
     fun onStartFailure(detail: String) {
         isRecording = false
         isAwaitingResult = false
+        isPreparingLocalRecognizer = false
         shouldCommitPartialOnClientError = false
         unknownErrorDetail = detail
         status = SpeechToTextStatus.ERROR_UNKNOWN
@@ -375,6 +466,7 @@ class SpeechToTextOverlaySession(
     fun onStopFailure(detail: String) {
         isRecording = false
         isAwaitingResult = false
+        isPreparingLocalRecognizer = false
         shouldCommitPartialOnClientError = false
         unknownErrorDetail = detail
         status = SpeechToTextStatus.ERROR_UNKNOWN
@@ -391,13 +483,18 @@ class SpeechToTextOverlaySession(
     }
 
     fun canSend(currentEditorText: String = currentText()): Boolean {
-        return currentEditorText.trim().isNotBlank() && !isRecording && !isAwaitingResult
+        return currentEditorText.trim().isNotBlank() &&
+            !isRecording &&
+            !isAwaitingResult &&
+            !isPreparingLocalRecognizer
     }
 
     fun isHoldButtonEnabled(): Boolean = !isAwaitingResult
+        && !isPreparingLocalRecognizer
 
     fun holdButtonText(context: Context): String {
         return when {
+            isPreparingLocalRecognizer -> context.getString(R.string.overlay_ui_speech_button_preparing)
             isRecording -> context.getString(R.string.overlay_ui_speech_button_release)
             isAwaitingResult -> context.getString(R.string.overlay_ui_speech_button_processing)
             else -> context.getString(R.string.overlay_ui_speech_button_hold)
@@ -408,6 +505,7 @@ class SpeechToTextOverlaySession(
         return when (status) {
             SpeechToTextStatus.IDLE -> context.getString(R.string.overlay_ui_speech_status_idle)
             SpeechToTextStatus.IDLE_OFFLINE -> context.getString(R.string.overlay_ui_speech_status_idle_offline)
+            SpeechToTextStatus.PREPARING_LOCAL -> context.getString(R.string.overlay_ui_speech_status_initializing_local)
             SpeechToTextStatus.RECORDING -> context.getString(R.string.overlay_ui_speech_status_recording)
             SpeechToTextStatus.PROCESSING -> context.getString(R.string.overlay_ui_speech_status_processing)
             SpeechToTextStatus.READY -> context.getString(R.string.overlay_ui_speech_status_ready)
@@ -466,7 +564,7 @@ class SpeechToTextOverlaySession(
     }
 
     private fun idleStatus(): SpeechToTextStatus {
-        return if (shouldUseOfflineRecognition()) {
+        return if (request.engine == SpeechToTextModule.ENGINE_SHERPA_NCNN || shouldUseOfflineRecognition()) {
             SpeechToTextStatus.IDLE_OFFLINE
         } else {
             SpeechToTextStatus.IDLE

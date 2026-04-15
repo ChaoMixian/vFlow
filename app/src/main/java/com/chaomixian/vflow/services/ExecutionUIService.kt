@@ -189,6 +189,7 @@ class ExecutionUIService(private val context: Context) {
             putExtra("title", request.title)
             putExtra(SpeechToTextOverlayContract.EXTRA_LANGUAGE, request.languageTag)
             putExtra(SpeechToTextOverlayContract.EXTRA_FORCE_OFFLINE, request.forceOffline)
+            putExtra(SpeechToTextOverlayContract.EXTRA_ENGINE, request.engine)
         }
         return startActivityAndAwaitResult(
             intent,

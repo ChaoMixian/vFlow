@@ -8,7 +8,10 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.format.Formatter
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,7 +28,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,10 +52,14 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
@@ -56,16 +67,23 @@ import androidx.core.net.toUri
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.integration.feishu.FeishuModuleConfig
 import com.chaomixian.vflow.integration.feishu.FeishuOAuthManager
+import com.chaomixian.vflow.speech.SherpaNcnnDownloadSource
+import com.chaomixian.vflow.speech.SherpaNcnnModelManager
+import com.chaomixian.vflow.speech.SherpaNcnnModelProgress
+import com.chaomixian.vflow.speech.SherpaNcnnModelSpec
+import com.chaomixian.vflow.speech.SherpaNcnnModelStage
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.launch
 
 class ModuleConfigActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_INITIAL_SECTION = "initial_section"
         const val SECTION_BACKTAP = "backtap"
+        const val SECTION_SHERPA = "sherpa"
         const val SECTION_FEISHU = "feishu"
         const val PREFS_NAME = "module_config_prefs"
         const val KEY_BACKTAP_SENSITIVITY = "backtap_sensitivity"
@@ -125,11 +143,12 @@ class ModuleConfigActivity : BaseActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences(ModuleConfigActivity.PREFS_NAME, Context.MODE_PRIVATE)
+    val appPrefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
     val scrollState = rememberScrollState()
 
     var sensitivityValue by remember {
@@ -157,8 +176,56 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
         FeishuModuleConfig.getUserAuthorizationStatus(context)
     }
     val redirectUri = remember { FeishuOAuthManager.getRedirectUri() }
+    val sherpaModelManager = remember { SherpaNcnnModelManager(context) }
+    val sherpaCoroutineScope = rememberCoroutineScope()
+    var sherpaModelsVersion by remember { mutableIntStateOf(0) }
+    var sherpaBusyAction by remember { mutableStateOf<String?>(null) }
+    var sherpaProgress by remember { mutableStateOf<SherpaNcnnModelProgress?>(null) }
+    var sherpaStatusMessage by remember { mutableStateOf<String?>(null) }
+    val sherpaInstalledSpecs = remember(sherpaModelsVersion) {
+        SherpaNcnnModelManager.SUPPORTED_MODEL_SPECS.filter(sherpaModelManager::isModelInstalled)
+    }
+    var sherpaDownloadSource by remember {
+        mutableStateOf(
+            SherpaNcnnDownloadSource.fromPreferenceValue(
+                appPrefs.getString(SherpaNcnnModelManager.DOWNLOAD_SOURCE_PREF_KEY, null)
+            )
+        )
+    }
     val isAuthInProgress = authUiState.phase == FeishuOAuthManager.Phase.WaitingForAuthorization ||
             authUiState.phase == FeishuOAuthManager.Phase.ExchangingToken
+
+    val sherpaImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        sherpaBusyAction = "import"
+        sherpaProgress = null
+        sherpaStatusMessage = context.getString(R.string.module_config_sherpa_status_starting_import)
+        sherpaCoroutineScope.launch {
+            try {
+                val result = sherpaModelManager.importModelArchive(uri) { progress ->
+                    sherpaCoroutineScope.launch {
+                        sherpaProgress = progress
+                        sherpaStatusMessage = formatSherpaModuleConfigProgress(context, progress)
+                    }
+                }
+                sherpaModelsVersion++
+                sherpaStatusMessage = context.getString(
+                    R.string.module_config_sherpa_status_installed,
+                    sherpaDisplayName(context, result.modelSpec)
+                )
+            } catch (e: Exception) {
+                sherpaStatusMessage = context.getString(
+                    R.string.module_config_sherpa_status_failed,
+                    e.message ?: context.getString(R.string.error_unknown_error)
+                )
+            } finally {
+                sherpaBusyAction = null
+                sherpaProgress = null
+            }
+        }
+    }
 
     val sliderPosition = ((sensitivityValue - ModuleConfigActivity.MIN_SENSITIVITY_VALUE) /
             (ModuleConfigActivity.MAX_SENSITIVITY_VALUE - ModuleConfigActivity.MIN_SENSITIVITY_VALUE) * 10)
@@ -262,6 +329,256 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
+                }
+            }
+
+            val renderSherpaSection: @Composable () -> Unit = {
+                ModuleConfigSection(title = stringResource(R.string.module_config_section_sherpa)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.module_config_sherpa_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = stringResource(
+                                R.string.module_config_sherpa_source_current,
+                                sherpaDownloadSourceLabel(context, sherpaDownloadSource)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                        ) {
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_sherpa_source_direct),
+                                selected = sherpaDownloadSource == SherpaNcnnDownloadSource.DIRECT,
+                                onSelected = {
+                                    sherpaDownloadSource = SherpaNcnnDownloadSource.DIRECT
+                                    appPrefs.edit {
+                                        putString(
+                                            SherpaNcnnModelManager.DOWNLOAD_SOURCE_PREF_KEY,
+                                            sherpaDownloadSource.preferenceValue
+                                        )
+                                    }
+                                },
+                                enabled = sherpaBusyAction == null,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                            )
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_sherpa_source_ghproxy_net),
+                                selected = sherpaDownloadSource == SherpaNcnnDownloadSource.GHPROXY_NET,
+                                onSelected = {
+                                    sherpaDownloadSource = SherpaNcnnDownloadSource.GHPROXY_NET
+                                    appPrefs.edit {
+                                        putString(
+                                            SherpaNcnnModelManager.DOWNLOAD_SOURCE_PREF_KEY,
+                                            sherpaDownloadSource.preferenceValue
+                                        )
+                                    }
+                                },
+                                enabled = sherpaBusyAction == null,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                            )
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_sherpa_source_gh_proxy_com),
+                                selected = sherpaDownloadSource == SherpaNcnnDownloadSource.GH_PROXY_COM,
+                                onSelected = {
+                                    sherpaDownloadSource = SherpaNcnnDownloadSource.GH_PROXY_COM
+                                    appPrefs.edit {
+                                        putString(
+                                            SherpaNcnnModelManager.DOWNLOAD_SOURCE_PREF_KEY,
+                                            sherpaDownloadSource.preferenceValue
+                                        )
+                                    }
+                                },
+                                enabled = sherpaBusyAction == null,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { sherpaImportLauncher.launch(arrayOf("*/*")) },
+                                enabled = sherpaBusyAction == null,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.module_config_sherpa_import))
+                            }
+                            TextButton(
+                                onClick = {
+                                    try {
+                                        context.startActivity(
+                                            Intent(
+                                                Intent.ACTION_VIEW,
+                                                SherpaNcnnModelManager.MODELS_DOWNLOAD_PAGE_URL.toUri()
+                                            )
+                                        )
+                                    } catch (e: Exception) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(
+                                                R.string.module_config_sherpa_status_failed,
+                                                e.message ?: context.getString(R.string.error_unknown_error)
+                                            ),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                },
+                                enabled = sherpaBusyAction == null,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.module_config_sherpa_open_page))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (sherpaBusyAction != null || sherpaProgress != null || !sherpaStatusMessage.isNullOrBlank()) {
+                            sherpaStatusMessage?.let { message ->
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (sherpaBusyAction != null || sherpaProgress != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val progress = sherpaProgress
+                                if (progress?.totalBytes != null && progress.totalBytes > 0L &&
+                                    (progress.stage == SherpaNcnnModelStage.DOWNLOADING || progress.stage == SherpaNcnnModelStage.IMPORTING)
+                                ) {
+                                    LinearProgressIndicator(
+                                        progress = { (progress.downloadedBytes.toFloat() / progress.totalBytes.toFloat()).coerceIn(0f, 1f) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else {
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        SherpaModelSpecCard(
+                            context = context,
+                            spec = SherpaNcnnModelManager.SMALL_BILINGUAL_MODEL,
+                            installed = sherpaInstalledSpecs.contains(SherpaNcnnModelManager.SMALL_BILINGUAL_MODEL),
+                            busy = sherpaBusyAction != null,
+                            onDownload = {
+                                sherpaBusyAction = SherpaNcnnModelManager.SMALL_BILINGUAL_MODEL.key
+                                sherpaProgress = null
+                                sherpaStatusMessage = context.getString(R.string.module_config_sherpa_status_starting_download)
+                                sherpaCoroutineScope.launch {
+                                    try {
+                                        sherpaModelManager.downloadModel(
+                                            SherpaNcnnModelManager.SMALL_BILINGUAL_MODEL,
+                                            sherpaDownloadSource
+                                        ) { progress ->
+                                            sherpaCoroutineScope.launch {
+                                                sherpaProgress = progress
+                                                sherpaStatusMessage = formatSherpaModuleConfigProgress(context, progress)
+                                            }
+                                        }
+                                        sherpaModelsVersion++
+                                        sherpaStatusMessage = context.getString(
+                                            R.string.module_config_sherpa_status_installed,
+                                            sherpaDisplayName(context, SherpaNcnnModelManager.SMALL_BILINGUAL_MODEL)
+                                        )
+                                    } catch (e: Exception) {
+                                        sherpaStatusMessage = context.getString(
+                                            R.string.module_config_sherpa_status_failed,
+                                            e.message ?: context.getString(R.string.error_unknown_error)
+                                        )
+                                    } finally {
+                                        sherpaBusyAction = null
+                                        sherpaProgress = null
+                                    }
+                                }
+                            },
+                            onDelete = {
+                                sherpaModelManager.uninstallModel(SherpaNcnnModelManager.SMALL_BILINGUAL_MODEL)
+                                sherpaModelsVersion++
+                                sherpaStatusMessage = context.getString(
+                                    R.string.module_config_sherpa_status_deleted,
+                                    sherpaDisplayName(context, SherpaNcnnModelManager.SMALL_BILINGUAL_MODEL)
+                                )
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        SherpaModelSpecCard(
+                            context = context,
+                            spec = SherpaNcnnModelManager.ENGLISH_MODEL,
+                            installed = sherpaInstalledSpecs.contains(SherpaNcnnModelManager.ENGLISH_MODEL),
+                            busy = sherpaBusyAction != null,
+                            onDownload = {
+                                sherpaBusyAction = SherpaNcnnModelManager.ENGLISH_MODEL.key
+                                sherpaProgress = null
+                                sherpaStatusMessage = context.getString(R.string.module_config_sherpa_status_starting_download)
+                                sherpaCoroutineScope.launch {
+                                    try {
+                                        sherpaModelManager.downloadModel(
+                                            SherpaNcnnModelManager.ENGLISH_MODEL,
+                                            sherpaDownloadSource
+                                        ) { progress ->
+                                            sherpaCoroutineScope.launch {
+                                                sherpaProgress = progress
+                                                sherpaStatusMessage = formatSherpaModuleConfigProgress(context, progress)
+                                            }
+                                        }
+                                        sherpaModelsVersion++
+                                        sherpaStatusMessage = context.getString(
+                                            R.string.module_config_sherpa_status_installed,
+                                            sherpaDisplayName(context, SherpaNcnnModelManager.ENGLISH_MODEL)
+                                        )
+                                    } catch (e: Exception) {
+                                        sherpaStatusMessage = context.getString(
+                                            R.string.module_config_sherpa_status_failed,
+                                            e.message ?: context.getString(R.string.error_unknown_error)
+                                        )
+                                    } finally {
+                                        sherpaBusyAction = null
+                                        sherpaProgress = null
+                                    }
+                                }
+                            },
+                            onDelete = {
+                                sherpaModelManager.uninstallModel(SherpaNcnnModelManager.ENGLISH_MODEL)
+                                sherpaModelsVersion++
+                                sherpaStatusMessage = context.getString(
+                                    R.string.module_config_sherpa_status_deleted,
+                                    sherpaDisplayName(context, SherpaNcnnModelManager.ENGLISH_MODEL)
+                                )
+                            }
+                        )
                     }
                 }
             }
@@ -451,13 +768,17 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
             }
 
             renderBacktapSection()
+            renderSherpaSection()
             renderFeishuSection()
         }
     }
 
     LaunchedEffect(initialSection, scrollState.maxValue) {
-        if (initialSection == ModuleConfigActivity.SECTION_FEISHU && scrollState.maxValue > 0) {
-            scrollState.animateScrollTo(scrollState.maxValue)
+        if (scrollState.maxValue > 0) {
+            when (initialSection) {
+                ModuleConfigActivity.SECTION_SHERPA -> scrollState.animateScrollTo(scrollState.maxValue / 2)
+                ModuleConfigActivity.SECTION_FEISHU -> scrollState.animateScrollTo(scrollState.maxValue)
+            }
         }
     }
 }
@@ -485,6 +806,88 @@ fun ModuleConfigSection(
                 modifier = Modifier.padding(8.dp)
             ) {
                 content()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SherpaSourceButton(
+    text: String,
+    selected: Boolean,
+    onSelected: () -> Unit,
+    enabled: Boolean,
+    shapes: androidx.compose.material3.ToggleButtonShapes,
+    modifier: Modifier = Modifier,
+) {
+    ToggleButton(
+        checked = selected,
+        onCheckedChange = { checked ->
+            if (checked && !selected) {
+                onSelected()
+            }
+        },
+        enabled = enabled,
+        shapes = shapes,
+        modifier = modifier,
+    ) {
+        Text(text)
+    }
+}
+
+@Composable
+private fun SherpaModelSpecCard(
+    context: Context,
+    spec: SherpaNcnnModelSpec,
+    installed: Boolean,
+    busy: Boolean,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = sherpaDisplayName(context, spec),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = context.getString(R.string.module_config_sherpa_archive_name, spec.archiveName),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = context.getString(
+                    if (installed) R.string.module_config_sherpa_model_installed else R.string.module_config_sherpa_model_missing
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onDownload,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.module_config_sherpa_download_model))
+                }
+                OutlinedButton(
+                    onClick = onDelete,
+                    enabled = installed && !busy,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(stringResource(R.string.module_config_sherpa_delete_model))
+                }
             }
         }
     }
@@ -553,4 +956,64 @@ private fun formatFeishuTime(timestampMillis: Long): String {
         return "未知"
     }
     return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(timestampMillis))
+}
+
+private fun sherpaDownloadSourceLabel(context: Context, source: SherpaNcnnDownloadSource): String {
+    return when (source) {
+        SherpaNcnnDownloadSource.DIRECT -> context.getString(R.string.module_config_sherpa_source_direct)
+        SherpaNcnnDownloadSource.GHPROXY_NET -> context.getString(R.string.module_config_sherpa_source_ghproxy_net)
+        SherpaNcnnDownloadSource.GH_PROXY_COM -> context.getString(R.string.module_config_sherpa_source_gh_proxy_com)
+    }
+}
+
+private fun sherpaDisplayName(context: Context, spec: SherpaNcnnModelSpec): String {
+    return when (spec) {
+        SherpaNcnnModelManager.SMALL_BILINGUAL_MODEL -> context.getString(R.string.module_config_sherpa_model_bilingual)
+        SherpaNcnnModelManager.ENGLISH_MODEL -> context.getString(R.string.module_config_sherpa_model_english)
+        else -> spec.archiveName
+    }
+}
+
+private fun formatSherpaModuleConfigProgress(
+    context: Context,
+    progress: SherpaNcnnModelProgress,
+): String {
+    return when (progress.stage) {
+        SherpaNcnnModelStage.DOWNLOADING -> formatSherpaTransferStatus(
+            context,
+            progress,
+            R.string.module_config_sherpa_status_downloading,
+            R.string.module_config_sherpa_status_downloading_progress,
+        )
+        SherpaNcnnModelStage.IMPORTING -> formatSherpaTransferStatus(
+            context,
+            progress,
+            R.string.module_config_sherpa_status_importing,
+            R.string.module_config_sherpa_status_importing_progress,
+        )
+        SherpaNcnnModelStage.VERIFYING -> context.getString(R.string.module_config_sherpa_status_verifying)
+        SherpaNcnnModelStage.EXTRACTING -> context.getString(R.string.module_config_sherpa_status_extracting)
+    }
+}
+
+private fun formatSherpaTransferStatus(
+    context: Context,
+    progress: SherpaNcnnModelProgress,
+    indeterminateRes: Int,
+    determinateRes: Int,
+): String {
+    val totalBytes = progress.totalBytes
+    if (totalBytes == null || totalBytes <= 0L) {
+        return context.getString(
+            indeterminateRes,
+            Formatter.formatShortFileSize(context, progress.downloadedBytes)
+        )
+    }
+    val percent = ((progress.downloadedBytes * 100L) / totalBytes).toInt().coerceIn(0, 100)
+    return context.getString(
+        determinateRes,
+        percent,
+        Formatter.formatShortFileSize(context, progress.downloadedBytes),
+        Formatter.formatShortFileSize(context, totalBytes),
+    )
 }
