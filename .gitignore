@@ -14,6 +14,8 @@
 .cxx
 local.properties
 *.jks
+signing.properties
+debug-signing.properties
 
 # Kotlin compilation cache and errors
 .kotlin/
