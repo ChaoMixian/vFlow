@@ -23,9 +23,28 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            val keystoreFile = rootProject.file("debug.keystore")
+            val signingPropsFile = rootProject.file("debug-signing.properties")
+
+            if (keystoreFile.exists()) {
+                val props = Properties()
+                if (signingPropsFile.exists()) {
+                    props.load(FileInputStream(signingPropsFile))
+                }
+
+                storeFile = keystoreFile
+                storePassword = props.getProperty("KEYSTORE_PASSWORD", "android")
+                keyAlias = props.getProperty("KEYSTORE_ALIAS", "androiddebugkey")
+                keyPassword = props.getProperty("KEY_PASSWORD", "android")
+            } else {
+                println("ℹ️ Debug 签名文件未找到，继续使用 AGP 默认 Debug 签名")
+            }
+        }
+
         create("release") {
-            val keystoreFile = file("../key.jks")
-            val signingPropsFile = file("../signing.properties")
+            val keystoreFile = rootProject.file("key.jks")
+            val signingPropsFile = rootProject.file("signing.properties")
 
             if (keystoreFile.exists() && signingPropsFile.exists()) {
                 val props = Properties()
@@ -42,6 +61,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            if (rootProject.file("debug.keystore").exists()) {
+                signingConfig = signingConfigs.getByName("debug")
+            }
+        }
+
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -49,10 +74,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (file("../signing.properties").exists()) {
+            if (rootProject.file("key.jks").exists() && rootProject.file("signing.properties").exists()) {
                 signingConfig = signingConfigs.getByName("release")
             } else {
-                println("⚠️ signing.properties 未找到")
+                println("⚠️ Release 签名文件未找到")
             }
         }
     }

@@ -66,12 +66,10 @@ jobs:
         env:
           ENCODED_DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
         run: |
-          mkdir -p "${HOME}/.android"
-
           if [[ -n "${ENCODED_DEBUG_KEYSTORE}" ]]; then
-            echo "${ENCODED_DEBUG_KEYSTORE}" | base64 --decode > "${HOME}/.android/debug.keystore"
+            echo "${ENCODED_DEBUG_KEYSTORE}" | base64 --decode > debug.keystore
           elif [[ -f debug.keystore ]]; then
-            cp debug.keystore "${HOME}/.android/debug.keystore"
+            echo "Using repository debug.keystore"
           else
             echo "Custom debug keystore not configured; debug APKs will use the runner default debug signing."
           fi
