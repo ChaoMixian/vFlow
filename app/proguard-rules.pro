@@ -175,3 +175,7 @@
 -keep class org.opencv.** { *; }
 -keepclassmembers class org.opencv.** { *; }
 -dontwarn org.opencv.**
+
+# 26. Sherpa-ncnn JNI 通过固定字段名读取 Kotlin 配置对象
+# release 混淆改名后会在 GetObjectField 时出现 fid == null
+-keep class com.k2fsa.sherpa.ncnn.** { *; }
