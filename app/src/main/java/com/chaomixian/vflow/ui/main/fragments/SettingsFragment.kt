@@ -29,10 +29,12 @@ import com.chaomixian.vflow.ui.settings.CrashReportsActivity
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.api.ApiService
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.slider.Slider
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
@@ -40,6 +42,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * “设置” Fragment。
@@ -84,6 +88,29 @@ class SettingsFragment : Fragment() {
             prefs.edit { putBoolean("dynamicColorEnabled", isChecked) }
             requireActivity().recreate() // 重新创建Activity以应用主题更改
         }
+
+        val appScaleSlider = view.findViewById<Slider>(R.id.slider_app_scale)
+        val appScaleValue = view.findViewById<TextView>(R.id.text_app_scale_value)
+        var lastSavedScale = AppearanceManager.getAppScale(requireContext())
+        appScaleSlider.value = lastSavedScale * 100f
+        appScaleValue.text = getString(
+            R.string.settings_app_scale_value,
+            (lastSavedScale * 100).roundToInt()
+        )
+        appScaleSlider.addOnChangeListener { _, value, _ ->
+            appScaleValue.text = getString(R.string.settings_app_scale_value, value.roundToInt())
+        }
+        appScaleSlider.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) = Unit
+
+            override fun onStopTrackingTouch(slider: Slider) {
+                val newScale = AppearanceManager.clampAppScale(slider.value / 100f)
+                if (abs(newScale - lastSavedScale) < 0.001f) return
+                prefs.edit { putFloat(AppearanceManager.KEY_APP_SCALE, newScale) }
+                lastSavedScale = newScale
+                requireActivity().recreate()
+            }
+        })
 
         // 进度通知开关逻辑
         val progressNotificationSwitch = view.findViewById<MaterialSwitch>(R.id.switch_progress_notification)

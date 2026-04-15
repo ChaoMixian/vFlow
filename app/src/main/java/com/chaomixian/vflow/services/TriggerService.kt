@@ -27,6 +27,7 @@ import com.chaomixian.vflow.core.workflow.module.triggers.handlers.ITriggerHandl
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.KeyEventTriggerHandler
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.ui.common.AppearanceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -61,7 +62,8 @@ class TriggerService : Service() {
 
     override fun attachBaseContext(newBase: Context) {
         val languageCode = LocaleManager.getLanguage(newBase)
-        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        val localizedContext = LocaleManager.applyLanguage(newBase, languageCode)
+        val context = AppearanceManager.applyDisplayScale(localizedContext)
         super.attachBaseContext(context)
     }
 

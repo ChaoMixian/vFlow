@@ -43,6 +43,7 @@ import com.chaomixian.vflow.core.workflow.module.system.SpeechToTextModule
 import com.chaomixian.vflow.speech.SherpaNcnnModelManager
 import com.chaomixian.vflow.speech.SherpaNcnnStreamingRecognizer
 import com.chaomixian.vflow.services.ExecutionUIService
+import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
@@ -71,7 +72,8 @@ class OverlayUIActivity : AppCompatActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val languageCode = LocaleManager.getLanguage(newBase)
-        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        val localizedContext = LocaleManager.applyLanguage(newBase, languageCode)
+        val context = AppearanceManager.applyDisplayScale(localizedContext)
         super.attachBaseContext(context)
     }
 

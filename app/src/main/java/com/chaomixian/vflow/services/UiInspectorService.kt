@@ -34,6 +34,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.locale.LocaleManager
+import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.chaomixian.vflow.ui.workflow_editor.inspector.WorkflowInspectorInsertRequest
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -89,7 +90,8 @@ class UiInspectorService : Service() {
 
     override fun attachBaseContext(newBase: Context) {
         val languageCode = LocaleManager.getLanguage(newBase)
-        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        val localizedContext = LocaleManager.applyLanguage(newBase, languageCode)
+        val context = AppearanceManager.applyDisplayScale(localizedContext)
         super.attachBaseContext(context)
     }
 

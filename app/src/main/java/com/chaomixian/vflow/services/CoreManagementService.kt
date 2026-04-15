@@ -12,6 +12,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.utils.StorageManager
+import com.chaomixian.vflow.ui.common.AppearanceManager
 import kotlinx.coroutines.*
 import java.io.File
 
@@ -47,7 +48,8 @@ class CoreManagementService : Service() {
 
     override fun attachBaseContext(newBase: android.content.Context) {
         val languageCode = LocaleManager.getLanguage(newBase)
-        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        val localizedContext = LocaleManager.applyLanguage(newBase, languageCode)
+        val context = AppearanceManager.applyDisplayScale(localizedContext)
         super.attachBaseContext(context)
     }
 

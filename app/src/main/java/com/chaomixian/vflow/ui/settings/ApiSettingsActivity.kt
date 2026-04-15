@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import com.chaomixian.vflow.api.ApiService
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -23,7 +24,8 @@ class ApiSettingsActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val languageCode = LocaleManager.getLanguage(newBase)
-        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        val localizedContext = LocaleManager.applyLanguage(newBase, languageCode)
+        val context = AppearanceManager.applyDisplayScale(localizedContext)
         super.attachBaseContext(context)
     }
 

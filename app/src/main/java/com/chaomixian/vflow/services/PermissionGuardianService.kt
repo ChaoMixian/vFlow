@@ -15,6 +15,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.settings.PermissionGuardianActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -86,7 +87,8 @@ class PermissionGuardianService : Service() {
 
     override fun attachBaseContext(newBase: Context) {
         val languageCode = LocaleManager.getLanguage(newBase)
-        val context = LocaleManager.applyLanguage(newBase, languageCode)
+        val localizedContext = LocaleManager.applyLanguage(newBase, languageCode)
+        val context = AppearanceManager.applyDisplayScale(localizedContext)
         super.attachBaseContext(context)
     }
 
