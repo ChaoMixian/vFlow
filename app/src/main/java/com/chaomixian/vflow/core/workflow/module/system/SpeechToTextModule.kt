@@ -7,6 +7,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.ActionMetadata
 import com.chaomixian.vflow.core.module.BaseModule
+import com.chaomixian.vflow.core.module.EditorAction
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.InputStyle
@@ -19,6 +20,7 @@ import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ExecutionUIService
+import com.chaomixian.vflow.ui.settings.ModuleConfigActivity
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class SpeechToTextModule : BaseModule() {
@@ -158,6 +160,19 @@ class SpeechToTextModule : BaseModule() {
         PermissionManager.OVERLAY,
         PermissionManager.MICROPHONE
     )
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(
+            EditorAction(labelStringRes = R.string.module_editor_action_configure_sherpa_model) { context ->
+                context.startActivity(
+                    ModuleConfigActivity.createIntent(
+                        context,
+                        ModuleConfigActivity.SECTION_SHERPA
+                    )
+                )
+            }
+        )
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         ENGINE_INPUT_DEFINITION,
