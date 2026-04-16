@@ -7,6 +7,7 @@ import android.service.quicksettings.TileService
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.TileManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.services.AccessibilityKeepAliveManager
 import com.chaomixian.vflow.ui.main.MainActivity
 
 /**
@@ -22,6 +23,7 @@ abstract class BaseWorkflowTileService : TileService() {
 
     override fun onStartListening() {
         super.onStartListening()
+        AccessibilityKeepAliveManager.onQuickSettingsPanelVisible(applicationContext)
         updateTileState()
     }
 

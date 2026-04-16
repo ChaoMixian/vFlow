@@ -20,10 +20,10 @@
     <string name="settings_section_general">General Settings</string>
     <string name="settings_switch_progress_notification">Show Execution Progress Notification</string>
     <string name="settings_switch_progress_notification_desc">Display a progress notification in the status bar when workflows run in the background.</string>
-    <string name="settings_switch_force_keep_alive">Force Keep Alive (Shizuku)</string>
-    <string name="settings_switch_force_keep_alive_desc">Experimental feature. Automatically restart the service when killed by the system through Shizuku daemon. May increase battery usage.</string>
+    <string name="settings_switch_force_keep_alive">Force Keep Alive</string>
+    <string name="settings_switch_force_keep_alive_desc">Experimental feature. Pulling down Quick Settings can trigger recovery; if Shizuku is available, it adds extra process guarding. May increase battery usage.</string>
     <string name="settings_module_config">Module Config</string>
-    <string name="settings_module_config_desc">Configure runtime parameters for various modules, such as back tap trigger sensitivity.</string>
+    <string name="settings_module_config_desc">Configure runtime parameters for various modules.</string>
     <string name="settings_switch_api_enabled">Enable Remote API</string>
     <string name="settings_switch_api_enabled_desc">Allow workflow access and control through LAN</string>
 
@@ -355,6 +355,8 @@
     <string name="settings_switch_auto_accessibility_unavailable">Auto Enable Accessibility Service (Shizuku/Root not authorized)</string>
     <string name="settings_toast_shizuku_watcher_started">Shizuku watcher started</string>
     <string name="settings_toast_shizuku_watcher_stopped">Shizuku watcher stopped</string>
+    <string name="settings_toast_force_keep_alive_enabled">Force keep alive enabled</string>
+    <string name="settings_toast_force_keep_alive_disabled">Force keep alive disabled</string>
     <string name="settings_toast_auto_accessibility_enabled">Auto accessibility service enabled</string>
     <string name="settings_toast_auto_accessibility_disabled">Auto accessibility service disabled</string>
     <string name="settings_toast_operation_failed">Operation failed, please check Shell permissions</string>
@@ -1083,7 +1085,7 @@
     <string name="onboarding_verify_button">Verify Permission and Authorize</string>
     <string name="onboarding_permission_verified">Permission Verified</string>
     <string name="onboarding_auto_enable_acc">Auto-enable when service is down (Recommended)</string>
-    <string name="onboarding_force_keep_alive">Enable daemon process (Prevent background kill)</string>
+    <string name="onboarding_force_keep_alive">Enable force keep alive</string>
     <string name="onboarding_continue_without_shell">Continue (Without Shell)</string>
     <string name="onboarding_save_and_continue">Save Config and Continue</string>
     <string name="onboarding_shizuku_not_running">Shizuku not running or not authorized</string>

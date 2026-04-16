@@ -40,6 +40,7 @@ class AccessibilityService : AccessibilityService() {
         interruptCountSinceConnect = 0
         loggedFirstEventAfterConnect = false
         ServiceStateBus.onAccessibilityServiceConnected(this, this)
+        AccessibilityKeepAliveManager.onAccessibilityConnected(this)
         logLifecycle(
             level = "D",
             event = "onServiceConnected",
@@ -112,6 +113,7 @@ class AccessibilityService : AccessibilityService() {
             return
         }
         serviceStateCleaned = true
+        AccessibilityKeepAliveManager.onAccessibilityDisconnected(this)
         ServiceStateBus.onAccessibilityServiceDisconnected(this)
         serviceScope.cancel()
         logLifecycle(level = "W", event = event, extra = extra)

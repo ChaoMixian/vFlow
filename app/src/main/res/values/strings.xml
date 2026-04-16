@@ -20,10 +20,10 @@
     <string name="settings_section_general">通用设置</string>
     <string name="settings_switch_progress_notification">显示执行进度通知</string>
     <string name="settings_switch_progress_notification_desc">当工作流在后台执行时，在状态栏显示一个进度通知。</string>
-    <string name="settings_switch_force_keep_alive">强制保活 (Shizuku)</string>
-    <string name="settings_switch_force_keep_alive_desc">实验性功能。通过 Shizuku 守护进程，在服务被系统意外终止时自动重启。可能会增加耗电。</string>
+    <string name="settings_switch_force_keep_alive">强制保活</string>
+    <string name="settings_switch_force_keep_alive_desc">实验性功能。启用后可通过下拉通知栏触发恢复；若 Shizuku 可用，则提供额外进程守护。可能会增加耗电。</string>
     <string name="settings_module_config">模块配置</string>
-    <string name="settings_module_config_desc">配置各个模块的运行参数，如轻敲背面触发器的灵敏度。</string>
+    <string name="settings_module_config_desc">配置各个模块的运行参数。</string>
     <string name="settings_switch_api_enabled">启用远程API</string>
     <string name="settings_switch_api_enabled_desc">允许通过局域网访问和控制工作流</string>
 
@@ -363,6 +363,8 @@
     <string name="settings_switch_auto_accessibility_unavailable">自动开启无障碍服务 (Shizuku/Root 未授权)</string>
     <string name="settings_toast_shizuku_watcher_started">Shizuku 守护已开启</string>
     <string name="settings_toast_shizuku_watcher_stopped">Shizuku 守护已关闭</string>
+    <string name="settings_toast_force_keep_alive_enabled">强制保活已开启</string>
+    <string name="settings_toast_force_keep_alive_disabled">强制保活已关闭</string>
     <string name="settings_toast_auto_accessibility_enabled">自动无障碍服务已开启</string>
     <string name="settings_toast_auto_accessibility_disabled">自动无障碍服务已关闭</string>
     <string name="settings_toast_operation_failed">操作失败，请检查Shell权限</string>
@@ -1083,7 +1085,7 @@
     <string name="onboarding_verify_button">检测权限并授权</string>
     <string name="onboarding_permission_verified">权限验证通过</string>
     <string name="onboarding_auto_enable_acc">服务关闭时自动开启 (推荐)</string>
-    <string name="onboarding_force_keep_alive">启用守护进程 (防杀后台)</string>
+    <string name="onboarding_force_keep_alive">启用强制保活</string>
     <string name="onboarding_continue_without_shell">继续 (不使用 Shell)</string>
     <string name="onboarding_save_and_continue">保存配置并继续</string>
     <string name="onboarding_shizuku_not_running">Shizuku 未运行或未授权</string>

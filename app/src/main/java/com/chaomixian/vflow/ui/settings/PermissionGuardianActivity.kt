@@ -28,6 +28,7 @@ import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.locale.toast
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.services.AccessibilityKeepAliveManager
 import com.chaomixian.vflow.services.PermissionGuardianService
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
@@ -330,6 +331,7 @@ class GuardianViewModel : androidx.lifecycle.ViewModel() {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean("accessibilityGuardEnabled", enabled).apply()
         _guardianEnabled.value = enabled
+        AccessibilityKeepAliveManager.refreshOverlayForCurrentService(context)
 
         if (enabled) {
             DebugLogger.i(TAG, "启动权限守护服务")

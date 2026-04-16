@@ -133,11 +133,11 @@ class SettingsFragment : Fragment() {
 
         // 强制保活开关逻辑
         val forceKeepAliveSwitch = view.findViewById<MaterialSwitch>(R.id.switch_force_keep_alive)
-        if (ShellManager.isShizukuActive(requireContext())) {
-            forceKeepAliveSwitch.isEnabled = true
-            forceKeepAliveSwitch.isChecked = prefs.getBoolean("forceKeepAliveEnabled", false)
-            forceKeepAliveSwitch.setOnCheckedChangeListener { _, isChecked ->
-                prefs.edit { putBoolean("forceKeepAliveEnabled", isChecked) }
+        forceKeepAliveSwitch.isEnabled = true
+        forceKeepAliveSwitch.isChecked = prefs.getBoolean("forceKeepAliveEnabled", false)
+        forceKeepAliveSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean("forceKeepAliveEnabled", isChecked) }
+            if (ShellManager.isShizukuActive(requireContext())) {
                 if (isChecked) {
                     ShellManager.startWatcher(requireContext())
                     requireContext().toast(R.string.settings_toast_shizuku_watcher_started)
@@ -145,11 +145,14 @@ class SettingsFragment : Fragment() {
                     ShellManager.stopWatcher(requireContext())
                     requireContext().toast(R.string.settings_toast_shizuku_watcher_stopped)
                 }
+            } else {
+                val toastRes = if (isChecked) {
+                    R.string.settings_toast_force_keep_alive_enabled
+                } else {
+                    R.string.settings_toast_force_keep_alive_disabled
+                }
+                requireContext().toast(toastRes)
             }
-        } else {
-            forceKeepAliveSwitch.isEnabled = false
-            forceKeepAliveSwitch.isChecked = false
-            forceKeepAliveSwitch.text = getString(R.string.settings_switch_keep_alive_unavailable, getString(R.string.settings_switch_force_keep_alive))
         }
 
         // 自动开启无障碍服务开关逻辑
