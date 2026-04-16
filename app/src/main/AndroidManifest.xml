@@ -102,7 +102,9 @@
             android:exported="false"
             android:taskAffinity=""
             android:excludeFromRecents="true"
-            android:noHistory="true" />
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
 
         <activity
             android:name=".ui.common.ShortcutExecutorActivity"

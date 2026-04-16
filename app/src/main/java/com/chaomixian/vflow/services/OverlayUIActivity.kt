@@ -18,6 +18,7 @@ import android.speech.SpeechRecognizer
 import android.text.InputType
 import android.view.LayoutInflater
 import android.view.MotionEvent
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
@@ -114,7 +115,14 @@ class OverlayUIActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyDynamicTheme()
+        configureWindowForLockScreen()
         handleIntent()
+    }
+
+    private fun configureWindowForLockScreen() {
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     private fun handleIntent() {
