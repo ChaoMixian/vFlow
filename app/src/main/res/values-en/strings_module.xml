@@ -161,6 +161,8 @@
     <string name="param_vflow_device_speech_to_text_engine_name">Recognition Engine</string>
     <string name="param_vflow_device_speech_to_text_language_name">Language</string>
     <string name="param_vflow_device_speech_to_text_prefer_offline_name">Offline Recognition</string>
+    <string name="param_vflow_device_speech_to_text_auto_start_name">Auto Start</string>
+    <string name="param_vflow_device_speech_to_text_auto_send_name">Auto Send</string>
     <string name="option_vflow_device_speech_to_text_engine_system">System Speech Recognizer</string>
     <string name="option_vflow_device_speech_to_text_engine_sherpa_ncnn">Local Sherpa-ncnn</string>
     <string name="output_vflow_device_speech_to_text_text_name">Transcript</string>

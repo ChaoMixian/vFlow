@@ -190,6 +190,8 @@ class ExecutionUIService(private val context: Context) {
             putExtra(SpeechToTextOverlayContract.EXTRA_LANGUAGE, request.languageTag)
             putExtra(SpeechToTextOverlayContract.EXTRA_FORCE_OFFLINE, request.forceOffline)
             putExtra(SpeechToTextOverlayContract.EXTRA_ENGINE, request.engine)
+            putExtra(SpeechToTextOverlayContract.EXTRA_AUTO_START, request.autoStart)
+            putExtra(SpeechToTextOverlayContract.EXTRA_AUTO_SEND, request.autoSend)
         }
         return startActivityAndAwaitResult(
             intent,

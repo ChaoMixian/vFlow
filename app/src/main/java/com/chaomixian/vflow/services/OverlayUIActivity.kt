@@ -60,6 +60,7 @@ import kotlinx.coroutines.launch
 class OverlayUIActivity : AppCompatActivity() {
     private var pendingSpeechRequest: SpeechToTextOverlayRequest? = null
     private var speechSession: SpeechToTextOverlaySession? = null
+    private var speechAutoStartPending = false
     private var speechDialog: AlertDialog? = null
     private var speechRecognizer: SpeechRecognizer? = null
     private var speechTitleView: TextView? = null
@@ -218,6 +219,7 @@ class OverlayUIActivity : AppCompatActivity() {
 
     private fun showSpeechToTextOverlay(request: SpeechToTextOverlayRequest) {
         pendingSpeechRequest = request
+        speechAutoStartPending = request.autoStart
         speechSession = SpeechToTextOverlaySession(request).also { it.onOverlayShown() }
         releaseSherpaRecognizer()
 
@@ -268,6 +270,7 @@ class OverlayUIActivity : AppCompatActivity() {
             ensureSherpaRecognizerPrepared()
         }
         renderSpeechUi()
+        maybeAutoStartSpeechRecognition()
     }
 
     private fun initializeSpeechRecognizer() {
@@ -302,6 +305,7 @@ class OverlayUIActivity : AppCompatActivity() {
                 override fun onResults(results: Bundle?) {
                     speechSession?.onResults(extractBestSpeechResult(results))
                     renderSpeechUi()
+                    maybeAutoSendSpeechResult()
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {
@@ -314,18 +318,17 @@ class OverlayUIActivity : AppCompatActivity() {
         }
     }
 
-    private fun startSpeechRecognition() {
-        val session = speechSession ?: return
+    private fun startSpeechRecognition(): Boolean {
+        val session = speechSession ?: return false
         if (!usesSystemSpeechRecognizer()) {
-            startLocalSpeechRecognition(session)
-            return
+            return startLocalSpeechRecognition(session)
         }
-        if (speechRecognizer == null) return
+        if (speechRecognizer == null) return false
 
         val request: SpeechRecognitionStartRequest = session.startRecognition(
             currentEditorText = speechResultEditText?.text?.toString().orEmpty(),
             deviceLanguageTag = Locale.getDefault().toLanguageTag()
-        ) ?: return
+        ) ?: return false
 
         renderSpeechUi()
 
@@ -338,9 +341,11 @@ class OverlayUIActivity : AppCompatActivity() {
 
         try {
             speechRecognizer?.startListening(recognizerIntent)
+            return true
         } catch (e: Exception) {
             session.onStartFailure(e.message ?: getString(R.string.error_unknown_error))
             renderSpeechUi()
+            return false
         }
     }
 
@@ -359,6 +364,7 @@ class OverlayUIActivity : AppCompatActivity() {
                     session.onStopFailure(e.message ?: getString(R.string.error_unknown_error))
                 }
                 renderSpeechUi()
+                maybeAutoSendSpeechResult()
             }
             return
         }
@@ -393,33 +399,43 @@ class OverlayUIActivity : AppCompatActivity() {
         updateSpeechSendButtonState()
     }
 
-    private fun startLocalSpeechRecognition(session: SpeechToTextOverlaySession) {
+    private fun startLocalSpeechRecognition(session: SpeechToTextOverlaySession): Boolean {
         val localRecognizer = sherpaRecognizer
         if (localRecognizer == null || !localRecognizer.isPrepared) {
             ensureSherpaRecognizerPrepared()
-            return
+            return false
         }
 
         session.startRecognition(
             currentEditorText = speechResultEditText?.text?.toString().orEmpty(),
             deviceLanguageTag = Locale.getDefault().toLanguageTag(),
-        ) ?: return
+        ) ?: return false
 
         renderSpeechUi()
         lifecycleScope.launch {
             try {
-                localRecognizer.startListening { partialText ->
-                    runOnUiThread {
-                        speechSession?.onPartialResult(partialText)
-                        renderSpeechUi()
+                localRecognizer.startListening(
+                    onPartialResult = { partialText ->
+                        runOnUiThread {
+                            speechSession?.onPartialResult(partialText)
+                            renderSpeechUi()
+                        }
+                    },
+                    onEndpoint = {
+                        runOnUiThread {
+                            if (pendingSpeechRequest?.autoStart == true) {
+                                stopSpeechRecognition()
+                            }
+                        }
                     }
-                }
+                )
                 session.onReadyForSpeech()
             } catch (e: Exception) {
                 session.onStartFailure(e.message ?: getString(R.string.error_unknown_error))
             }
             renderSpeechUi()
         }
+        return true
     }
 
     private fun ensureSherpaRecognizerPrepared() {
@@ -449,6 +465,7 @@ class OverlayUIActivity : AppCompatActivity() {
                 speechSession?.onStartFailure(e.message ?: getString(R.string.error_unknown_error))
             }
             renderSpeechUi()
+            maybeAutoStartSpeechRecognition()
         }
     }
 
@@ -481,6 +498,20 @@ class OverlayUIActivity : AppCompatActivity() {
     private fun updateSpeechSendButtonState() {
         val currentEditorText = speechResultEditText?.text?.toString().orEmpty()
         speechSendButton?.isEnabled = speechSession?.canSend(currentEditorText) == true
+    }
+
+    private fun maybeAutoStartSpeechRecognition() {
+        if (!speechAutoStartPending) return
+        if (startSpeechRecognition()) {
+            speechAutoStartPending = false
+        }
+    }
+
+    private fun maybeAutoSendSpeechResult() {
+        val text = speechResultEditText?.text?.toString()?.trim().orEmpty()
+        if (speechSession?.shouldAutoSend(text) == true) {
+            complete(SpeechToTextResult(text = text))
+        }
     }
 
     /**

@@ -28,6 +28,8 @@ class SpeechToTextModule : BaseModule() {
         const val ENGINE_SYSTEM = "SYSTEM"
         const val ENGINE_SHERPA_NCNN = "SHERPA_NCNN"
         private const val SHERPA_LANGUAGE_INPUT_ID = "sherpaLanguage"
+        private const val AUTO_START_INPUT_ID = "autoStart"
+        private const val AUTO_SEND_INPUT_ID = "autoSend"
 
         private const val LANGUAGE_AUTO = "auto"
         private const val LANGUAGE_ZH_CN = "zh-CN"
@@ -130,6 +132,26 @@ class SpeechToTextModule : BaseModule() {
             acceptsMagicVariable = false,
             visibility = InputVisibility.whenEquals("engine", ENGINE_SHERPA_NCNN),
         )
+        val AUTO_START_INPUT_DEFINITION = InputDefinition(
+            id = AUTO_START_INPUT_ID,
+            name = "自动开始",
+            nameStringRes = R.string.param_vflow_device_speech_to_text_auto_start_name,
+            staticType = ParameterType.BOOLEAN,
+            defaultValue = false,
+            inputStyle = InputStyle.SWITCH,
+            isFolded = true,
+            acceptsMagicVariable = false,
+        )
+        val AUTO_SEND_INPUT_DEFINITION = InputDefinition(
+            id = AUTO_SEND_INPUT_ID,
+            name = "自动发送",
+            nameStringRes = R.string.param_vflow_device_speech_to_text_auto_send_name,
+            staticType = ParameterType.BOOLEAN,
+            defaultValue = false,
+            inputStyle = InputStyle.SWITCH,
+            isFolded = true,
+            acceptsMagicVariable = false,
+        )
 
         fun resolveRequestedLanguage(
             engine: String,
@@ -197,7 +219,9 @@ class SpeechToTextModule : BaseModule() {
             isFolded = true,
             acceptsMagicVariable = false,
             visibility = InputVisibility.whenEquals("engine", ENGINE_SYSTEM),
-        )
+        ),
+        AUTO_START_INPUT_DEFINITION,
+        AUTO_SEND_INPUT_DEFINITION,
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -242,6 +266,8 @@ class SpeechToTextModule : BaseModule() {
             rawSherpaLanguage = context.getVariableAsString(SHERPA_LANGUAGE_INPUT_ID),
         )
         val preferOffline = context.getVariableAsBoolean("preferOffline") ?: false
+        val autoStart = context.getVariableAsBoolean(AUTO_START_INPUT_ID) ?: false
+        val autoSend = context.getVariableAsBoolean(AUTO_SEND_INPUT_ID) ?: false
 
         onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_device_speech_to_text_waiting)))
 
@@ -251,6 +277,8 @@ class SpeechToTextModule : BaseModule() {
                 languageTag = language,
                 forceOffline = preferOffline,
                 engine = engine,
+                autoStart = autoStart,
+                autoSend = autoSend,
             )
         )
             ?: return ExecutionResult.Failure(
@@ -288,6 +316,8 @@ data class SpeechToTextOverlayRequest(
     val languageTag: String,
     val forceOffline: Boolean,
     val engine: String = SpeechToTextModule.ENGINE_SYSTEM,
+    val autoStart: Boolean = false,
+    val autoSend: Boolean = false,
 )
 
 object SpeechToTextOverlayContract {
@@ -295,6 +325,8 @@ object SpeechToTextOverlayContract {
     const val EXTRA_LANGUAGE = "speech_language"
     const val EXTRA_FORCE_OFFLINE = "speech_force_offline"
     const val EXTRA_ENGINE = "speech_engine"
+    const val EXTRA_AUTO_START = "speech_auto_start"
+    const val EXTRA_AUTO_SEND = "speech_auto_send"
 
     fun fromIntent(intent: Intent, fallbackTitle: String): SpeechToTextOverlayRequest {
         return SpeechToTextOverlayRequest(
@@ -304,6 +336,8 @@ object SpeechToTextOverlayContract {
             engine = SpeechToTextModule.ENGINE_INPUT_DEFINITION.normalizeEnumValueOrNull(
                 intent.getStringExtra(EXTRA_ENGINE)
             ) ?: SpeechToTextModule.ENGINE_SYSTEM,
+            autoStart = intent.getBooleanExtra(EXTRA_AUTO_START, false),
+            autoSend = intent.getBooleanExtra(EXTRA_AUTO_SEND, false),
         )
     }
 }
@@ -502,6 +536,10 @@ class SpeechToTextOverlaySession(
             !isRecording &&
             !isAwaitingResult &&
             !isPreparingLocalRecognizer
+    }
+
+    fun shouldAutoSend(currentEditorText: String = currentText()): Boolean {
+        return request.autoSend && canSend(currentEditorText)
     }
 
     fun isHoldButtonEnabled(): Boolean = !isAwaitingResult

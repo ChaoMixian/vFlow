@@ -1,6 +1,8 @@
 package com.chaomixian.vflow.core.workflow.module.system
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SpeechToTextModuleTest {
@@ -39,5 +41,46 @@ class SpeechToTextModuleTest {
         )
 
         assertEquals("auto", resolved)
+    }
+
+    @Test
+    fun `auto start and auto send inputs stay folded`() {
+        assertTrue(SpeechToTextModule.AUTO_START_INPUT_DEFINITION.isFolded)
+        assertTrue(SpeechToTextModule.AUTO_SEND_INPUT_DEFINITION.isFolded)
+    }
+
+    @Test
+    fun `overlay request defaults auto options to false`() {
+        val request = SpeechToTextOverlayRequest(
+            title = "语音转文字",
+            languageTag = "auto",
+            forceOffline = false,
+        )
+
+        assertFalse(request.autoStart)
+        assertFalse(request.autoSend)
+    }
+
+    @Test
+    fun `overlay session auto send waits for final result`() {
+        val session = SpeechToTextOverlaySession(
+            SpeechToTextOverlayRequest(
+                title = "语音转文字",
+                languageTag = "auto",
+                forceOffline = false,
+                autoSend = true,
+            )
+        )
+
+        session.onOverlayShown()
+        session.startRecognition(currentEditorText = "", deviceLanguageTag = "zh-CN")
+        session.onPartialResult("你好")
+        assertFalse(session.shouldAutoSend())
+
+        session.onEndOfSpeech()
+        assertFalse(session.shouldAutoSend())
+
+        session.onResults("你好")
+        assertTrue(session.shouldAutoSend())
     }
 }

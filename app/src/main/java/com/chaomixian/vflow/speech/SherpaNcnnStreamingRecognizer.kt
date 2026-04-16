@@ -71,7 +71,10 @@ class SherpaNcnnStreamingRecognizer(context: Context) {
         )
     }
 
-    suspend fun startListening(onPartialResult: (String) -> Unit): Boolean = stateMutex.withLock {
+    suspend fun startListening(
+        onPartialResult: (String) -> Unit,
+        onEndpoint: (() -> Unit)? = null,
+    ): Boolean = stateMutex.withLock {
         val activeRecognizer = recognizer ?: throw IllegalStateException("Sherpa recognizer is not prepared")
         if (recordingJob?.isActive == true) {
             return false
@@ -110,6 +113,7 @@ class SherpaNcnnStreamingRecognizer(context: Context) {
         audioRecord = record
         recordingJob = scope.launch {
             val buffer = ShortArray(minBufferSize)
+            var endpointDelivered = false
             try {
                 while (isActive) {
                     val read = record.read(buffer, 0, buffer.size)
@@ -128,6 +132,10 @@ class SherpaNcnnStreamingRecognizer(context: Context) {
                         latestText = text
                         lastEmittedText = text
                         onPartialResult(text)
+                    }
+                    if (!endpointDelivered && activeRecognizer.isEndpoint()) {
+                        endpointDelivered = true
+                        onEndpoint?.invoke()
                     }
                 }
             } catch (e: Exception) {
