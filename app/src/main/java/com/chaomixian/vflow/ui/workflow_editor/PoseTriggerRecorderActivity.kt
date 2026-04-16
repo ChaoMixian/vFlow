@@ -13,6 +13,7 @@ import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.workflow.module.triggers.GravityVector
 import com.chaomixian.vflow.core.workflow.module.triggers.PoseAngles
 import com.chaomixian.vflow.core.workflow.module.triggers.PoseTriggerMath
 import com.chaomixian.vflow.ui.common.BaseActivity
@@ -21,17 +22,24 @@ import com.google.android.material.button.MaterialButton
 
 class PoseTriggerRecorderActivity : BaseActivity(), SensorEventListener {
     companion object {
+        const val EXTRA_INCLUDE_GRAVITY_ACCELERATION = "pose_include_gravity_acceleration"
         const val EXTRA_RESULT_AZIMUTH = "pose_result_azimuth"
         const val EXTRA_RESULT_PITCH = "pose_result_pitch"
         const val EXTRA_RESULT_ROLL = "pose_result_roll"
+        const val EXTRA_RESULT_GRAVITY_X = "pose_result_gravity_x"
+        const val EXTRA_RESULT_GRAVITY_Y = "pose_result_gravity_y"
+        const val EXTRA_RESULT_GRAVITY_Z = "pose_result_gravity_z"
 
-        fun createIntent(context: Context): Intent {
-            return Intent(context, PoseTriggerRecorderActivity::class.java)
+        fun createIntent(context: Context, includeGravityAcceleration: Boolean): Intent {
+            return Intent(context, PoseTriggerRecorderActivity::class.java).apply {
+                putExtra(EXTRA_INCLUDE_GRAVITY_ACCELERATION, includeGravityAcceleration)
+            }
         }
     }
 
     private lateinit var sensorManager: SensorManager
     private var rotationSensor: Sensor? = null
+    private var gravitySensor: Sensor? = null
 
     private lateinit var statusText: TextView
     private lateinit var currentPoseText: TextView
@@ -39,17 +47,23 @@ class PoseTriggerRecorderActivity : BaseActivity(), SensorEventListener {
     private lateinit var sampleCountText: TextView
     private lateinit var cancelButton: MaterialButton
 
+    private var includeGravityAcceleration = false
     private var latestPose: PoseAngles? = null
+    private var latestGravity: GravityVector? = null
     private var isRecording = false
     private val recordedSamples = mutableListOf<PoseAngles>()
+    private val recordedGravitySamples = mutableListOf<GravityVector>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_pose_trigger_recorder)
 
+        includeGravityAcceleration = intent.getBooleanExtra(EXTRA_INCLUDE_GRAVITY_ACCELERATION, false)
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
+            ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         statusText = findViewById(R.id.text_record_status)
         currentPoseText = findViewById(R.id.text_current_pose)
@@ -70,6 +84,11 @@ class PoseTriggerRecorderActivity : BaseActivity(), SensorEventListener {
             finish()
             return
         }
+        if (includeGravityAcceleration && gravitySensor == null) {
+            Toast.makeText(this, R.string.pose_trigger_gravity_sensor_unavailable, Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
         renderUi()
     }
@@ -78,6 +97,11 @@ class PoseTriggerRecorderActivity : BaseActivity(), SensorEventListener {
         super.onResume()
         rotationSensor?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+        }
+        if (includeGravityAcceleration) {
+            gravitySensor?.let {
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+            }
         }
     }
 
@@ -99,9 +123,21 @@ class PoseTriggerRecorderActivity : BaseActivity(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || event.values.isEmpty()) return
-        latestPose = PoseTriggerMath.fromRotationVector(event.values)
-        if (isRecording) {
-            recordedSamples += latestPose!!
+        when (event.sensor.type) {
+            Sensor.TYPE_ROTATION_VECTOR -> {
+                latestPose = PoseTriggerMath.fromRotationVector(event.values)
+                if (isRecording) {
+                    recordedSamples += latestPose!!
+                }
+            }
+            Sensor.TYPE_GRAVITY, Sensor.TYPE_ACCELEROMETER -> {
+                if (!includeGravityAcceleration) return
+                latestGravity = PoseTriggerMath.fromGravityValues(event.values)
+                if (isRecording) {
+                    recordedGravitySamples += latestGravity!!
+                }
+            }
+            else -> return
         }
         renderUi()
     }
@@ -112,14 +148,26 @@ class PoseTriggerRecorderActivity : BaseActivity(), SensorEventListener {
         if (!isRecording) {
             isRecording = true
             recordedSamples.clear()
+            recordedGravitySamples.clear()
             renderUi()
             return
         }
 
         val averagedPose = PoseTriggerMath.average(recordedSamples)
             ?: latestPose
+        val averagedGravity = if (includeGravityAcceleration) {
+            PoseTriggerMath.averageGravity(recordedGravitySamples) ?: latestGravity
+        } else {
+            null
+        }
         if (averagedPose == null) {
             Toast.makeText(this, R.string.pose_trigger_record_empty, Toast.LENGTH_SHORT).show()
+            isRecording = false
+            renderUi()
+            return
+        }
+        if (includeGravityAcceleration && averagedGravity == null) {
+            Toast.makeText(this, R.string.pose_trigger_gravity_record_empty, Toast.LENGTH_SHORT).show()
             isRecording = false
             renderUi()
             return
@@ -129,6 +177,11 @@ class PoseTriggerRecorderActivity : BaseActivity(), SensorEventListener {
             putExtra(EXTRA_RESULT_AZIMUTH, averagedPose.azimuth)
             putExtra(EXTRA_RESULT_PITCH, averagedPose.pitch)
             putExtra(EXTRA_RESULT_ROLL, averagedPose.roll)
+            if (averagedGravity != null) {
+                putExtra(EXTRA_RESULT_GRAVITY_X, averagedGravity.x)
+                putExtra(EXTRA_RESULT_GRAVITY_Y, averagedGravity.y)
+                putExtra(EXTRA_RESULT_GRAVITY_Z, averagedGravity.z)
+            }
         }
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
@@ -149,7 +202,12 @@ class PoseTriggerRecorderActivity : BaseActivity(), SensorEventListener {
             R.string.pose_trigger_record_sample_count,
             recordedSamples.size
         )
-        currentPoseText.text = latestPose?.format()
-            ?: getString(R.string.pose_trigger_current_pose_waiting)
+        currentPoseText.text = buildString {
+            append(latestPose?.format() ?: getString(R.string.pose_trigger_current_pose_waiting))
+            if (includeGravityAcceleration) {
+                append('\n')
+                append(latestGravity?.format() ?: getString(R.string.pose_trigger_current_gravity_waiting))
+            }
+        }
     }
 }

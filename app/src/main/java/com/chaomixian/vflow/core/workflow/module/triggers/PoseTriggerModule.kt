@@ -21,6 +21,8 @@ class PoseTriggerModule : BaseModule() {
     companion object {
         const val DEFAULT_MATCH_THRESHOLD = 90.0
         const val DEFAULT_POSE_RECORDED = false
+        const val DEFAULT_INCLUDE_GRAVITY_ACCELERATION = false
+        const val DEFAULT_GRAVITY_RECORDED = false
     }
 
     override val id = "vflow.trigger.pose"
@@ -75,6 +77,42 @@ class PoseTriggerModule : BaseModule() {
             isHidden = true,
             nameStringRes = R.string.param_vflow_trigger_pose_match_threshold_name,
         ),
+        InputDefinition(
+            id = "includeGravityAcceleration",
+            name = "包含重力加速度",
+            staticType = ParameterType.BOOLEAN,
+            defaultValue = DEFAULT_INCLUDE_GRAVITY_ACCELERATION,
+            isHidden = true,
+            nameStringRes = R.string.param_vflow_trigger_pose_include_gravity_name,
+        ),
+        InputDefinition(
+            id = "gravityRecorded",
+            name = "已录制重力",
+            staticType = ParameterType.BOOLEAN,
+            defaultValue = DEFAULT_GRAVITY_RECORDED,
+            isHidden = true,
+        ),
+        InputDefinition(
+            id = "targetGravityX",
+            name = "目标重力 X 轴",
+            staticType = ParameterType.NUMBER,
+            defaultValue = 0.0,
+            isHidden = true,
+        ),
+        InputDefinition(
+            id = "targetGravityY",
+            name = "目标重力 Y 轴",
+            staticType = ParameterType.NUMBER,
+            defaultValue = 0.0,
+            isHidden = true,
+        ),
+        InputDefinition(
+            id = "targetGravityZ",
+            name = "目标重力 Z 轴",
+            staticType = ParameterType.NUMBER,
+            defaultValue = 0.0,
+            isHidden = true,
+        ),
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
@@ -117,16 +155,31 @@ class PoseTriggerModule : BaseModule() {
         )
         val threshold = ((step.parameters["matchThreshold"] as? Number)?.toDouble()
             ?: DEFAULT_MATCH_THRESHOLD).roundToInt()
+        val includeGravityAcceleration =
+            step.parameters["includeGravityAcceleration"] as? Boolean ?: DEFAULT_INCLUDE_GRAVITY_ACCELERATION
+        val gravityRecorded = step.parameters["gravityRecorded"] as? Boolean ?: DEFAULT_GRAVITY_RECORDED
         val thresholdPill = PillUtil.Pill("$threshold%", "matchThreshold")
         val posePill = PillUtil.Pill(targetPose.format(), "pose")
-        return PillUtil.buildSpannable(
-            context,
-            context.getString(R.string.summary_vflow_trigger_pose_prefix),
-            " ",
-            posePill,
-            " · ",
-            thresholdPill,
-        )
+        val parts = mutableListOf<Any>()
+        parts += context.getString(R.string.summary_vflow_trigger_pose_prefix)
+        parts += " "
+        parts += posePill
+        parts += " · "
+        parts += thresholdPill
+        if (includeGravityAcceleration) {
+            parts += " · "
+            parts += PillUtil.Pill(
+                context.getString(
+                    if (gravityRecorded) {
+                        R.string.summary_vflow_trigger_pose_gravity_enabled
+                    } else {
+                        R.string.summary_vflow_trigger_pose_gravity_pending
+                    }
+                ),
+                "includeGravityAcceleration"
+            )
+        }
+        return PillUtil.buildSpannable(context, *parts.toTypedArray())
     }
 
     override suspend fun execute(

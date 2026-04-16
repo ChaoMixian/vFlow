@@ -37,6 +37,21 @@
         android:text="@string/pose_trigger_record_button"
         app:icon="@drawable/rounded_auto_awesome_motion_24" />
 
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/switch_include_gravity_acceleration"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/pose_trigger_include_gravity_acceleration" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/pose_trigger_include_gravity_acceleration_hint"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="?attr/colorOnSurfaceVariant" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

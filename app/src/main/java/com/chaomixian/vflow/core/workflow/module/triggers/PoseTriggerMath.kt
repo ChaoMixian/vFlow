@@ -5,6 +5,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class PoseAngles(
     val azimuth: Float,
@@ -16,7 +17,25 @@ data class PoseAngles(
     }
 }
 
+data class GravityVector(
+    val x: Float,
+    val y: Float,
+    val z: Float,
+) {
+    fun magnitude(): Float = sqrt(x * x + y * y + z * z)
+
+    fun isMeaningful(epsilon: Float = 0.1f): Boolean = magnitude() > epsilon
+
+    fun format(): String {
+        return "G X ${x.formatSignedOneDecimal()}, Y ${y.formatSignedOneDecimal()}, Z ${z.formatSignedOneDecimal()} m/s²"
+    }
+
+    private fun Float.formatSignedOneDecimal(): String = String.format("%.1f", this)
+}
+
 object PoseTriggerMath {
+    private const val MAX_GRAVITY_VECTOR_DIFF = SensorManager.GRAVITY_EARTH * 2f
+
     fun fromRotationVector(values: FloatArray): PoseAngles {
         val rotationMatrix = FloatArray(9)
         SensorManager.getRotationMatrixFromVector(rotationMatrix, values)
@@ -29,6 +48,14 @@ object PoseTriggerMath {
         )
     }
 
+    fun fromGravityValues(values: FloatArray): GravityVector {
+        return GravityVector(
+            x = values.getOrElse(0) { 0f },
+            y = values.getOrElse(1) { 0f },
+            z = values.getOrElse(2) { 0f },
+        )
+    }
+
     fun average(samples: List<PoseAngles>): PoseAngles? {
         if (samples.isEmpty()) return null
         return PoseAngles(
@@ -38,7 +65,38 @@ object PoseTriggerMath {
         )
     }
 
-    fun calculateMatchScore(target: PoseAngles, current: PoseAngles): Float {
+    fun averageGravity(samples: List<GravityVector>): GravityVector? {
+        if (samples.isEmpty()) return null
+        return GravityVector(
+            x = samples.map { it.x }.average().toFloat(),
+            y = samples.map { it.y }.average().toFloat(),
+            z = samples.map { it.z }.average().toFloat(),
+        )
+    }
+
+    fun calculateMatchScore(
+        target: PoseAngles,
+        current: PoseAngles,
+        targetGravity: GravityVector? = null,
+        currentGravity: GravityVector? = null,
+    ): Float {
+        val poseScore = calculatePoseMatchScore(target, current)
+        if (targetGravity == null || currentGravity == null) {
+            return poseScore
+        }
+        val gravityScore = calculateGravityMatchScore(targetGravity, currentGravity)
+        return ((poseScore + gravityScore) / 2f).coerceIn(0f, 100f)
+    }
+
+    fun calculateGravityMatchScore(target: GravityVector, current: GravityVector): Float {
+        val diffX = target.x - current.x
+        val diffY = target.y - current.y
+        val diffZ = target.z - current.z
+        val diff = sqrt(diffX * diffX + diffY * diffY + diffZ * diffZ)
+        return ((MAX_GRAVITY_VECTOR_DIFF - diff) / MAX_GRAVITY_VECTOR_DIFF * 100f).coerceIn(0f, 100f)
+    }
+
+    private fun calculatePoseMatchScore(target: PoseAngles, current: PoseAngles): Float {
         val azimuthDiff = shortestAngleDifference(target.azimuth, current.azimuth)
         val pitchDiff = shortestAngleDifference(target.pitch, current.pitch)
         val rollDiff = shortestAngleDifference(target.roll, current.roll)

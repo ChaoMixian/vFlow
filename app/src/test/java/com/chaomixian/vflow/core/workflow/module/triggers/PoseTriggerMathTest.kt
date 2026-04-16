@@ -37,4 +37,43 @@ class PoseTriggerMathTest {
         assertTrue(closeScore > 95f)
         assertTrue(farScore < 50f)
     }
+
+    @Test
+    fun `gravity average keeps stable center`() {
+        val average = PoseTriggerMath.averageGravity(
+            listOf(
+                GravityVector(x = 0f, y = 9.6f, z = 0.4f),
+                GravityVector(x = 0.2f, y = 9.8f, z = 0.2f),
+            )
+        )!!
+
+        assertEquals(0.1f, average.x, 0.001f)
+        assertEquals(9.7f, average.y, 0.001f)
+        assertEquals(0.3f, average.z, 0.001f)
+    }
+
+    @Test
+    fun `combined match score gets stricter with gravity mismatch`() {
+        val targetPose = PoseAngles(azimuth = 20f, pitch = 15f, roll = -5f)
+        val currentPose = PoseAngles(azimuth = 22f, pitch = 16f, roll = -4f)
+        val targetGravity = GravityVector(x = 0f, y = 9.8f, z = 0f)
+        val closeGravity = GravityVector(x = 0.1f, y = 9.7f, z = 0.1f)
+        val farGravity = GravityVector(x = 9.8f, y = 0f, z = 0f)
+
+        val closeScore = PoseTriggerMath.calculateMatchScore(
+            target = targetPose,
+            current = currentPose,
+            targetGravity = targetGravity,
+            currentGravity = closeGravity,
+        )
+        val farScore = PoseTriggerMath.calculateMatchScore(
+            target = targetPose,
+            current = currentPose,
+            targetGravity = targetGravity,
+            currentGravity = farGravity,
+        )
+
+        assertTrue(closeScore > 95f)
+        assertTrue(farScore < 80f)
+    }
 }

@@ -543,8 +543,11 @@
     <string name="overlay_ui_speech_offline_pack_missing_message">当前语言未安装离线语音包，请前往系统语音设置下载后重试。</string>
     <string name="pose_trigger_record_button">录制三轴姿态</string>
     <string name="pose_trigger_pose_not_recorded">尚未录制目标姿态</string>
+    <string name="pose_trigger_gravity_not_recorded">尚未录制重力加速度，开启后请重新录制</string>
     <string name="pose_trigger_record_instructions">打开录制页后，单击任意音量键开始录制，再次单击音量键结束录制。</string>
     <string name="pose_trigger_match_threshold_value">当前要求至少 %1$d%% 匹配</string>
+    <string name="pose_trigger_include_gravity_acceleration">包含重力加速度</string>
+    <string name="pose_trigger_include_gravity_acceleration_hint">默认关闭。开启后会额外录制并匹配重力三轴，建议重新录制姿态。</string>
     <string name="pose_trigger_record_title">录制姿态</string>
     <string name="pose_trigger_record_status_ready">准备录制</string>
     <string name="pose_trigger_record_status_recording">录制中</string>
@@ -553,9 +556,12 @@
     <string name="pose_trigger_record_sample_count">已采样 %1$d 帧</string>
     <string name="pose_trigger_current_pose_title">当前姿态</string>
     <string name="pose_trigger_current_pose_waiting">等待传感器数据…</string>
+    <string name="pose_trigger_current_gravity_waiting">等待重力数据…</string>
     <string name="pose_trigger_record_tip">提示：匹配度越高越严格。90% 适合稳定姿态，80% 左右更适合手持触发。</string>
     <string name="pose_trigger_sensor_unavailable">当前设备不支持姿态传感器</string>
+    <string name="pose_trigger_gravity_sensor_unavailable">当前设备不支持重力加速度传感器</string>
     <string name="pose_trigger_record_empty">尚未采集到姿态数据，请重试</string>
+    <string name="pose_trigger_gravity_record_empty">尚未采集到重力加速度数据，请重试</string>
 
     <!-- WorkflowRepoFragment -->
     <string name="text_no_workflows">暂无工作流</string>

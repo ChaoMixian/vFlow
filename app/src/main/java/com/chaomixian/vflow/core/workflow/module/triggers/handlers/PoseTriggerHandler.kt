@@ -6,6 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.workflow.module.triggers.GravityVector
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.module.triggers.PoseAngles
 import com.chaomixian.vflow.core.workflow.module.triggers.PoseTriggerData
@@ -23,14 +24,17 @@ class PoseTriggerHandler : BaseTriggerHandler(), SensorEventListener {
         val trigger: TriggerSpec,
         val targetPose: PoseAngles,
         val threshold: Float,
+        val targetGravity: GravityVector? = null,
         var isWithinMatchWindow: Boolean = false,
     )
 
     private var appContext: Context? = null
     private var sensorManager: SensorManager? = null
     private var rotationSensor: Sensor? = null
+    private var gravitySensor: Sensor? = null
     private val activeTriggers = CopyOnWriteArrayList<ResolvedPoseTrigger>()
     private val recentSamples = ArrayDeque<PoseAngles>()
+    private val recentGravitySamples = ArrayDeque<GravityVector>()
     private var isListening = false
 
     override fun start(context: Context) {
@@ -38,6 +42,8 @@ class PoseTriggerHandler : BaseTriggerHandler(), SensorEventListener {
         appContext = context.applicationContext
         sensorManager = appContext?.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         rotationSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        gravitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
+            ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         if (rotationSensor == null) {
             DebugLogger.w(TAG, "Rotation vector sensor unavailable")
         }
@@ -48,9 +54,11 @@ class PoseTriggerHandler : BaseTriggerHandler(), SensorEventListener {
         stopListening()
         activeTriggers.clear()
         recentSamples.clear()
+        recentGravitySamples.clear()
         appContext = null
         sensorManager = null
         rotationSensor = null
+        gravitySensor = null
         super.stop(context)
     }
 
@@ -67,16 +75,37 @@ class PoseTriggerHandler : BaseTriggerHandler(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || event.values.isEmpty()) return
-        val pose = PoseTriggerMath.fromRotationVector(event.values)
-        if (recentSamples.size >= MAX_RECENT_SAMPLES) {
-            recentSamples.removeFirst()
+        when (event.sensor.type) {
+            Sensor.TYPE_ROTATION_VECTOR -> {
+                val pose = PoseTriggerMath.fromRotationVector(event.values)
+                if (recentSamples.size >= MAX_RECENT_SAMPLES) {
+                    recentSamples.removeFirst()
+                }
+                recentSamples.addLast(pose)
+            }
+            Sensor.TYPE_GRAVITY, Sensor.TYPE_ACCELEROMETER -> {
+                val gravity = PoseTriggerMath.fromGravityValues(event.values)
+                if (recentGravitySamples.size >= MAX_RECENT_SAMPLES) {
+                    recentGravitySamples.removeFirst()
+                }
+                recentGravitySamples.addLast(gravity)
+            }
+            else -> return
         }
-        recentSamples.addLast(pose)
-        val smoothedPose = PoseTriggerMath.average(recentSamples.toList()) ?: pose
+        val smoothedPose = PoseTriggerMath.average(recentSamples.toList()) ?: return
+        val smoothedGravity = PoseTriggerMath.averageGravity(recentGravitySamples.toList())
         val context = appContext ?: return
 
         activeTriggers.forEach { resolved ->
-            val score = PoseTriggerMath.calculateMatchScore(resolved.targetPose, smoothedPose)
+            if (resolved.targetGravity != null && smoothedGravity == null) {
+                return@forEach
+            }
+            val score = PoseTriggerMath.calculateMatchScore(
+                target = resolved.targetPose,
+                current = smoothedPose,
+                targetGravity = resolved.targetGravity,
+                currentGravity = smoothedGravity,
+            )
             val isMatch = score >= resolved.threshold
             if (isMatch && !resolved.isWithinMatchWindow) {
                 resolved.isWithinMatchWindow = true
@@ -111,6 +140,7 @@ class PoseTriggerHandler : BaseTriggerHandler(), SensorEventListener {
         if (isListening) return
         val sensor = rotationSensor ?: return
         sensorManager?.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
+        gravitySensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
         isListening = true
     }
 
@@ -119,6 +149,7 @@ class PoseTriggerHandler : BaseTriggerHandler(), SensorEventListener {
         sensorManager?.unregisterListener(this)
         isListening = false
         recentSamples.clear()
+        recentGravitySamples.clear()
     }
 
     private fun resolveTrigger(trigger: TriggerSpec): ResolvedPoseTrigger? {
@@ -130,10 +161,25 @@ class PoseTriggerHandler : BaseTriggerHandler(), SensorEventListener {
             roll = numberParameter(trigger.parameters["targetRoll"]),
         )
         val threshold = numberParameter(trigger.parameters["matchThreshold"], 90f).coerceIn(0f, 100f)
+        val includeGravityAcceleration = booleanParameter(trigger.parameters["includeGravityAcceleration"])
+        val gravityRecorded = booleanParameter(trigger.parameters["gravityRecorded"])
+        val targetGravity = if (includeGravityAcceleration && gravityRecorded) {
+            GravityVector(
+                x = numberParameter(trigger.parameters["targetGravityX"]),
+                y = numberParameter(trigger.parameters["targetGravityY"]),
+                z = numberParameter(trigger.parameters["targetGravityZ"]),
+            ).takeIf { it.isMeaningful() }
+        } else {
+            null
+        }
+        if (includeGravityAcceleration && targetGravity == null) {
+            DebugLogger.w(TAG, "Pose trigger ${trigger.triggerId} enabled gravity matching without recorded gravity data")
+        }
         return ResolvedPoseTrigger(
             trigger = trigger,
             targetPose = targetPose,
             threshold = threshold,
+            targetGravity = targetGravity,
         )
     }
 
@@ -141,6 +187,14 @@ class PoseTriggerHandler : BaseTriggerHandler(), SensorEventListener {
         return when (value) {
             is Number -> value.toFloat()
             is String -> value.toFloatOrNull() ?: fallback
+            else -> fallback
+        }
+    }
+
+    private fun booleanParameter(value: Any?, fallback: Boolean = false): Boolean {
+        return when (value) {
+            is Boolean -> value
+            is String -> value.equals("true", ignoreCase = true)
             else -> fallback
         }
     }

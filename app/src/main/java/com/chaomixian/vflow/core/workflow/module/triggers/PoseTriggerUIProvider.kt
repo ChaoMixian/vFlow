@@ -13,21 +13,35 @@ import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PoseTriggerRecorderActivity
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 
 private class PoseTriggerViewHolder(
     view: View,
     val recordButton: MaterialButton,
     val poseValue: TextView,
+    val includeGravitySwitch: MaterialSwitch,
     val thresholdValue: TextView,
     val thresholdSlider: Slider,
 ) : CustomEditorViewHolder(view) {
     var recordedPose: PoseAngles? = null
+    var recordedGravity: GravityVector? = null
 }
 
 class PoseTriggerUIProvider : ModuleUIProvider {
     override fun getHandledInputIds(): Set<String> {
-        return setOf("poseRecorded", "targetAzimuth", "targetPitch", "targetRoll", "matchThreshold")
+        return setOf(
+            "poseRecorded",
+            "targetAzimuth",
+            "targetPitch",
+            "targetRoll",
+            "matchThreshold",
+            "includeGravityAcceleration",
+            "gravityRecorded",
+            "targetGravityX",
+            "targetGravityY",
+            "targetGravityZ",
+        )
     }
 
     override fun createEditor(
@@ -44,6 +58,7 @@ class PoseTriggerUIProvider : ModuleUIProvider {
             view = view,
             recordButton = view.findViewById(R.id.button_record_pose),
             poseValue = view.findViewById(R.id.text_pose_value),
+            includeGravitySwitch = view.findViewById(R.id.switch_include_gravity_acceleration),
             thresholdValue = view.findViewById(R.id.text_match_threshold),
             thresholdSlider = view.findViewById(R.id.slider_match_threshold),
         )
@@ -55,6 +70,18 @@ class PoseTriggerUIProvider : ModuleUIProvider {
                 pitch = (currentParameters["targetPitch"] as? Number)?.toFloat() ?: 0f,
                 roll = (currentParameters["targetRoll"] as? Number)?.toFloat() ?: 0f,
             )
+        }
+        val includeGravityAcceleration =
+            currentParameters["includeGravityAcceleration"] as? Boolean
+                ?: PoseTriggerModule.DEFAULT_INCLUDE_GRAVITY_ACCELERATION
+        holder.includeGravitySwitch.isChecked = includeGravityAcceleration
+        val gravityRecorded = currentParameters["gravityRecorded"] as? Boolean ?: PoseTriggerModule.DEFAULT_GRAVITY_RECORDED
+        if (gravityRecorded) {
+            holder.recordedGravity = GravityVector(
+                x = (currentParameters["targetGravityX"] as? Number)?.toFloat() ?: 0f,
+                y = (currentParameters["targetGravityY"] as? Number)?.toFloat() ?: 0f,
+                z = (currentParameters["targetGravityZ"] as? Number)?.toFloat() ?: 0f,
+            ).takeIf { it.isMeaningful() }
         }
         renderRecordedPose(context, holder)
 
@@ -68,15 +95,34 @@ class PoseTriggerUIProvider : ModuleUIProvider {
             onParametersChanged()
         }
 
+        holder.includeGravitySwitch.setOnCheckedChangeListener { _, _ ->
+            renderRecordedPose(context, holder)
+            onParametersChanged()
+        }
+
         holder.recordButton.setOnClickListener {
             if (onStartActivityForResult == null) return@setOnClickListener
-            onStartActivityForResult(PoseTriggerRecorderActivity.createIntent(context)) callback@{ resultCode, data ->
+            onStartActivityForResult(
+                PoseTriggerRecorderActivity.createIntent(
+                    context = context,
+                    includeGravityAcceleration = holder.includeGravitySwitch.isChecked,
+                )
+            ) callback@{ resultCode, data ->
                 if (resultCode != Activity.RESULT_OK || data == null) return@callback
                 holder.recordedPose = PoseAngles(
                     azimuth = data.getFloatExtra(PoseTriggerRecorderActivity.EXTRA_RESULT_AZIMUTH, 0f),
                     pitch = data.getFloatExtra(PoseTriggerRecorderActivity.EXTRA_RESULT_PITCH, 0f),
                     roll = data.getFloatExtra(PoseTriggerRecorderActivity.EXTRA_RESULT_ROLL, 0f),
                 )
+                holder.recordedGravity = if (data.hasExtra(PoseTriggerRecorderActivity.EXTRA_RESULT_GRAVITY_X)) {
+                    GravityVector(
+                        x = data.getFloatExtra(PoseTriggerRecorderActivity.EXTRA_RESULT_GRAVITY_X, 0f),
+                        y = data.getFloatExtra(PoseTriggerRecorderActivity.EXTRA_RESULT_GRAVITY_Y, 0f),
+                        z = data.getFloatExtra(PoseTriggerRecorderActivity.EXTRA_RESULT_GRAVITY_Z, 0f),
+                    ).takeIf { it.isMeaningful() }
+                } else {
+                    null
+                }
                 renderRecordedPose(context, holder)
                 onParametersChanged()
             }
@@ -88,12 +134,18 @@ class PoseTriggerUIProvider : ModuleUIProvider {
     override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
         val viewHolder = holder as PoseTriggerViewHolder
         val pose = viewHolder.recordedPose
+        val gravity = viewHolder.recordedGravity
         return mapOf(
             "poseRecorded" to (pose != null),
             "targetAzimuth" to (pose?.azimuth?.toDouble() ?: 0.0),
             "targetPitch" to (pose?.pitch?.toDouble() ?: 0.0),
             "targetRoll" to (pose?.roll?.toDouble() ?: 0.0),
             "matchThreshold" to viewHolder.thresholdSlider.value.toDouble(),
+            "includeGravityAcceleration" to viewHolder.includeGravitySwitch.isChecked,
+            "gravityRecorded" to (gravity != null),
+            "targetGravityX" to (gravity?.x?.toDouble() ?: 0.0),
+            "targetGravityY" to (gravity?.y?.toDouble() ?: 0.0),
+            "targetGravityZ" to (gravity?.z?.toDouble() ?: 0.0),
         )
     }
 
@@ -106,8 +158,15 @@ class PoseTriggerUIProvider : ModuleUIProvider {
     ): View? = null
 
     private fun renderRecordedPose(context: Context, holder: PoseTriggerViewHolder) {
-        holder.poseValue.text = holder.recordedPose?.format()
+        val poseText = holder.recordedPose?.format()
             ?: context.getString(R.string.pose_trigger_pose_not_recorded)
+        if (!holder.includeGravitySwitch.isChecked) {
+            holder.poseValue.text = poseText
+            return
+        }
+        val gravityText = holder.recordedGravity?.format()
+            ?: context.getString(R.string.pose_trigger_gravity_not_recorded)
+        holder.poseValue.text = "$poseText\n$gravityText"
     }
 
     private fun renderThreshold(context: Context, holder: PoseTriggerViewHolder, value: Float) {

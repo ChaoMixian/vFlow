@@ -391,12 +391,15 @@
     <string name="module_vflow_trigger_pose_desc">当设备姿态接近录制的三轴姿态时触发工作流</string>
     <string name="param_vflow_trigger_pose_recorded_pose_name">录制姿态</string>
     <string name="param_vflow_trigger_pose_match_threshold_name">姿态匹配度</string>
+    <string name="param_vflow_trigger_pose_include_gravity_name">包含重力加速度</string>
     <string name="output_vflow_trigger_pose_azimuth_name">当前 Z 轴</string>
     <string name="output_vflow_trigger_pose_pitch_name">当前 X 轴</string>
     <string name="output_vflow_trigger_pose_roll_name">当前 Y 轴</string>
     <string name="output_vflow_trigger_pose_match_score_name">匹配度</string>
     <string name="summary_vflow_trigger_pose_not_recorded">录制目标姿态</string>
     <string name="summary_vflow_trigger_pose_prefix">姿态匹配</string>
+    <string name="summary_vflow_trigger_pose_gravity_enabled">含重力</string>
+    <string name="summary_vflow_trigger_pose_gravity_pending">重力待录</string>
     <string name="msg_vflow_trigger_pose_triggered">姿态触发器已触发</string>
     <string name="option_vflow_trigger_backtap_mode_double_tap">双击</string>
     <string name="option_vflow_trigger_backtap_mode_triple_tap">三击</string>
