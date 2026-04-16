@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -261,6 +262,8 @@ private fun CoreManagementScreen(
     var logs by remember { mutableStateOf("") }
     var statusDetail by remember { mutableStateOf("") }
     var logsExpanded by remember { mutableStateOf(false) }
+    var coreVersionSummary by remember { mutableStateOf("") }
+    var coreUpdateAvailable by remember { mutableStateOf(false) }
 
     // 保存的启动方式和自动启动设置
     var selectedLaunchMode by remember { mutableStateOf<ShellManager.ShellMode?>(null) }
@@ -273,6 +276,28 @@ private fun CoreManagementScreen(
     // Toast 辅助函数
     fun showToast(message: String) {
         android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    fun refreshCoreVersionState() {
+        val versionStatus = VFlowCoreBridge.getCoreVersionStatus()
+        coreVersionSummary = if (!VFlowCoreBridge.isConnected) {
+            context.getString(
+                R.string.core_version_summary_not_running,
+                versionStatus.packaged.versionName
+            )
+        } else if (versionStatus.running != null) {
+            context.getString(
+                R.string.core_version_summary,
+                versionStatus.running.versionName,
+                versionStatus.packaged.versionName
+            )
+        } else {
+            context.getString(
+                R.string.core_version_summary_legacy,
+                versionStatus.packaged.versionName
+            )
+        }
+        coreUpdateAvailable = versionStatus.needsUpdate
     }
 
     // 初始加载和自动启动
@@ -293,6 +318,7 @@ private fun CoreManagementScreen(
         mutualKeepAliveEnabled = prefs.getBoolean("mutual_keep_alive_enabled", true)
 
         isServerRunning = onCheckStatus()
+        refreshCoreVersionState()
         logs = onLoadLogs()
 
         // 如果需要自动启动且 Core 未运行
@@ -304,6 +330,7 @@ private fun CoreManagementScreen(
             val success = onStartServer()
             isChecking = false
             isServerRunning = success
+            refreshCoreVersionState()
             statusDetail = if (success) {
                 showToast(context.getString(R.string.toast_core_start_success))
                 // 重新加载日志
@@ -341,7 +368,9 @@ private fun CoreManagementScreen(
                 isRunning = isServerRunning,
                 isChecking = isChecking,
                 statusDetail = statusDetail,
-                privilegeMode = VFlowCoreBridge.privilegeMode
+                privilegeMode = VFlowCoreBridge.privilegeMode,
+                versionSummary = coreVersionSummary,
+                updateAvailable = coreUpdateAvailable
             )
 
             // 启动方式卡片组
@@ -380,6 +409,7 @@ private fun CoreManagementScreen(
                         val success = onStartServerWithMode(ShellManager.ShellMode.SHIZUKU)
                         isChecking = false
                         isServerRunning = success
+                        refreshCoreVersionState()
                         statusDetail = if (success) {
                             showToast(context.getString(R.string.toast_core_start_success))
                             logs = onLoadLogs()
@@ -419,6 +449,7 @@ private fun CoreManagementScreen(
                         val success = onStartServerWithMode(ShellManager.ShellMode.ROOT)
                         isChecking = false
                         isServerRunning = success
+                        refreshCoreVersionState()
                         statusDetail = if (success) {
                             showToast(context.getString(R.string.toast_core_start_success))
                             logs = onLoadLogs()
@@ -456,6 +487,7 @@ private fun CoreManagementScreen(
                                 val success = VFlowCoreBridge.restart(context)
                                 isChecking = false
                                 isServerRunning = success
+                                refreshCoreVersionState()
                                 statusDetail = if (success) {
                                     showToast(context.getString(R.string.toast_core_restart_success))
                                     logs = onLoadLogs()
@@ -474,6 +506,7 @@ private fun CoreManagementScreen(
                                 val success = onStartServerWithMode(mode)
                                 isChecking = false
                                 isServerRunning = success
+                                refreshCoreVersionState()
                                 statusDetail = if (success) {
                                     showToast(context.getString(R.string.toast_core_start_success))
                                     logs = onLoadLogs()
@@ -501,12 +534,22 @@ private fun CoreManagementScreen(
                     )
                 ) {
                     Icon(
-                        if (isServerRunning == true) Icons.Default.Refresh else Icons.Default.PlayArrow,
+                        if (isServerRunning == true) {
+                            if (coreUpdateAvailable) Icons.Default.SystemUpdate else Icons.Default.Refresh
+                        } else {
+                            Icons.Default.PlayArrow
+                        },
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(if (isServerRunning == true) stringResource(R.string.button_restart_core) else stringResource(R.string.button_start_core))
+                    Text(
+                        if (isServerRunning == true) {
+                            if (coreUpdateAvailable) stringResource(R.string.button_update_core) else stringResource(R.string.button_restart_core)
+                        } else {
+                            stringResource(R.string.button_start_core)
+                        }
+                    )
                 }
 
                 // 停止 Core 按钮
@@ -519,6 +562,7 @@ private fun CoreManagementScreen(
                             val stillRunning = onStopServer()
                             isChecking = false
                             isServerRunning = stillRunning
+                            refreshCoreVersionState()
                             statusDetail = if (!stillRunning) {
                                 showToast(context.getString(R.string.toast_core_stopped))
                                 context.getString(R.string.status_core_not_running)
@@ -555,6 +599,7 @@ private fun CoreManagementScreen(
                         val running = onCheckStatus()
                         isChecking = false
                         isServerRunning = running
+                        refreshCoreVersionState()
                         statusDetail = if (running) {
                             context.getString(R.string.status_core_running)
                         } else {
@@ -707,7 +752,9 @@ private fun StatusCard(
     isRunning: Boolean?,
     isChecking: Boolean,
     statusDetail: String,
-    privilegeMode: VFlowCoreBridge.PrivilegeMode
+    privilegeMode: VFlowCoreBridge.PrivilegeMode,
+    versionSummary: String,
+    updateAvailable: Boolean
 ) {
     val statusColor = when {
         isChecking -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -829,6 +876,23 @@ private fun StatusCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (versionSummary.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = versionSummary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (updateAvailable) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.core_update_available_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }

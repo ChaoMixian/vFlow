@@ -1,10 +1,111 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
+import javax.inject.Inject
+
+abstract class GenerateCoreBuildInfoTask : DefaultTask() {
+    @get:Input
+    abstract val versionCode: Property<Int>
+
+    @get:Input
+    abstract val versionName: Property<String>
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @TaskAction
+    fun generate() {
+        val targetFile = outputFile.get().asFile
+        targetFile.parentFile.mkdirs()
+        targetFile.writeText(
+            """
+            package com.chaomixian.vflow.server.common
+
+            object CoreBuildInfo {
+                const val VERSION_CODE = ${versionCode.get()}
+                const val VERSION_NAME = "${versionName.get()}"
+            }
+            """.trimIndent()
+        )
+    }
+}
+
+abstract class BuildDexTask : DefaultTask() {
+    @get:InputFile
+    abstract val inputJar: RegularFileProperty
+
+    @get:InputFile
+    abstract val androidJar: RegularFileProperty
+
+    @get:Input
+    abstract val d8Path: Property<String>
+
+    @get:Input
+    abstract val coreVersion: Property<Int>
+
+    @get:OutputDirectory
+    abstract val tempDexDir: DirectoryProperty
+
+    @get:OutputFile
+    abstract val targetDex: RegularFileProperty
+
+    @get:OutputFile
+    abstract val targetVersionFile: RegularFileProperty
+
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
+    @TaskAction
+    fun buildDex() {
+        val tempDex = tempDexDir.get().asFile
+        val targetDexFile = targetDex.get().asFile
+        val targetVersion = targetVersionFile.get().asFile
+        val androidJarFile = androidJar.get().asFile
+
+        tempDex.mkdirs()
+        targetDexFile.parentFile.mkdirs()
+
+        execOperations.exec {
+            commandLine(
+                d8Path.get(),
+                "--lib", androidJarFile.absolutePath,
+                "--output", tempDex.absolutePath,
+                inputJar.get().asFile.absolutePath
+            )
+        }
+
+        val generatedDex = tempDex.resolve("classes.dex")
+        if (!generatedDex.exists()) {
+            throw GradleException("d8 命令执行失败，未生成 classes.dex")
+        }
+
+        if (targetDexFile.exists()) {
+            targetDexFile.delete()
+        }
+        generatedDex.copyTo(targetDexFile)
+        targetVersion.writeText(coreVersion.get().toString())
+
+        println("✅ Server Dex 构建成功并已复制到: ${targetDexFile.absolutePath}")
+        println("📊 DEX 大小: ${targetDexFile.length() / 1024} KB")
+        println("🧩 Core 版本: ${targetVersion.readText().trim()}")
+    }
+}
 
 plugins {
     id("java-library")
     kotlin("jvm") // 使用标准 Kotlin JVM 插件
 }
+
+val vflowCoreVersion = 15
 
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
@@ -19,7 +120,7 @@ val androidJar = "$sdkDir/platforms/android-36/android.jar"
 
 // 指定构建工具版本 (d8 所在位置)
 val buildToolsVersion = "36.1.0"
-val d8Path = "$sdkDir/build-tools/$buildToolsVersion/d8" +
+val d8ExecutablePath = "$sdkDir/build-tools/$buildToolsVersion/d8" +
         if (System.getProperty("os.name").lowercase().contains("windows")) ".bat" else ""
 
 java {
@@ -27,7 +128,26 @@ java {
     targetCompatibility = JavaVersion.VERSION_11
 }
 
+val generatedCoreBuildInfoDir = layout.buildDirectory.dir("generated/sources/coreBuildInfo/kotlin")
+val generatedCoreBuildInfoFile = layout.buildDirectory.file(
+    "generated/sources/coreBuildInfo/kotlin/com/chaomixian/vflow/server/common/CoreBuildInfo.kt"
+)
+val androidJarFile = file(androidJar)
+
+sourceSets {
+    main {
+        java.srcDir(generatedCoreBuildInfoDir)
+    }
+}
+
+val generateCoreBuildInfo by tasks.registering(GenerateCoreBuildInfoTask::class) {
+    versionCode.set(vflowCoreVersion)
+    versionName.set(vflowCoreVersion.toString())
+    outputFile.set(generatedCoreBuildInfoFile)
+}
+
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    dependsOn(generateCoreBuildInfo)
     compilerOptions.jvmTarget.set(JvmTarget.JVM_11)
 }
 
@@ -40,6 +160,7 @@ dependencies {
 }
 
 tasks.jar {
+    dependsOn(generateCoreBuildInfo)
     manifest {
         attributes["Main-Class"] = "com.chaomixian.vflow.server.VFlowCore"
     }
@@ -56,55 +177,17 @@ tasks.jar {
 }
 
 // Dex 构建任务
-tasks.register<Exec>("buildDex") {
+tasks.register<BuildDexTask>("buildDex") {
     group = "build"
     description = "将 Jar 编译为 Dex 并复制到 App assets"
 
-    // 依赖 jar 任务先执行
-    dependsOn("jar")
+    dependsOn(tasks.jar)
 
-    val inputJar = tasks.jar.get().archiveFile.get().asFile
-    // 临时输出目录
-    val tempDexDir = layout.buildDirectory.dir("dex").get().asFile
-    // 最终目标目录 (App 模块的 assets)
-    val appAssetsDir = rootProject.file("app/src/main/assets")
-    val targetDex = File(appAssetsDir, "vFlowCore.dex")
-
-    // 声明输入输出，让 Gradle 能正确追踪变化
-    inputs.file(inputJar)
-    outputs.file(targetDex)
-
-    // 确保目录存在
-    doFirst {
-        if (!tempDexDir.exists()) tempDexDir.mkdirs()
-        if (!appAssetsDir.exists()) appAssetsDir.mkdirs()
-    }
-
-    // 执行 d8 命令
-    // d8 --lib <android.jar> --output <dir> <input.jar>
-    commandLine(
-        d8Path,
-        "--lib", androidJar,
-        "--output", tempDexDir.absolutePath,
-        inputJar.absolutePath
-    )
-
-    // 任务执行完后，将 classes.dex 移动并重命名为 vFlowCore.dex
-    doLast {
-        val generatedDex = File(tempDexDir, "classes.dex")
-
-        if (generatedDex.exists()) {
-            if (targetDex.exists()) {
-                targetDex.delete()
-            }
-            generatedDex.copyTo(targetDex)
-            println("✅ Server Dex 构建成功并已复制到: ${targetDex.absolutePath}")
-            println("📊 DEX 大小: ${targetDex.length() / 1024} KB")
-
-            // 清理临时文件
-            // generatedDex.delete()
-        } else {
-            throw GradleException("d8 命令执行失败，未生成 classes.dex")
-        }
-    }
+    inputJar.set(tasks.jar.flatMap { it.archiveFile })
+    androidJar.set(androidJarFile)
+    d8Path.set(d8ExecutablePath)
+    coreVersion.set(vflowCoreVersion)
+    tempDexDir.set(layout.buildDirectory.dir("dex"))
+    targetDex.set(rootProject.file("app/src/main/assets/vFlowCore.dex"))
+    targetVersionFile.set(rootProject.file("app/src/main/assets/vFlowCore.version"))
 }

@@ -51,6 +51,9 @@ class HomeFragment : Fragment() {
     private lateinit var coreModeText: TextView
     private lateinit var coreStatusText: TextView
     private lateinit var coreBackgroundIcon: ImageView
+    private lateinit var coreUpdateCard: MaterialCardView
+    private lateinit var coreUpdateTitle: TextView
+    private lateinit var coreUpdateDesc: TextView
 
     // 权限健康检查卡片视图
     private lateinit var permissionHealthTitle: TextView
@@ -96,6 +99,9 @@ class HomeFragment : Fragment() {
         coreModeText = view.findViewById(R.id.text_core_mode)
         coreStatusText = view.findViewById(R.id.text_core_status)
         coreBackgroundIcon = view.findViewById(R.id.icon_core_background)
+        coreUpdateCard = view.findViewById(R.id.card_core_update)
+        coreUpdateTitle = view.findViewById(R.id.text_core_update_title)
+        coreUpdateDesc = view.findViewById(R.id.text_core_update_desc)
 
         permissionHealthTitle = view.findViewById(R.id.text_permission_health_title)
         permissionHealthDesc = view.findViewById(R.id.text_permission_health_desc)
@@ -158,9 +164,20 @@ class HomeFragment : Fragment() {
      * 更新 vFlow Core 状态卡片
      */
     private fun updateCoreStatus() {
+        lifecycleScope.launch {
+            val pingSuccess = withContext(Dispatchers.IO) {
+                VFlowCoreBridge.ping()
+            }
+            if (!isAdded) return@launch
+            renderCoreStatus(pingSuccess)
+        }
+    }
+
+    private fun renderCoreStatus(pingSuccess: Boolean) {
         val privilegeMode = VFlowCoreBridge.privilegeMode
-        val isConnected = VFlowCoreBridge.isConnected
+        val isConnected = pingSuccess && VFlowCoreBridge.isConnected
         val context = requireContext()
+        val versionStatus = VFlowCoreBridge.getCoreVersionStatus()
 
         // 设置模式文本 (Mode)
         val modeString = when (privilegeMode) {
@@ -208,6 +225,23 @@ class HomeFragment : Fragment() {
         coreStatusCard.setOnClickListener {
             val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.CoreManagementActivity::class.java)
             startActivity(intent)
+        }
+
+        coreUpdateCard.setOnClickListener {
+            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.CoreManagementActivity::class.java)
+            startActivity(intent)
+        }
+
+        val needsUpdate = versionStatus.needsUpdate
+        coreUpdateCard.isVisible = isConnected && needsUpdate
+        if (needsUpdate) {
+            coreUpdateTitle.text = getString(R.string.home_core_update_title)
+            val runningLabel = versionStatus.running?.versionName ?: getString(R.string.core_version_unknown)
+            coreUpdateDesc.text = getString(
+                R.string.home_core_update_desc,
+                runningLabel,
+                versionStatus.packaged.versionName
+            )
         }
     }
 
@@ -448,12 +482,8 @@ class HomeFragment : Fragment() {
                 val isCoreConnected = withContext(Dispatchers.IO) {
                     VFlowCoreBridge.ping() && VFlowCoreBridge.isConnected
                 }
-                if (isCoreConnected) {
-                    // Core已连接，更新UI
-                    updateCoreStatus()
-                    // 停止轮询
-                    return@launch
-                }
+                renderCoreStatus(isCoreConnected)
+                if (isCoreConnected) return@launch
             }
         }
     }

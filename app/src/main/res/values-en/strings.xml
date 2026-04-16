@@ -294,6 +294,8 @@
     <string name="home_total_workflows">Total Workflows</string>
     <string name="home_auto_tasks">Automated Tasks</string>
     <string name="home_permission_health">Permission Health Check</string>
+    <string name="home_core_update_title">Core Update Available</string>
+    <string name="home_core_update_desc">A newer Core is bundled. Running: %1$s, bundled: %2$s. Tap to open Core Management and update.</string>
     <string name="home_permission_good">Status: Good, all permissions granted</string>
     <string name="home_permission_missing">Status: %d missing permissions</string>
     <string name="home_recent_logs">Recent Logs</string>
@@ -972,6 +974,7 @@
     <string name="text_adb_prerequisites">• Ensure Android device is connected to computer via USB\n• USB debugging mode is enabled\n• ADB tools are installed on your computer</string>
     <string name="toast_command_copied">Command copied to clipboard</string>
     <string name="button_restart_core">Restart Core</string>
+    <string name="button_update_core">Update Core</string>
     <string name="button_start_core">Start Core</string>
     <string name="button_stop_core">Stop Core</string>
     <string name="status_restarting_core">Restarting vFlowCore (loading new DEX)...</string>
@@ -1008,6 +1011,11 @@
     <string name="status_checking">Checking...</string>
     <string name="status_running">Running</string>
     <string name="status_stopped">Stopped</string>
+    <string name="core_version_unknown">Unknown legacy version</string>
+    <string name="core_version_summary">Running: %1$s  Bundled: %2$s</string>
+    <string name="core_version_summary_legacy">Running: legacy Core without version info  Bundled: %1$s</string>
+    <string name="core_version_summary_not_running">Core not running  Bundled: %1$s</string>
+    <string name="core_update_available_hint">A newer bundled Core is available. Tap “Update Core” below to load it.</string>
     <string name="mode_root">Root</string>
     <string name="mode_shell">Shell</string>
     <string name="status_not_connected">Not connected</string>

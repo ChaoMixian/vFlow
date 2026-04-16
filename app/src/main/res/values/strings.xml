@@ -302,6 +302,8 @@
     <string name="home_total_workflows">工作流总数</string>
     <string name="home_auto_tasks">自动化任务</string>
     <string name="home_permission_health">权限健康检查</string>
+    <string name="home_core_update_title">Core 更新提醒</string>
+    <string name="home_core_update_desc">检测到新的 Core 版本。当前运行：%1$s，内置版本：%2$s。点击进入管理页面更新。</string>
     <string name="home_permission_good">状态：良好，所有权限均已授予</string>
     <string name="home_permission_missing">状态：存在 %d 个缺失的权限</string>
     <string name="home_recent_logs">最近日志</string>
@@ -957,6 +959,7 @@
     <string name="text_adb_prerequisites">• 确保 Android 设备已通过 USB 连接到电脑\n• 已启用 USB 调试模式\n• 电脑已安装 ADB 工具</string>
     <string name="toast_command_copied">命令已复制到剪贴板</string>
     <string name="button_restart_core">重启 Core</string>
+    <string name="button_update_core">更新 Core</string>
     <string name="button_start_core">启动 Core</string>
     <string name="button_stop_core">停止 Core</string>
     <string name="status_restarting_core">正在重启 vFlowCore（加载新 DEX）...</string>
@@ -993,6 +996,11 @@
     <string name="status_checking">检查中...</string>
     <string name="status_running">运行中</string>
     <string name="status_stopped">已停止</string>
+    <string name="core_version_unknown">未知旧版本</string>
+    <string name="core_version_summary">当前运行：%1$s  内置版本：%2$s</string>
+    <string name="core_version_summary_legacy">当前运行：旧版 Core（未上报版本）  内置版本：%1$s</string>
+    <string name="core_version_summary_not_running">Core 未运行  内置版本：%1$s</string>
+    <string name="core_update_available_hint">检测到可更新的 Core，点击下方“更新 Core”加载新版本。</string>
     <string name="mode_root">Root</string>
     <string name="mode_shell">Shell</string>
     <string name="status_not_connected">未连接</string>

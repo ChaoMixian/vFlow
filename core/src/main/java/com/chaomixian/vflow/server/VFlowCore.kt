@@ -1,6 +1,7 @@
 // 文件: server/src/main/java/com/chaomixian/vflow/server/VFlowCore.kt
 package com.chaomixian.vflow.server
 
+import com.chaomixian.vflow.server.common.CoreBuildInfo
 import com.chaomixian.vflow.server.common.Config
 import com.chaomixian.vflow.server.common.utils.SystemUtils
 import com.chaomixian.vflow.server.worker.RootWorker
@@ -86,9 +87,8 @@ object VFlowCore {
 
     private fun runAsMaster() {
         val isRoot = SystemUtils.isRoot()
-        val debugVersion = 14
         println(">>> vFlow Core MASTER Starting (PID: ${android.os.Process.myPid()}, UID: ${SystemUtils.getMyUid()}) <<<")
-        println(">>> Debug Version: $debugVersion <<<")
+        println(">>> Core Version: ${CoreBuildInfo.VERSION_CODE} <<<")
 
         Runtime.getRuntime().addShutdownHook(Thread {
             workerProcesses.forEach { SystemUtils.killProcess(it) }
@@ -193,7 +193,12 @@ object VFlowCore {
 
                 // ping 请求直接返回
                 if (method == "ping") {
-                    return JSONObject().put("success", true).put("uid", SystemUtils.getMyUid()).toString()
+                    return JSONObject()
+                        .put("success", true)
+                        .put("uid", SystemUtils.getMyUid())
+                        .put("versionCode", CoreBuildInfo.VERSION_CODE)
+                        .put("versionName", CoreBuildInfo.VERSION_NAME)
+                        .toString()
                 }
 
                 // exec 请求根据 asRoot 参数路由

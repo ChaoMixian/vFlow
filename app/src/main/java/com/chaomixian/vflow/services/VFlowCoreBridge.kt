@@ -3,6 +3,7 @@ package com.chaomixian.vflow.services
 
 import android.content.Context
 import android.content.Intent
+import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.logging.DebugLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -26,6 +27,7 @@ object VFlowCoreBridge {
     private const val TAG = "VFlowCoreBridge"
     private const val HOST = "127.0.0.1"
     private const val PORT = 19999
+    private const val CORE_VERSION_ASSET = "vFlowCore.version"
 
     // 用于在 ping() 中执行网络操作的 IO 线程池
     private val ioExecutor = Executors.newSingleThreadExecutor { r ->
@@ -42,6 +44,14 @@ object VFlowCoreBridge {
 
     var currentUid: Int = -1
         private set
+
+    var runningVersionCode: Int = -1
+        private set
+
+    var runningVersionName: String = ""
+        private set
+
+    private var packagedVersionInfoCache: CoreVersionInfo? = null
 
     // 心跳机制：定期发送 ping 保持连接活跃
     private val heartbeatExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { r ->
@@ -72,12 +82,57 @@ object VFlowCoreBridge {
         val error: String? = null
     )
 
+    data class CoreVersionInfo(
+        val versionCode: Int,
+        val versionName: String
+    )
+
+    data class CoreVersionStatus(
+        val packaged: CoreVersionInfo,
+        val running: CoreVersionInfo?,
+        val needsUpdate: Boolean
+    )
+
     val privilegeMode: PrivilegeMode
         get() = when {
             !isConnected -> PrivilegeMode.NONE
             currentUid == 0 -> PrivilegeMode.ROOT
             else -> PrivilegeMode.SHELL // 应该是2000
         }
+
+    val packagedVersionInfo: CoreVersionInfo
+        get() = packagedVersionInfoCache ?: loadPackagedVersionInfo().also {
+            if (it.versionCode > 0) {
+                packagedVersionInfoCache = it
+            }
+        }
+
+    val runningVersionInfo: CoreVersionInfo?
+        get() = if (runningVersionCode > 0 || runningVersionName.isNotBlank()) {
+            CoreVersionInfo(
+                versionCode = runningVersionCode.takeIf { it > 0 } ?: -1,
+                versionName = runningVersionName.ifBlank { "unknown" }
+            )
+        } else {
+            null
+        }
+
+    fun getCoreVersionStatus(): CoreVersionStatus {
+        val packaged = packagedVersionInfo
+        val running = runningVersionInfo
+        val needsUpdate = when {
+            !isConnected -> false
+            running == null -> true
+            running.versionCode <= 0 -> true
+            packaged.versionCode > running.versionCode -> true
+            else -> false
+        }
+        return CoreVersionStatus(
+            packaged = packaged,
+            running = running,
+            needsUpdate = needsUpdate
+        )
+    }
 
     /**
      * 确保 vFlow Core 正在运行并已连接。
@@ -138,9 +193,11 @@ object VFlowCoreBridge {
             if (res!!.has("uid")) {
                 currentUid = res.optInt("uid")
             }
+            updateVersionInfo(res)
         } else {
             isConnected = false
             currentUid = -1
+            clearVersionInfo()
             stopHeartbeat()
         }
         return success
@@ -178,6 +235,7 @@ object VFlowCoreBridge {
         writer = null
         reader = null
         isConnected = false
+        clearVersionInfo()
     }
 
     /**
@@ -255,10 +313,12 @@ object VFlowCoreBridge {
                 if (res.has("uid")) {
                     currentUid = res.optInt("uid")
                     isConnected = true
+                    updateVersionInfo(res)
                     DebugLogger.i(TAG, "ping: 成功, uid=$currentUid, mode=$privilegeMode")
                 }
             } else {
                 DebugLogger.w(TAG, "ping: 响应中 success=false 或不存在")
+                clearVersionInfo()
             }
 
             return@submit success
@@ -275,6 +335,39 @@ object VFlowCoreBridge {
             DebugLogger.w(TAG, "ping: 执行异常: ${e.javaClass.simpleName} - ${e.message}")
             false
         }
+    }
+
+    private fun updateVersionInfo(response: JSONObject) {
+        runningVersionCode = if (response.has("versionCode")) {
+            response.optInt("versionCode", -1)
+        } else {
+            -1
+        }
+        runningVersionName = if (response.has("versionName")) {
+            response.optString("versionName", "")
+        } else {
+            ""
+        }
+    }
+
+    private fun clearVersionInfo() {
+        runningVersionCode = -1
+        runningVersionName = ""
+    }
+
+    private fun loadPackagedVersionInfo(): CoreVersionInfo {
+        val appContext = runCatching { LogManager.applicationContext }.getOrNull()
+        if (appContext == null) {
+            return CoreVersionInfo(versionCode = -1, versionName = "unknown")
+        }
+
+        val versionText = runCatching {
+            appContext.assets.open(CORE_VERSION_ASSET).bufferedReader().use { it.readText().trim() }
+        }.getOrNull()
+
+        val versionCode = versionText?.toIntOrNull() ?: -1
+        val versionName = versionText?.takeIf { it.isNotBlank() } ?: "unknown"
+        return CoreVersionInfo(versionCode = versionCode, versionName = versionName)
     }
 
     /**
