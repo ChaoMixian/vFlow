@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.widget.ScrollView
 import android.widget.TextView
 import android.view.View
-import android.view.ViewTreeObserver
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -57,7 +56,8 @@ class MainActivity : BaseActivity() {
         const val LOG_PREFS_NAME = "vFlowLogPrefs" // 日志相关偏好设置
     }
 
-    private var insetsApplied = false // 标记边衬区是否已应用
+    private var windowInsetsBound = false
+    private var bottomNavSystemInset = 0
     private var uiShellReady = false
     private var navigationReady = false
     private var startupCompleted = false
@@ -116,6 +116,7 @@ class MainActivity : BaseActivity() {
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
+        bindWindowInsets()
     }
 
     private fun initializeNavigation() {
@@ -173,17 +174,12 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * Activity 启动时，如果尚未应用边衬区，则应用它们。
-     * 同时检查并应用启动设置。
+     * Activity 进入前台时，重新分发窗口边衬区并检查启动设置。
      */
     override fun onStart() {
         super.onStart()
-        if (uiShellReady && !insetsApplied) {
-            val appBarLayout = findViewById<AppBarLayout>(R.id.app_bar_layout)
-            val navView: BottomNavigationView = findViewById(R.id.bottom_nav_view)
-            val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-            applyWindowInsets(appBarLayout, navView, navHostFragment.requireView())
-            // insetsApplied 会在 applyWindowInsets 的回调中设置
+        if (uiShellReady) {
+            ViewCompat.requestApplyInsets(findViewById(R.id.main_root))
         }
         if (startupCompleted) {
             // 每次返回主界面时，检查并应用 Shizuku 相关设置
@@ -364,52 +360,58 @@ class MainActivity : BaseActivity() {
         startActivity(Intent.createChooser(intent, getString(R.string.crash_report_share_title)))
     }
 
-
     /**
-     * 应用窗口边衬区到 AppBar、底部导航和 Fragment 容器。
-     * @param appBar AppBarLayout 视图。
-     * @param bottomNav BottomNavigationView 视图。
-     * @param fragmentContainer Fragment 容器视图。
+     * 为主界面的 AppBar、内容区和底部导航建立幂等的 edge-to-edge 处理。
      */
-    private fun applyWindowInsets(appBar: AppBarLayout, bottomNav: BottomNavigationView, fragmentContainer: View) {
-        // 1. 为 AppBar 顶部添加状态栏高度的 padding
+    private fun bindWindowInsets() {
+        if (windowInsetsBound) return
+        windowInsetsBound = true
+
+        val root = findViewById<View>(R.id.main_root)
+        val appBar = findViewById<AppBarLayout>(R.id.app_bar_layout)
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
+        val fragmentContainer = findViewById<View>(R.id.nav_host_fragment)
+        val appBarInitialTop = appBar.paddingTop
+        val bottomNavInitialBottom = bottomNav.paddingBottom
+        val fragmentContainerInitialBottom = fragmentContainer.paddingBottom
+        val bottomNavBaseHeight =
+            resources.getDimensionPixelSize(com.google.android.material.R.dimen.design_bottom_navigation_height)
+
+        fun resolveBottomNavHeight(): Int {
+            val currentHeight = bottomNav.height.takeIf { it > 0 } ?: bottomNav.measuredHeight.takeIf { it > 0 }
+            return currentHeight ?: (bottomNavBaseHeight + bottomNavInitialBottom + bottomNavSystemInset)
+        }
+
+        fun updateFragmentContainerBottomPadding(bottomNavHeight: Int = resolveBottomNavHeight()) {
+            fragmentContainer.updatePadding(bottom = fragmentContainerInitialBottom + bottomNavHeight)
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = systemBars.top)
+            view.updatePadding(top = appBarInitialTop + systemBars.top)
             insets
         }
 
-        // 为底部导航栏底部添加系统导航栏高度的 padding
         ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(bottom = systemBars.bottom)
+            val targetBottomPadding = bottomNavInitialBottom + systemBars.bottom
+            val contentHeight = when {
+                view.height > 0 -> (view.height - view.paddingBottom).coerceAtLeast(bottomNavBaseHeight)
+                view.measuredHeight > 0 -> (view.measuredHeight - view.paddingBottom).coerceAtLeast(bottomNavBaseHeight)
+                else -> bottomNavBaseHeight
+            }
+            bottomNavSystemInset = systemBars.bottom
+            view.updatePadding(bottom = targetBottomPadding)
+            updateFragmentContainerBottomPadding(contentHeight + targetBottomPadding)
             insets
         }
 
-        // 为 Fragment 容器底部添加 BottomNavigationView 高度的 padding
-        // 使用 ViewTreeObserver 监听布局变化，直到获取到准确的高度值
-        val globalLayoutListener = object : ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                // 移除监听器，避免重复调用
-                bottomNav.viewTreeObserver.removeOnGlobalLayoutListener(this)
-
-                // 获取底部导航栏的准确高度（包含 padding）
-                val bottomNavHeight = bottomNav.height
-
-                // 只有高度有效时才应用 padding
-                if (bottomNavHeight > 0) {
-                    fragmentContainer.updatePadding(bottom = bottomNavHeight)
-                    insetsApplied = true
-                } else {
-                    // 如果高度仍为 0，延迟重试
-                    bottomNav.post {
-                        fragmentContainer.updatePadding(bottom = bottomNav.height)
-                        insetsApplied = true
-                    }
-                }
-            }
+        bottomNav.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            updateFragmentContainerBottomPadding()
         }
-        bottomNav.viewTreeObserver.addOnGlobalLayoutListener(globalLayoutListener)
+
+        updateFragmentContainerBottomPadding()
+        ViewCompat.requestApplyInsets(root)
     }
 
     private val dialogPadding: Int by lazy {
