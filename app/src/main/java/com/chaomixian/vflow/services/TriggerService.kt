@@ -19,6 +19,7 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.WorkflowPermissionRecovery
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
@@ -87,6 +88,7 @@ class TriggerService : Service() {
 
         // 首次启动时，加载所有活动的触发器
         loadAllActiveTriggers()
+        WorkflowPermissionRecovery.recoverEligibleWorkflows(applicationContext)
 
         // 启动 Core 进程守护（双进程保活机制）
         startCoreWatcher()

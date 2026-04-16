@@ -26,6 +26,7 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.opencv.OpenCVManager
+import com.chaomixian.vflow.core.workflow.WorkflowPermissionRecovery
 import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
@@ -184,6 +185,9 @@ class MainActivity : BaseActivity() {
         if (startupCompleted) {
             // 每次返回主界面时，检查并应用 Shizuku 相关设置
             checkAndApplyStartupSettings()
+            lifecycleScope.launch(Dispatchers.IO) {
+                WorkflowPermissionRecovery.recoverEligibleWorkflows(applicationContext)
+            }
         }
     }
 

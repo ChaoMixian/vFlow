@@ -19,6 +19,7 @@ import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.workflow.WorkflowPermissionRecovery
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.appbar.AppBarLayout
@@ -122,6 +123,7 @@ class PermissionActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         refreshPermissionsStatus()
+        WorkflowPermissionRecovery.recoverEligibleWorkflows(this)
     }
 
     private fun setupUI() {

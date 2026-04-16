@@ -30,6 +30,7 @@ import com.chaomixian.vflow.core.workflow.FolderManager
 import com.chaomixian.vflow.core.workflow.WorkflowBatchEnumMigrationPreview
 import com.chaomixian.vflow.core.workflow.WorkflowEnumMigration
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.WorkflowPermissionRecovery
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.model.WorkflowFolder
 import com.chaomixian.vflow.permissions.PermissionActivity
@@ -277,7 +278,7 @@ class WorkflowListFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        checkAndReEnableWorkflows()
+        WorkflowPermissionRecovery.recoverEligibleWorkflows(requireContext())
         loadData()
         maybePromptWorkflowEnumMigration()
     }
@@ -354,20 +355,6 @@ class WorkflowListFragment : Fragment() {
             action = WorkflowsFloatPanelService.ACTION_SHOW
         }
         requireContext().startService(intent)
-    }
-
-    private fun checkAndReEnableWorkflows() {
-        val allWorkflows = workflowManager.getAllWorkflows()
-        allWorkflows.forEach { workflow ->
-            if (workflow.wasEnabledBeforePermissionsLost && !workflow.isEnabled) {
-                val missingPermissions = PermissionManager.getMissingPermissions(requireContext(), workflow)
-                if (missingPermissions.isEmpty()) {
-                    DebugLogger.i("WorkflowListFragment", "工作流 '${workflow.name}' 的权限已授予，正在自动重新启用。")
-                    val updatedWorkflow = workflow.copy(isEnabled = true, wasEnabledBeforePermissionsLost = false)
-                    workflowManager.saveWorkflow(updatedWorkflow)
-                }
-            }
-        }
     }
 
     private fun loadData() {

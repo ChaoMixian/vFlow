@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.locale.LocaleManager
+import com.chaomixian.vflow.core.workflow.WorkflowPermissionRecovery
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.settings.PermissionGuardianActivity
@@ -190,5 +191,7 @@ class PermissionGuardianService : Service() {
                 DebugLogger.e(TAG, "检查权限出错: ${permission.name}", e)
             }
         }
+
+        WorkflowPermissionRecovery.recoverEligibleWorkflows(this)
     }
 }
