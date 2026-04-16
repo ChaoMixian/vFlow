@@ -93,6 +93,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.workflow_editor.PoseTriggerRecorderActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".permissions.PermissionActivity"
             android:exported="false" />
 

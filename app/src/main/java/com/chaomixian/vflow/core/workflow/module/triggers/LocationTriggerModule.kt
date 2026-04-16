@@ -44,7 +44,7 @@ class LocationTriggerModule : BaseModule() {
         descriptionStringRes = R.string.module_vflow_trigger_location_desc,
         name = "位置触发器",
         description = "当进入或离开指定区域时触发工作流",
-        iconRes = R.drawable.rounded_alt_route_24,
+        iconRes = R.drawable.rounded_location_on_24,
         category = "触发器",
         categoryId = "trigger"
     )

@@ -80,6 +80,7 @@ object ModuleRegistry {
         register(ElementTriggerModule(), context)
         register(GKDTriggerModule(), context)
         register(LocationTriggerModule(), context)
+        register(PoseTriggerModule(), context)
 
         // 界面交互
         register(FindTextModule(), context)

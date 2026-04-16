@@ -541,6 +541,21 @@
     <string name="overlay_ui_speech_error_unknown">语音识别失败: %s</string>
     <string name="overlay_ui_speech_offline_pack_missing_title">缺少离线语音包</string>
     <string name="overlay_ui_speech_offline_pack_missing_message">当前语言未安装离线语音包，请前往系统语音设置下载后重试。</string>
+    <string name="pose_trigger_record_button">录制三轴姿态</string>
+    <string name="pose_trigger_pose_not_recorded">尚未录制目标姿态</string>
+    <string name="pose_trigger_record_instructions">打开录制页后，单击任意音量键开始录制，再次单击音量键结束录制。</string>
+    <string name="pose_trigger_match_threshold_value">当前要求至少 %1$d%% 匹配</string>
+    <string name="pose_trigger_record_title">录制姿态</string>
+    <string name="pose_trigger_record_status_ready">准备录制</string>
+    <string name="pose_trigger_record_status_recording">录制中</string>
+    <string name="pose_trigger_record_hint_start">将设备摆到目标姿态，然后单击任意音量键开始采样。</string>
+    <string name="pose_trigger_record_hint_stop">保持设备稳定，再次单击任意音量键结束录制并保存平均姿态。</string>
+    <string name="pose_trigger_record_sample_count">已采样 %1$d 帧</string>
+    <string name="pose_trigger_current_pose_title">当前姿态</string>
+    <string name="pose_trigger_current_pose_waiting">等待传感器数据…</string>
+    <string name="pose_trigger_record_tip">提示：匹配度越高越严格。90% 适合稳定姿态，80% 左右更适合手持触发。</string>
+    <string name="pose_trigger_sensor_unavailable">当前设备不支持姿态传感器</string>
+    <string name="pose_trigger_record_empty">尚未采集到姿态数据，请重试</string>
 
     <!-- WorkflowRepoFragment -->
     <string name="text_no_workflows">暂无工作流</string>

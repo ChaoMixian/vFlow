@@ -437,6 +437,17 @@
     <string name="module_vflow_trigger_backtap_name">Back Tap Trigger</string>
     <string name="module_vflow_trigger_backtap_desc">Trigger workflow by tapping the back of your phone (double/triple tap)</string>
     <string name="param_vflow_trigger_backtap_mode_name">Mode</string>
+    <string name="module_vflow_trigger_pose_name">Pose Trigger</string>
+    <string name="module_vflow_trigger_pose_desc">Trigger the workflow when the device pose matches a recorded three-axis pose</string>
+    <string name="param_vflow_trigger_pose_recorded_pose_name">Recorded Pose</string>
+    <string name="param_vflow_trigger_pose_match_threshold_name">Pose Match Threshold</string>
+    <string name="output_vflow_trigger_pose_azimuth_name">Current Z Axis</string>
+    <string name="output_vflow_trigger_pose_pitch_name">Current X Axis</string>
+    <string name="output_vflow_trigger_pose_roll_name">Current Y Axis</string>
+    <string name="output_vflow_trigger_pose_match_score_name">Match Score</string>
+    <string name="summary_vflow_trigger_pose_not_recorded">Record target pose</string>
+    <string name="summary_vflow_trigger_pose_prefix">Pose match</string>
+    <string name="msg_vflow_trigger_pose_triggered">Pose trigger fired</string>
     <string name="option_vflow_trigger_backtap_mode_double_tap">Double Tap</string>
     <string name="option_vflow_trigger_backtap_mode_triple_tap">Triple Tap</string>
 

@@ -556,6 +556,21 @@
     <string name="overlay_ui_speech_error_unknown">Speech recognition failed: %s</string>
     <string name="overlay_ui_speech_offline_pack_missing_title">Offline speech pack missing</string>
     <string name="overlay_ui_speech_offline_pack_missing_message">The selected language does not have an offline speech pack installed. Download it in system voice settings and try again.</string>
+    <string name="pose_trigger_record_button">Record 3-Axis Pose</string>
+    <string name="pose_trigger_pose_not_recorded">No target pose recorded yet</string>
+    <string name="pose_trigger_record_instructions">Open the recorder, press any volume key once to start, and press a volume key again to stop.</string>
+    <string name="pose_trigger_match_threshold_value">Require at least %1$d%% match</string>
+    <string name="pose_trigger_record_title">Record Pose</string>
+    <string name="pose_trigger_record_status_ready">Ready to record</string>
+    <string name="pose_trigger_record_status_recording">Recording</string>
+    <string name="pose_trigger_record_hint_start">Hold the device in the target pose, then press any volume key once to start sampling.</string>
+    <string name="pose_trigger_record_hint_stop">Keep the device steady and press a volume key again to finish and save the averaged pose.</string>
+    <string name="pose_trigger_record_sample_count">Captured %1$d samples</string>
+    <string name="pose_trigger_current_pose_title">Current Pose</string>
+    <string name="pose_trigger_current_pose_waiting">Waiting for sensor data…</string>
+    <string name="pose_trigger_record_tip">Tip: higher thresholds are stricter. Around 90% fits stable poses, around 80% is better for handheld triggering.</string>
+    <string name="pose_trigger_sensor_unavailable">This device does not support pose sensors</string>
+    <string name="pose_trigger_record_empty">No pose data captured yet, please try again</string>
 
     <!-- WorkflowRepoFragment -->
     <string name="text_no_workflows">No workflows available</string>

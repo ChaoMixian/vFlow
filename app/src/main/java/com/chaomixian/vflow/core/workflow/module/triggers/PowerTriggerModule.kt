@@ -14,7 +14,7 @@ class PowerTriggerModule : BaseModule() {
         descriptionStringRes = R.string.module_vflow_trigger_power_desc,
         name = "电源触发",  // Fallback
         description = "当电源连接或断开时触发工作流",  // Fallback
-        iconRes = R.drawable.rounded_battery_android_frame_full_24,
+        iconRes = R.drawable.rounded_mobile_charge_24,
         category = "触发器",
         categoryId = "trigger"
     )

@@ -39,6 +39,7 @@ object TriggerHandlerRegistry {
         register(ElementTriggerModule().id) { ElementTriggerHandler() }
         register(GKDTriggerModule().id) { GKDTriggerHandler() }
         register(LocationTriggerModule().id) { LocationTriggerHandler() }
+        register(PoseTriggerModule().id) { PoseTriggerHandler() }
 
     }
 
