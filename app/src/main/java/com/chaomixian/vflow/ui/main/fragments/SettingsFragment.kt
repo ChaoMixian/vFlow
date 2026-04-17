@@ -1,9 +1,9 @@
-// 文件: main/java/com/chaomixian/vflow/ui/main/fragments/SettingsFragment.kt
 package com.chaomixian.vflow.ui.main.fragments
 
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -31,6 +31,7 @@ import com.chaomixian.vflow.api.ApiService
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.main.MainActivity
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -87,14 +88,22 @@ class SettingsFragment : Fragment() {
         dynamicColorSwitch.isChecked = prefs.getBoolean("dynamicColorEnabled", false)
         dynamicColorSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean("dynamicColorEnabled", isChecked) }
-            requireActivity().recreate() // 重新创建Activity以应用主题更改
+            (activity as? MainActivity)?.safeRestart()
         }
 
         val colorfulWorkflowCardsSwitch = view.findViewById<MaterialSwitch>(R.id.switch_colorful_workflow_cards)
         colorfulWorkflowCardsSwitch.isChecked = ThemeUtils.isColorfulWorkflowCardsEnabled(requireContext())
         colorfulWorkflowCardsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean(ThemeUtils.KEY_COLORFUL_WORKFLOW_CARDS_ENABLED, isChecked) }
-            requireActivity().recreate()
+            (activity as? MainActivity)?.safeRestart()
+        }
+
+        val liquidGlassNavBarSwitch = view.findViewById<MaterialSwitch>(R.id.switch_liquid_glass_nav_bar)
+        liquidGlassNavBarSwitch.isChecked = AppearanceManager.isLiquidGlassNavBarEnabled(requireContext())
+        liquidGlassNavBarSwitch.isEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        liquidGlassNavBarSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(AppearanceManager.KEY_LIQUID_GLASS_NAV_BAR_ENABLED, isChecked) }
+            (activity as? MainActivity)?.applyLiquidGlassNavBarEnabled(isChecked)
         }
 
         val appScaleSlider = view.findViewById<Slider>(R.id.slider_app_scale)
@@ -116,7 +125,7 @@ class SettingsFragment : Fragment() {
                 if (abs(newScale - lastSavedScale) < 0.001f) return
                 prefs.edit { putFloat(AppearanceManager.KEY_APP_SCALE, newScale) }
                 lastSavedScale = newScale
-                requireActivity().recreate()
+                (activity as? MainActivity)?.safeRestart()
             }
         })
 
@@ -473,14 +482,7 @@ class SettingsFragment : Fragment() {
             .setTitle(R.string.settings_toast_language_changed)
             .setMessage(R.string.settings_toast_restart_needed)
             .setPositiveButton(R.string.settings_button_restart) { _, _ ->
-                // 重启应用
-                val intent = requireContext().packageManager.getLaunchIntentForPackage(requireContext().packageName)
-                if (intent != null) {
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                }
-                requireActivity().finish()
+                (activity as? MainActivity)?.safeRestart()
             }
             .setNegativeButton(R.string.settings_button_later, null)
             .setCancelable(false)

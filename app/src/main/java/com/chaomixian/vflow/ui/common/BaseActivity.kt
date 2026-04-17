@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
-import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.locale.LocaleManager
 
 // 文件：BaseActivity.kt
@@ -40,15 +39,5 @@ abstract class BaseActivity : AppCompatActivity() {
     private fun applyDynamicTheme() {
         val themeResId = ThemeUtils.getThemeResId(this)
         setTheme(themeResId)
-    }
-
-    /**
-     * 切换语言并重建Activity
-     *
-     * @param languageCode 要切换到的语言代码（如 "zh", "en"）
-     */
-    fun recreateWithLanguage(languageCode: String) {
-        LocaleManager.setLanguage(this, languageCode)
-        recreate()
     }
 }

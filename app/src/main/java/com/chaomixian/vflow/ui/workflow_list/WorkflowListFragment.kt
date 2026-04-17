@@ -11,7 +11,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.view.*
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
@@ -37,6 +39,8 @@ import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.ShortcutHelper
 import com.chaomixian.vflow.ui.float.WorkflowsFloatPanelService
+import com.chaomixian.vflow.ui.main.MainTopBarActionHandler
+import com.chaomixian.vflow.ui.main.WorkflowTopBarAction
 import com.chaomixian.vflow.ui.workflow_editor.WorkflowEditorActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -49,7 +53,7 @@ import java.text.Collator
 import java.text.SimpleDateFormat
 import java.util.*
 
-class WorkflowListFragment : Fragment() {
+class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
     private lateinit var workflowManager: WorkflowManager
     private lateinit var folderManager: FolderManager
     private lateinit var importHelper: WorkflowImportHelper
@@ -227,12 +231,6 @@ class WorkflowListFragment : Fragment() {
         }
     }
 
-    /** Fragment 创建时调用，启用选项菜单。 */
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
-    }
-
     /** 创建并返回 Fragment 的视图。 */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -285,38 +283,23 @@ class WorkflowListFragment : Fragment() {
         maybePromptWorkflowEnumMigration()
     }
 
-    // 选项菜单处理
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.workflow_list_menu, menu)
-        super.onCreateOptionsMenu(menu, inflater)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.menu_sort_by_name -> {
+    override fun onMainTopBarAction(action: WorkflowTopBarAction): Boolean {
+        when (action) {
+            WorkflowTopBarAction.FavoriteFloat -> handleFavoriteFloatClick()
+            WorkflowTopBarAction.SortByName -> {
                 isSortedByName = !isSortedByName
                 loadData()
-                true
             }
-            R.id.menu_create_folder -> {
-                showCreateFolderDialog()
-                true
-            }
-            R.id.menu_favorite_float -> {
-                handleFavoriteFloatClick()
-                true
-            }
-            R.id.menu_backup_workflows -> {
+            WorkflowTopBarAction.CreateFolder -> showCreateFolderDialog()
+            WorkflowTopBarAction.BackupWorkflows -> {
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                 backupLauncher.launch("vflow_backup_${timestamp}.json")
-                true
             }
-            R.id.menu_import_workflows -> {
+            WorkflowTopBarAction.ImportWorkflows -> {
                 importLauncher.launch(arrayOf("application/json"))
-                true
             }
-            else -> super.onOptionsItemSelected(item)
         }
+        return true
     }
 
     private fun handleFavoriteFloatClick() {

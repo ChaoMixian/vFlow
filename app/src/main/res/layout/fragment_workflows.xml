@@ -11,7 +11,7 @@
         android:paddingTop="8dp"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        android:paddingBottom="88dp"
+        android:paddingBottom="16dp"
         android:clipToPadding="false" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton

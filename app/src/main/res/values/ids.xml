@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="main_compose_fragment_container_home" type="id" />
+    <item name="main_compose_fragment_container_workflows" type="id" />
+    <item name="main_compose_fragment_container_modules" type="id" />
+    <item name="main_compose_fragment_container_repository" type="id" />
+    <item name="main_compose_fragment_container_settings" type="id" />
+    <item name="main_tab_inset_base_padding_bottom" type="id" />
+    <item name="main_tab_inset_base_margin_bottom" type="id" />
+</resources>

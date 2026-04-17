@@ -1,23 +1,25 @@
-// 文件：main/java/com/chaomixian/vflow/ui/main/MainActivity.kt
-// 描述：应用的主活动，承载底部导航和各个主页面 Fragment。
 package com.chaomixian.vflow.ui.main
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
-import android.app.ActivityManager
 import android.os.Bundle
 import android.widget.ScrollView
 import android.widget.TextView
-import android.view.View
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.updatePadding
+import androidx.core.widget.NestedScrollView
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.commitNow
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.locale.toast
 import com.chaomixian.vflow.core.logging.CrashReport
@@ -30,13 +32,12 @@ import com.chaomixian.vflow.core.workflow.WorkflowPermissionRecovery
 import com.chaomixian.vflow.core.workflow.module.scripted.ModuleManager
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TriggerHandlerRegistry
 import com.chaomixian.vflow.services.ExecutionNotificationManager
+import com.chaomixian.vflow.services.PermissionGuardianService
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.TriggerService
-import com.chaomixian.vflow.services.PermissionGuardianService
+import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.common.BaseActivity
-import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.chaomixian.vflow.services.CoreManagementService
@@ -46,23 +47,23 @@ import java.util.Locale
 
 /**
  * 应用的主 Activity。
- * 初始化模块注册表，设置Toolbar、底部导航栏和 NavHostFragment。
- * 处理窗口边衬区 (WindowInsets) 以适配系统栏。
+ * 负责启动流程、主界面 Compose 外壳以及内嵌主页面 Fragment 的生命周期切换。
  */
 class MainActivity : BaseActivity() {
-
-    // SharedPreferences 文件名常量
     companion object {
-        const val PREFS_NAME = "vFlowPrefs" // 应用主要偏好设置
-        const val LOG_PREFS_NAME = "vFlowLogPrefs" // 日志相关偏好设置
+        const val PREFS_NAME = "vFlowPrefs"
+        const val LOG_PREFS_NAME = "vFlowLogPrefs"
+        private const val EXTRA_INITIAL_MAIN_TAB_TAG = "initial_main_tab_tag"
     }
 
-    private var windowInsetsBound = false
-    private var bottomNavSystemInset = 0
     private var uiShellReady = false
-    private var navigationReady = false
     private var startupCompleted = false
+    private var contentReady by mutableStateOf(false)
+    private var liquidGlassNavBarEnabled by mutableStateOf(false)
     private var pendingCrashExportText: String? = null
+    private var currentMainTabTag: String? = null
+    private var initialMainTab: MainTopLevelTab = MainTopLevelTab.HOME
+    private var latestMainBottomInsetPx: Int = 0
     private val exportCrashReportLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
             try {
@@ -86,6 +87,9 @@ class MainActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        liquidGlassNavBarEnabled = AppearanceManager.isLiquidGlassNavBarEnabled(this)
+        initialMainTab = resolveInitialMainTab(savedInstanceState)
+        currentMainTabTag = initialMainTab.fragmentTag
 
         // 检查首次运行
         if (prefs.getBoolean("is_first_run", true)) {
@@ -100,53 +104,33 @@ class MainActivity : BaseActivity() {
             val pendingCrashReport = CrashReportManager.getPendingCrashReport()
             if (pendingCrashReport != null) {
                 maybeShowPendingCrashReport(pendingCrashReport) {
-                    continueStartup(savedInstanceState)
+                    continueStartup()
                 }
                 return
             }
         }
 
-        continueStartup(savedInstanceState)
+        continueStartup()
     }
 
     private fun initializeUiShell() {
         if (uiShellReady) return
         uiShellReady = true
-
-        setContentView(R.layout.activity_main)
-
-        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        bindWindowInsets()
-    }
-
-    private fun initializeNavigation() {
-        if (navigationReady) return
-        navigationReady = true
-
-        val navView: BottomNavigationView = findViewById(R.id.bottom_nav_view)
-        val navHostFragment = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        val navController = navHostFragment.navController
-        val hasGraph = runCatching { navController.graph.id }.getOrNull() != null
-        if (!hasGraph) {
-            navController.setGraph(R.navigation.main_nav_graph, null)
-        }
-
-        val appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.navigation_home,
-                R.id.navigation_workflows,
-                R.id.navigation_modules,
-                R.id.navigation_repository,
-                R.id.navigation_settings
+        window.isNavigationBarContrastEnforced = false
+        setContent {
+            MainActivityContent(
+                isReady = contentReady,
+                liquidGlassNavBarEnabled = liquidGlassNavBarEnabled,
+                initialTab = initialMainTab,
+                onBackPressedAtRoot = { finish() },
+                onDisplayTab = ::showMainTabFragment,
+                onPrimaryTabChanged = ::setPrimaryMainTab,
+                onWorkflowTopBarAction = ::handleWorkflowTopBarAction,
             )
-        )
-        setupActionBarWithNavController(navController, appBarConfiguration)
-        navView.setupWithNavController(navController)
+        }
     }
 
-    private fun continueStartup(savedInstanceState: Bundle?) {
+    private fun continueStartup() {
         if (startupCompleted) return
         startupCompleted = true
 
@@ -165,13 +149,10 @@ class MainActivity : BaseActivity() {
 
         // 应用启动时，立即发起 Shizuku 预连接
         ShellManager.proactiveConnect(applicationContext)
-        // 检查并自动启动 vFlow Core
         checkCoreAutoStart()
-        // 检查并自动启动权限守护
         checkPermissionGuardianAutoStart()
-        // 启动后台触发器服务
         startService(Intent(this, TriggerService::class.java))
-        initializeNavigation()
+        contentReady = true
     }
 
     /**
@@ -179,11 +160,7 @@ class MainActivity : BaseActivity() {
      */
     override fun onStart() {
         super.onStart()
-        if (uiShellReady) {
-            ViewCompat.requestApplyInsets(findViewById(R.id.main_root))
-        }
         if (startupCompleted) {
-            // 每次返回主界面时，检查并应用 Shizuku 相关设置
             checkAndApplyStartupSettings()
             lifecycleScope.launch(Dispatchers.IO) {
                 WorkflowPermissionRecovery.recoverEligibleWorkflows(applicationContext)
@@ -199,7 +176,6 @@ class MainActivity : BaseActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val hideFromRecents = prefs.getBoolean("hideFromRecents", false)
         if (hideFromRecents) {
-            // 从最近任务中移除当前Activity
             val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             activityManager.appTasks.forEach { task ->
                 if (task.taskInfo.baseActivity?.packageName == packageName) {
@@ -222,11 +198,9 @@ class MainActivity : BaseActivity() {
                 val shizukuActive = ShellManager.isShizukuActive(this@MainActivity)
                 val rootAvailable = ShellManager.isRootAvailable()
                 if (autoEnableAccessibility && (shizukuActive || rootAvailable)) {
-                    // 自动启用无障碍服务，这里不显示 Toast 以避免打扰
                     ShellManager.ensureAccessibilityServiceRunning(this@MainActivity)
                 }
                 if (forceKeepAlive && shizukuActive) {
-                    // 自动启动守护，仅支持 Shizuku
                     ShellManager.startWatcher(this@MainActivity)
                 }
             }
@@ -260,6 +234,199 @@ class MainActivity : BaseActivity() {
                 }
             }
         }
+    }
+
+    internal fun showMainTabFragment(tab: MainTopLevelTab, containerId: Int, bottomInsetPx: Int) {
+        val fragmentManager = supportFragmentManager
+        if (isDestroyed || fragmentManager.isStateSaved) return
+        latestMainBottomInsetPx = bottomInsetPx
+
+        val targetFragment = fragmentManager.findFragmentByTag(tab.fragmentTag) ?: tab.createFragment()
+        if (targetFragment.isAdded) {
+            applyScrollableBottomInset(targetFragment, bottomInsetPx)
+            return
+        }
+
+        fragmentManager.commitNow {
+            setReorderingAllowed(true)
+            add(containerId, targetFragment, tab.fragmentTag)
+        }
+        applyScrollableBottomInset(targetFragment, bottomInsetPx)
+    }
+
+    private fun applyScrollableBottomInset(fragment: Fragment, bottomInsetPx: Int) {
+        fragment.view?.let { root ->
+            applyScrollableBottomInsetToRoot(root, bottomInsetPx)
+            root.doOnLayout {
+                applyScrollableBottomInsetToRoot(root, bottomInsetPx)
+            }
+            root.post {
+                if (!isDestroyed) {
+                    applyScrollableBottomInsetToRoot(root, bottomInsetPx)
+                }
+            }
+        }
+    }
+
+    private fun applyScrollableBottomInsetToRoot(root: android.view.View, bottomInsetPx: Int) {
+        val fabInsetPx = collectBottomAnchoredFabInset(root)
+        updateScrollableBottomInsetRecursive(
+            view = root,
+            scrollableBottomInsetPx = bottomInsetPx + fabInsetPx,
+            fabBottomInsetPx = bottomInsetPx,
+        )
+    }
+
+    private fun collectBottomAnchoredFabInset(view: android.view.View): Int {
+        var maxInset = 0
+        fun walk(node: android.view.View) {
+            when (node) {
+                is com.google.android.material.floatingactionbutton.FloatingActionButton,
+                is com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton -> {
+                    val layoutParams = node.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+                    val baseBottomMargin =
+                        (node.getTag(R.id.main_tab_inset_base_margin_bottom) as? Int)
+                            ?: layoutParams?.bottomMargin
+                            ?: 0
+                    maxInset = maxOf(maxInset, node.height + baseBottomMargin)
+                }
+            }
+            if (node is android.view.ViewGroup) {
+                for (index in 0 until node.childCount) {
+                    walk(node.getChildAt(index))
+                }
+            }
+        }
+        walk(view)
+        return maxInset
+    }
+
+    private fun updateScrollableBottomInsetRecursive(
+        view: android.view.View,
+        scrollableBottomInsetPx: Int,
+        fabBottomInsetPx: Int,
+    ) {
+        when (view) {
+            is com.google.android.material.floatingactionbutton.FloatingActionButton,
+            is com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton -> {
+                val layoutParams = view.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+                if (layoutParams != null) {
+                    val baseBottomMargin =
+                        (view.getTag(R.id.main_tab_inset_base_margin_bottom) as? Int) ?: layoutParams.bottomMargin.also {
+                            view.setTag(R.id.main_tab_inset_base_margin_bottom, it)
+                        }
+                    layoutParams.bottomMargin = baseBottomMargin + fabBottomInsetPx
+                    view.layoutParams = layoutParams
+                }
+            }
+
+            is RecyclerView -> {
+                val basePadding = (view.getTag(R.id.main_tab_inset_base_padding_bottom) as? Int) ?: view.paddingBottom.also {
+                    view.setTag(R.id.main_tab_inset_base_padding_bottom, it)
+                }
+                view.clipToPadding = false
+                view.updatePadding(bottom = basePadding + scrollableBottomInsetPx)
+            }
+
+            is ScrollView -> {
+                val basePadding = (view.getTag(R.id.main_tab_inset_base_padding_bottom) as? Int) ?: view.paddingBottom.also {
+                    view.setTag(R.id.main_tab_inset_base_padding_bottom, it)
+                }
+                view.clipToPadding = false
+                view.updatePadding(bottom = basePadding + scrollableBottomInsetPx)
+            }
+
+            is NestedScrollView -> {
+                val basePadding = (view.getTag(R.id.main_tab_inset_base_padding_bottom) as? Int) ?: view.paddingBottom.also {
+                    view.setTag(R.id.main_tab_inset_base_padding_bottom, it)
+                }
+                view.clipToPadding = false
+                view.updatePadding(bottom = basePadding + scrollableBottomInsetPx)
+            }
+
+            is ViewPager2 -> {
+                val recyclerView = (0 until view.childCount)
+                    .map(view::getChildAt)
+                    .filterIsInstance<RecyclerView>()
+                    .firstOrNull()
+                if (recyclerView != null) {
+                    updateScrollableBottomInsetRecursive(
+                        view = recyclerView,
+                        scrollableBottomInsetPx = scrollableBottomInsetPx,
+                        fabBottomInsetPx = fabBottomInsetPx,
+                    )
+                }
+            }
+        }
+
+        if (view is android.view.ViewGroup && view !is ViewPager2) {
+            for (index in 0 until view.childCount) {
+                updateScrollableBottomInsetRecursive(
+                    view = view.getChildAt(index),
+                    scrollableBottomInsetPx = scrollableBottomInsetPx,
+                    fabBottomInsetPx = fabBottomInsetPx,
+                )
+            }
+        }
+    }
+
+    internal fun setPrimaryMainTab(tab: MainTopLevelTab) {
+        val fragmentManager = supportFragmentManager
+        if (isDestroyed || fragmentManager.isStateSaved) return
+
+        if (currentMainTabTag == tab.fragmentTag) {
+            return
+        }
+
+        fragmentManager.commitNow {
+            setReorderingAllowed(true)
+            MainTopLevelTab.entries.forEach { entry ->
+                fragmentManager.findFragmentByTag(entry.fragmentTag)?.let { fragment ->
+                    if (fragment.isAdded) {
+                        setMaxLifecycle(
+                            fragment,
+                            if (entry == tab) Lifecycle.State.RESUMED else Lifecycle.State.STARTED
+                        )
+                        if (entry == tab) {
+                            applyScrollableBottomInset(fragment, latestMainBottomInsetPx)
+                        }
+                    }
+                }
+            }
+        }
+        currentMainTabTag = tab.fragmentTag
+    }
+
+    fun applyLiquidGlassNavBarEnabled(enabled: Boolean) {
+        liquidGlassNavBarEnabled = enabled
+    }
+
+    private fun handleWorkflowTopBarAction(action: WorkflowTopBarAction) {
+        val fragment =
+            supportFragmentManager.findFragmentByTag(MainTopLevelTab.WORKFLOWS.fragmentTag)
+                as? MainTopBarActionHandler
+                ?: return
+        fragment.onMainTopBarAction(action)
+    }
+
+    fun safeRestart() {
+        val nextTab = currentMainTabTag ?: initialMainTab.fragmentTag
+        val restartIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            putExtra(EXTRA_INITIAL_MAIN_TAB_TAG, nextTab)
+        }
+        startActivity(restartIntent)
+        finish()
+        overridePendingTransition(0, 0)
+    }
+
+    private fun resolveInitialMainTab(savedInstanceState: Bundle?): MainTopLevelTab {
+        val requestedTag = if (savedInstanceState == null) {
+            intent.getStringExtra(EXTRA_INITIAL_MAIN_TAB_TAG)
+        } else {
+            null
+        }
+        return MainTopLevelTab.entries.firstOrNull { it.fragmentTag == requestedTag } ?: MainTopLevelTab.HOME
     }
 
     /**
@@ -362,60 +529,6 @@ class MainActivity : BaseActivity() {
             putExtra(Intent.EXTRA_TEXT, reportText)
         }
         startActivity(Intent.createChooser(intent, getString(R.string.crash_report_share_title)))
-    }
-
-    /**
-     * 为主界面的 AppBar、内容区和底部导航建立幂等的 edge-to-edge 处理。
-     */
-    private fun bindWindowInsets() {
-        if (windowInsetsBound) return
-        windowInsetsBound = true
-
-        val root = findViewById<View>(R.id.main_root)
-        val appBar = findViewById<AppBarLayout>(R.id.app_bar_layout)
-        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
-        val fragmentContainer = findViewById<View>(R.id.nav_host_fragment)
-        val appBarInitialTop = appBar.paddingTop
-        val bottomNavInitialBottom = bottomNav.paddingBottom
-        val fragmentContainerInitialBottom = fragmentContainer.paddingBottom
-        val bottomNavBaseHeight =
-            resources.getDimensionPixelSize(com.google.android.material.R.dimen.design_bottom_navigation_height)
-
-        fun resolveBottomNavHeight(): Int {
-            val currentHeight = bottomNav.height.takeIf { it > 0 } ?: bottomNav.measuredHeight.takeIf { it > 0 }
-            return currentHeight ?: (bottomNavBaseHeight + bottomNavInitialBottom + bottomNavSystemInset)
-        }
-
-        fun updateFragmentContainerBottomPadding(bottomNavHeight: Int = resolveBottomNavHeight()) {
-            fragmentContainer.updatePadding(bottom = fragmentContainerInitialBottom + bottomNavHeight)
-        }
-
-        ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = appBarInitialTop + systemBars.top)
-            insets
-        }
-
-        ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val targetBottomPadding = bottomNavInitialBottom + systemBars.bottom
-            val contentHeight = when {
-                view.height > 0 -> (view.height - view.paddingBottom).coerceAtLeast(bottomNavBaseHeight)
-                view.measuredHeight > 0 -> (view.measuredHeight - view.paddingBottom).coerceAtLeast(bottomNavBaseHeight)
-                else -> bottomNavBaseHeight
-            }
-            bottomNavSystemInset = systemBars.bottom
-            view.updatePadding(bottom = targetBottomPadding)
-            updateFragmentContainerBottomPadding(contentHeight + targetBottomPadding)
-            insets
-        }
-
-        bottomNav.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            updateFragmentContainerBottomPadding()
-        }
-
-        updateFragmentContainerBottomPadding()
-        ViewCompat.requestApplyInsets(root)
     }
 
     private val dialogPadding: Int by lazy {

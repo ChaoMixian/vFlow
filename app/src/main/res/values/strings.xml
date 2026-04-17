@@ -13,6 +13,8 @@
     <string name="settings_switch_dynamic_color_desc">基于您的壁纸颜色生成应用外观主题。</string>
     <string name="settings_switch_colorful_workflow_cards">多彩配色 (Beta)</string>
     <string name="settings_switch_colorful_workflow_cards_desc">为工作流卡片启用图标和多彩背景。</string>
+    <string name="settings_switch_liquid_glass_nav_bar">液态玻璃导航栏</string>
+    <string name="settings_switch_liquid_glass_nav_bar_desc">使用液态玻璃风格浮动底栏替换主界面底部导航。</string>
     <string name="settings_app_scale">缩放比例</string>
     <string name="settings_app_scale_default_value">100%%</string>
     <string name="settings_app_scale_value">%1$d%%</string>

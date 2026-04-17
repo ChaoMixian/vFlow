@@ -13,6 +13,8 @@
     <string name="settings_switch_dynamic_color_desc">Generate the app appearance from your wallpaper colors.</string>
     <string name="settings_switch_colorful_workflow_cards">Colorful workflow cards (Beta)</string>
     <string name="settings_switch_colorful_workflow_cards_desc">Enable icons and colorful backgrounds for workflow cards.</string>
+    <string name="settings_switch_liquid_glass_nav_bar">Liquid Glass navigation bar</string>
+    <string name="settings_switch_liquid_glass_nav_bar_desc">Replace the main bottom navigation with a Liquid Glass floating bar.</string>
     <string name="settings_app_scale">Scale</string>
     <string name="settings_app_scale_default_value">100%%</string>
     <string name="settings_app_scale_value">%1$d%%</string>

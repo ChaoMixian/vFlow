@@ -8,6 +8,7 @@ import kotlin.math.roundToInt
 object AppearanceManager {
     const val PREFS_NAME = "vFlowPrefs"
     const val KEY_APP_SCALE = "appScale"
+    const val KEY_LIQUID_GLASS_NAV_BAR_ENABLED = "liquidGlassNavBarEnabled"
 
     const val DEFAULT_APP_SCALE = 1.0f
     const val MIN_APP_SCALE = 0.75f
@@ -17,6 +18,11 @@ object AppearanceManager {
     fun getAppScale(context: Context): Float {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return clampAppScale(prefs.getFloat(KEY_APP_SCALE, DEFAULT_APP_SCALE))
+    }
+
+    fun isLiquidGlassNavBarEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_LIQUID_GLASS_NAV_BAR_ENABLED, false)
     }
 
     fun clampAppScale(scale: Float): Float {

@@ -15,6 +15,8 @@ materialVersion = "1.13.0"
 jetbrainsKotlinJvm = "2.3.20"
 foundation = "1.10.6"
 opencv = "4.13.0"
+navigation3 = "1.1.0"
+backdrop = "1.0.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,6 +30,9 @@ androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation
 androidx-scenecore = { group = "androidx.xr.scenecore", name = "scenecore", version.ref = "scenecore" }
 google-material = { group = "com.google.android.material", name = "material", version.ref = "materialVersion" }
 androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 opencv = { group = "org.opencv", name = "opencv", version.ref = "opencv" }
 
 [plugins]
