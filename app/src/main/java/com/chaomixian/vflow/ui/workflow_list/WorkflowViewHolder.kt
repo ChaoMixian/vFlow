@@ -218,7 +218,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
                 )
             }
             executeIcon.setImageResource(
-                if (WorkflowExecutor.isRunning(workflow.id)) R.drawable.rounded_pause_24 else R.drawable.ic_play_arrow
+                if (WorkflowExecutor.isRunning(workflow.id)) R.drawable.rounded_pause_fill_24 else R.drawable.rounded_play_arrow_fill_24
             )
             executeButton.setOnClickListener { callbacks.onExecute?.invoke(workflow) }
 

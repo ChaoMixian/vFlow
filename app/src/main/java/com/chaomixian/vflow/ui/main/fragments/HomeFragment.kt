@@ -356,11 +356,11 @@ class HomeFragment : Fragment() {
 
             when (runCatching { log.status }.getOrNull()) {
                 LogStatus.SUCCESS -> {
-                    iconView.setImageResource(R.drawable.ic_log_success)
+                    iconView.setImageResource(R.drawable.rounded_check_24)
                     iconView.setColorFilter(MaterialColors.getColor(requireContext(), android.R.attr.colorPrimary, 0))
                 }
                 LogStatus.FAILURE, LogStatus.CANCELLED, null -> {
-                    iconView.setImageResource(R.drawable.ic_log_failure)
+                    iconView.setImageResource(R.drawable.rounded_close_24)
                     iconView.setColorFilter(MaterialColors.getColor(requireContext(), android.R.attr.colorError, 0))
                 }
             }
@@ -458,7 +458,7 @@ class HomeFragment : Fragment() {
             if (WorkflowExecutor.isRunning(workflowId)) {
                 iconView.setImageResource(R.drawable.rounded_pause_24)
             } else {
-                iconView.setImageResource(R.drawable.ic_play_arrow)
+                iconView.setImageResource(R.drawable.rounded_play_arrow_24)
             }
         }
     }
