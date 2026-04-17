@@ -88,14 +88,14 @@ class SettingsFragment : Fragment() {
         dynamicColorSwitch.isChecked = prefs.getBoolean("dynamicColorEnabled", false)
         dynamicColorSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean("dynamicColorEnabled", isChecked) }
-            (activity as? MainActivity)?.safeRestart()
+            activity?.recreate()
         }
 
         val colorfulWorkflowCardsSwitch = view.findViewById<MaterialSwitch>(R.id.switch_colorful_workflow_cards)
         colorfulWorkflowCardsSwitch.isChecked = ThemeUtils.isColorfulWorkflowCardsEnabled(requireContext())
         colorfulWorkflowCardsSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean(ThemeUtils.KEY_COLORFUL_WORKFLOW_CARDS_ENABLED, isChecked) }
-            (activity as? MainActivity)?.safeRestart()
+            activity?.recreate()
         }
 
         val liquidGlassNavBarSwitch = view.findViewById<MaterialSwitch>(R.id.switch_liquid_glass_nav_bar)
@@ -125,7 +125,7 @@ class SettingsFragment : Fragment() {
                 if (abs(newScale - lastSavedScale) < 0.001f) return
                 prefs.edit { putFloat(AppearanceManager.KEY_APP_SCALE, newScale) }
                 lastSavedScale = newScale
-                (activity as? MainActivity)?.safeRestart()
+                activity?.recreate()
             }
         })
 
