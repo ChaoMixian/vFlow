@@ -28,6 +28,8 @@
     <string name="settings_switch_force_keep_alive_desc">实验性功能。启用后可通过下拉通知栏触发恢复；若 Shizuku 可用，则提供额外进程守护。可能会增加耗电。</string>
     <string name="settings_module_config">模块配置</string>
     <string name="settings_module_config_desc">配置各个模块的运行参数。</string>
+    <string name="settings_switch_allow_show_on_lock_screen">允许锁屏显示</string>
+    <string name="settings_switch_allow_show_on_lock_screen_desc">允许模块弹窗、快捷查看等覆盖层在锁屏界面显示。</string>
     <string name="settings_switch_api_enabled">启用远程API</string>
     <string name="settings_switch_api_enabled_desc">允许通过局域网访问和控制工作流</string>
 

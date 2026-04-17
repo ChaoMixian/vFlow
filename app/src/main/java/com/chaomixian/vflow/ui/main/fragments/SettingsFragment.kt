@@ -30,6 +30,7 @@ import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.api.ApiService
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
+import com.chaomixian.vflow.ui.common.OverlayUiPreferences
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.chaomixian.vflow.ui.main.MainActivity
 import com.google.android.material.card.MaterialCardView
@@ -52,7 +53,6 @@ import kotlin.math.roundToInt
  * 提供应用相关的设置选项，如动态颜色和权限管理入口。
  */
 class SettingsFragment : Fragment() {
-
     private var iconClickCount = 0  // 图标点击计数器
     private var lastClickTime = 0L
     private var updateInfo: com.chaomixian.vflow.data.update.UpdateInfo? = null
@@ -335,6 +335,16 @@ class SettingsFragment : Fragment() {
         view.findViewById<View>(R.id.btn_module_config).setOnClickListener {
             val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.ModuleConfigActivity::class.java)
             startActivity(intent)
+        }
+
+        val allowShowOnLockScreenSwitch =
+            view.findViewById<MaterialSwitch>(R.id.switch_allow_show_on_lock_screen)
+        allowShowOnLockScreenSwitch.isChecked =
+            OverlayUiPreferences.isShowOnLockScreenAllowed(requireContext())
+        allowShowOnLockScreenSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit {
+                putBoolean(OverlayUiPreferences.KEY_ALLOW_SHOW_ON_LOCK_SCREEN, isChecked)
+            }
         }
 
         // API开关逻辑

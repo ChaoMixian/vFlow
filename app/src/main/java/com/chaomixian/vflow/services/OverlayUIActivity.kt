@@ -45,6 +45,7 @@ import com.chaomixian.vflow.speech.SherpaNcnnModelManager
 import com.chaomixian.vflow.speech.SherpaNcnnStreamingRecognizer
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.ui.common.AppearanceManager
+import com.chaomixian.vflow.ui.common.OverlayUiPreferences
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
@@ -121,8 +122,9 @@ class OverlayUIActivity : AppCompatActivity() {
     }
 
     private fun configureWindowForLockScreen() {
-        setShowWhenLocked(true)
-        setTurnScreenOn(true)
+        val allowShowOnLockScreen = OverlayUiPreferences.isShowOnLockScreenAllowed(this)
+        setShowWhenLocked(allowShowOnLockScreen)
+        setTurnScreenOn(allowShowOnLockScreen)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
