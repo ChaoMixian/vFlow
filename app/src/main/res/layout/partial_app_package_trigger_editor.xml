@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/label_event"
+        android:textAppearance="?attr/textAppearanceLabelLarge" />
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/cg_app_package_event"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/chip_app_installed"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/option_vflow_trigger_app_package_event_installed" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/chip_app_removed"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/option_vflow_trigger_app_package_event_removed" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/chip_app_updated"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/option_vflow_trigger_app_package_event_updated" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/label_target_apps"
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/cg_selected_apps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleSelection="false" />
+
+    <TextView
+        android:id="@+id/text_selected_app_summary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        tools:text="未选择应用时匹配任意应用" />
+
+    <Button
+        android:id="@+id/button_pick_app"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/button_add_app" />
+
+</LinearLayout>

@@ -370,6 +370,21 @@
     <string name="msg_vflow_trigger_app_start_triggered">App event triggered</string>
     <string name="option_vflow_trigger_app_start_event_opened">Opened</string>
     <string name="option_vflow_trigger_app_start_event_closed">Closed</string>
+    <string name="module_vflow_trigger_app_package_name">App Install/Remove/Update</string>
+    <string name="module_vflow_trigger_app_package_desc">Trigger workflow when an app is installed, removed, or updated</string>
+    <string name="param_vflow_trigger_app_package_event_name">Event</string>
+    <string name="param_vflow_trigger_app_package_package_name_name">App Package List</string>
+    <string name="output_vflow_trigger_app_package_package_name_name">Package Name</string>
+    <string name="output_vflow_trigger_app_package_app_name_name">App Name</string>
+    <string name="output_vflow_trigger_app_package_event_name">Event</string>
+    <string name="summary_vflow_trigger_app_package_prefix">When</string>
+    <string name="summary_vflow_trigger_app_package_any_app">any app</string>
+    <string name="summary_vflow_trigger_app_package_picker_any_app">No app selected, matches any app</string>
+    <string name="summary_vflow_trigger_app_package_picker_selected">Selected: %1$s</string>
+    <string name="msg_vflow_trigger_app_package_triggered">App package event triggered</string>
+    <string name="option_vflow_trigger_app_package_event_installed">Installed</string>
+    <string name="option_vflow_trigger_app_package_event_removed">Removed</string>
+    <string name="option_vflow_trigger_app_package_event_updated">Updated</string>
 
     <!-- vflow.trigger.battery - Battery Trigger -->
     <string name="module_vflow_trigger_battery_name">Battery Trigger</string>
