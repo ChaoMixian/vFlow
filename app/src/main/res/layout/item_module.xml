@@ -71,7 +71,7 @@
             android:contentDescription="@string/desc_details"
             android:padding="4dp"
             android:scaleType="fitCenter"
-            android:src="@drawable/rounded_auto_transmission_24"
+            android:src="@drawable/rounded_info_24"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:tint="?attr/colorOnSurfaceVariant" />
