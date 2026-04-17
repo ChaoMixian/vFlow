@@ -45,8 +45,11 @@ import com.chaomixian.vflow.ui.workflow_editor.WorkflowEditorActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.text.Collator
@@ -65,6 +68,7 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
     private val gson = Gson()
     private var pendingEnumMigrationPreview: WorkflowBatchEnumMigrationPreview? = null
     private var dismissedEnumMigrationSignature: String? = null
+    private var loadDataJob: Job? = null
 
     // 排序状态：false = 默认排序，true = 按名称排序
     private var isSortedByName = false
@@ -278,9 +282,13 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
 
     override fun onResume() {
         super.onResume()
-        WorkflowPermissionRecovery.recoverEligibleWorkflows(requireContext())
-        loadData()
-        maybePromptWorkflowEnumMigration()
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            WorkflowPermissionRecovery.recoverEligibleWorkflows(requireContext())
+            withContext(Dispatchers.Main) {
+                if (!isAdded || view == null) return@withContext
+                loadData(showMigrationPrompt = true)
+            }
+        }
     }
 
     override fun onMainTopBarAction(action: WorkflowTopBarAction): Boolean {
@@ -343,98 +351,117 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
     }
 
     private fun loadData() {
-        val workflows = workflowManager.getAllWorkflows()
-        val folders = folderManager.getAllFolders()
+        loadData(showMigrationPrompt = false)
+    }
 
-        // 构建混合列表：文件夹在前，工作流在后（不在文件夹中的）
+    private fun loadData(showMigrationPrompt: Boolean) {
+        loadDataJob?.cancel()
+        loadDataJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
+            val workflows = workflowManager.getAllWorkflows()
+            val folders = folderManager.getAllFolders()
+            val items = buildWorkflowItems(workflows, folders)
+            val migrationPreview = if (showMigrationPrompt) {
+                WorkflowEnumMigration.scan(workflows)
+            } else {
+                null
+            }
+
+            withContext(Dispatchers.Main) {
+                if (!isAdded || view == null) return@withContext
+
+                if (::adapter.isInitialized) {
+                    adapter.updateData(items)
+                } else {
+                    adapter = WorkflowListAdapter(
+                        items.toMutableList(),
+                        workflowManager,
+                        onEditWorkflow = { workflow ->
+                            val intent = Intent(requireContext(), WorkflowEditorActivity::class.java).apply {
+                                putExtra(WorkflowEditorActivity.EXTRA_WORKFLOW_ID, workflow.id)
+                            }
+                            startActivity(intent)
+                        },
+                        onDeleteWorkflow = { workflow -> showDeleteWorkflowConfirmationDialog(workflow) },
+                        onDuplicateWorkflow = { workflow ->
+                            workflowManager.duplicateWorkflow(workflow.id)
+                            Toast.makeText(requireContext(), getString(R.string.toast_copied_as, workflow.name), Toast.LENGTH_SHORT).show()
+                            loadData()
+                        },
+                        onExportWorkflow = { workflow ->
+                            pendingExportWorkflow = workflow
+                            exportSingleLauncher.launch("${workflow.name}.json")
+                        },
+                        onExecuteWorkflow = { workflow ->
+                            if (WorkflowExecutor.isRunning(workflow.id)) {
+                                WorkflowExecutor.stopExecution(workflow.id)
+                            } else {
+                                executeWorkflow(workflow)
+                            }
+                        },
+                        onExecuteWorkflowDelayed = { workflow, delayMs ->
+                            scheduleDelayedExecution(workflow, delayMs)
+                        },
+                        onAddShortcut = { workflow ->
+                            ShortcutHelper.requestPinnedShortcut(requireContext(), workflow)
+                        },
+                        onFolderClick = { folderId ->
+                            val folder = folderManager.getFolder(folderId)
+                            folder?.let {
+                                val dialog = FolderContentDialogFragment.newInstance(folderId, folder.name)
+                                dialog.setOnWorkflowChangedListener {
+                                    loadData()
+                                }
+                                dialog.show(childFragmentManager, FolderContentDialogFragment.TAG)
+                            }
+                        },
+                        onFolderRename = { folderId -> showRenameFolderDialog(folderId) },
+                        onFolderDelete = { folderId -> showDeleteFolderConfirmationDialog(folderId) },
+                        onFolderExport = { folderId ->
+                            pendingExportFolderId = folderId
+                            val folder = folderManager.getFolder(folderId)
+                            exportFolderLauncher.launch("${folder?.name ?: "folder"}.json")
+                        },
+                        itemTouchHelper = itemTouchHelper,
+                        onMoveToFolder = null
+                    )
+                    recyclerView.adapter = adapter
+                }
+
+                if (showMigrationPrompt) {
+                    maybePromptWorkflowEnumMigration(migrationPreview)
+                }
+            }
+
+            launch(Dispatchers.IO) {
+                ShortcutHelper.updateShortcuts(requireContext())
+            }
+        }
+    }
+
+    private fun buildWorkflowItems(
+        workflows: List<Workflow>,
+        folders: List<WorkflowFolder>,
+    ): MutableList<WorkflowListItem> {
         val items = mutableListOf<WorkflowListItem>()
-
-        // 根据排序状态决定排序方式
         val sortedFolders = if (isSortedByName) {
             folders.sortedWith(compareWithChineseCollator { it.name })
         } else {
             folders
         }
-
-        // 添加文件夹（带有工作流数量）
         sortedFolders.forEach { folder ->
             val count = workflows.count { it.folderId == folder.id }
             items.add(WorkflowListItem.FolderItem(folder, count))
         }
-
-        // 过滤出不在文件夹中的工作流
         val rootWorkflows = workflows.filter { it.folderId == null }
-
-        // 根据排序状态决定排序方式
         val sortedWorkflows = if (isSortedByName) {
             rootWorkflows.sortedWith(compareWithChineseCollator { it.name })
         } else {
             rootWorkflows
         }
-
         sortedWorkflows.forEach { workflow ->
             items.add(WorkflowListItem.WorkflowItem(workflow))
         }
-
-        if (::adapter.isInitialized) {
-            adapter.updateData(items)
-        } else {
-            adapter = WorkflowListAdapter(
-                items.toMutableList(),
-                workflowManager,
-                onEditWorkflow = { workflow ->
-                    val intent = Intent(requireContext(), WorkflowEditorActivity::class.java).apply {
-                        putExtra(WorkflowEditorActivity.EXTRA_WORKFLOW_ID, workflow.id)
-                    }
-                    startActivity(intent)
-                },
-                onDeleteWorkflow = { workflow -> showDeleteWorkflowConfirmationDialog(workflow) },
-                onDuplicateWorkflow = { workflow ->
-                    workflowManager.duplicateWorkflow(workflow.id)
-                    Toast.makeText(requireContext(), getString(R.string.toast_copied_as, workflow.name), Toast.LENGTH_SHORT).show()
-                    loadData()
-                },
-                onExportWorkflow = { workflow ->
-                    pendingExportWorkflow = workflow
-                    exportSingleLauncher.launch("${workflow.name}.json")
-                },
-                onExecuteWorkflow = { workflow ->
-                    if (WorkflowExecutor.isRunning(workflow.id)) {
-                        WorkflowExecutor.stopExecution(workflow.id)
-                    } else {
-                        executeWorkflow(workflow)
-                    }
-                },
-                onExecuteWorkflowDelayed = { workflow, delayMs ->
-                    scheduleDelayedExecution(workflow, delayMs)
-                },
-                onAddShortcut = { workflow ->
-                    ShortcutHelper.requestPinnedShortcut(requireContext(), workflow)
-                },
-                onFolderClick = { folderId ->
-                    val folder = folderManager.getFolder(folderId)
-                    folder?.let {
-                        // 打开文件夹内容弹窗
-                        val dialog = FolderContentDialogFragment.newInstance(folderId, folder.name)
-                        dialog.setOnWorkflowChangedListener {
-                            loadData()
-                        }
-                        dialog.show(childFragmentManager, FolderContentDialogFragment.TAG)
-                    }
-                },
-                onFolderRename = { folderId -> showRenameFolderDialog(folderId) },
-                onFolderDelete = { folderId -> showDeleteFolderConfirmationDialog(folderId) },
-                onFolderExport = { folderId ->
-                    pendingExportFolderId = folderId
-                    val folder = folderManager.getFolder(folderId)
-                    exportFolderLauncher.launch("${folder?.name ?: "folder"}.json")
-                },
-                itemTouchHelper = itemTouchHelper,
-                onMoveToFolder = null // 暂不实现拖拽移动
-            )
-            recyclerView.adapter = adapter
-        }
-        ShortcutHelper.updateShortcuts(requireContext())
+        return items
     }
 
     private fun backupAllWorkflowsToUri(fileUri: Uri) {
@@ -449,10 +476,8 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
         requireContext().contentResolver.openOutputStream(fileUri)?.use { it.write(jsonString.toByteArray()) }
     }
 
-    private fun maybePromptWorkflowEnumMigration() {
+    private fun maybePromptWorkflowEnumMigration(preview: WorkflowBatchEnumMigrationPreview?) {
         if (pendingEnumMigrationPreview != null) return
-
-        val preview = WorkflowEnumMigration.scan(workflowManager.getAllWorkflows())
         if (preview == null) {
             dismissedEnumMigrationSignature = null
             return
