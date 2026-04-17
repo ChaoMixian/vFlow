@@ -384,11 +384,21 @@ class MainActivity : BaseActivity() {
                     .filterIsInstance<RecyclerView>()
                     .firstOrNull()
                 if (recyclerView != null) {
-                    updateScrollableBottomInsetRecursive(
-                        view = recyclerView,
-                        scrollableBottomInsetPx = scrollableBottomInsetPx,
-                        fabBottomInsetPx = fabBottomInsetPx,
-                    )
+                    val basePadding =
+                        (recyclerView.getTag(R.id.main_tab_inset_base_padding_bottom) as? Int)
+                            ?: recyclerView.paddingBottom.also {
+                                recyclerView.setTag(R.id.main_tab_inset_base_padding_bottom, it)
+                            }
+                    recyclerView.clipToPadding = false
+                    recyclerView.updatePadding(bottom = basePadding)
+
+                    for (index in 0 until recyclerView.childCount) {
+                        updateScrollableBottomInsetRecursive(
+                            view = recyclerView.getChildAt(index),
+                            scrollableBottomInsetPx = scrollableBottomInsetPx,
+                            fabBottomInsetPx = fabBottomInsetPx,
+                        )
+                    }
                 }
             }
         }
