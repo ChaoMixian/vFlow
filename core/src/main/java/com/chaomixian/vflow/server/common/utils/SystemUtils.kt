@@ -33,7 +33,7 @@ object SystemUtils {
     /**
      * 启动 vFlow Worker 子进程 (直接 Fork)
      */
-    fun startWorkerProcess(type: String): Process {
+    fun startWorkerProcess(type: String, extraArgs: List<String> = emptyList()): Process {
         val classPath = getClassPath()
         val mainClass = "com.chaomixian.vflow.server.VFlowCore"
 
@@ -45,7 +45,7 @@ object SystemUtils {
             "--worker",
             "--type",
             type
-        )
+        ) + extraArgs
 
         println(">>> Spawning Worker [$type]: ${appProcessCmd.joinToString(" ")}")
 
@@ -57,7 +57,7 @@ object SystemUtils {
     /**
      * 使用 vflow_shell_exec 启动 Worker（自动降权 + SELinux 切换）
      */
-    fun startWorkerProcess(type: String, shellLauncherPath: String): Process {
+    fun startWorkerProcess(type: String, shellLauncherPath: String, extraArgs: List<String> = emptyList()): Process {
         val classPath = getClassPath()
         val mainClass = "com.chaomixian.vflow.server.VFlowCore"
 
@@ -71,7 +71,7 @@ object SystemUtils {
             "--worker",
             "--type",
             type
-        )
+        ) + extraArgs
 
         println(">>> Spawning Worker [$type] via vflow_shell_exec: ${cmd.joinToString(" ")}")
 

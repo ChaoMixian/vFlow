@@ -485,6 +485,10 @@
     <string name="core_mutual_keep_alive_desc">The app and Core watch each other and restart automatically if either process is killed</string>
     <string name="toast_core_mutual_keep_alive_enabled">Mutual keep-alive enabled</string>
     <string name="toast_core_mutual_keep_alive_disabled">Mutual keep-alive disabled</string>
+    <string name="core_unix_socket_title">Use UNIX Socket</string>
+    <string name="core_unix_socket_desc">Connect to Core through a local UNIX socket instead of a TCP port. Takes effect after restarting Core.</string>
+    <string name="toast_core_unix_socket_changed">UNIX socket setting saved. Restart Core to apply it.</string>
+    <string name="toast_core_unix_socket_shizuku_disabled">Shizuku launch is unavailable when UNIX socket is enabled. Use Root instead.</string>
 
     <!-- AiGenerationSheet -->
     <string name="toast_please_enter_requirement">Please enter requirement</string>
@@ -957,6 +961,7 @@
     <string name="label_launch_method">Launch Method</string>
     <string name="title_shizuku_launch">Launch via Shizuku</string>
     <string name="desc_shizuku_launch">Start Core using Shizuku permissions, no Root required</string>
+    <string name="desc_shizuku_launch_unix_disabled">Unavailable when UNIX socket is enabled. Use Root launch instead.</string>
     <string name="toast_shizuku_not_active">Shizuku is not active or not authorized, cannot start</string>
     <string name="status_starting_shizuku">Starting vFlow Core via Shizuku...</string>
     <string name="toast_core_start_success">vFlow Core started successfully</string>

@@ -2,6 +2,11 @@
 package com.chaomixian.vflow.server.common
 
 object Config {
+    enum class WorkerType {
+        SHELL,
+        ROOT
+    }
+
     // ============================================
     // 日志配置
     // ============================================
@@ -37,6 +42,7 @@ object Config {
     // 监听地址配置
     const val LOCALHOST = "127.0.0.1"  // 本地回环
     const val BIND_ADDRESS = "0.0.0.0"  // 绑定所有网卡，允许远程连接
+    private const val UNIX_SOCKET_PREFIX = "vflow"
 
     // ============================================
     // 路由表配置
@@ -45,23 +51,23 @@ object Config {
     // 路由表配置：定义哪些 Target 由哪个 Worker 处理
     val ROUTING_TABLE = mapOf(
         // Shell 权限可处理
-        "clipboard" to PORT_WORKER_SHELL,
-        "input" to PORT_WORKER_SHELL,
-        "audio" to PORT_WORKER_SHELL,
-        "wifi" to PORT_WORKER_SHELL,
-        "bluetooth_manager" to PORT_WORKER_SHELL,
-        "nfc" to PORT_WORKER_SHELL,
-        "power" to PORT_WORKER_SHELL,
-        "activity" to PORT_WORKER_SHELL,
-        "connectivity" to PORT_WORKER_SHELL,
-        "location" to PORT_WORKER_SHELL,
-        "alarm" to PORT_WORKER_SHELL,
-        "activity_task" to PORT_WORKER_SHELL,
-        "screenshot" to PORT_WORKER_SHELL,
+        "clipboard" to WorkerType.SHELL,
+        "input" to WorkerType.SHELL,
+        "audio" to WorkerType.SHELL,
+        "wifi" to WorkerType.SHELL,
+        "bluetooth_manager" to WorkerType.SHELL,
+        "nfc" to WorkerType.SHELL,
+        "power" to WorkerType.SHELL,
+        "activity" to WorkerType.SHELL,
+        "connectivity" to WorkerType.SHELL,
+        "location" to WorkerType.SHELL,
+        "alarm" to WorkerType.SHELL,
+        "activity_task" to WorkerType.SHELL,
+        "screenshot" to WorkerType.SHELL,
 
         // 必须 Root 权限
-        "uinput" to PORT_WORKER_ROOT,
-        "system_root" to PORT_WORKER_ROOT
+        "uinput" to WorkerType.ROOT,
+        "system_root" to WorkerType.ROOT
     )
 
     // 注意：system target 由 Master 动态路由，不在静态路由表中
@@ -73,5 +79,21 @@ object Config {
     init {
         // 根据 DEBUG 配置设置日志级别
         Logger.setLevel(if (DEBUG) Logger.Level.DEBUG else Logger.Level.INFO)
+    }
+
+    fun getWorkerPort(type: WorkerType): Int {
+        return when (type) {
+            WorkerType.SHELL -> PORT_WORKER_SHELL
+            WorkerType.ROOT -> PORT_WORKER_ROOT
+        }
+    }
+
+    fun getWorkerSocketName(type: WorkerType, appPackageName: String?): String {
+        val packageSuffix = (appPackageName ?: "com.chaomixian.vflow").replace('.', '_')
+        val workerSuffix = when (type) {
+            WorkerType.SHELL -> "shell"
+            WorkerType.ROOT -> "root"
+        }
+        return "${UNIX_SOCKET_PREFIX}_${packageSuffix}_worker_$workerSuffix"
     }
 }

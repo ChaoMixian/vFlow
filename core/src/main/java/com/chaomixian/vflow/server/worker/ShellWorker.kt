@@ -7,7 +7,15 @@ import com.chaomixian.vflow.server.common.utils.SystemUtils
 import com.chaomixian.vflow.server.wrappers.shell.*
 import kotlin.system.exitProcess
 
-class ShellWorker : BaseWorker(Config.PORT_WORKER_SHELL, "Shell") {
+class ShellWorker(
+    useUnixSocket: Boolean = false,
+    unixSocketPath: String? = null
+) : BaseWorker(
+    Config.PORT_WORKER_SHELL,
+    "Shell",
+    useUnixSocket,
+    unixSocketPath
+) {
 
     override fun registerWrappers() {
         // 注册所有 Shell 级别的 ServiceWrappers

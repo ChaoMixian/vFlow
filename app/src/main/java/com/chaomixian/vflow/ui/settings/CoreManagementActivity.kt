@@ -128,6 +128,13 @@ class CoreManagementActivity : BaseActivity() {
      */
     private suspend fun startServer(): Boolean {
         return withContext(Dispatchers.IO) {
+            val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+            val savedMode = prefs.getString("preferred_core_launch_mode", "shizuku")
+            if (VFlowCoreBridge.isUnixSocketEnabled(this@CoreManagementActivity) && savedMode == "shizuku") {
+                DebugLogger.w("CoreManagementActivity", "UNIX 套接字启用时禁止通过 UI 使用 Shizuku 启动")
+                return@withContext false
+            }
+
             // 发送启动 Intent
             val intent = Intent(this@CoreManagementActivity, CoreManagementService::class.java).apply {
                 action = CoreManagementService.ACTION_START_CORE
@@ -159,6 +166,11 @@ class CoreManagementActivity : BaseActivity() {
     private suspend fun startServerWithMode(mode: ShellManager.ShellMode, forceRestart: Boolean = true): Boolean {
         return withContext(Dispatchers.IO) {
             try {
+                if (VFlowCoreBridge.isUnixSocketEnabled(this@CoreManagementActivity) && mode == ShellManager.ShellMode.SHIZUKU) {
+                    DebugLogger.w("CoreManagementActivity", "UNIX 套接字启用时禁止通过 UI 使用 Shizuku 启动")
+                    return@withContext false
+                }
+
                 // 发送启动 Intent 到 Service，并传递 ShellMode
                 val intent = Intent(this@CoreManagementActivity, CoreManagementService::class.java).apply {
                     action = if (forceRestart) {
@@ -269,6 +281,7 @@ private fun CoreManagementScreen(
     var selectedLaunchMode by remember { mutableStateOf<ShellManager.ShellMode?>(null) }
     var autoStartEnabled by remember { mutableStateOf(false) }
     var mutualKeepAliveEnabled by remember { mutableStateOf(false) }
+    var unixSocketEnabled by remember { mutableStateOf(false) }
 
     // 处理返回键
     BackHandler(enabled = true, onBack = onBackClick)
@@ -278,9 +291,9 @@ private fun CoreManagementScreen(
         android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
     }
 
-    fun refreshCoreVersionState() {
+    fun refreshCoreVersionState(isRunning: Boolean?) {
         val versionStatus = VFlowCoreBridge.getCoreVersionStatus()
-        coreVersionSummary = if (!VFlowCoreBridge.isConnected) {
+        coreVersionSummary = if (isRunning != true) {
             context.getString(
                 R.string.core_version_summary_not_running,
                 versionStatus.packaged.versionName
@@ -297,7 +310,7 @@ private fun CoreManagementScreen(
                 versionStatus.packaged.versionName
             )
         }
-        coreUpdateAvailable = versionStatus.needsUpdate
+        coreUpdateAvailable = isRunning == true && versionStatus.needsUpdate
     }
 
     // 初始加载和自动启动
@@ -316,9 +329,13 @@ private fun CoreManagementScreen(
         }
         autoStartEnabled = prefs.getBoolean("core_auto_start_enabled", false)
         mutualKeepAliveEnabled = prefs.getBoolean("mutual_keep_alive_enabled", true)
+        unixSocketEnabled = VFlowCoreBridge.isUnixSocketEnabled(context)
+        if (unixSocketEnabled && selectedLaunchMode == ShellManager.ShellMode.SHIZUKU) {
+            selectedLaunchMode = null
+        }
 
         isServerRunning = onCheckStatus()
-        refreshCoreVersionState()
+        refreshCoreVersionState(isServerRunning)
         logs = onLoadLogs()
 
         // 如果需要自动启动且 Core 未运行
@@ -330,7 +347,7 @@ private fun CoreManagementScreen(
             val success = onStartServer()
             isChecking = false
             isServerRunning = success
-            refreshCoreVersionState()
+            refreshCoreVersionState(isServerRunning)
             statusDetail = if (success) {
                 showToast(context.getString(R.string.toast_core_start_success))
                 // 重新加载日志
@@ -368,7 +385,7 @@ private fun CoreManagementScreen(
                 isRunning = isServerRunning,
                 isChecking = isChecking,
                 statusDetail = statusDetail,
-                privilegeMode = VFlowCoreBridge.privilegeMode,
+                privilegeMode = if (isServerRunning == true) VFlowCoreBridge.privilegeMode else VFlowCoreBridge.PrivilegeMode.NONE,
                 versionSummary = coreVersionSummary,
                 updateAvailable = coreUpdateAvailable
             )
@@ -385,10 +402,14 @@ private fun CoreManagementScreen(
             // Shizuku 启动卡片
             LaunchMethodCard(
                 title = stringResource(R.string.title_shizuku_launch),
-                description = stringResource(R.string.desc_shizuku_launch),
+                description = if (unixSocketEnabled) {
+                    stringResource(R.string.desc_shizuku_launch_unix_disabled)
+                } else {
+                    stringResource(R.string.desc_shizuku_launch)
+                },
                 icon = Icons.Default.Terminal,
                 iconTint = MaterialTheme.colorScheme.tertiary,
-                isAvailable = ShellManager.isShizukuActive(context),
+                isAvailable = ShellManager.isShizukuActive(context) && !unixSocketEnabled,
                 isRunning = isChecking,
                 isSelected = selectedLaunchMode == ShellManager.ShellMode.SHIZUKU,
                 onClick = {
@@ -409,7 +430,7 @@ private fun CoreManagementScreen(
                         val success = onStartServerWithMode(ShellManager.ShellMode.SHIZUKU)
                         isChecking = false
                         isServerRunning = success
-                        refreshCoreVersionState()
+                        refreshCoreVersionState(isServerRunning)
                         statusDetail = if (success) {
                             showToast(context.getString(R.string.toast_core_start_success))
                             logs = onLoadLogs()
@@ -449,7 +470,7 @@ private fun CoreManagementScreen(
                         val success = onStartServerWithMode(ShellManager.ShellMode.ROOT)
                         isChecking = false
                         isServerRunning = success
-                        refreshCoreVersionState()
+                        refreshCoreVersionState(isServerRunning)
                         statusDetail = if (success) {
                             showToast(context.getString(R.string.toast_core_start_success))
                             logs = onLoadLogs()
@@ -487,7 +508,7 @@ private fun CoreManagementScreen(
                                 val success = VFlowCoreBridge.restart(context)
                                 isChecking = false
                                 isServerRunning = success
-                                refreshCoreVersionState()
+                                refreshCoreVersionState(isServerRunning)
                                 statusDetail = if (success) {
                                     showToast(context.getString(R.string.toast_core_restart_success))
                                     logs = onLoadLogs()
@@ -506,7 +527,7 @@ private fun CoreManagementScreen(
                                 val success = onStartServerWithMode(mode)
                                 isChecking = false
                                 isServerRunning = success
-                                refreshCoreVersionState()
+                                refreshCoreVersionState(isServerRunning)
                                 statusDetail = if (success) {
                                     showToast(context.getString(R.string.toast_core_start_success))
                                     logs = onLoadLogs()
@@ -562,7 +583,7 @@ private fun CoreManagementScreen(
                             val stillRunning = onStopServer()
                             isChecking = false
                             isServerRunning = stillRunning
-                            refreshCoreVersionState()
+                            refreshCoreVersionState(isServerRunning)
                             statusDetail = if (!stillRunning) {
                                 showToast(context.getString(R.string.toast_core_stopped))
                                 context.getString(R.string.status_core_not_running)
@@ -599,7 +620,7 @@ private fun CoreManagementScreen(
                         val running = onCheckStatus()
                         isChecking = false
                         isServerRunning = running
-                        refreshCoreVersionState()
+                        refreshCoreVersionState(isServerRunning)
                         statusDetail = if (running) {
                             context.getString(R.string.status_core_running)
                         } else {
@@ -735,6 +756,48 @@ private fun CoreManagementScreen(
                                         }
                                     )
                                 )
+                            }
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.core_unix_socket_title),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = stringResource(R.string.core_unix_socket_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Switch(
+                            checked = unixSocketEnabled,
+                            onCheckedChange = {
+                                unixSocketEnabled = it
+                                VFlowCoreBridge.setUnixSocketEnabled(context, it)
+                                if (it && selectedLaunchMode == ShellManager.ShellMode.SHIZUKU) {
+                                    selectedLaunchMode = null
+                                    showToast(context.getString(R.string.toast_core_unix_socket_shizuku_disabled))
+                                } else {
+                                    showToast(context.getString(R.string.toast_core_unix_socket_changed))
+                                }
                             }
                         )
                     }

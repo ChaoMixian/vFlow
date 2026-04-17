@@ -470,6 +470,10 @@
     <string name="core_mutual_keep_alive_desc">App 与 Core 互相守护，任一进程被杀时自动重启</string>
     <string name="toast_core_mutual_keep_alive_enabled">已启用双进程保活</string>
     <string name="toast_core_mutual_keep_alive_disabled">已禁用双进程保活</string>
+    <string name="core_unix_socket_title">使用 UNIX 套接字</string>
+    <string name="core_unix_socket_desc">通过本地 UNIX 套接字连接 Core，替代 TCP 端口。重启 Core 后生效。</string>
+    <string name="toast_core_unix_socket_changed">UNIX 套接字设置已保存，重启 Core 后生效</string>
+    <string name="toast_core_unix_socket_shizuku_disabled">启用 UNIX 套接字后不能使用 Shizuku 启动，请改用 Root</string>
 
     <!-- AiGenerationSheet -->
     <string name="toast_please_enter_requirement">请输入需求</string>
@@ -942,6 +946,7 @@
     <string name="label_launch_method">启动方式</string>
     <string name="title_shizuku_launch">通过 Shizuku 启动</string>
     <string name="desc_shizuku_launch">使用 Shizuku 权限启动 Core，无需 Root</string>
+    <string name="desc_shizuku_launch_unix_disabled">启用 UNIX 套接字后不可用，请改用 Root 启动</string>
     <string name="toast_shizuku_not_active">Shizuku 未激活或未授权，无法启动</string>
     <string name="status_starting_shizuku">正在通过 Shizuku 启动 vFlow Core...</string>
     <string name="toast_core_start_success">vFlow Core 启动成功</string>

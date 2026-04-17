@@ -1,6 +1,8 @@
 // 文件: server/src/main/java/com/chaomixian/vflow/server/worker/BaseWorker.kt
 package com.chaomixian.vflow.server.worker
 
+import android.net.LocalServerSocket
+import android.net.LocalSocket
 import com.chaomixian.vflow.server.common.Config
 import com.chaomixian.vflow.server.wrappers.ServiceWrapper
 import com.chaomixian.vflow.server.wrappers.IWrapper
@@ -16,7 +18,12 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-abstract class BaseWorker(private val port: Int, private val name: String) {
+abstract class BaseWorker(
+    private val port: Int,
+    private val name: String,
+    private val useUnixSocket: Boolean = false,
+    private val unixSocketPath: String? = null
+) {
 
     @Volatile
     private var isRunning = true
@@ -32,7 +39,12 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
     abstract fun registerWrappers()
 
     fun start() {
-        println(">>> $name Worker Starting (PID: ${android.os.Process.myPid()}, Port: $port) <<<")
+        val endpoint = if (useUnixSocket) {
+            "unix:@${requireUnixSocketName()}"
+        } else {
+            "${Config.LOCALHOST}:$port"
+        }
+        println(">>> $name Worker Starting (PID: ${android.os.Process.myPid()}, Endpoint: $endpoint) <<<")
 
         // 注册服务
         try {
@@ -46,24 +58,10 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
 
         // 启动监听
         try {
-            // 仅绑定 localhost，确保安全
-            val serverSocket = ServerSocket(port, 50, InetAddress.getByName(Config.LOCALHOST))
-            // 设置 SO_REUSEADDR 避免重启时端口占用
-            serverSocket.reuseAddress = true
-
-            println("✅ $name Worker listening on ${Config.LOCALHOST}:$port")
-
-            while (isRunning) {
-                try {
-                    val client = serverSocket.accept()
-                    // 提交给线程池处理，避免阻塞主循环
-                    executor.submit { handleClient(client) }
-                } catch (e: Exception) {
-                    if (isRunning) {
-                        System.err.println("⚠️ Accept failed: ${e.message}")
-                        e.printStackTrace()
-                    }
-                }
+            if (useUnixSocket) {
+                startUnixServer()
+            } else {
+                startTcpServer()
             }
         } catch (e: Exception) {
             System.err.println("❌ $name Worker Fatal Error: ${e.message}")
@@ -72,36 +70,100 @@ abstract class BaseWorker(private val port: Int, private val name: String) {
         }
     }
 
-    private fun handleClient(socket: Socket) {
+    private fun startTcpServer() {
+        val serverSocket = ServerSocket(port, 50, InetAddress.getByName(Config.LOCALHOST))
+        serverSocket.reuseAddress = true
+        println("✅ $name Worker listening on ${Config.LOCALHOST}:$port")
+
+        serverSocket.use { server ->
+            while (isRunning) {
+                try {
+                    val client = server.accept()
+                    executor.submit { handleTcpClient(client) }
+                } catch (e: Exception) {
+                    if (isRunning) {
+                        System.err.println("⚠️ Accept failed: ${e.message}")
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startUnixServer() {
+        try {
+            val socketName = requireUnixSocketName()
+            LocalServerSocket(socketName).use { server ->
+                println("✅ $name Worker listening on unix:@$socketName")
+
+                while (isRunning) {
+                    try {
+                        val client = server.accept()
+                        executor.submit { handleLocalClient(client) }
+                    } catch (e: Exception) {
+                        if (isRunning) {
+                            System.err.println("⚠️ Accept failed: ${e.message}")
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            throw IllegalStateException("$name Worker failed to bind abstract UNIX socket", e)
+        }
+    }
+
+    private fun handleTcpClient(socket: Socket) {
         socket.use { s ->
             try {
-                // 设置读超时
                 s.soTimeout = Config.SOCKET_TIMEOUT
-
                 val reader = BufferedReader(InputStreamReader(s.inputStream))
                 val writer = PrintWriter(OutputStreamWriter(s.getOutputStream()), true)
-
-                while (isRunning && !s.isClosed) {
-                    val requestStr = reader.readLine() ?: break
-                    // 即使发生异常也要确保返回 JSON 格式
-                    val response = try {
-                        val request = JSONObject(requestStr)
-                        processRequest(request)
-                    } catch (e: Exception) {
-                        val err = JSONObject()
-                        err.put("success", false)
-                        err.put("error", "Invalid JSON or Internal Error: ${e.message}")
-                        err
-                    }
-                    writer.println(response.toString())
-                }
+                handleClientLoop(reader, writer)
             } catch (e: Exception) {
-                // 常见的 Socket 关闭异常忽略，其他打印
                 if (e.message?.contains("Socket closed") != true) {
                     e.printStackTrace()
                 }
             }
         }
+    }
+
+    private fun handleLocalClient(socket: LocalSocket) {
+        socket.use { s ->
+            try {
+                s.soTimeout = Config.SOCKET_TIMEOUT
+                val reader = BufferedReader(InputStreamReader(s.inputStream))
+                val writer = PrintWriter(OutputStreamWriter(s.outputStream), true)
+                handleClientLoop(reader, writer)
+            } catch (e: Exception) {
+                if (e.message?.contains("Socket closed") != true) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    private fun handleClientLoop(
+        reader: BufferedReader,
+        writer: PrintWriter
+    ) {
+        while (isRunning) {
+            val requestStr = reader.readLine() ?: break
+            val response = try {
+                val request = JSONObject(requestStr)
+                processRequest(request)
+            } catch (e: Exception) {
+                JSONObject().apply {
+                    put("success", false)
+                    put("error", "Invalid JSON or Internal Error: ${e.message}")
+                }
+            }
+            writer.println(response.toString())
+        }
+    }
+
+    private fun requireUnixSocketName(): String {
+        return unixSocketPath ?: throw IllegalStateException("$name Worker missing UNIX socket name")
     }
 
     /**

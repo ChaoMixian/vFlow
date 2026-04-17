@@ -3,8 +3,11 @@ package com.chaomixian.vflow.services
 
 import android.content.Context
 import android.content.Intent
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.logging.DebugLogger
+import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -25,9 +28,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 object VFlowCoreBridge {
     private const val TAG = "VFlowCoreBridge"
+    private const val PREFS_NAME = "vFlowPrefs"
+    private const val PREF_UNIX_SOCKET_ENABLED = "core_unix_socket_enabled"
     private const val HOST = "127.0.0.1"
     private const val PORT = 19999
     private const val CORE_VERSION_ASSET = "vFlowCore.version"
+    private const val UNIX_SOCKET_SUFFIX = "_vflow_core"
 
     // 用于在 ping() 中执行网络操作的 IO 线程池
     private val ioExecutor = Executors.newSingleThreadExecutor { r ->
@@ -35,9 +41,11 @@ object VFlowCoreBridge {
     }
 
     private var socket: Socket? = null
+    private var localSocket: LocalSocket? = null
     private var writer: PrintWriter? = null
     private var reader: BufferedReader? = null
     private val isConnecting = AtomicBoolean(false)
+    private var activeTransport: ConnectionTransport? = null
 
     var isConnected = false
         private set
@@ -58,6 +66,11 @@ object VFlowCoreBridge {
         Thread(r, "VFlowCoreBridge-Heartbeat").apply { isDaemon = true }
     }
     private var heartbeatFuture: ScheduledFuture<*>? = null
+
+    private enum class ConnectionTransport {
+        TCP,
+        UNIX
+    }
 
     /**
      * 核心权限模式
@@ -106,6 +119,25 @@ object VFlowCoreBridge {
                 packagedVersionInfoCache = it
             }
         }
+
+    fun isUnixSocketEnabled(context: Context? = null): Boolean {
+        val appContext = resolveAppContext(context) ?: return false
+        return appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(PREF_UNIX_SOCKET_ENABLED, false)
+    }
+
+    fun setUnixSocketEnabled(context: Context, enabled: Boolean) {
+        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putBoolean(PREF_UNIX_SOCKET_ENABLED, enabled)
+        }
+        disconnect()
+    }
+
+    fun getUnixSocketName(context: Context? = null): String {
+        val packageName = resolveAppContext(context)?.packageName ?: "com.chaomixian.vflow"
+        val sanitizedPackage = packageName.replace('.', '_')
+        return "${sanitizedPackage}$UNIX_SOCKET_SUFFIX"
+    }
 
     val runningVersionInfo: CoreVersionInfo?
         get() = if (runningVersionCode > 0 || runningVersionName.isNotBlank()) {
@@ -179,7 +211,7 @@ object VFlowCoreBridge {
      * 发送 Ping 并更新状态 (UID)
      */
     private fun checkConnection(): Boolean {
-        if (socket == null || socket!!.isClosed) {
+        if (isConnectionClosed()) {
             if (!establishConnection()) return false
         }
         val res = sendRaw(JSONObject().put("target", "system").put("method", "ping"))
@@ -190,15 +222,13 @@ object VFlowCoreBridge {
             // 启动心跳保持连接活跃
             startHeartbeat()
             // 更新 UID 缓存
-            if (res!!.has("uid")) {
+            if (res.has("uid")) {
                 currentUid = res.optInt("uid")
             }
             updateVersionInfo(res)
         } else {
-            isConnected = false
+            close()
             currentUid = -1
-            clearVersionInfo()
-            stopHeartbeat()
         }
         return success
     }
@@ -207,21 +237,58 @@ object VFlowCoreBridge {
      * 建立 Socket 连接
      */
     private fun establishConnection(): Boolean {
+        close() // 清理旧连接
+        return if (isUnixSocketEnabled()) {
+            ConnectionTransport.UNIX
+        } else {
+            ConnectionTransport.TCP
+        }.let { establishConnection(it) }
+    }
+
+    private fun establishConnection(transport: ConnectionTransport): Boolean {
         return try {
-            close() // 清理旧连接
-            DebugLogger.d(TAG, "正在建立到 $HOST:$PORT 的连接...")
-            socket = Socket(HOST, PORT)
-            socket?.soTimeout = 0 // 0 = 无限超时，避免读写超时导致连接断开
-            socket?.keepAlive = true
-            socket?.tcpNoDelay = true // 禁用 Nagle 算法，减少延迟
-            writer = PrintWriter(socket!!.getOutputStream(), true)
-            reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
-            DebugLogger.i(TAG, "Socket 连接建立成功")
+            when (transport) {
+                ConnectionTransport.TCP -> {
+                    DebugLogger.d(TAG, "正在建立到 $HOST:$PORT 的 TCP 连接...")
+                    socket = Socket(HOST, PORT).apply {
+                        soTimeout = 0
+                        keepAlive = true
+                        tcpNoDelay = true
+                    }
+                    writer = PrintWriter(socket!!.getOutputStream(), true)
+                    reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
+                }
+                ConnectionTransport.UNIX -> {
+                    val socketName = getUnixSocketName()
+                    DebugLogger.d(TAG, "正在建立到 @$socketName 的 UNIX 套接字连接...")
+                    localSocket = LocalSocket(LocalSocket.SOCKET_STREAM).apply {
+                        connect(
+                            LocalSocketAddress(
+                                socketName,
+                                LocalSocketAddress.Namespace.ABSTRACT
+                            )
+                        )
+                        setSoTimeout(0)
+                    }
+                    writer = PrintWriter(localSocket!!.getOutputStream(), true)
+                    reader = BufferedReader(InputStreamReader(localSocket!!.getInputStream()))
+                }
+            }
+            activeTransport = transport
+            DebugLogger.i(TAG, "${transport.name} 连接建立成功")
             true
         } catch (e: Exception) {
-            DebugLogger.w(TAG, "Socket 连接失败: ${e.javaClass.simpleName} - ${e.message}")
-            // 连接失败很正常（vFlowCore可能还没起来）
+            DebugLogger.w(TAG, "${transport.name} 连接失败: ${e.javaClass.simpleName} - ${e.message}")
+            close()
             false
+        }
+    }
+
+    private fun isConnectionClosed(): Boolean {
+        return when (activeTransport) {
+            ConnectionTransport.TCP -> socket == null || socket!!.isClosed
+            ConnectionTransport.UNIX -> localSocket == null
+            null -> true
         }
     }
 
@@ -231,9 +298,12 @@ object VFlowCoreBridge {
     private fun close() {
         stopHeartbeat() // 停止心跳
         try { socket?.close() } catch (e: Exception) {}
+        try { localSocket?.close() } catch (e: Exception) {}
         socket = null
+        localSocket = null
         writer = null
         reader = null
+        activeTransport = null
         isConnected = false
         clearVersionInfo()
     }
@@ -257,15 +327,14 @@ object VFlowCoreBridge {
 
         heartbeatFuture = heartbeatExecutor.scheduleWithFixedDelay({
             try {
-                if (socket != null && !socket!!.isClosed && isConnected) {
+                if (!isConnectionClosed() && isConnected) {
                     val req = JSONObject().put("target", "system").put("method", "ping")
                     DebugLogger.d(TAG, "Heartbeat: sending ping")
                     sendRaw(req)
                 }
             } catch (e: Exception) {
                 DebugLogger.w(TAG, "Heartbeat failed: ${e.message}")
-                // 心跳失败，标记连接断开
-                isConnected = false
+                close()
             }
         }, 30, 30, TimeUnit.SECONDS)
     }
@@ -287,7 +356,7 @@ object VFlowCoreBridge {
         // 使用 Future 在 IO 线程执行，避免在主线程进行网络操作
         val future = ioExecutor.submit<Boolean> {
             // 如果 Socket 对象都不存在，尝试建立一次
-            if (socket == null || socket!!.isClosed) {
+            if (isConnectionClosed()) {
                 DebugLogger.d(TAG, "ping: socket 未建立，尝试连接...")
                 if (!establishConnection()) {
                     DebugLogger.w(TAG, "ping: 建立 socket 连接失败")
@@ -330,9 +399,11 @@ object VFlowCoreBridge {
         } catch (e: java.util.concurrent.TimeoutException) {
             DebugLogger.w(TAG, "ping: 超时")
             future.cancel(true)
+            close()
             false
         } catch (e: Exception) {
             DebugLogger.w(TAG, "ping: 执行异常: ${e.javaClass.simpleName} - ${e.message}")
+            close()
             false
         }
     }
@@ -356,7 +427,7 @@ object VFlowCoreBridge {
     }
 
     private fun loadPackagedVersionInfo(): CoreVersionInfo {
-        val appContext = runCatching { LogManager.applicationContext }.getOrNull()
+        val appContext = resolveAppContext()
         if (appContext == null) {
             return CoreVersionInfo(versionCode = -1, versionName = "unknown")
         }
@@ -370,6 +441,10 @@ object VFlowCoreBridge {
         return CoreVersionInfo(versionCode = versionCode, versionName = versionName)
     }
 
+    private fun resolveAppContext(context: Context? = null): Context? {
+        return context?.applicationContext ?: runCatching { LogManager.applicationContext }.getOrNull()
+    }
+
     /**
      * 底层发送方法
      */
@@ -377,7 +452,7 @@ object VFlowCoreBridge {
     private fun sendRaw(json: JSONObject): JSONObject? {
         try {
             // 双重检查连接
-            if (socket == null || socket!!.isClosed) {
+            if (isConnectionClosed()) {
                 if (!establishConnection()) return null
             }
 

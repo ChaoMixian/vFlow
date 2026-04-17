@@ -54,27 +54,28 @@ object CoreLauncher {
         forceRestart: Boolean = false
     ): LaunchResult {
         DebugLogger.i(TAG, "准备启动 vFlowCore (模式: $mode, 强制重启: $forceRestart)...")
+        val finalMode = resolveLaunchMode(context, mode)
 
         // 如果 Core 已经在运行且不是强制重启模式，直接返回
         if (!forceRestart && VFlowCoreBridge.ping()) {
             DebugLogger.d(TAG, "vFlowCore 已在运行，无需启动")
             return LaunchResult(
                 success = true,
-                mode = mode,
+                mode = finalMode,
                 privilegeMode = VFlowCoreBridge.privilegeMode
             )
         }
 
-        // 如果是强制重启且 Core 正在运行，先停止
-        if (forceRestart && VFlowCoreBridge.ping()) {
-            DebugLogger.d(TAG, "强制重启模式：检测到旧的 vFlowCore 正在运行，先停止...")
-            stop(context)
-            delay(1500) // 等待进程完全退出并释放 DEX 文件
-
-            // 确认进程已退出
+        if (forceRestart) {
             if (VFlowCoreBridge.ping()) {
-                DebugLogger.w(TAG, "进程仍未退出，强制等待...")
-                delay(1000)
+                DebugLogger.d(TAG, "强制重启模式：检测到旧的 vFlowCore 正在运行，先停止...")
+                stop(context)
+                delay(1500)
+
+                if (VFlowCoreBridge.ping()) {
+                    DebugLogger.w(TAG, "进程仍未退出，强制等待...")
+                    delay(1000)
+                }
             }
         }
 
@@ -93,25 +94,12 @@ object CoreLauncher {
             // 2. 准备日志文件
             val logFile = File(StorageManager.logsDir, "server_process.log")
 
-            // 3. 确定最终使用的 ShellMode
-            val finalMode = if (mode == LaunchMode.AUTO) {
-                val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-                val preferredMode = prefs.getString("preferred_core_launch_mode", "shizuku")
-                if (preferredMode == "root") LaunchMode.ROOT else LaunchMode.SHIZUKU
-            } else {
-                mode
-            }
-
-            // 4. 构建启动命令
+            // 3. 构建启动命令
             val command = buildLaunchCommand(dexFile, logFile, finalMode, context)
 
-            // 5. 执行启动命令
+            // 4. 执行启动命令
             DebugLogger.d(TAG, "执行启动命令: $command (ShellMode: $finalMode)")
-            val shellMode = when (finalMode) {
-                LaunchMode.ROOT -> ShellManager.ShellMode.ROOT
-                LaunchMode.SHIZUKU -> ShellManager.ShellMode.SHIZUKU
-                LaunchMode.AUTO -> ShellManager.ShellMode.AUTO
-            }
+            val shellMode = finalMode.toShellMode()
 
             val result = ShellManager.execShellCommand(context, command, shellMode)
 
@@ -160,7 +148,7 @@ object CoreLauncher {
             DebugLogger.e(TAG, "启动过程发生异常", e)
             LaunchResult(
                 success = false,
-                mode = mode,
+                mode = finalMode,
                 error = e.message
             )
         }
@@ -198,8 +186,29 @@ object CoreLauncher {
     suspend fun restart(context: Context, mode: LaunchMode = LaunchMode.AUTO): LaunchResult {
         DebugLogger.i(TAG, "正在重启 vFlowCore...")
         stop(context)
-        delay(500) // 等待进程完全退出
+        delay(500)
         return launch(context, mode, forceRestart = true)
+    }
+
+    private fun resolveLaunchMode(context: Context, mode: LaunchMode): LaunchMode {
+        if (mode != LaunchMode.AUTO) {
+            return mode
+        }
+        val prefs = context.getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+        val preferredMode = prefs.getString("preferred_core_launch_mode", "shizuku")
+        return if (preferredMode == "root") LaunchMode.ROOT else LaunchMode.SHIZUKU
+    }
+
+    private fun LaunchMode.toShellMode(): ShellManager.ShellMode {
+        return when (this) {
+            LaunchMode.ROOT -> ShellManager.ShellMode.ROOT
+            LaunchMode.SHIZUKU -> ShellManager.ShellMode.SHIZUKU
+            LaunchMode.AUTO -> ShellManager.ShellMode.AUTO
+        }
+    }
+
+    private fun shellQuote(value: String): String {
+        return "'${value.replace("'", "'\\''")}'"
     }
 
     /**
@@ -261,6 +270,7 @@ object CoreLauncher {
         val classpath = dexFile.absolutePath
         val logPath = logFile.absolutePath
         val packageName = context.packageName
+        val transportArgs = buildTransportArgs(context)
 
         return if (mode == LaunchMode.ROOT) {
             // ROOT 模式：需要部署 vflow_shell_exec 来降权启动 shell worker
@@ -271,7 +281,7 @@ object CoreLauncher {
                 tempScript.writeText("""
                     #!/system/bin/sh
                     export CLASSPATH="$classpath"
-                    exec app_process /system/bin $CORE_CLASS --shell-launcher "${shellLauncher.absolutePath}" --app-package "$packageName"
+                    exec app_process /system/bin $CORE_CLASS --shell-launcher "${shellLauncher.absolutePath}" --app-package "$packageName" $transportArgs
                 """.trimIndent())
                 tempScript.setExecutable(true)
 
@@ -279,12 +289,22 @@ object CoreLauncher {
                 "sh ${tempScript.absolutePath} > \"$logPath\" 2>&1 & rm -f ${tempScript.absolutePath}"
             } else {
                 DebugLogger.w(TAG, "ROOT 模式但 vflow_shell_exec 部署失败，回退到直接启动（可能有权限问题）")
-                "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS --app-package \"$packageName\"' > \"$logPath\" 2>&1 &"
+                "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS --app-package \"$packageName\" $transportArgs' > \"$logPath\" 2>&1 &"
             }
         } else {
             // Shizuku 或 AUTO 模式：Master 以 shell 权限运行，无需降权，直接启动
             DebugLogger.d(TAG, "Shell 模式：直接启动（无需降权）")
-            "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS --app-package \"$packageName\"' > \"$logPath\" 2>&1 &"
+            "sh -c 'export CLASSPATH=\"$classpath\"; exec app_process /system/bin $CORE_CLASS --app-package \"$packageName\" $transportArgs' > \"$logPath\" 2>&1 &"
+        }
+    }
+
+    private fun buildTransportArgs(context: Context): String {
+        return if (VFlowCoreBridge.isUnixSocketEnabled(context)) {
+            val socketName = VFlowCoreBridge.getUnixSocketName(context)
+            DebugLogger.d(TAG, "使用 UNIX 套接字: @$socketName")
+            "--ipc-transport unix --unix-socket-name \"$socketName\""
+        } else {
+            "--ipc-transport tcp"
         }
     }
 

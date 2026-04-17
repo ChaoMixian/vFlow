@@ -1,6 +1,9 @@
 // 文件: server/src/main/java/com/chaomixian/vflow/server/VFlowCore.kt
 package com.chaomixian.vflow.server
 
+import android.net.LocalServerSocket
+import android.net.LocalSocket
+import android.net.LocalSocketAddress
 import com.chaomixian.vflow.server.common.CoreBuildInfo
 import com.chaomixian.vflow.server.common.Config
 import com.chaomixian.vflow.server.common.utils.SystemUtils
@@ -21,12 +24,19 @@ import kotlin.system.exitProcess
  * vFlow Core 入口
  */
 object VFlowCore {
+    private enum class MasterTransport {
+        TCP,
+        UNIX
+    }
+
     private var isRunning = true
     private val executor = Executors.newCachedThreadPool()
     private val workerProcesses = mutableListOf<Process>()
     private var shellLauncherPath: String? = null
     private var appPackageName: String? = null
     private var appWatcherJob: Thread? = null
+    private var masterTransport: MasterTransport = MasterTransport.TCP
+    private var unixSocketName: String? = null
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -53,6 +63,22 @@ object VFlowCore {
                         i++
                     }
                 }
+                "--ipc-transport" -> {
+                    if (i + 1 < args.size) {
+                        masterTransport = if (args[i + 1].equals("unix", ignoreCase = true)) {
+                            MasterTransport.UNIX
+                        } else {
+                            MasterTransport.TCP
+                        }
+                        i++
+                    }
+                }
+                "--unix-socket-name" -> {
+                    if (i + 1 < args.size) {
+                        unixSocketName = args[i + 1]
+                        i++
+                    }
+                }
             }
             i++
         }
@@ -73,9 +99,16 @@ object VFlowCore {
             e.printStackTrace()
         }
 
+        val useUnixSocket = masterTransport == MasterTransport.UNIX
+        val resolvedUnixSocketName = if (useUnixSocket) {
+            unixSocketName ?: Config.getWorkerSocketName(resolveWorkerType(type), appPackageName)
+        } else {
+            null
+        }
+
         when (type) {
-            "shell" -> ShellWorker().run() // 逻辑已移入 ShellWorker
-            "root" -> RootWorker().run()
+            "shell" -> ShellWorker(useUnixSocket, resolvedUnixSocketName).run() // 逻辑已移入 ShellWorker
+            "root" -> RootWorker(useUnixSocket, resolvedUnixSocketName).run()
             else -> {
                 System.err.println("Unknown worker type: $type")
                 exitProcess(1)
@@ -89,15 +122,22 @@ object VFlowCore {
         val isRoot = SystemUtils.isRoot()
         println(">>> vFlow Core MASTER Starting (PID: ${android.os.Process.myPid()}, UID: ${SystemUtils.getMyUid()}) <<<")
         println(">>> Core Version: ${CoreBuildInfo.VERSION_CODE} <<<")
+        if (masterTransport == MasterTransport.UNIX) {
+            println(">>> IPC Transport: UNIX (@${resolveUnixSocketName()}) <<<")
+        } else {
+            println(">>> IPC Transport: TCP (${Config.BIND_ADDRESS}:${Config.PORT_MASTER}) <<<")
+        }
 
         Runtime.getRuntime().addShutdownHook(Thread {
             workerProcesses.forEach { SystemUtils.killProcess(it) }
             appWatcherJob?.interrupt()
         })
 
-        spawnWorkers(isRoot, shellLauncherPath)
-        startAppWatcher() // 启动 App 进程监控
-        startMasterServer()
+        if (masterTransport == MasterTransport.UNIX) {
+            runUnixMasterServer(isRoot)
+        } else {
+            runTcpMasterServer(isRoot)
+        }
     }
 
     private fun spawnWorkers(isRoot: Boolean, shellLauncherPath: String?) {
@@ -105,10 +145,11 @@ object VFlowCore {
 
         // 1. 启动 Shell Worker
         try {
+            val shellWorkerArgs = buildWorkerTransportArgs(Config.WorkerType.SHELL)
             val p = if (shellLauncherPath != null) {
-                SystemUtils.startWorkerProcess("shell", shellLauncherPath)
+                SystemUtils.startWorkerProcess("shell", shellLauncherPath, shellWorkerArgs)
             } else {
-                SystemUtils.startWorkerProcess("shell")
+                SystemUtils.startWorkerProcess("shell", shellWorkerArgs)
             }
             workerProcesses.add(p)
             setupWorkerLogger(p, "ShellWorker")
@@ -119,7 +160,7 @@ object VFlowCore {
         // 2. 启动 Root Worker (仅 Master 为 Root 时，保持原样，不需要 vflow_shell_exec)
         if (isRoot) {
             try {
-                val p = SystemUtils.startWorkerProcess("root")
+                val p = SystemUtils.startWorkerProcess("root", buildWorkerTransportArgs(Config.WorkerType.ROOT))
                 workerProcesses.add(p)
                 setupWorkerLogger(p, "RootWorker")
             } catch (e: Exception) {
@@ -143,15 +184,20 @@ object VFlowCore {
         }
     }
 
-    private fun startMasterServer() {
+    private fun runTcpMasterServer(isRoot: Boolean) {
         try {
             val serverSocket = ServerSocket(Config.PORT_MASTER, 50, InetAddress.getByName(Config.BIND_ADDRESS))
             serverSocket.reuseAddress = true
             println("✅ Master listening on ${Config.BIND_ADDRESS}:${Config.PORT_MASTER}")
 
-            while (isRunning) {
-                val client = serverSocket.accept()
-                executor.submit { handleMasterClient(client) }
+            serverSocket.use { server ->
+                spawnWorkers(isRoot, shellLauncherPath)
+                startAppWatcher() // 启动 App 进程监控
+
+                while (isRunning) {
+                    val client = server.accept()
+                    executor.submit { handleMasterTcpClient(client) }
+                }
             }
         } catch (e: Exception) {
             System.err.println("❌ Master Fatal: ${e.message}")
@@ -159,28 +205,126 @@ object VFlowCore {
         }
     }
 
-    private fun handleMasterClient(socket: Socket) {
+    private fun runUnixMasterServer(isRoot: Boolean) {
+        val socketName = resolveUnixSocketName()
+        try {
+            LocalServerSocket(socketName).use { server ->
+                println("✅ Master listening on unix:@$socketName")
+
+                spawnWorkers(isRoot, shellLauncherPath)
+                startAppWatcher() // 启动 App 进程监控
+
+                while (isRunning) {
+                    val client = server.accept()
+                    executor.submit { handleMasterLocalClient(client) }
+                }
+            }
+        } catch (e: Exception) {
+            System.err.println("❌ Master Fatal (UNIX): ${e.message}")
+            e.printStackTrace()
+            exitProcess(1)
+        }
+    }
+
+    private fun handleMasterTcpClient(socket: Socket) {
         socket.use { s ->
             try {
                 s.soTimeout = Config.SOCKET_TIMEOUT
                 val reader = BufferedReader(InputStreamReader(s.inputStream))
                 val writer = PrintWriter(OutputStreamWriter(s.getOutputStream()), true)
-
-                while (isRunning && !s.isClosed) {
-                    val reqStr = reader.readLine() ?: break
-                    val req = try { JSONObject(reqStr) } catch(e:Exception) { null }
-
-                    if (req != null) {
-                        if (req.optString("target") == "system" && req.optString("method") == "exit") {
-                            writer.println(JSONObject().put("success", true).toString())
-                            isRunning = false
-                            executor.submit { Thread.sleep(500); exitProcess(0) }
-                            return
-                        }
-                        writer.println(routeRequest(req.optString("target"), reqStr))
-                    }
-                }
+                handleMasterClientLoop(reader, writer)
             } catch (e: Exception) {}
+        }
+    }
+
+    private fun handleMasterLocalClient(socket: LocalSocket) {
+        socket.use { s ->
+            try {
+                s.soTimeout = Config.SOCKET_TIMEOUT
+                val reader = BufferedReader(InputStreamReader(s.inputStream))
+                val writer = PrintWriter(OutputStreamWriter(s.outputStream), true)
+                handleMasterClientLoop(reader, writer)
+            } catch (e: Exception) {
+            }
+        }
+    }
+
+    private fun handleMasterClientLoop(
+        reader: BufferedReader,
+        writer: PrintWriter
+    ) {
+        while (isRunning) {
+            val reqStr = reader.readLine() ?: break
+            val req = try { JSONObject(reqStr) } catch(e:Exception) { null }
+
+            if (req != null) {
+                if (req.optString("target") == "system" && req.optString("method") == "exit") {
+                    writer.println(JSONObject().put("success", true).toString())
+                    isRunning = false
+                    executor.submit { Thread.sleep(500); exitProcess(0) }
+                    return
+                }
+                writer.println(routeRequest(req.optString("target"), reqStr))
+            }
+        }
+    }
+
+    private fun resolveUnixSocketName(): String {
+        val providedPath = unixSocketName?.takeIf { it.isNotBlank() }
+        if (providedPath != null) {
+            return providedPath
+        }
+        val packageSuffix = (appPackageName ?: "com.chaomixian.vflow").replace('.', '_')
+        return "${packageSuffix}_vflow_core"
+    }
+
+    private fun buildWorkerTransportArgs(type: Config.WorkerType): List<String> {
+        if (masterTransport != MasterTransport.UNIX) {
+            return emptyList()
+        }
+        return listOf(
+            "--ipc-transport",
+            "unix",
+            "--unix-socket-name",
+            Config.getWorkerSocketName(type, appPackageName),
+            "--app-package",
+            appPackageName.orEmpty()
+        )
+    }
+
+    private fun resolveWorkerType(type: String): Config.WorkerType {
+        return when (type) {
+            "root" -> Config.WorkerType.ROOT
+            else -> Config.WorkerType.SHELL
+        }
+    }
+
+    private fun routeRequestToWorker(workerType: Config.WorkerType, requestStr: String): String {
+        return try {
+            if (masterTransport == MasterTransport.UNIX) {
+                val socketName = Config.getWorkerSocketName(workerType, appPackageName)
+                LocalSocket(LocalSocket.SOCKET_STREAM).use { ws ->
+                    ws.connect(
+                        LocalSocketAddress(socketName, LocalSocketAddress.Namespace.ABSTRACT)
+                    )
+                    ws.soTimeout = Config.SOCKET_TIMEOUT
+                    val writer = PrintWriter(OutputStreamWriter(ws.outputStream), true)
+                    val reader = BufferedReader(InputStreamReader(ws.inputStream))
+                    writer.println(requestStr)
+                    reader.readLine() ?: JSONObject().put("success", false).put("error", "Empty response").toString()
+                }
+            } else {
+                val port = Config.getWorkerPort(workerType)
+                Socket(Config.LOCALHOST, port).use { ws ->
+                    ws.soTimeout = Config.SOCKET_TIMEOUT
+                    val writer = PrintWriter(OutputStreamWriter(ws.getOutputStream()), true)
+                    val reader = BufferedReader(InputStreamReader(ws.inputStream))
+                    writer.println(requestStr)
+                    reader.readLine() ?: JSONObject().put("success", false).put("error", "Empty response").toString()
+                }
+            }
+        } catch (e: Exception) {
+            JSONObject().put("success", false).put("error", "Worker error: ${e.message}").toString()
         }
     }
 
@@ -204,24 +348,14 @@ object VFlowCore {
                 // exec 请求根据 asRoot 参数路由
                 if (method == "exec") {
                     val asRoot = req.optJSONObject("params")?.optBoolean("asRoot", false) ?: false
-                    val port = if (asRoot) Config.PORT_WORKER_ROOT else Config.PORT_WORKER_SHELL
+                    val workerType = if (asRoot) Config.WorkerType.ROOT else Config.WorkerType.SHELL
 
                     // 检查目标 Worker 是否存在
                     if (asRoot && !SystemUtils.isRoot()) {
                         return JSONObject().put("success", false).put("error", "RootWorker not available (Master not Root)").toString()
                     }
 
-                    return try {
-                        Socket(Config.LOCALHOST, port).use { ws ->
-                            ws.soTimeout = Config.SOCKET_TIMEOUT
-                            val wWriter = PrintWriter(OutputStreamWriter(ws.getOutputStream()), true)
-                            val wReader = BufferedReader(InputStreamReader(ws.inputStream))
-                            wWriter.println(requestStr)
-                            wReader.readLine() ?: JSONObject().put("success", false).put("error", "Empty response").toString()
-                        }
-                    } catch (e: Exception) {
-                        JSONObject().put("success", false).put("error", "Worker error: ${e.message}").toString()
-                    }
+                    return routeRequestToWorker(workerType, requestStr)
                 }
 
                 // exit 请求（系统控制）
@@ -237,22 +371,12 @@ object VFlowCore {
         }
 
         // 其他 target 使用静态路由表
-        val port = Config.ROUTING_TABLE[target]
-        if (port == null) {
+        val workerType = Config.ROUTING_TABLE[target]
+        if (workerType == null) {
             return JSONObject().put("success", false).put("error", "No route").toString()
         }
 
-        return try {
-            Socket(Config.LOCALHOST, port).use { ws ->
-                ws.soTimeout = Config.SOCKET_TIMEOUT
-                val wWriter = PrintWriter(OutputStreamWriter(ws.getOutputStream()), true)
-                val wReader = BufferedReader(InputStreamReader(ws.inputStream))
-                wWriter.println(requestStr)
-                wReader.readLine() ?: JSONObject().put("success", false).put("error", "Empty response").toString()
-            }
-        } catch (e: Exception) {
-            JSONObject().put("success", false).put("error", "Worker error: ${e.message}").toString()
-        }
+        return routeRequestToWorker(workerType, requestStr)
     }
 
     // ================= App 进程守护逻辑 =================

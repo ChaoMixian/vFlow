@@ -4,7 +4,15 @@ package com.chaomixian.vflow.server.worker
 import com.chaomixian.vflow.server.common.Config
 import com.chaomixian.vflow.server.wrappers.root.UinputWrapper
 
-class RootWorker : BaseWorker(Config.PORT_WORKER_ROOT, "Root") {
+class RootWorker(
+    useUnixSocket: Boolean = false,
+    unixSocketPath: String? = null
+) : BaseWorker(
+    Config.PORT_WORKER_ROOT,
+    "Root",
+    useUnixSocket,
+    unixSocketPath
+) {
 
     override fun registerWrappers() {
         // 注册需要 Root 权限的 Wrappers

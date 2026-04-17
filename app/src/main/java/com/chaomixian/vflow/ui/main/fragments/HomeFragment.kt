@@ -174,8 +174,12 @@ class HomeFragment : Fragment() {
     }
 
     private fun renderCoreStatus(pingSuccess: Boolean) {
-        val privilegeMode = VFlowCoreBridge.privilegeMode
         val isConnected = pingSuccess && VFlowCoreBridge.isConnected
+        val privilegeMode = if (isConnected) {
+            VFlowCoreBridge.privilegeMode
+        } else {
+            VFlowCoreBridge.PrivilegeMode.NONE
+        }
         val context = requireContext()
         val versionStatus = VFlowCoreBridge.getCoreVersionStatus()
 
