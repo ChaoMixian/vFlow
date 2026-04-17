@@ -21,6 +21,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:visibility="gone"
+            app:cardCornerRadius="24dp"
             app:strokeColor="?attr/colorPrimary"
             app:strokeWidth="2dp">
 
@@ -70,7 +71,8 @@
         <com.google.android.material.card.MaterialCardView
             style="?attr/materialCardViewFilledStyle"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -172,7 +174,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:clickable="true"
-            android:focusable="true">
+            android:focusable="true"
+            app:cardCornerRadius="24dp">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -220,7 +223,8 @@
             style="?attr/materialCardViewFilledStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="24dp">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -428,7 +432,8 @@
             style="?attr/materialCardViewFilledStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="24dp">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -578,7 +583,8 @@
             style="?attr/materialCardViewFilledStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="24dp">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -716,7 +722,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:clickable="true"
-            android:focusable="true">
+            android:focusable="true"
+            app:cardCornerRadius="24dp">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
