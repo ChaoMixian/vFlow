@@ -31,6 +31,7 @@ object TriggerHandlerRegistry {
         register(TimeTriggerModule().id) { TimeTriggerHandler() }
         register(BatteryTriggerModule().id) { BatteryTriggerHandler() }
         register(PowerTriggerModule().id) { PowerTriggerHandler() }
+        register(ScreenTriggerModule().id) { ScreenTriggerHandler() }
         register(WifiTriggerModule().id) { WifiTriggerHandler() }
         register(BluetoothTriggerModule().id) { BluetoothTriggerHandler() }
         register(SmsTriggerModule().id) { SmsTriggerHandler() }
