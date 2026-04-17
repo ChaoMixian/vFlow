@@ -54,6 +54,7 @@ class MainActivity : BaseActivity() {
         const val PREFS_NAME = "vFlowPrefs"
         const val LOG_PREFS_NAME = "vFlowLogPrefs"
         private const val EXTRA_INITIAL_MAIN_TAB_TAG = "initial_main_tab_tag"
+        private const val STATE_CURRENT_MAIN_TAB_TAG = "current_main_tab_tag"
     }
 
     private var uiShellReady = false
@@ -89,7 +90,7 @@ class MainActivity : BaseActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         liquidGlassNavBarEnabled = AppearanceManager.isLiquidGlassNavBarEnabled(this)
         initialMainTab = resolveInitialMainTab(savedInstanceState)
-        currentMainTabTag = initialMainTab.fragmentTag
+        currentMainTabTag = null
 
         // 检查首次运行
         if (prefs.getBoolean("is_first_run", true)) {
@@ -111,6 +112,14 @@ class MainActivity : BaseActivity() {
         }
 
         continueStartup()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(
+            STATE_CURRENT_MAIN_TAB_TAG,
+            currentMainTabTag ?: initialMainTab.fragmentTag
+        )
+        super.onSaveInstanceState(outState)
     }
 
     private fun initializeUiShell() {
@@ -241,10 +250,22 @@ class MainActivity : BaseActivity() {
         if (isDestroyed || fragmentManager.isStateSaved) return
         latestMainBottomInsetPx = bottomInsetPx
 
-        val targetFragment = fragmentManager.findFragmentByTag(tab.fragmentTag) ?: tab.createFragment()
-        if (targetFragment.isAdded) {
-            applyScrollableBottomInset(targetFragment, bottomInsetPx)
+        val currentContainer = findViewById<android.view.ViewGroup?>(containerId) ?: return
+        val existingFragment = fragmentManager.findFragmentByTag(tab.fragmentTag)
+        if (existingFragment != null &&
+            isMainTabFragmentAttachedToContainer(existingFragment, currentContainer, containerId)
+        ) {
+            applyScrollableBottomInset(existingFragment, bottomInsetPx)
             return
+        }
+        val targetFragment = if (existingFragment != null) {
+            fragmentManager.commitNow {
+                setReorderingAllowed(true)
+                remove(existingFragment)
+            }
+            tab.createFragment()
+        } else {
+            tab.createFragment()
         }
 
         fragmentManager.commitNow {
@@ -252,6 +273,19 @@ class MainActivity : BaseActivity() {
             add(containerId, targetFragment, tab.fragmentTag)
         }
         applyScrollableBottomInset(targetFragment, bottomInsetPx)
+    }
+
+    private fun isMainTabFragmentAttachedToContainer(
+        fragment: Fragment,
+        currentContainer: android.view.ViewGroup,
+        containerId: Int,
+    ): Boolean {
+        val fragmentView = fragment.view
+        val currentParent = fragmentView?.parent as? android.view.ViewGroup
+        return fragment.id == containerId &&
+            fragmentView != null &&
+            currentParent === currentContainer &&
+            currentContainer.isAttachedToWindow
     }
 
     private fun applyScrollableBottomInset(fragment: Fragment, bottomInsetPx: Int) {
@@ -421,11 +455,8 @@ class MainActivity : BaseActivity() {
     }
 
     private fun resolveInitialMainTab(savedInstanceState: Bundle?): MainTopLevelTab {
-        val requestedTag = if (savedInstanceState == null) {
-            intent.getStringExtra(EXTRA_INITIAL_MAIN_TAB_TAG)
-        } else {
-            null
-        }
+        val requestedTag = savedInstanceState?.getString(STATE_CURRENT_MAIN_TAB_TAG)
+            ?: intent.getStringExtra(EXTRA_INITIAL_MAIN_TAB_TAG)
         return MainTopLevelTab.entries.firstOrNull { it.fragmentTag == requestedTag } ?: MainTopLevelTab.HOME
     }
 
