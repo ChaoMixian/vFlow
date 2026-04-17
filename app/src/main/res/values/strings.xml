@@ -11,6 +11,8 @@
     <string name="settings_section_theme">外观</string>
     <string name="settings_switch_dynamic_color">动态取色</string>
     <string name="settings_switch_dynamic_color_desc">基于您的壁纸颜色生成应用外观主题。</string>
+    <string name="settings_switch_colorful_workflow_cards">多彩配色 (Beta)</string>
+    <string name="settings_switch_colorful_workflow_cards_desc">为工作流卡片启用图标和多彩背景。</string>
     <string name="settings_app_scale">缩放比例</string>
     <string name="settings_app_scale_default_value">100%%</string>
     <string name="settings_app_scale_value">%1$d%%</string>
@@ -617,6 +619,11 @@
 
     <!-- Workflow Config -->
     <string name="workflow_config">工作流配置</string>
+    <string name="workflow_icon">工作流图标</string>
+    <string name="workflow_card_preview">卡片预览</string>
+    <string name="workflow_card_icon">卡片图标</string>
+    <string name="workflow_theme_color">主题色</string>
+    <string name="workflow_theme_color_value">当前主题色：%1$s</string>
     <string name="workflow_max_execution_time_enabled">限制最大执行时长</string>
     <string name="workflow_max_execution_time_value">%d 秒</string>
     <string name="copied_to_clipboard">已复制到剪贴板</string>

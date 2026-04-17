@@ -4,6 +4,7 @@ import com.chaomixian.vflow.api.auth.RateLimiter
 import com.chaomixian.vflow.api.model.*
 import com.chaomixian.vflow.api.server.ApiDependencies
 import com.chaomixian.vflow.core.workflow.WorkflowNormalizer
+import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import fi.iki.elonen.NanoHTTPD
 import com.google.gson.Gson
@@ -225,6 +226,8 @@ class WorkflowHandler(
             tags = request.tags ?: emptyList(),
             version = "1.0.0",
             maxExecutionTime = request.maxExecutionTime,
+            cardIconRes = WorkflowVisuals.defaultIconResName(),
+            cardThemeColor = WorkflowVisuals.randomThemeColorHex(),
             modifiedAt = System.currentTimeMillis()
         )
 

@@ -1,6 +1,7 @@
 package com.chaomixian.vflow.core.workflow.model
 
 import android.os.Parcelable
+import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import kotlinx.parcelize.Parcelize
 
 private const val MANUAL_TRIGGER_ID = "vflow.trigger.manual"
@@ -18,6 +19,8 @@ data class Workflow(
     var order: Int = 0,
     var shortcutName: String? = null,
     var shortcutIconRes: String? = null,
+    var cardIconRes: String = WorkflowVisuals.DEFAULT_ICON_RES_NAME,
+    var cardThemeColor: String = WorkflowVisuals.DEFAULT_THEME_COLOR_HEX,
     var modifiedAt: Long = System.currentTimeMillis(),
     var version: String = "1.0.0",
     var vFlowLevel: Int = 1,

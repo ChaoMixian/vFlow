@@ -69,18 +69,22 @@ class WorkflowManager(val context: Context) {
         val index = workflows.indexOfFirst { it.id == workflow.id }
         val oldWorkflow = if (index != -1) workflows[index] else null
         val normalizedWorkflow = normalizeWorkflow(workflow)
+        val normalizedVisualWorkflow = normalizedWorkflow.copy(
+            cardIconRes = WorkflowVisuals.normalizeIconResName(normalizedWorkflow.cardIconRes),
+            cardThemeColor = WorkflowVisuals.normalizeThemeColorHex(normalizedWorkflow.cardThemeColor)
+        )
 
-        val workflowToSave = normalizedWorkflow.copy(
+        val workflowToSave = normalizedVisualWorkflow.copy(
             modifiedAt = System.currentTimeMillis(),
-            version = normalizedWorkflow.version.ifBlank { "1.0.0" },
-            vFlowLevel = normalizedWorkflow.vFlowLevel.takeIf { it > 0 } ?: 1,
-            description = normalizedWorkflow.description,
-            author = normalizedWorkflow.author,
-            homepage = normalizedWorkflow.homepage,
-            tags = normalizedWorkflow.tags,
-            triggers = normalizedWorkflow.triggers,
-            steps = normalizedWorkflow.steps,
-            maxExecutionTime = normalizedWorkflow.maxExecutionTime
+            version = normalizedVisualWorkflow.version.ifBlank { "1.0.0" },
+            vFlowLevel = normalizedVisualWorkflow.vFlowLevel.takeIf { it > 0 } ?: 1,
+            description = normalizedVisualWorkflow.description,
+            author = normalizedVisualWorkflow.author,
+            homepage = normalizedVisualWorkflow.homepage,
+            tags = normalizedVisualWorkflow.tags,
+            triggers = normalizedVisualWorkflow.triggers,
+            steps = normalizedVisualWorkflow.steps,
+            maxExecutionTime = normalizedVisualWorkflow.maxExecutionTime
         )
 
         if (index != -1) {
@@ -224,6 +228,8 @@ class WorkflowManager(val context: Context) {
             order = record.getInt("order") ?: 0,
             shortcutName = record.getString("shortcutName"),
             shortcutIconRes = record.getString("shortcutIconRes"),
+            cardIconRes = WorkflowVisuals.normalizeIconResName(record.getString("cardIconRes")),
+            cardThemeColor = WorkflowVisuals.normalizeThemeColorHex(record.getString("cardThemeColor")),
             modifiedAt = record.getLong("modifiedAt")?.takeIf { it > 0 } ?: System.currentTimeMillis(),
             version = record.getString("version")?.takeIf { it.isNotBlank() } ?: "1.0.0",
             vFlowLevel = record.getInt("vFlowLevel")?.takeIf { it > 0 } ?: 1,

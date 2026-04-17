@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.PopupMenu
@@ -21,8 +22,10 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.chaomixian.vflow.ui.common.ShortcutHelper
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -35,6 +38,10 @@ import androidx.core.view.isNotEmpty
  * 工作流列表项的 ViewHolder，可在主列表和文件夹弹窗中复用
  */
 class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    private val cardView: MaterialCardView = itemView.findViewById(R.id.card_view)
+    private val workflowIconCard: MaterialCardView = itemView.findViewById(R.id.card_workflow_icon)
+    private val workflowIcon: ImageView = itemView.findViewById(R.id.image_workflow_icon)
+    private val workflowTitleContainer: View = itemView.findViewById(R.id.workflow_title_container)
     val name: TextView = itemView.findViewById(R.id.text_view_workflow_name)
     val infoChipGroup: ChipGroup = itemView.findViewById(R.id.chip_group_info)
     val moreOptionsButton: ImageButton = itemView.findViewById(R.id.button_more_options)
@@ -61,9 +68,27 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val isManualTrigger = workflow.hasManualTrigger()
         val hasAutoTriggers = workflow.hasAutoTriggers()
         val missingPermissions = PermissionManager.getMissingPermissions(itemView.context, workflow)
+        val visualColors = WorkflowVisuals.resolveCardColors(itemView.context, workflow.cardThemeColor)
+        val colorfulCardsEnabled = ThemeUtils.isColorfulWorkflowCardsEnabled(itemView.context)
 
         // 基本信息
         name.text = workflow.name
+        if (colorfulCardsEnabled) {
+            cardView.setCardBackgroundColor(visualColors.cardBackground)
+            workflowIconCard.isVisible = true
+            workflowIconCard.setCardBackgroundColor(visualColors.iconBackground)
+            workflowIcon.setImageResource(
+                WorkflowVisuals.resolveIconDrawableRes(workflow.cardIconRes)
+            )
+            workflowIcon.imageTintList = ColorStateList.valueOf(visualColors.iconTint)
+            updateTitleStartMargin(12)
+        } else {
+            cardView.setCardBackgroundColor(
+                MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorSurfaceContainerLow, 0)
+            )
+            workflowIconCard.isVisible = false
+            updateTitleStartMargin(0)
+        }
         infoChipGroup.removeAllViews()
         val inflater = LayoutInflater.from(itemView.context)
 
@@ -72,12 +97,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
             permissionChip.text = itemView.context.getString(R.string.workflow_chip_missing_permissions)
             permissionChip.setChipIconResource(R.drawable.rounded_security_24)
-            permissionChip.chipBackgroundColor = ColorStateList.valueOf(
-                MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorErrorContainer, 0)
-            )
-            val onColor = MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorOnErrorContainer, 0)
-            permissionChip.chipIconTint = ColorStateList.valueOf(onColor)
-            permissionChip.setTextColor(onColor)
+            applyErrorChipStyle(permissionChip)
             infoChipGroup.addView(permissionChip)
         }
 
@@ -87,6 +107,11 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val stepChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
             stepChip.text = itemView.context.getString(R.string.workflow_chip_steps, stepCount.coerceAtLeast(0))
             stepChip.setChipIconResource(R.drawable.rounded_dashboard_fill_24)
+            if (colorfulCardsEnabled) {
+                applyColoredChipStyle(stepChip, visualColors)
+            } else {
+                applyDefaultChipStyle(stepChip)
+            }
             infoChipGroup.addView(stepChip)
         }
 
@@ -102,6 +127,11 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val permissionChip = inflater.inflate(R.layout.chip_permission, infoChipGroup, false) as Chip
             permissionChip.text = permission.getLocalizedName(itemView.context)
             permissionChip.setChipIconResource(R.drawable.rounded_security_24)
+            if (colorfulCardsEnabled) {
+                applyColoredChipStyle(permissionChip, visualColors)
+            } else {
+                applyDefaultChipStyle(permissionChip)
+            }
             infoChipGroup.addView(permissionChip)
         }
 
@@ -176,6 +206,17 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         enabledSwitch.isVisible = hasAutoTriggers
 
         if (isManualTrigger) {
+            if (colorfulCardsEnabled) {
+                executeButton.setCardBackgroundColor(visualColors.accentBackground)
+                executeIcon.imageTintList = ColorStateList.valueOf(visualColors.iconTint)
+            } else {
+                executeButton.setCardBackgroundColor(
+                    MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorPrimaryContainer, 0)
+                )
+                executeIcon.imageTintList = ColorStateList.valueOf(
+                    MaterialColors.getColor(itemView.context, com.google.android.material.R.attr.colorOnPrimaryContainer, 0)
+                )
+            }
             executeIcon.setImageResource(
                 if (WorkflowExecutor.isRunning(workflow.id)) R.drawable.rounded_pause_24 else R.drawable.ic_play_arrow
             )
@@ -202,6 +243,55 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
                 updateWorkflowInList(workflowListRef, updatedWorkflow)
             }
         }
+    }
+
+    private fun updateTitleStartMargin(marginDp: Int) {
+        val params = workflowTitleContainer.layoutParams as? ViewGroup.MarginLayoutParams ?: return
+        val newMarginPx = (marginDp * itemView.resources.displayMetrics.density).toInt()
+        if (params.marginStart != newMarginPx) {
+            params.marginStart = newMarginPx
+            workflowTitleContainer.layoutParams = params
+        }
+    }
+
+    private fun applyColoredChipStyle(chip: Chip, visualColors: WorkflowVisuals.CardColors) {
+        chip.chipBackgroundColor = ColorStateList.valueOf(visualColors.chipBackground)
+        chip.chipIconTint = ColorStateList.valueOf(visualColors.iconTint)
+        chip.setTextColor(visualColors.iconTint)
+    }
+
+    private fun applyDefaultChipStyle(chip: Chip) {
+        val context = itemView.context
+        val backgroundColor = MaterialColors.getColor(
+            context,
+            com.google.android.material.R.attr.colorSurfaceContainerHighest,
+            0
+        )
+        val foregroundColor = MaterialColors.getColor(
+            context,
+            com.google.android.material.R.attr.colorOnSurfaceVariant,
+            0
+        )
+        chip.chipBackgroundColor = ColorStateList.valueOf(backgroundColor)
+        chip.chipIconTint = ColorStateList.valueOf(foregroundColor)
+        chip.setTextColor(foregroundColor)
+    }
+
+    private fun applyErrorChipStyle(chip: Chip) {
+        val context = itemView.context
+        val backgroundColor = MaterialColors.getColor(
+            context,
+            com.google.android.material.R.attr.colorErrorContainer,
+            0
+        )
+        val foregroundColor = MaterialColors.getColor(
+            context,
+            com.google.android.material.R.attr.colorOnErrorContainer,
+            0
+        )
+        chip.chipBackgroundColor = ColorStateList.valueOf(backgroundColor)
+        chip.chipIconTint = ColorStateList.valueOf(foregroundColor)
+        chip.setTextColor(foregroundColor)
     }
 
     /**

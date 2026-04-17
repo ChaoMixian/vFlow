@@ -94,6 +94,20 @@
                     android:text="@string/settings_switch_dynamic_color_desc"
                     android:textAppearance="?attr/textAppearanceBodySmall" />
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_colorful_workflow_cards"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/settings_switch_colorful_workflow_cards" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/settings_switch_colorful_workflow_cards_desc"
+                    android:textAppearance="?attr/textAppearanceBodySmall" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

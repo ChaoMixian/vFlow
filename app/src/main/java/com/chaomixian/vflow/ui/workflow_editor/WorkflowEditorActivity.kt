@@ -37,6 +37,7 @@ import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowEnumMigration
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
@@ -310,12 +311,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
             // 确保已有 currentWorkflow 对象（未保存的工作流在执行时创建）
             if (currentWorkflow == null) {
-                currentWorkflow = Workflow(
-                    id = UUID.randomUUID().toString(),
-                    name = name,
-                    triggers = triggerSteps.toList(),
-                    steps = actionSteps.toList()
-                )
+                currentWorkflow = createDraftWorkflow(name)
             }
 
             val workflowToExecute = currentWorkflow!!.copy(
@@ -373,6 +369,17 @@ class WorkflowEditorActivity : BaseActivity() {
             name = nameEditText.text.toString(),
             triggers = triggerSteps.toList(),
             steps = actionSteps.toList()
+        )
+    }
+
+    private fun createDraftWorkflow(name: String = nameEditText.text.toString().trim()): Workflow {
+        return Workflow(
+            id = UUID.randomUUID().toString(),
+            name = name,
+            triggers = triggerSteps.toList(),
+            steps = actionSteps.toList(),
+            cardIconRes = WorkflowVisuals.defaultIconResName(),
+            cardThemeColor = WorkflowVisuals.randomThemeColorHex()
         )
     }
 
@@ -1625,12 +1632,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 triggers = triggerSteps.toList(),
                 steps = actionSteps.toList(),
                 isEnabled = currentWorkflow?.isEnabled ?: true
-            ) ?: Workflow(
-                id = UUID.randomUUID().toString(),
-                name = name,
-                triggers = triggerSteps.toList(),
-                steps = actionSteps.toList()
-            )
+            ) ?: createDraftWorkflow(name)
             workflowManager.saveWorkflow(workflowToSave)
 
             // 如果是第一次保存新工作流，则更新当前Activity的状态
@@ -1652,6 +1654,9 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun showEditorMoreOptionsSheet() {
+        if (currentWorkflow == null) {
+            currentWorkflow = createDraftWorkflow()
+        }
         val sheet = EditorMoreOptionsSheet()
         sheet.workflow = currentWorkflow
         sheet.onAiGenerateClicked = {
@@ -1664,8 +1669,9 @@ class WorkflowEditorActivity : BaseActivity() {
         }
         sheet.onMetadataSaved = { updatedWorkflow ->
             currentWorkflow = updatedWorkflow
-            // 保存工作流
-            workflowManager.saveWorkflow(updatedWorkflow)
+            if (updatedWorkflow.name.isNotBlank()) {
+                workflowManager.saveWorkflow(updatedWorkflow)
+            }
         }
         sheet.show(supportFragmentManager, "EditorMoreOptionsSheet")
     }

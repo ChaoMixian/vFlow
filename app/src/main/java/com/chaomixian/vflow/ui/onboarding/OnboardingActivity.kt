@@ -48,6 +48,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.edit
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.permissions.Permission
@@ -95,7 +96,9 @@ class OnboardingActivity : BaseActivity() {
             ActionStep("vflow.device.delay", mapOf("duration" to 1000.0)),
             ActionStep("vflow.device.toast", mapOf("message" to getString(R.string.onboarding_hello_toast)))
             ),
-            isFavorite = true
+            isFavorite = true,
+            cardIconRes = WorkflowVisuals.defaultIconResName(),
+            cardThemeColor = WorkflowVisuals.randomThemeColorHex()
         )
         workflowManager.saveWorkflow(workflow)
     }

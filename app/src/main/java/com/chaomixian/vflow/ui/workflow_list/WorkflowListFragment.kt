@@ -149,6 +149,8 @@ class WorkflowListFragment : Fragment() {
             "order" to workflow.order,
             "shortcutName" to workflow.shortcutName,
             "shortcutIconRes" to workflow.shortcutIconRes,
+            "cardIconRes" to workflow.cardIconRes,
+            "cardThemeColor" to workflow.cardThemeColor,
             "modifiedAt" to workflow.modifiedAt,
             "version" to workflow.version,
             "vFlowLevel" to workflow.vFlowLevel,

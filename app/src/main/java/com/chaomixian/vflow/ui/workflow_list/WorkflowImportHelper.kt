@@ -7,6 +7,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.FolderManager
 import com.chaomixian.vflow.core.workflow.WorkflowJsonImportParser
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.model.WorkflowFolder
 import com.google.gson.Gson
@@ -97,6 +98,8 @@ class WorkflowImportHelper(
             author = wf.author ?: "",
             homepage = wf.homepage ?: "",
             tags = wf.tags ?: emptyList(),
+            cardIconRes = WorkflowVisuals.normalizeIconResName(wf.cardIconRes),
+            cardThemeColor = WorkflowVisuals.normalizeThemeColorHex(wf.cardThemeColor),
             modifiedAt = if (wf.modifiedAt == 0L) System.currentTimeMillis() else wf.modifiedAt,
             folderId = wf.folderId?.takeIf { it.isNotBlank() }
         )
@@ -112,6 +115,8 @@ class WorkflowImportHelper(
                 author = wf.author ?: "",
                 homepage = wf.homepage ?: "",
                 tags = wf.tags ?: emptyList(),
+                cardIconRes = WorkflowVisuals.normalizeIconResName(wf.cardIconRes),
+                cardThemeColor = WorkflowVisuals.normalizeThemeColorHex(wf.cardThemeColor),
                 modifiedAt = if (wf.modifiedAt == 0L) System.currentTimeMillis() else wf.modifiedAt
             )
         }

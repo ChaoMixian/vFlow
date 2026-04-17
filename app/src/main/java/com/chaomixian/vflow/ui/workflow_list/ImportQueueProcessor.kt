@@ -7,6 +7,7 @@ import android.widget.CheckBox
 import android.widget.Toast
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.LinkedList
@@ -95,6 +96,8 @@ class ImportQueueProcessor(
             author = toImport.author ?: "",
             homepage = toImport.homepage ?: "",
             tags = toImport.tags ?: emptyList(),
+            cardIconRes = WorkflowVisuals.normalizeIconResName(toImport.cardIconRes),
+            cardThemeColor = WorkflowVisuals.normalizeThemeColorHex(toImport.cardThemeColor),
             modifiedAt = if (toImport.modifiedAt == 0L) System.currentTimeMillis() else toImport.modifiedAt
         )
         val newWorkflow = workflowWithDefaults.copy(

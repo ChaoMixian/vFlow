@@ -30,6 +30,7 @@ import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.api.ApiService
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
+import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -87,6 +88,13 @@ class SettingsFragment : Fragment() {
         dynamicColorSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean("dynamicColorEnabled", isChecked) }
             requireActivity().recreate() // 重新创建Activity以应用主题更改
+        }
+
+        val colorfulWorkflowCardsSwitch = view.findViewById<MaterialSwitch>(R.id.switch_colorful_workflow_cards)
+        colorfulWorkflowCardsSwitch.isChecked = ThemeUtils.isColorfulWorkflowCardsEnabled(requireContext())
+        colorfulWorkflowCardsSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(ThemeUtils.KEY_COLORFUL_WORKFLOW_CARDS_ENABLED, isChecked) }
+            requireActivity().recreate()
         }
 
         val appScaleSlider = view.findViewById<Slider>(R.id.slider_app_scale)

@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,8 +15,12 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -54,6 +59,19 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
     private lateinit var layoutMaxExecutionTimeSlider: LinearLayout
     private lateinit var textMaxExecutionTimeValue: TextView
     private lateinit var sliderMaxExecutionTime: com.google.android.material.slider.Slider
+    private lateinit var layoutWorkflowVisuals: LinearLayout
+    private lateinit var textColorfulWorkflowCardsDisabled: TextView
+    private lateinit var cardVisualPreview: MaterialCardView
+    private lateinit var cardVisualPreviewIcon: MaterialCardView
+    private lateinit var imageVisualPreviewIcon: ImageView
+    private lateinit var textVisualPreviewName: TextView
+    private lateinit var textVisualPreviewColor: TextView
+    private lateinit var textSelectedThemeColor: TextView
+    private lateinit var iconPickerAdapter: WorkflowIconPickerAdapter
+    private lateinit var themeColorAdapter: WorkflowThemeColorAdapter
+
+    private var selectedIconRes: String = WorkflowVisuals.defaultIconResName()
+    private var selectedThemeColor: String = WorkflowVisuals.defaultThemeColorHex()
 
     private var isMoreMetadataExpanded = false
 
@@ -104,6 +122,19 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
         layoutMaxExecutionTimeSlider = view.findViewById(R.id.layout_max_execution_time_slider)
         textMaxExecutionTimeValue = view.findViewById(R.id.text_max_execution_time_value)
         sliderMaxExecutionTime = view.findViewById(R.id.slider_max_execution_time)
+        layoutWorkflowVisuals = view.findViewById(R.id.layout_workflow_visuals)
+        textColorfulWorkflowCardsDisabled = view.findViewById(R.id.text_colorful_workflow_cards_disabled)
+        cardVisualPreview = view.findViewById(R.id.card_visual_preview)
+        cardVisualPreviewIcon = view.findViewById(R.id.card_visual_preview_icon)
+        imageVisualPreviewIcon = view.findViewById(R.id.image_visual_preview_icon)
+        textVisualPreviewName = view.findViewById(R.id.text_visual_preview_name)
+        textVisualPreviewColor = view.findViewById(R.id.text_visual_preview_color)
+        textSelectedThemeColor = view.findViewById(R.id.text_selected_theme_color)
+
+        setupVisualPickers(view)
+        val colorfulCardsEnabled = ThemeUtils.isColorfulWorkflowCardsEnabled(requireContext())
+        layoutWorkflowVisuals.visibility = if (colorfulCardsEnabled) View.VISIBLE else View.GONE
+        textColorfulWorkflowCardsDisabled.visibility = if (colorfulCardsEnabled) View.GONE else View.VISIBLE
 
         val btnSaveMetadata = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_metadata)
 
@@ -127,6 +158,11 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             editAuthor.setText(wf.author)
             editHomepage.setText(wf.homepage)
             editTags.setText(wf.tags.joinToString(", "))
+            selectedIconRes = WorkflowVisuals.normalizeIconResName(wf.cardIconRes)
+            selectedThemeColor = WorkflowVisuals.normalizeThemeColorHex(wf.cardThemeColor)
+            iconPickerAdapter.setSelectedIcon(selectedIconRes)
+            themeColorAdapter.setSelectedColor(selectedThemeColor)
+            updateVisualPreview()
 
             // 填充最大执行时长配置
             wf.maxExecutionTime?.let { maxTime ->
@@ -150,6 +186,11 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             layoutMaxExecutionTimeSlider.visibility = View.GONE
             sliderMaxExecutionTime.value = 60f
             updateMaxExecutionTimeValue(60)
+            selectedIconRes = WorkflowVisuals.defaultIconResName()
+            selectedThemeColor = WorkflowVisuals.defaultThemeColorHex()
+            iconPickerAdapter.setSelectedIcon(selectedIconRes)
+            themeColorAdapter.setSelectedColor(selectedThemeColor)
+            updateVisualPreview()
         }
 
         // 保存元数据
@@ -187,6 +228,45 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
 
     private fun updateMaxExecutionTimeValue(seconds: Int) {
         textMaxExecutionTimeValue.text = getString(R.string.workflow_max_execution_time_value, seconds)
+    }
+
+    private fun setupVisualPickers(view: View) {
+        val iconRecyclerView = view.findViewById<RecyclerView>(R.id.recycler_workflow_icons)
+        iconPickerAdapter = WorkflowIconPickerAdapter { iconRes ->
+            selectedIconRes = iconRes
+            updateVisualPreview()
+        }
+        iconRecyclerView.layoutManager = object : GridLayoutManager(requireContext(), 5) {
+            override fun canScrollVertically(): Boolean = false
+        }
+        iconRecyclerView.adapter = iconPickerAdapter
+        iconRecyclerView.overScrollMode = View.OVER_SCROLL_NEVER
+
+        val colorRecyclerView = view.findViewById<RecyclerView>(R.id.recycler_workflow_colors)
+        themeColorAdapter = WorkflowThemeColorAdapter { colorHex ->
+            selectedThemeColor = colorHex
+            updateVisualPreview()
+        }
+        colorRecyclerView.layoutManager = object : GridLayoutManager(requireContext(), 5) {
+            override fun canScrollVertically(): Boolean = false
+        }
+        colorRecyclerView.adapter = themeColorAdapter
+        colorRecyclerView.overScrollMode = View.OVER_SCROLL_NEVER
+    }
+
+    private fun updateVisualPreview() {
+        val previewName = workflow?.name?.takeIf { it.isNotBlank() }
+            ?: getString(R.string.workflow_name_untitled)
+        val cardColors = WorkflowVisuals.resolveCardColors(requireContext(), selectedThemeColor)
+        cardVisualPreview.setCardBackgroundColor(cardColors.cardBackground)
+        cardVisualPreviewIcon.setCardBackgroundColor(cardColors.iconBackground)
+        imageVisualPreviewIcon.setImageResource(
+            WorkflowVisuals.resolveIconDrawableRes(selectedIconRes)
+        )
+        imageVisualPreviewIcon.imageTintList = ColorStateList.valueOf(cardColors.iconTint)
+        textVisualPreviewName.text = previewName
+        textVisualPreviewColor.text = selectedThemeColor
+        textSelectedThemeColor.text = getString(R.string.workflow_theme_color_value, selectedThemeColor)
     }
 
     private fun toggleMoreMetadataExpansion() {
@@ -229,7 +309,9 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             author = author,
             homepage = homepage,
             tags = tags,
-            maxExecutionTime = maxExecutionTime
+            maxExecutionTime = maxExecutionTime,
+            cardIconRes = selectedIconRes,
+            cardThemeColor = selectedThemeColor
         )
 
         onMetadataSaved?.invoke(updatedWorkflow)

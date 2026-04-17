@@ -11,6 +11,8 @@
     <string name="settings_section_theme">Appearance</string>
     <string name="settings_switch_dynamic_color">Dynamic Color</string>
     <string name="settings_switch_dynamic_color_desc">Generate the app appearance from your wallpaper colors.</string>
+    <string name="settings_switch_colorful_workflow_cards">Colorful workflow cards (Beta)</string>
+    <string name="settings_switch_colorful_workflow_cards_desc">Enable icons and colorful backgrounds for workflow cards.</string>
     <string name="settings_app_scale">Scale</string>
     <string name="settings_app_scale_default_value">100%%</string>
     <string name="settings_app_scale_value">%1$d%%</string>
@@ -1138,6 +1140,11 @@
 
     <string name="onboarding_hello_workflow">Hello vFlow</string>
     <string name="onboarding_hello_toast">🎉 Congratulations! vFlow is configured successfully, your first workflow has been executed!</string>
+    <string name="workflow_icon">Workflow icon</string>
+    <string name="workflow_card_preview">Card preview</string>
+    <string name="workflow_card_icon">Card icon</string>
+    <string name="workflow_theme_color">Theme color</string>
+    <string name="workflow_theme_color_value">Current theme color: %1$s</string>
 
     <!-- UI Inspector -->
     <string name="ui_inspector_service_started">UI Inspector service started</string>

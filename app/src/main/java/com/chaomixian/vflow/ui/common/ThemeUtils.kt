@@ -18,6 +18,7 @@ object ThemeUtils {
 
     private const val PREFS_NAME = "vFlowPrefs"
     private const val KEY_DYNAMIC_COLOR_ENABLED = "dynamicColorEnabled"
+    const val KEY_COLORFUL_WORKFLOW_CARDS_ENABLED = "colorfulWorkflowCardsEnabled"
 
     /**
      * 获取主题资源 ID
@@ -59,6 +60,12 @@ object ThemeUtils {
     fun isDynamicColorEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(KEY_DYNAMIC_COLOR_ENABLED, false)
+    }
+
+    @JvmStatic
+    fun isColorfulWorkflowCardsEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_COLORFUL_WORKFLOW_CARDS_ENABLED, false)
     }
 
     /**

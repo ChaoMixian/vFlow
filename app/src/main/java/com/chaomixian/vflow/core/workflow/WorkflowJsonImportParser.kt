@@ -74,6 +74,8 @@ class WorkflowJsonImportParser(
             triggers = workflow.triggers ?: emptyList(),
             steps = workflow.steps ?: emptyList(),
             folderId = workflow.folderId?.takeIf { it.isNotBlank() },
+            cardIconRes = WorkflowVisuals.normalizeIconResName(workflow.cardIconRes),
+            cardThemeColor = WorkflowVisuals.normalizeThemeColorHex(workflow.cardThemeColor),
             modifiedAt = workflow.modifiedAt.takeIf { it > 0 } ?: System.currentTimeMillis(),
             version = workflow.version?.takeIf { it.isNotBlank() } ?: "1.0.0",
             vFlowLevel = workflow.vFlowLevel.takeIf { it > 0 } ?: 1,
