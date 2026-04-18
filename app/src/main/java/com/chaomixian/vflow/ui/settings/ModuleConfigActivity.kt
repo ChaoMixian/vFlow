@@ -1006,7 +1006,7 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
     LaunchedEffect(initialSection, scrollState.maxValue) {
         if (scrollState.maxValue > 0) {
             when (initialSection) {
-                ModuleConfigActivity.SECTION_APP_START -> scrollState.animateScrollTo(scrollState.maxValue / 4)
+                ModuleConfigActivity.SECTION_APP_START -> scrollState.animateScrollTo(scrollState.maxValue / 6)
                 ModuleConfigActivity.SECTION_SHERPA -> scrollState.animateScrollTo(scrollState.maxValue / 2)
                 ModuleConfigActivity.SECTION_FEISHU -> scrollState.animateScrollTo(scrollState.maxValue)
             }
