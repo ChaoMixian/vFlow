@@ -40,12 +40,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/shape_variable_pill"
-                android:backgroundTint="?attr/colorPrimaryContainer"
+                android:backgroundTint="?attr/colorSurfaceVariant"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="2dp"
                 android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnPrimaryContainer"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 tools:text="用户脚本" />
 
         </LinearLayout>
