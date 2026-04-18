@@ -201,11 +201,11 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             popup.show()
         }
 
-        // 执行按钮 vs 开关
-        executeButton.isVisible = isManualTrigger
+        // 自动 + 手动并存时优先保留开关，避免控件重叠
+        executeButton.isVisible = isManualTrigger && !hasAutoTriggers
         enabledSwitch.isVisible = hasAutoTriggers
 
-        if (isManualTrigger) {
+        if (executeButton.isVisible) {
             if (colorfulCardsEnabled) {
                 executeButton.setCardBackgroundColor(visualColors.accentBackground)
                 executeIcon.imageTintList = ColorStateList.valueOf(visualColors.iconTint)
