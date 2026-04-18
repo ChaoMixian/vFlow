@@ -3,9 +3,11 @@
 package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
 import com.chaomixian.vflow.services.ServiceStateBus
+import com.chaomixian.vflow.ui.settings.ModuleConfigActivity
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -23,10 +25,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     // 记录应用的打开状态和关闭检测任务
     private val appOpenStates = ConcurrentHashMap<String, Boolean>()
     private val pendingCloseChecks = ConcurrentHashMap<String, Job>()
-
-    // 关闭检测的延迟时间和验证次数
-    private val closeCheckDelay = 800L  // 增加延迟时间提高稳定性
-    private val verificationDelay = 200L // 状态验证间隔
+    private lateinit var prefs: SharedPreferences
 
     companion object {
         private const val TAG = "AppStartTriggerHandler"
@@ -63,7 +62,6 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     )
 
     private var lastCheckTime = 0L
-    private val minCheckInterval = 100L // 减少到100ms，提高响应性
 
     // 防误触机制：记录最近的窗口变化历史
     private val recentWindowHistory = mutableListOf<Pair<String, Long>>()
@@ -72,6 +70,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
     override fun startListening(context: Context) {
         if (collectorJob != null) return
         DebugLogger.d(TAG, "启动应用事件监听...")
+        prefs = context.applicationContext.getSharedPreferences(ModuleConfigActivity.PREFS_NAME, Context.MODE_PRIVATE)
 
         // 检测当前系统的桌面包名
         detectLauncherPackage(context)
@@ -91,7 +90,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
             .filter { it.first.isNotBlank() && !ignoredPackages.contains(it.first) }
             .onEach { (packageName, className) ->
                 val currentTime = System.currentTimeMillis()
-                if (currentTime - lastCheckTime >= minCheckInterval) {
+                if (currentTime - lastCheckTime >= getMinCheckInterval()) {
                     // 更新窗口历史
                     updateWindowHistory(packageName, currentTime)
 
@@ -291,7 +290,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
 
         // 启动新的关闭检测任务
         val closeCheckJob = triggerScope.launch {
-            delay(closeCheckDelay)
+            delay(getCloseCheckDelay())
 
             // 执行多次验证以确保应用确实关闭了
             val isReallyClosedList = mutableListOf<Boolean>()
@@ -302,7 +301,7 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
 
                 DebugLogger.d(TAG, "关闭验证 ${it + 1}/3 for $packageName: 当前前台=$currentForeground, 已关闭=$isReallyClosed")
 
-                if (it < 2) delay(verificationDelay) // 不是最后一次验证时等待
+                if (it < 2) delay(getVerificationDelay()) // 不是最后一次验证时等待
             }
 
             // 如果大部分验证都确认应用已关闭，则认为应用真的关闭了
@@ -421,5 +420,17 @@ class AppStartTriggerHandler : ListeningTriggerHandler() {
                 }
             }
         }
+    }
+
+    private fun getCloseCheckDelay(): Long {
+        return ModuleConfigActivity.readAppStartCloseCheckDelay(prefs)
+    }
+
+    private fun getVerificationDelay(): Long {
+        return ModuleConfigActivity.readAppStartVerificationDelay(prefs)
+    }
+
+    private fun getMinCheckInterval(): Long {
+        return ModuleConfigActivity.readAppStartMinCheckInterval(prefs)
     }
 }

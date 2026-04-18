@@ -9,6 +9,7 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
+import com.chaomixian.vflow.ui.settings.ModuleConfigActivity
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class AppStartTriggerModule : BaseModule() {
@@ -51,6 +52,19 @@ class AppStartTriggerModule : BaseModule() {
 
     // 为该模块提供自定义的UI交互逻辑
     override val uiProvider: ModuleUIProvider = AppStartTriggerUIProvider()
+
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> {
+        return listOf(
+            EditorAction(labelStringRes = R.string.module_editor_action_configure_app_start_trigger) { context ->
+                context.startActivity(
+                    ModuleConfigActivity.createIntent(
+                        context,
+                        ModuleConfigActivity.SECTION_APP_START
+                    )
+                )
+            }
+        )
+    }
 
     override fun getInputs(): List<InputDefinition> = listOf(
         EVENT_INPUT,

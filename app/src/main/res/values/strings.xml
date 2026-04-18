@@ -41,6 +41,14 @@
     <string name="module_config_backtap_button">打开模块配置</string>
     <string name="module_editor_action_open_feishu_config">打开飞书配置</string>
     <string name="module_editor_action_configure_sherpa_model">配置Sherpa模型</string>
+    <string name="module_editor_action_configure_app_start_trigger">配置应用事件检测</string>
+    <string name="module_config_section_app_start">应用事件</string>
+    <string name="module_config_app_start_desc">调整应用打开/关闭触发器的全局检测参数。</string>
+    <string name="module_config_app_start_close_check_delay">关闭检测延迟</string>
+    <string name="module_config_app_start_verification_delay">关闭验证间隔</string>
+    <string name="module_config_app_start_min_check_interval">事件最小处理间隔</string>
+    <string name="module_config_app_start_millis_value">%1$d ms</string>
+    <string name="module_config_reset_defaults">恢复默认值</string>
     <string name="module_config_section_sherpa">Sherpa 语音模型</string>
     <string name="module_config_sherpa_desc">管理本地 Sherpa-ncnn 语音转文字模型。可以提前下载、切换镜像源、导入手动下载的模型文件，或删除已安装模型。</string>
     <string name="module_config_sherpa_source_current">当前下载源：%1$s</string>

@@ -33,6 +33,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -83,10 +85,14 @@ class ModuleConfigActivity : BaseActivity() {
     companion object {
         const val EXTRA_INITIAL_SECTION = "initial_section"
         const val SECTION_BACKTAP = "backtap"
+        const val SECTION_APP_START = "app_start"
         const val SECTION_SHERPA = "sherpa"
         const val SECTION_FEISHU = "feishu"
         const val PREFS_NAME = "module_config_prefs"
         const val KEY_BACKTAP_SENSITIVITY = "backtap_sensitivity"
+        const val KEY_APP_START_CLOSE_CHECK_DELAY = "app_start_close_check_delay"
+        const val KEY_APP_START_VERIFICATION_DELAY = "app_start_verification_delay"
+        const val KEY_APP_START_MIN_CHECK_INTERVAL = "app_start_min_check_interval"
         const val KEY_FEISHU_APP_ID = "feishu_app_id"
         const val KEY_FEISHU_APP_SECRET = "feishu_app_secret"
         const val KEY_FEISHU_APP_ACCESS_TOKEN = "feishu_app_access_token"
@@ -104,6 +110,18 @@ class ModuleConfigActivity : BaseActivity() {
 
         const val MIN_SENSITIVITY_VALUE = 0.0f
         const val MAX_SENSITIVITY_VALUE = 0.75f
+        const val DEFAULT_APP_START_CLOSE_CHECK_DELAY = 800L
+        const val MIN_APP_START_CLOSE_CHECK_DELAY = 200L
+        const val MAX_APP_START_CLOSE_CHECK_DELAY = 2000L
+        const val APP_START_CLOSE_CHECK_DELAY_STEP = 100L
+        const val DEFAULT_APP_START_VERIFICATION_DELAY = 200L
+        const val MIN_APP_START_VERIFICATION_DELAY = 50L
+        const val MAX_APP_START_VERIFICATION_DELAY = 1000L
+        const val APP_START_VERIFICATION_DELAY_STEP = 50L
+        const val DEFAULT_APP_START_MIN_CHECK_INTERVAL = 100L
+        const val MIN_APP_START_MIN_CHECK_INTERVAL = 0L
+        const val MAX_APP_START_MIN_CHECK_INTERVAL = 500L
+        const val APP_START_MIN_CHECK_INTERVAL_STEP = 10L
 
         fun getSensitivityDisplayValue(value: Float): String {
             return when {
@@ -118,6 +136,21 @@ class ModuleConfigActivity : BaseActivity() {
                 value <= 0.53f -> "非常难"
                 else -> "极难"
             }
+        }
+
+        fun readAppStartCloseCheckDelay(prefs: android.content.SharedPreferences): Long {
+            return prefs.getLong(KEY_APP_START_CLOSE_CHECK_DELAY, DEFAULT_APP_START_CLOSE_CHECK_DELAY)
+                .coerceIn(MIN_APP_START_CLOSE_CHECK_DELAY, MAX_APP_START_CLOSE_CHECK_DELAY)
+        }
+
+        fun readAppStartVerificationDelay(prefs: android.content.SharedPreferences): Long {
+            return prefs.getLong(KEY_APP_START_VERIFICATION_DELAY, DEFAULT_APP_START_VERIFICATION_DELAY)
+                .coerceIn(MIN_APP_START_VERIFICATION_DELAY, MAX_APP_START_VERIFICATION_DELAY)
+        }
+
+        fun readAppStartMinCheckInterval(prefs: android.content.SharedPreferences): Long {
+            return prefs.getLong(KEY_APP_START_MIN_CHECK_INTERVAL, DEFAULT_APP_START_MIN_CHECK_INTERVAL)
+                .coerceIn(MIN_APP_START_MIN_CHECK_INTERVAL, MAX_APP_START_MIN_CHECK_INTERVAL)
         }
 
         fun createIntent(context: Context, initialSection: String? = null): Intent {
@@ -159,6 +192,15 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
                     ModuleConfigActivity.MAX_SENSITIVITY_VALUE
                 )
         )
+    }
+    var appStartCloseCheckDelay by remember {
+        mutableFloatStateOf(ModuleConfigActivity.readAppStartCloseCheckDelay(prefs).toFloat())
+    }
+    var appStartVerificationDelay by remember {
+        mutableFloatStateOf(ModuleConfigActivity.readAppStartVerificationDelay(prefs).toFloat())
+    }
+    var appStartMinCheckInterval by remember {
+        mutableFloatStateOf(ModuleConfigActivity.readAppStartMinCheckInterval(prefs).toFloat())
     }
     var feishuAppId by remember {
         mutableStateOf(
@@ -583,6 +625,193 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
                 }
             }
 
+            val renderAppStartSection: @Composable () -> Unit = {
+                ModuleConfigSection(title = stringResource(R.string.module_config_section_app_start)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        val isDefault =
+                            appStartCloseCheckDelay.toLong() == ModuleConfigActivity.DEFAULT_APP_START_CLOSE_CHECK_DELAY &&
+                                    appStartVerificationDelay.toLong() == ModuleConfigActivity.DEFAULT_APP_START_VERIFICATION_DELAY &&
+                                    appStartMinCheckInterval.toLong() == ModuleConfigActivity.DEFAULT_APP_START_MIN_CHECK_INTERVAL
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.module_config_app_start_desc),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilledTonalButton(
+                                onClick = {
+                                    appStartCloseCheckDelay = ModuleConfigActivity.DEFAULT_APP_START_CLOSE_CHECK_DELAY.toFloat()
+                                    appStartVerificationDelay = ModuleConfigActivity.DEFAULT_APP_START_VERIFICATION_DELAY.toFloat()
+                                    appStartMinCheckInterval = ModuleConfigActivity.DEFAULT_APP_START_MIN_CHECK_INTERVAL.toFloat()
+                                    prefs.edit {
+                                        putLong(
+                                            ModuleConfigActivity.KEY_APP_START_CLOSE_CHECK_DELAY,
+                                            ModuleConfigActivity.DEFAULT_APP_START_CLOSE_CHECK_DELAY
+                                        )
+                                        putLong(
+                                            ModuleConfigActivity.KEY_APP_START_VERIFICATION_DELAY,
+                                            ModuleConfigActivity.DEFAULT_APP_START_VERIFICATION_DELAY
+                                        )
+                                        putLong(
+                                            ModuleConfigActivity.KEY_APP_START_MIN_CHECK_INTERVAL,
+                                            ModuleConfigActivity.DEFAULT_APP_START_MIN_CHECK_INTERVAL
+                                        )
+                                    }
+                                },
+                                enabled = !isDefault
+                            ) {
+                                Text(stringResource(R.string.module_config_reset_defaults))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_app_start_close_check_delay),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.module_config_app_start_millis_value,
+                                appStartCloseCheckDelay.toInt()
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                            value = appStartCloseCheckDelay,
+                            onValueChange = { value ->
+                                appStartCloseCheckDelay = value
+                                    .toLong()
+                                    .coerceIn(
+                                        ModuleConfigActivity.MIN_APP_START_CLOSE_CHECK_DELAY,
+                                        ModuleConfigActivity.MAX_APP_START_CLOSE_CHECK_DELAY
+                                    )
+                                    .toFloat()
+                            },
+                            onValueChangeFinished = {
+                                prefs.edit {
+                                    putLong(
+                                        ModuleConfigActivity.KEY_APP_START_CLOSE_CHECK_DELAY,
+                                        appStartCloseCheckDelay.toLong()
+                                    )
+                                }
+                            },
+                            valueRange = ModuleConfigActivity.MIN_APP_START_CLOSE_CHECK_DELAY.toFloat()..
+                                    ModuleConfigActivity.MAX_APP_START_CLOSE_CHECK_DELAY.toFloat(),
+                            steps = (
+                                (ModuleConfigActivity.MAX_APP_START_CLOSE_CHECK_DELAY -
+                                        ModuleConfigActivity.MIN_APP_START_CLOSE_CHECK_DELAY) /
+                                        ModuleConfigActivity.APP_START_CLOSE_CHECK_DELAY_STEP
+                                ).toInt() - 1,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_app_start_verification_delay),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.module_config_app_start_millis_value,
+                                appStartVerificationDelay.toInt()
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                            value = appStartVerificationDelay,
+                            onValueChange = { value ->
+                                appStartVerificationDelay = value
+                                    .toLong()
+                                    .coerceIn(
+                                        ModuleConfigActivity.MIN_APP_START_VERIFICATION_DELAY,
+                                        ModuleConfigActivity.MAX_APP_START_VERIFICATION_DELAY
+                                    )
+                                    .toFloat()
+                            },
+                            onValueChangeFinished = {
+                                prefs.edit {
+                                    putLong(
+                                        ModuleConfigActivity.KEY_APP_START_VERIFICATION_DELAY,
+                                        appStartVerificationDelay.toLong()
+                                    )
+                                }
+                            },
+                            valueRange = ModuleConfigActivity.MIN_APP_START_VERIFICATION_DELAY.toFloat()..
+                                    ModuleConfigActivity.MAX_APP_START_VERIFICATION_DELAY.toFloat(),
+                            steps = (
+                                (ModuleConfigActivity.MAX_APP_START_VERIFICATION_DELAY -
+                                        ModuleConfigActivity.MIN_APP_START_VERIFICATION_DELAY) /
+                                        ModuleConfigActivity.APP_START_VERIFICATION_DELAY_STEP
+                                ).toInt() - 1,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_app_start_min_check_interval),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.module_config_app_start_millis_value,
+                                appStartMinCheckInterval.toInt()
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                            value = appStartMinCheckInterval,
+                            onValueChange = { value ->
+                                appStartMinCheckInterval = value
+                                    .toLong()
+                                    .coerceIn(
+                                        ModuleConfigActivity.MIN_APP_START_MIN_CHECK_INTERVAL,
+                                        ModuleConfigActivity.MAX_APP_START_MIN_CHECK_INTERVAL
+                                    )
+                                    .toFloat()
+                            },
+                            onValueChangeFinished = {
+                                prefs.edit {
+                                    putLong(
+                                        ModuleConfigActivity.KEY_APP_START_MIN_CHECK_INTERVAL,
+                                        appStartMinCheckInterval.toLong()
+                                    )
+                                }
+                            },
+                            valueRange = ModuleConfigActivity.MIN_APP_START_MIN_CHECK_INTERVAL.toFloat()..
+                                    ModuleConfigActivity.MAX_APP_START_MIN_CHECK_INTERVAL.toFloat(),
+                            steps = (
+                                (ModuleConfigActivity.MAX_APP_START_MIN_CHECK_INTERVAL -
+                                        ModuleConfigActivity.MIN_APP_START_MIN_CHECK_INTERVAL) /
+                                        ModuleConfigActivity.APP_START_MIN_CHECK_INTERVAL_STEP
+                                ).toInt() - 1,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
             val renderFeishuSection: @Composable () -> Unit = {
                 ModuleConfigSection(title = stringResource(R.string.module_config_section_feishu)) {
                     Column(
@@ -768,6 +997,7 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
             }
 
             renderBacktapSection()
+            renderAppStartSection()
             renderSherpaSection()
             renderFeishuSection()
         }
@@ -776,6 +1006,7 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
     LaunchedEffect(initialSection, scrollState.maxValue) {
         if (scrollState.maxValue > 0) {
             when (initialSection) {
+                ModuleConfigActivity.SECTION_APP_START -> scrollState.animateScrollTo(scrollState.maxValue / 4)
                 ModuleConfigActivity.SECTION_SHERPA -> scrollState.animateScrollTo(scrollState.maxValue / 2)
                 ModuleConfigActivity.SECTION_FEISHU -> scrollState.animateScrollTo(scrollState.maxValue)
             }

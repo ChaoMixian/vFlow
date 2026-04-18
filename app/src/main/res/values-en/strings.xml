@@ -41,6 +41,14 @@
     <string name="module_config_backtap_button">Open Module Config</string>
     <string name="module_editor_action_open_feishu_config">Open Feishu Config</string>
     <string name="module_editor_action_configure_sherpa_model">Configure Sherpa Model</string>
+    <string name="module_editor_action_configure_app_start_trigger">Configure App Event Detection</string>
+    <string name="module_config_section_app_start">App Events</string>
+    <string name="module_config_app_start_desc">Adjust the global detection parameters for app open/close triggers.</string>
+    <string name="module_config_app_start_close_check_delay">Close detection delay</string>
+    <string name="module_config_app_start_verification_delay">Close verification interval</string>
+    <string name="module_config_app_start_min_check_interval">Minimum event handling interval</string>
+    <string name="module_config_app_start_millis_value">%1$d ms</string>
+    <string name="module_config_reset_defaults">Reset defaults</string>
     <string name="module_config_section_sherpa">Sherpa Speech Models</string>
     <string name="module_config_sherpa_desc">Manage local Sherpa-ncnn speech-to-text models. You can pre-download models, switch mirrors, import a model archive you downloaded manually, or delete installed models.</string>
     <string name="module_config_sherpa_source_current">Current download source: %1$s</string>
