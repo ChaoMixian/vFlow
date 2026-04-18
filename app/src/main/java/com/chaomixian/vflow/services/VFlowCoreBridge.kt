@@ -9,10 +9,12 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.logging.DebugLogger
 import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.Closeable
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.Socket
@@ -21,6 +23,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.coroutineContext
 
 /**
  * vFlowCore 的客户端桥接器。
@@ -93,6 +96,14 @@ object VFlowCoreBridge {
     data class CoreOperationResult(
         val success: Boolean,
         val error: String? = null
+    )
+
+    data class ClipboardStreamEvent(
+        val event: String,
+        val sequence: Long,
+        val text: String = "",
+        val signature: String = "",
+        val imageUri: String? = null
     )
 
     data class CoreVersionInfo(
@@ -623,6 +634,81 @@ object VFlowCoreBridge {
             .put("method", "getClipboard")
         val res = sendRaw(req)
         return res?.optString("text", "") ?: ""
+    }
+
+    suspend fun streamClipboardEvents(onEvent: suspend (ClipboardStreamEvent) -> Unit): Boolean = withContext(Dispatchers.IO) {
+        val subscribeRequest = JSONObject()
+            .put("target", "clipboard")
+            .put("method", "subscribeClipboardStream")
+
+        return@withContext try {
+            if (isUnixSocketEnabled()) {
+                val socketName = getUnixSocketName()
+                LocalSocket(LocalSocket.SOCKET_STREAM).use { streamSocket ->
+                    bindStreamCancellation(streamSocket)
+                    streamSocket.connect(
+                        LocalSocketAddress(
+                            socketName,
+                            LocalSocketAddress.Namespace.ABSTRACT
+                        )
+                    )
+                    streamSocket.setSoTimeout(0)
+                    val streamWriter = PrintWriter(streamSocket.outputStream, true)
+                    val streamReader = BufferedReader(InputStreamReader(streamSocket.inputStream))
+                    streamWriter.println(subscribeRequest.toString())
+                    if (streamWriter.checkError()) {
+                        return@withContext false
+                    }
+                    consumeClipboardStream(streamReader, onEvent)
+                }
+            } else {
+                Socket(HOST, PORT).use { streamSocket ->
+                    bindStreamCancellation(streamSocket)
+                    streamSocket.soTimeout = 0
+                    streamSocket.keepAlive = true
+                    streamSocket.tcpNoDelay = true
+                    val streamWriter = PrintWriter(streamSocket.getOutputStream(), true)
+                    val streamReader = BufferedReader(InputStreamReader(streamSocket.getInputStream()))
+                    streamWriter.println(subscribeRequest.toString())
+                    if (streamWriter.checkError()) {
+                        return@withContext false
+                    }
+                    consumeClipboardStream(streamReader, onEvent)
+                }
+            }
+        } catch (e: Exception) {
+            DebugLogger.w(TAG, "剪贴板事件流异常: ${e.javaClass.simpleName} - ${e.message}", e)
+            false
+        }
+    }
+
+    private suspend fun bindStreamCancellation(closeable: Closeable) {
+        coroutineContext[Job]?.invokeOnCompletion {
+            runCatching { closeable.close() }
+        }
+    }
+
+    private suspend fun consumeClipboardStream(
+        reader: BufferedReader,
+        onEvent: suspend (ClipboardStreamEvent) -> Unit
+    ): Boolean {
+        while (true) {
+            val line = reader.readLine() ?: return false
+            DebugLogger.d(TAG, "剪贴板事件流接收: $line")
+            val payload = JSONObject(line)
+            if (!payload.optBoolean("success")) {
+                return false
+            }
+            onEvent(
+                ClipboardStreamEvent(
+                    event = payload.optString("event"),
+                    sequence = payload.optLong("sequence", -1L),
+                    text = payload.optString("text", ""),
+                    signature = payload.optString("signature", ""),
+                    imageUri = payload.optString("imageUri").takeIf { it.isNotBlank() }
+                )
+            )
+        }
     }
 
     // Power Management APIs

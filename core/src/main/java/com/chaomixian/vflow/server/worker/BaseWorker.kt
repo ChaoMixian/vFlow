@@ -6,6 +6,7 @@ import android.net.LocalSocket
 import com.chaomixian.vflow.server.common.Config
 import com.chaomixian.vflow.server.wrappers.ServiceWrapper
 import com.chaomixian.vflow.server.wrappers.IWrapper
+import com.chaomixian.vflow.server.wrappers.StreamingWrapper
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -149,6 +150,11 @@ abstract class BaseWorker(
     ) {
         while (isRunning) {
             val requestStr = reader.readLine() ?: break
+            val streamHandled = tryHandleStreamRequest(requestStr, writer)
+            if (streamHandled) {
+                return
+            }
+
             val response = try {
                 val request = JSONObject(requestStr)
                 processRequest(request)
@@ -159,6 +165,23 @@ abstract class BaseWorker(
                 }
             }
             writer.println(response.toString())
+        }
+    }
+
+    private fun tryHandleStreamRequest(requestStr: String, writer: PrintWriter): Boolean {
+        return try {
+            val request = JSONObject(requestStr)
+            val target = request.optString("target")
+            val method = request.optString("method")
+            val params = request.optJSONObject("params") ?: JSONObject()
+            val wrapper = serviceWrappers[target]
+            if (wrapper is StreamingWrapper) {
+                wrapper.handleStream(method, params, writer)
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 

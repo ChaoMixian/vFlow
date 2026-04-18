@@ -264,6 +264,9 @@ object VFlowCore {
                     executor.submit { Thread.sleep(500); exitProcess(0) }
                     return
                 }
+                if (tryRouteStreamRequest(req, reqStr, writer)) {
+                    return
+                }
                 writer.println(routeRequest(req.optString("target"), reqStr))
             }
         }
@@ -325,6 +328,76 @@ object VFlowCore {
             }
         } catch (e: Exception) {
             JSONObject().put("success", false).put("error", "Worker error: ${e.message}").toString()
+        }
+    }
+
+    private fun tryRouteStreamRequest(req: JSONObject, requestStr: String, clientWriter: PrintWriter): Boolean {
+        val target = req.optString("target")
+        val method = req.optString("method")
+        if (target != "clipboard" || method != "subscribeClipboardStream") {
+            return false
+        }
+
+        val workerType = Config.ROUTING_TABLE[target] ?: return false
+        relayStreamRequestToWorker(workerType, requestStr, clientWriter)
+        return true
+    }
+
+    private fun relayStreamRequestToWorker(
+        workerType: Config.WorkerType,
+        requestStr: String,
+        clientWriter: PrintWriter
+    ) {
+        try {
+            if (masterTransport == MasterTransport.UNIX) {
+                val socketName = Config.getWorkerSocketName(workerType, appPackageName)
+                LocalSocket(LocalSocket.SOCKET_STREAM).use { workerSocket ->
+                    workerSocket.connect(
+                        LocalSocketAddress(socketName, LocalSocketAddress.Namespace.ABSTRACT)
+                    )
+                    workerSocket.soTimeout = Config.SOCKET_TIMEOUT
+                    val workerWriter = PrintWriter(OutputStreamWriter(workerSocket.outputStream), true)
+                    val workerReader = BufferedReader(InputStreamReader(workerSocket.inputStream))
+                    workerWriter.println(requestStr)
+                    if (workerWriter.checkError()) {
+                        clientWriter.println(JSONObject().put("success", false).put("error", "Failed to write stream request").toString())
+                        return
+                    }
+                    while (isRunning) {
+                        val line = workerReader.readLine() ?: break
+                        clientWriter.println(line)
+                        if (clientWriter.checkError()) {
+                            break
+                        }
+                    }
+                }
+            } else {
+                val port = Config.getWorkerPort(workerType)
+                Socket(Config.LOCALHOST, port).use { workerSocket ->
+                    workerSocket.soTimeout = Config.SOCKET_TIMEOUT
+                    val workerWriter = PrintWriter(OutputStreamWriter(workerSocket.getOutputStream()), true)
+                    val workerReader = BufferedReader(InputStreamReader(workerSocket.inputStream))
+                    workerWriter.println(requestStr)
+                    if (workerWriter.checkError()) {
+                        clientWriter.println(JSONObject().put("success", false).put("error", "Failed to write stream request").toString())
+                        return
+                    }
+                    while (isRunning) {
+                        val line = workerReader.readLine() ?: break
+                        clientWriter.println(line)
+                        if (clientWriter.checkError()) {
+                            break
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            clientWriter.println(
+                JSONObject()
+                    .put("success", false)
+                    .put("error", "Worker stream error: ${e.message}")
+                    .toString()
+            )
         }
     }
 

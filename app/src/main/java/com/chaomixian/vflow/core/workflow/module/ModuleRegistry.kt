@@ -68,6 +68,7 @@ object ModuleRegistry {
         register(ReceiveShareTriggerModule(), context)
         register(AppStartTriggerModule(), context)
         register(AppPackageTriggerModule(), context)
+        register(ClipboardTriggerModule(), context)
         register(KeyEventTriggerModule(), context)
         register(BackTapTriggerModule(), context)
         register(TimeTriggerModule(), context)

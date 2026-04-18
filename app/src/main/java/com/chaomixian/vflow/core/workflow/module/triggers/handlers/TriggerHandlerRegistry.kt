@@ -29,6 +29,7 @@ object TriggerHandlerRegistry {
         register(BackTapTriggerModule().id) { BackTapTriggerHandler() }
         register(AppStartTriggerModule().id) { AppStartTriggerHandler() }
         register(AppPackageTriggerModule().id) { AppPackageTriggerHandler() }
+        register(ClipboardTriggerModule().id) { ClipboardTriggerHandler() }
         register(TimeTriggerModule().id) { TimeTriggerHandler() }
         register(BatteryTriggerModule().id) { BatteryTriggerHandler() }
         register(PowerTriggerModule().id) { PowerTriggerHandler() }

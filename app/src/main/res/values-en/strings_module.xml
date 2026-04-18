@@ -385,6 +385,15 @@
     <string name="option_vflow_trigger_app_package_event_installed">Installed</string>
     <string name="option_vflow_trigger_app_package_event_removed">Removed</string>
     <string name="option_vflow_trigger_app_package_event_updated">Updated</string>
+    <string name="module_vflow_trigger_clipboard_name">Clipboard Changed</string>
+    <string name="module_vflow_trigger_clipboard_desc">Trigger workflow when clipboard content changes</string>
+    <string name="param_vflow_trigger_clipboard_mode_name">Listening Mode</string>
+    <string name="output_vflow_trigger_clipboard_text_content_name">Clipboard Text</string>
+    <string name="output_vflow_trigger_clipboard_image_content_name">Clipboard Image</string>
+    <string name="summary_vflow_trigger_clipboard">Trigger on clipboard change</string>
+    <string name="msg_vflow_trigger_clipboard_triggered">Clipboard change event triggered</string>
+    <string name="option_vflow_trigger_clipboard_mode_standard">Standard</string>
+    <string name="option_vflow_trigger_clipboard_mode_core">Read via Core</string>
 
     <!-- vflow.trigger.battery - Battery Trigger -->
     <string name="module_vflow_trigger_battery_name">Battery Trigger</string>

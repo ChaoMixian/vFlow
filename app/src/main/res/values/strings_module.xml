@@ -345,6 +345,15 @@
     <string name="option_vflow_trigger_app_package_event_installed">安装时</string>
     <string name="option_vflow_trigger_app_package_event_removed">卸载时</string>
     <string name="option_vflow_trigger_app_package_event_updated">更新时</string>
+    <string name="module_vflow_trigger_clipboard_name">剪贴板变更</string>
+    <string name="module_vflow_trigger_clipboard_desc">当剪贴板内容发生变化时触发工作流</string>
+    <string name="param_vflow_trigger_clipboard_mode_name">监听模式</string>
+    <string name="output_vflow_trigger_clipboard_text_content_name">剪贴板文本</string>
+    <string name="output_vflow_trigger_clipboard_image_content_name">剪贴板图片</string>
+    <string name="summary_vflow_trigger_clipboard">剪贴板变更时触发</string>
+    <string name="msg_vflow_trigger_clipboard_triggered">剪贴板变更事件已触发</string>
+    <string name="option_vflow_trigger_clipboard_mode_standard">普通模式</string>
+    <string name="option_vflow_trigger_clipboard_mode_core">Core 读取</string>
     <string name="module_vflow_trigger_battery_name">电量触发</string>
     <string name="module_vflow_trigger_battery_desc">当电池电量满足特定条件时触发工作流</string>
     <string name="param_vflow_trigger_battery_level_name">电量阈值</string>
