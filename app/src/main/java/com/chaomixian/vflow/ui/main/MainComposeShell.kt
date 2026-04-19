@@ -16,6 +16,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
@@ -32,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -61,6 +63,9 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.rounded.Check
 
 internal enum class MainTopLevelTab(
     val fragmentTag: String,
@@ -86,10 +91,20 @@ internal enum class MainTopLevelTab(
 
 enum class WorkflowTopBarAction {
     FavoriteFloat,
+    SortDefault,
     SortByName,
+    SortByRecentModified,
+    SortFavoritesFirst,
     CreateFolder,
     BackupWorkflows,
     ImportWorkflows,
+}
+
+enum class WorkflowSortMode {
+    Default,
+    Name,
+    RecentModified,
+    FavoritesFirst,
 }
 
 interface MainTopBarActionHandler {
@@ -101,6 +116,7 @@ internal fun MainActivityContent(
     isReady: Boolean,
     liquidGlassNavBarEnabled: Boolean,
     initialTab: MainTopLevelTab,
+    initialWorkflowSortMode: WorkflowSortMode,
     onBackPressedAtRoot: () -> Unit,
     onDisplayTab: (MainTopLevelTab, Int, Int) -> Unit,
     onPrimaryTabChanged: (MainTopLevelTab) -> Unit,
@@ -118,6 +134,7 @@ internal fun MainActivityContent(
                         isReady = isReady,
                         liquidGlassEnabled = liquidGlassNavBarEnabled,
                         initialTab = initialTab,
+                        initialWorkflowSortMode = initialWorkflowSortMode,
                         onDisplayTab = onDisplayTab,
                         onPrimaryTabChanged = onPrimaryTabChanged,
                         onWorkflowTopBarAction = onWorkflowTopBarAction,
@@ -133,6 +150,7 @@ private fun MainScreen(
     isReady: Boolean,
     liquidGlassEnabled: Boolean,
     initialTab: MainTopLevelTab,
+    initialWorkflowSortMode: WorkflowSortMode,
     onDisplayTab: (MainTopLevelTab, Int, Int) -> Unit,
     onPrimaryTabChanged: (MainTopLevelTab) -> Unit,
     onWorkflowTopBarAction: (WorkflowTopBarAction) -> Unit,
@@ -142,6 +160,7 @@ private fun MainScreen(
     val selectedTab = MainTopLevelTab.entries[mainPagerState.selectedPage]
     val loadedPages = remember(initialTab) { mutableStateListOf(initialTab.ordinal) }
     val surfaceColor = MaterialTheme.colorScheme.surface
+    var workflowSortMode by rememberSaveable { mutableStateOf(initialWorkflowSortMode) }
     val backdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
@@ -168,7 +187,19 @@ private fun MainScreen(
                 title = { Text(stringResource(selectedTab.titleRes), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 actions = {
                     if (selectedTab == MainTopLevelTab.WORKFLOWS) {
-                        WorkflowTopBarActions(onAction = onWorkflowTopBarAction)
+                        WorkflowTopBarActions(
+                            sortMode = workflowSortMode,
+                            onAction = { action ->
+                                workflowSortMode = when (action) {
+                                    WorkflowTopBarAction.SortDefault -> WorkflowSortMode.Default
+                                    WorkflowTopBarAction.SortByName -> WorkflowSortMode.Name
+                                    WorkflowTopBarAction.SortByRecentModified -> WorkflowSortMode.RecentModified
+                                    WorkflowTopBarAction.SortFavoritesFirst -> WorkflowSortMode.FavoritesFirst
+                                    else -> workflowSortMode
+                                }
+                                onWorkflowTopBarAction(action)
+                            }
+                        )
                     }
                 }
             )
@@ -202,9 +233,11 @@ private fun MainScreen(
 
 @Composable
 private fun WorkflowTopBarActions(
+    sortMode: WorkflowSortMode,
     onAction: (WorkflowTopBarAction) -> Unit,
 ) {
     var overflowExpanded by remember { mutableStateOf(false) }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
 
     IconButton(onClick = { onAction(WorkflowTopBarAction.FavoriteFloat) }) {
         Icon(
@@ -213,11 +246,60 @@ private fun WorkflowTopBarActions(
         )
     }
 
-    IconButton(onClick = { onAction(WorkflowTopBarAction.SortByName) }) {
-        Icon(
-            painter = painterResource(R.drawable.rounded_sort_24),
-            contentDescription = stringResource(R.string.workflow_list_menu_sort_by_name)
-        )
+    Box {
+        IconButton(
+            onClick = { sortMenuExpanded = true },
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = if (sortMode != WorkflowSortMode.Default) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+            )
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Sort,
+                contentDescription = stringResource(R.string.workflow_list_menu_sort)
+            )
+        }
+
+        DropdownMenu(
+            expanded = sortMenuExpanded,
+            onDismissRequest = { sortMenuExpanded = false }
+        ) {
+            WorkflowSortMenuItem(
+                text = stringResource(R.string.workflow_list_sort_default),
+                selected = sortMode == WorkflowSortMode.Default,
+                onClick = {
+                    sortMenuExpanded = false
+                    onAction(WorkflowTopBarAction.SortDefault)
+                }
+            )
+            WorkflowSortMenuItem(
+                text = stringResource(R.string.workflow_list_sort_name),
+                selected = sortMode == WorkflowSortMode.Name,
+                onClick = {
+                    sortMenuExpanded = false
+                    onAction(WorkflowTopBarAction.SortByName)
+                }
+            )
+            WorkflowSortMenuItem(
+                text = stringResource(R.string.workflow_list_sort_recent_modified),
+                selected = sortMode == WorkflowSortMode.RecentModified,
+                onClick = {
+                    sortMenuExpanded = false
+                    onAction(WorkflowTopBarAction.SortByRecentModified)
+                }
+            )
+            WorkflowSortMenuItem(
+                text = stringResource(R.string.workflow_list_sort_favorites_first),
+                selected = sortMode == WorkflowSortMode.FavoritesFirst,
+                onClick = {
+                    sortMenuExpanded = false
+                    onAction(WorkflowTopBarAction.SortFavoritesFirst)
+                }
+            )
+        }
     }
 
     Box {
@@ -255,6 +337,26 @@ private fun WorkflowTopBarActions(
             )
         }
     }
+}
+
+@Composable
+private fun WorkflowSortMenuItem(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(text) },
+        onClick = onClick,
+        leadingIcon = {
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = null
+                )
+            }
+        }
+    )
 }
 
 @Composable

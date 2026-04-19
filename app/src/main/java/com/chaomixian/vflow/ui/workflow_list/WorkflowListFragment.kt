@@ -40,6 +40,8 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.ShortcutHelper
 import com.chaomixian.vflow.ui.float.WorkflowsFloatPanelService
 import com.chaomixian.vflow.ui.main.MainTopBarActionHandler
+import com.chaomixian.vflow.ui.main.MainActivity
+import com.chaomixian.vflow.ui.main.WorkflowSortMode
 import com.chaomixian.vflow.ui.main.WorkflowTopBarAction
 import com.chaomixian.vflow.ui.workflow_editor.WorkflowEditorActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -57,6 +59,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
+    companion object {
+        const val PREF_WORKFLOW_SORT_MODE = "workflow_sort_mode"
+    }
+
     private lateinit var workflowManager: WorkflowManager
     private lateinit var folderManager: FolderManager
     private lateinit var importHelper: WorkflowImportHelper
@@ -70,8 +76,7 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
     private var dismissedEnumMigrationSignature: String? = null
     private var loadDataJob: Job? = null
 
-    // 排序状态：false = 默认排序，true = 按名称排序
-    private var isSortedByName = false
+    private var workflowSortMode = WorkflowSortMode.Default
 
     // 中文排序器（按拼音排序）
     private val chineseCollator = Collator.getInstance(java.util.Locale.CHINA).apply {
@@ -242,6 +247,7 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
         val view = inflater.inflate(R.layout.fragment_workflows, container, false)
         workflowManager = WorkflowManager(requireContext())
         folderManager = FolderManager(requireContext())
+        workflowSortMode = readWorkflowSortMode()
         importHelper = WorkflowImportHelper(
             requireContext(),
             workflowManager,
@@ -294,8 +300,24 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
     override fun onMainTopBarAction(action: WorkflowTopBarAction): Boolean {
         when (action) {
             WorkflowTopBarAction.FavoriteFloat -> handleFavoriteFloatClick()
+            WorkflowTopBarAction.SortDefault -> {
+                workflowSortMode = WorkflowSortMode.Default
+                persistWorkflowSortMode()
+                loadData()
+            }
             WorkflowTopBarAction.SortByName -> {
-                isSortedByName = !isSortedByName
+                workflowSortMode = WorkflowSortMode.Name
+                persistWorkflowSortMode()
+                loadData()
+            }
+            WorkflowTopBarAction.SortByRecentModified -> {
+                workflowSortMode = WorkflowSortMode.RecentModified
+                persistWorkflowSortMode()
+                loadData()
+            }
+            WorkflowTopBarAction.SortFavoritesFirst -> {
+                workflowSortMode = WorkflowSortMode.FavoritesFirst
+                persistWorkflowSortMode()
                 loadData()
             }
             WorkflowTopBarAction.CreateFolder -> showCreateFolderDialog()
@@ -443,25 +465,40 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
         folders: List<WorkflowFolder>,
     ): MutableList<WorkflowListItem> {
         val items = mutableListOf<WorkflowListItem>()
-        val sortedFolders = if (isSortedByName) {
-            folders.sortedWith(compareWithChineseCollator { it.name })
-        } else {
-            folders
+        val sortedFolders = when (workflowSortMode) {
+            WorkflowSortMode.Name -> folders.sortedWith(compareWithChineseCollator { it.name })
+            else -> folders
         }
         sortedFolders.forEach { folder ->
             val count = workflows.count { it.folderId == folder.id }
             items.add(WorkflowListItem.FolderItem(folder, count))
         }
         val rootWorkflows = workflows.filter { it.folderId == null }
-        val sortedWorkflows = if (isSortedByName) {
-            rootWorkflows.sortedWith(compareWithChineseCollator { it.name })
-        } else {
-            rootWorkflows
+        val sortedWorkflows = when (workflowSortMode) {
+            WorkflowSortMode.Name -> rootWorkflows.sortedWith(compareWithChineseCollator { it.name })
+            WorkflowSortMode.RecentModified -> rootWorkflows.sortedByDescending { it.modifiedAt }
+            WorkflowSortMode.FavoritesFirst -> rootWorkflows.sortedWith(
+                compareByDescending<Workflow> { it.isFavorite }
+            )
+            WorkflowSortMode.Default -> rootWorkflows
         }
         sortedWorkflows.forEach { workflow ->
             items.add(WorkflowListItem.WorkflowItem(workflow))
         }
         return items
+    }
+
+    private fun readWorkflowSortMode(): WorkflowSortMode {
+        val prefs = requireContext().getSharedPreferences(MainActivity.PREFS_NAME, Activity.MODE_PRIVATE)
+        val storedValue = prefs.getString(PREF_WORKFLOW_SORT_MODE, WorkflowSortMode.Default.name)
+        return WorkflowSortMode.entries.firstOrNull { it.name == storedValue } ?: WorkflowSortMode.Default
+    }
+
+    private fun persistWorkflowSortMode() {
+        requireContext().getSharedPreferences(MainActivity.PREFS_NAME, Activity.MODE_PRIVATE)
+            .edit()
+            .putString(PREF_WORKFLOW_SORT_MODE, workflowSortMode.name)
+            .apply()
     }
 
     private fun backupAllWorkflowsToUri(fileUri: Uri) {

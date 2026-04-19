@@ -331,7 +331,12 @@
     <string name="workflow_import_name_indexed">%1$s (Imported %2$d)</string>
     <string name="workflow_copy_name">%s (Copy)</string>
     <string name="workflow_list_menu_favorite_float">Favorite Workflow Quick Panel</string>
+    <string name="workflow_list_menu_sort">Sort options</string>
     <string name="workflow_list_menu_sort_by_name">Sort by Name</string>
+    <string name="workflow_list_sort_default">Default order</string>
+    <string name="workflow_list_sort_name">Name order</string>
+    <string name="workflow_list_sort_recent_modified">Recently modified</string>
+    <string name="workflow_list_sort_favorites_first">Favorites first</string>
     <string name="workflow_list_menu_backup_all">Back Up All Workflows</string>
     <string name="workflow_list_menu_import_restore">Import/Restore Workflows</string>
     <string name="toast_workflow_moved_to_folder">Moved \"%1$s\" to \"%2$s\"</string>

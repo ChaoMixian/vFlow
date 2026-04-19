@@ -339,7 +339,12 @@
     <string name="workflow_import_name_indexed">%1$s (导入%2$d)</string>
     <string name="workflow_copy_name">%s (副本)</string>
     <string name="workflow_list_menu_favorite_float">收藏工作流快速控制</string>
+    <string name="workflow_list_menu_sort">排序方式</string>
     <string name="workflow_list_menu_sort_by_name">按名称排序</string>
+    <string name="workflow_list_sort_default">默认排序</string>
+    <string name="workflow_list_sort_name">名称排序</string>
+    <string name="workflow_list_sort_recent_modified">最近修改</string>
+    <string name="workflow_list_sort_favorites_first">收藏优先</string>
     <string name="workflow_list_menu_backup_all">备份所有工作流</string>
     <string name="workflow_list_menu_import_restore">导入/恢复工作流</string>
     <string name="toast_workflow_moved_to_folder">已将 \"%1$s\" 移动到 \"%2$s\"</string>

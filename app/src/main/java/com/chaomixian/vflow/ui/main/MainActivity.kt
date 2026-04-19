@@ -37,6 +37,7 @@ import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.common.BaseActivity
+import com.chaomixian.vflow.ui.workflow_list.WorkflowListFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,6 +65,7 @@ class MainActivity : BaseActivity() {
     private var pendingCrashExportText: String? = null
     private var currentMainTabTag: String? = null
     private var initialMainTab: MainTopLevelTab = MainTopLevelTab.HOME
+    private var initialWorkflowSortMode: WorkflowSortMode = WorkflowSortMode.Default
     private var latestMainBottomInsetPx: Int = 0
     private val exportCrashReportLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
@@ -90,6 +92,7 @@ class MainActivity : BaseActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         liquidGlassNavBarEnabled = AppearanceManager.isLiquidGlassNavBarEnabled(this)
         initialMainTab = resolveInitialMainTab(savedInstanceState)
+        initialWorkflowSortMode = resolveInitialWorkflowSortMode()
         currentMainTabTag = null
 
         // 检查首次运行
@@ -131,6 +134,7 @@ class MainActivity : BaseActivity() {
                 isReady = contentReady,
                 liquidGlassNavBarEnabled = liquidGlassNavBarEnabled,
                 initialTab = initialMainTab,
+                initialWorkflowSortMode = initialWorkflowSortMode,
                 onBackPressedAtRoot = { finish() },
                 onDisplayTab = ::showMainTabFragment,
                 onPrimaryTabChanged = ::setPrimaryMainTab,
@@ -468,6 +472,12 @@ class MainActivity : BaseActivity() {
         val requestedTag = savedInstanceState?.getString(STATE_CURRENT_MAIN_TAB_TAG)
             ?: intent.getStringExtra(EXTRA_INITIAL_MAIN_TAB_TAG)
         return MainTopLevelTab.entries.firstOrNull { it.fragmentTag == requestedTag } ?: MainTopLevelTab.HOME
+    }
+
+    private fun resolveInitialWorkflowSortMode(): WorkflowSortMode {
+        val storedValue = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(WorkflowListFragment.PREF_WORKFLOW_SORT_MODE, WorkflowSortMode.Default.name)
+        return WorkflowSortMode.entries.firstOrNull { it.name == storedValue } ?: WorkflowSortMode.Default
     }
 
     /**
