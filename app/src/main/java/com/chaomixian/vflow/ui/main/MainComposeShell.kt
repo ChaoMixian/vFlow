@@ -13,11 +13,15 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuPopup
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
@@ -231,6 +235,7 @@ private fun MainScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun WorkflowTopBarActions(
     sortMode: WorkflowSortMode,
@@ -263,42 +268,55 @@ private fun WorkflowTopBarActions(
             )
         }
 
-        DropdownMenu(
+        DropdownMenuPopup(
             expanded = sortMenuExpanded,
             onDismissRequest = { sortMenuExpanded = false }
         ) {
-            WorkflowSortMenuItem(
-                text = stringResource(R.string.workflow_list_sort_default),
-                selected = sortMode == WorkflowSortMode.Default,
-                onClick = {
-                    sortMenuExpanded = false
-                    onAction(WorkflowTopBarAction.SortDefault)
-                }
-            )
-            WorkflowSortMenuItem(
-                text = stringResource(R.string.workflow_list_sort_name),
-                selected = sortMode == WorkflowSortMode.Name,
-                onClick = {
-                    sortMenuExpanded = false
-                    onAction(WorkflowTopBarAction.SortByName)
-                }
-            )
-            WorkflowSortMenuItem(
-                text = stringResource(R.string.workflow_list_sort_recent_modified),
-                selected = sortMode == WorkflowSortMode.RecentModified,
-                onClick = {
-                    sortMenuExpanded = false
-                    onAction(WorkflowTopBarAction.SortByRecentModified)
-                }
-            )
-            WorkflowSortMenuItem(
-                text = stringResource(R.string.workflow_list_sort_favorites_first),
-                selected = sortMode == WorkflowSortMode.FavoritesFirst,
-                onClick = {
-                    sortMenuExpanded = false
-                    onAction(WorkflowTopBarAction.SortFavoritesFirst)
-                }
-            )
+            DropdownMenuGroup(
+                shapes = MenuDefaults.groupShape(index = 0, count = 1),
+                containerColor = MenuDefaults.groupStandardContainerColor,
+            ) {
+                WorkflowSortMenuItem(
+                    text = stringResource(R.string.workflow_list_sort_default),
+                    selected = sortMode == WorkflowSortMode.Default,
+                    index = 0,
+                    count = 4,
+                    onClick = {
+                        sortMenuExpanded = false
+                        onAction(WorkflowTopBarAction.SortDefault)
+                    }
+                )
+                WorkflowSortMenuItem(
+                    text = stringResource(R.string.workflow_list_sort_name),
+                    selected = sortMode == WorkflowSortMode.Name,
+                    index = 1,
+                    count = 4,
+                    onClick = {
+                        sortMenuExpanded = false
+                        onAction(WorkflowTopBarAction.SortByName)
+                    }
+                )
+                WorkflowSortMenuItem(
+                    text = stringResource(R.string.workflow_list_sort_recent_modified),
+                    selected = sortMode == WorkflowSortMode.RecentModified,
+                    index = 2,
+                    count = 4,
+                    onClick = {
+                        sortMenuExpanded = false
+                        onAction(WorkflowTopBarAction.SortByRecentModified)
+                    }
+                )
+                WorkflowSortMenuItem(
+                    text = stringResource(R.string.workflow_list_sort_favorites_first),
+                    selected = sortMode == WorkflowSortMode.FavoritesFirst,
+                    index = 3,
+                    count = 4,
+                    onClick = {
+                        sortMenuExpanded = false
+                        onAction(WorkflowTopBarAction.SortFavoritesFirst)
+                    }
+                )
+            }
         }
     }
 
@@ -310,52 +328,82 @@ private fun WorkflowTopBarActions(
             )
         }
 
-        DropdownMenu(
+        DropdownMenuPopup(
             expanded = overflowExpanded,
             onDismissRequest = { overflowExpanded = false }
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.folder_create)) },
-                onClick = {
-                    overflowExpanded = false
-                    onAction(WorkflowTopBarAction.CreateFolder)
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.workflow_list_menu_backup_all)) },
-                onClick = {
-                    overflowExpanded = false
-                    onAction(WorkflowTopBarAction.BackupWorkflows)
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.workflow_list_menu_import_restore)) },
-                onClick = {
-                    overflowExpanded = false
-                    onAction(WorkflowTopBarAction.ImportWorkflows)
-                }
-            )
+            DropdownMenuGroup(
+                shapes = MenuDefaults.groupShape(index = 0, count = 1),
+                containerColor = MenuDefaults.groupStandardContainerColor,
+            ) {
+                WorkflowActionMenuItem(
+                    text = stringResource(R.string.folder_create),
+                    index = 0,
+                    count = 3,
+                    onClick = {
+                        overflowExpanded = false
+                        onAction(WorkflowTopBarAction.CreateFolder)
+                    }
+                )
+                WorkflowActionMenuItem(
+                    text = stringResource(R.string.workflow_list_menu_backup_all),
+                    index = 1,
+                    count = 3,
+                    onClick = {
+                        overflowExpanded = false
+                        onAction(WorkflowTopBarAction.BackupWorkflows)
+                    }
+                )
+                WorkflowActionMenuItem(
+                    text = stringResource(R.string.workflow_list_menu_import_restore),
+                    index = 2,
+                    count = 3,
+                    onClick = {
+                        overflowExpanded = false
+                        onAction(WorkflowTopBarAction.ImportWorkflows)
+                    }
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun WorkflowSortMenuItem(
     text: String,
     selected: Boolean,
+    index: Int,
+    count: Int,
     onClick: () -> Unit,
 ) {
     DropdownMenuItem(
+        selected = selected,
         text = { Text(text) },
         onClick = onClick,
-        leadingIcon = {
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = null
-                )
-            }
-        }
+        shapes = MenuDefaults.itemShape(index = index, count = count),
+        selectedLeadingIcon = {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = null
+            )
+        },
+        colors = MenuDefaults.selectableItemColors(),
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun WorkflowActionMenuItem(
+    text: String,
+    index: Int,
+    count: Int,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        onClick = onClick,
+        text = { Text(text) },
+        shape = MenuDefaults.itemShape(index = index, count = count).shape,
     )
 }
 
