@@ -90,8 +90,8 @@ class GetCurrentActivityModule : BaseModule() {
             )
         }
 
-        val packageName = ServiceStateBus.lastWindowPackageName
-        val className = ServiceStateBus.lastWindowClassName
+        val packageName = ServiceStateBus.lastActivityPackageName
+        val className = ServiceStateBus.lastActivityClassName
 
         if (packageName.isNullOrBlank() || className.isNullOrBlank()) {
             return ExecutionResult.Failure(

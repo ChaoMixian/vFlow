@@ -3,6 +3,9 @@ package com.chaomixian.vflow.services
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import com.chaomixian.vflow.core.logging.DebugLogger
@@ -27,6 +30,7 @@ class AccessibilityService : AccessibilityService() {
     private var eventCountSinceConnect = 0
     private var interruptCountSinceConnect = 0
     private var loggedFirstEventAfterConnect = false
+    private val packageActivityCache = mutableMapOf<String, Set<String>>()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -71,8 +75,9 @@ class AccessibilityService : AccessibilityService() {
 
         // TYPE_WINDOW_STATE_CHANGED: 窗口状态变化（Activity切换、Dialog显示等）
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val confirmedActivityClassName = resolveConfirmedActivityClassName(packageName, className)
             serviceScope.launch {
-                ServiceStateBus.postWindowChangeEvent(packageName, className)
+                ServiceStateBus.postWindowChangeEvent(packageName, className, confirmedActivityClassName)
             }
         }
 
@@ -121,6 +126,35 @@ class AccessibilityService : AccessibilityService() {
 
     private fun createServiceScope(): CoroutineScope {
         return CoroutineScope(Dispatchers.IO + SupervisorJob())
+    }
+
+    private fun resolveConfirmedActivityClassName(packageName: String, className: String): String? {
+        val activityClassNames = packageActivityCache.getOrPut(packageName) {
+            loadActivityClassNames(packageName)
+        }
+        return className.takeIf { it in activityClassNames }
+    }
+
+    private fun loadActivityClassNames(packageName: String): Set<String> {
+        return try {
+            val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.getPackageInfo(
+                    packageName,
+                    PackageManager.PackageInfoFlags.of(PackageManager.GET_ACTIVITIES.toLong())
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)
+            }
+            extractActivityClassNames(packageInfo)
+        } catch (_: Exception) {
+            emptySet()
+        }
+    }
+
+    private fun extractActivityClassNames(packageInfo: PackageInfo): Set<String> {
+        val activities = packageInfo.activities ?: return emptySet()
+        return activities.mapNotNull { it.name }.toSet()
     }
 
     private fun logLifecycle(level: String, event: String, extra: String = "") {

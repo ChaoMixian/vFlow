@@ -485,9 +485,13 @@ class UiInspectorService : Service() {
             appName = pm.getApplicationLabel(info).toString()
         } catch (e: Exception) { }
 
-        val currentActivity = ServiceStateBus.lastWindowClassName ?: getString(R.string.ui_inspector_unknown)
+        val currentActivity = ServiceStateBus.lastActivityClassName ?: getString(R.string.ui_inspector_unknown)
+        val currentWindow = ServiceStateBus.lastWindowClassName ?: getString(R.string.ui_inspector_unknown)
         val currentAppInsertRequest = buildLaunchAppInsertRequest(packageName)
-        val currentPageInsertRequest = buildLaunchActivityInsertRequest(packageName, currentActivity)
+        val currentPageInsertRequest = buildLaunchActivityInsertRequest(
+            ServiceStateBus.lastActivityPackageName ?: packageName,
+            currentActivity
+        )
         val controlId = node.viewIdResourceName ?: getString(R.string.ui_inspector_none)
         val controlText = node.text?.toString() ?: ""
         val gkdSelector = generateGkdSelector(node)
@@ -499,6 +503,7 @@ class UiInspectorService : Service() {
         list.add(InspectorItem.Header(getString(R.string.ui_inspector_basic_info)))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_app), "$appName ($packageName)", currentAppInsertRequest))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_page), currentActivity, currentPageInsertRequest))
+        list.add(InspectorItem.Property(getString(R.string.ui_inspector_current_window), currentWindow))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_id), controlId, buildClickInsertRequest(controlId)))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_text), controlText, buildFindTextInsertRequest(controlText)))
         list.add(InspectorItem.Property(getString(R.string.ui_inspector_control_type), node.className?.toString() ?: getString(R.string.ui_inspector_unknown)))

@@ -1177,6 +1177,7 @@
     <string name="ui_inspector_none">无</string>
     <string name="ui_inspector_basic_info">基础信息</string>
     <string name="ui_inspector_current_page">所在页面</string>
+    <string name="ui_inspector_current_window">所在窗口</string>
     <string name="ui_inspector_control_id">控件ID</string>
     <string name="ui_inspector_control_text">控件文本</string>
     <string name="ui_inspector_control_type">控件类型</string>

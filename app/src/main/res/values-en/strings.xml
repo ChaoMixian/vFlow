@@ -1177,6 +1177,7 @@
     <string name="ui_inspector_none">None</string>
     <string name="ui_inspector_basic_info">Basic Info</string>
     <string name="ui_inspector_current_page">Current Page</string>
+    <string name="ui_inspector_current_window">Current Window</string>
     <string name="ui_inspector_control_id">Control ID</string>
     <string name="ui_inspector_control_text">Control Text</string>
     <string name="ui_inspector_control_type">Control Type</string>

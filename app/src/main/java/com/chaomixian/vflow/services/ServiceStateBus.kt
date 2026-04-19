@@ -33,6 +33,13 @@ object ServiceStateBus {
     var lastWindowPackageName: String? = null
         private set
 
+    // 缓存最近一次确认的 Activity 信息，供“所在页面”和获取当前 Activity 使用
+    var lastActivityClassName: String? = null
+        private set
+
+    var lastActivityPackageName: String? = null
+        private set
+
     // 定义广播动作
     const val ACTION_ACCESSIBILITY_SERVICE_STATE_CHANGED = "vflow.action.ACCESSIBILITY_SERVICE_STATE_CHANGED"
     const val EXTRA_IS_CONNECTED = "is_connected"
@@ -54,6 +61,10 @@ object ServiceStateBus {
         val previousRef = accessibilityServiceRef?.get()
         accessibilityServiceRef?.clear()
         accessibilityServiceRef = null
+        lastWindowClassName = null
+        lastWindowPackageName = null
+        lastActivityClassName = null
+        lastActivityPackageName = null
         DebugLogger.w(
             "ServiceStateBus",
             "无障碍服务状态更新: connected=false previous=${previousRef?.javaClass?.simpleName}@${previousRef?.let { Integer.toHexString(System.identityHashCode(it)) } ?: "null"}"
@@ -64,9 +75,17 @@ object ServiceStateBus {
     /**
      * 由 AccessibilityService 调用，用于发出窗口变化事件。
      */
-    suspend fun postWindowChangeEvent(packageName: String, className: String) {
+    suspend fun postWindowChangeEvent(
+        packageName: String,
+        className: String,
+        confirmedActivityClassName: String? = null,
+    ) {
         lastWindowClassName = className
         lastWindowPackageName = packageName
+        if (!confirmedActivityClassName.isNullOrBlank()) {
+            lastActivityClassName = confirmedActivityClassName
+            lastActivityPackageName = packageName
+        }
         _windowChangeEventFlow.emit(packageName to className)
     }
 
