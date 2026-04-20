@@ -339,6 +339,8 @@
     <string name="workflow_execute_delay_1min">1 分钟后执行</string>
     <string name="workflow_execute_delayed">%s 后执行: %s</string>
     <string name="workflow_execute_delay_seconds">%d 秒</string>
+    <string name="workflow_action_run">执行</string>
+    <string name="workflow_action_stop">停止</string>
     <string name="workflow_name_untitled">未命名工作流</string>
     <string name="workflow_import_name">%s (导入)</string>
     <string name="workflow_import_name_indexed">%1$s (导入%2$d)</string>
@@ -1118,6 +1120,8 @@
     <string name="folder_export">导出</string>
     <string name="folder_create">创建文件夹</string>
     <string name="folder_name_hint">文件夹名称</string>
+    <string name="dialog_move_to_folder_title">移入文件夹</string>
+    <string name="dialog_move_to_folder_no_folders">请先创建文件夹</string>
     <string name="dialog_folder_delete_title">确认删除文件夹</string>
     <string name="dialog_folder_delete_message">确定要删除文件夹 \"%s\" 吗？文件夹内的工作流将被保留并移至根目录。</string>
     <string name="toast_folder_created">文件夹已创建</string>
@@ -1125,6 +1129,9 @@
     <string name="toast_folder_deleted">文件夹已删除</string>
     <string name="toast_folder_export_success">文件夹导出成功</string>
     <string name="folder_empty_workflows">此文件夹为空</string>
+    <string name="workflow_list_overview_summary">%1$d 个工作流 · %2$d 个文件夹</string>
+    <string name="workflow_list_empty_title">还没有工作流</string>
+    <string name="workflow_list_empty_message">可以新建一个工作流，或者从备份中导入现有工作流。</string>
     <string name="workflows_count">%d 个工作流</string>
     <string name="one_workflow">1 个工作流</string>
     <string name="zero_workflows">0 个工作流</string>

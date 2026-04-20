@@ -331,6 +331,8 @@
     <string name="workflow_execute_delay_1min">Execute in 1 minute</string>
     <string name="workflow_execute_delayed">Executing in %1$s: %2$s</string>
     <string name="workflow_execute_delay_seconds">%d seconds</string>
+    <string name="workflow_action_run">Run</string>
+    <string name="workflow_action_stop">Stop</string>
     <string name="workflow_name_untitled">Untitled Workflow</string>
     <string name="workflow_import_name">%s (Imported)</string>
     <string name="workflow_import_name_indexed">%1$s (Imported %2$d)</string>
@@ -1113,6 +1115,8 @@
     <string name="folder_export">Export</string>
     <string name="folder_create">Create Folder</string>
     <string name="folder_name_hint">Folder name</string>
+    <string name="dialog_move_to_folder_title">Move to Folder</string>
+    <string name="dialog_move_to_folder_no_folders">Create a folder first</string>
     <string name="dialog_folder_delete_title">Confirm Delete Folder</string>
     <string name="dialog_folder_delete_message">Are you sure you want to delete folder \"%s\"? Workflows in this folder will be kept and moved to the root directory.</string>
     <string name="toast_folder_created">Folder created</string>
@@ -1120,6 +1124,9 @@
     <string name="toast_folder_deleted">Folder deleted</string>
     <string name="toast_folder_export_success">Folder exported successfully</string>
     <string name="folder_empty_workflows">This folder is empty</string>
+    <string name="workflow_list_overview_summary">%1$d workflows · %2$d folders</string>
+    <string name="workflow_list_empty_title">No workflows yet</string>
+    <string name="workflow_list_empty_message">Create your first workflow or import an existing backup.</string>
     <string name="workflows_count">%d workflows</string>
     <string name="one_workflow">1 workflow</string>
     <string name="zero_workflows">0 workflows</string>

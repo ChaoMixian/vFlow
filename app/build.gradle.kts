@@ -123,6 +123,7 @@ dependencies {
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.backdrop)
+    implementation(libs.reorderable)
 
     // 扩展图标库
     implementation("androidx.compose.material:material-icons-extended")
