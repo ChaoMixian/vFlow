@@ -41,7 +41,7 @@ import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
-import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -165,9 +165,7 @@ class KeyTesterActivity : ComponentActivity() {
                 }
             }
 
-            val colorScheme = ThemeUtils.getAppColorScheme()
-
-            MaterialTheme(colorScheme = colorScheme) {
+            VFlowTheme {
                 Scaffold(
                     topBar = {
                         KeyTesterTopBar(

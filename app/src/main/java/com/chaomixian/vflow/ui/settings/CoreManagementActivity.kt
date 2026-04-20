@@ -12,7 +12,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.chaomixian.vflow.ui.common.BaseActivity
-import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -93,9 +93,7 @@ class CoreManagementActivity : BaseActivity() {
         }
 
         setContent {
-            MaterialTheme(
-                colorScheme = ThemeUtils.getAppColorScheme()
-            ) {
+            VFlowTheme {
                 CoreManagementScreen(
                     onBackClick = { finish() },
                     onCheckStatus = { checkServerStatus() },

@@ -63,7 +63,7 @@ import com.chaomixian.vflow.core.locale.toast
 import com.chaomixian.vflow.core.logging.CrashReportManager
 import com.chaomixian.vflow.core.logging.CrashReportRecord
 import com.chaomixian.vflow.ui.common.AppearanceManager
-import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -146,8 +146,7 @@ class CrashReportsActivity : ComponentActivity() {
 private fun CrashReportsTheme(
     content: @Composable () -> Unit
 ) {
-    val colorScheme = ThemeUtils.getAppColorScheme()
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    VFlowTheme(content = content)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

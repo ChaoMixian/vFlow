@@ -4,15 +4,12 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalInspectionMode
 import com.chaomixian.vflow.api.ApiService
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
-import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
@@ -51,6 +48,5 @@ class ApiSettingsActivity : ComponentActivity() {
 private fun ApiSettingsTheme(
     content: @Composable () -> Unit
 ) {
-    val colorScheme = ThemeUtils.getAppColorScheme()
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    VFlowTheme(content = content)
 }

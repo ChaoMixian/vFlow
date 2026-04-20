@@ -1,63 +1,67 @@
 package com.chaomixian.vflow.ui.main.fragments
 
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import com.chaomixian.vflow.core.locale.toast
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.api.ApiService
+import com.chaomixian.vflow.core.locale.LocaleManager
+import com.chaomixian.vflow.core.locale.toast
 import com.chaomixian.vflow.core.logging.DebugLogger
-import com.chaomixian.vflow.data.update.UpdateChecker
+import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
-import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.ShellDiagnostic
+import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.services.UiInspectorService
 import com.chaomixian.vflow.ui.changelog.ChangelogActivity
-import com.chaomixian.vflow.ui.settings.KeyTesterActivity
-import com.chaomixian.vflow.ui.settings.CrashReportsActivity
-import com.chaomixian.vflow.core.locale.LocaleManager
-import com.chaomixian.vflow.api.ApiService
-import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
-import com.chaomixian.vflow.ui.common.OverlayUiPreferences
-import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.common.InsetAwareComposeContainer
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import com.chaomixian.vflow.ui.main.MainActivity
-import com.google.android.material.card.MaterialCardView
+import com.chaomixian.vflow.ui.screen.settings.SettingsScreen
+import com.chaomixian.vflow.ui.screen.settings.SettingsScreenActions
+import com.chaomixian.vflow.ui.settings.ApiSettingsActivity
+import com.chaomixian.vflow.ui.settings.CoreManagementActivity
+import com.chaomixian.vflow.ui.settings.CrashReportsActivity
+import com.chaomixian.vflow.ui.settings.KeyTesterActivity
+import com.chaomixian.vflow.ui.settings.ModuleConfigActivity
+import com.chaomixian.vflow.ui.settings.PermissionGuardianActivity
+import com.chaomixian.vflow.ui.viewmodel.SettingsViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.slider.Slider
-import androidx.core.content.edit
-import androidx.core.net.toUri
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.ArrayList
+import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
-/**
- * “设置” Fragment。
- * 提供应用相关的设置选项，如动态颜色和权限管理入口。
- */
 class SettingsFragment : Fragment() {
-    private var iconClickCount = 0  // 图标点击计数器
-    private var lastClickTime = 0L
-    private var updateInfo: com.chaomixian.vflow.data.update.UpdateInfo? = null
+    private val settingsViewModel: SettingsViewModel by viewModels()
 
-    // 新增一个 ActivityResultLauncher 用于处理文件导出
+    private lateinit var apiService: ApiService
+    private var iconClickCount = 0
+    private var lastClickTime = 0L
+
     private val exportLogsLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
             uri?.let { fileUri ->
@@ -66,380 +70,317 @@ class SettingsFragment : Fragment() {
                         outputStream.write(DebugLogger.getLogs().toByteArray())
                     }
                     requireContext().toast(R.string.settings_toast_logs_exported)
-                } catch (e: Exception) {
-                    requireContext().toast(getString(R.string.settings_toast_export_failed, e.message))
+                } catch (error: Exception) {
+                    requireContext().toast(
+                        getString(R.string.settings_toast_export_failed, error.message)
+                    )
                 }
             }
         }
 
-    /** 创建并返回 Fragment 的视图。 */
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        val view = inflater.inflate(R.layout.fragment_settings, container, false)
-        val prefs = requireActivity().getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-
-        // 检查更新
-        checkForUpdates(view)
-
-        // 动态颜色开关逻辑
-        val dynamicColorSwitch = view.findViewById<MaterialSwitch>(R.id.switch_dynamic_color)
-        dynamicColorSwitch.isChecked = prefs.getBoolean("dynamicColorEnabled", false)
-        dynamicColorSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean("dynamicColorEnabled", isChecked) }
-            activity?.recreate()
-        }
-
-        val colorfulWorkflowCardsSwitch = view.findViewById<MaterialSwitch>(R.id.switch_colorful_workflow_cards)
-        colorfulWorkflowCardsSwitch.isChecked = ThemeUtils.isColorfulWorkflowCardsEnabled(requireContext())
-        colorfulWorkflowCardsSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(ThemeUtils.KEY_COLORFUL_WORKFLOW_CARDS_ENABLED, isChecked) }
-            activity?.recreate()
-        }
-
-        val liquidGlassNavBarSwitch = view.findViewById<MaterialSwitch>(R.id.switch_liquid_glass_nav_bar)
-        liquidGlassNavBarSwitch.isChecked = AppearanceManager.isLiquidGlassNavBarEnabled(requireContext())
-        liquidGlassNavBarSwitch.isEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        liquidGlassNavBarSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(AppearanceManager.KEY_LIQUID_GLASS_NAV_BAR_ENABLED, isChecked) }
-            (activity as? MainActivity)?.applyLiquidGlassNavBarEnabled(isChecked)
-        }
-
-        val appScaleSlider = view.findViewById<Slider>(R.id.slider_app_scale)
-        val appScaleValue = view.findViewById<TextView>(R.id.text_app_scale_value)
-        var lastSavedScale = AppearanceManager.getAppScale(requireContext())
-        appScaleSlider.value = lastSavedScale * 100f
-        appScaleValue.text = getString(
-            R.string.settings_app_scale_value,
-            (lastSavedScale * 100).roundToInt()
-        )
-        appScaleSlider.addOnChangeListener { _, value, _ ->
-            appScaleValue.text = getString(R.string.settings_app_scale_value, value.roundToInt())
-        }
-        appScaleSlider.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
-            override fun onStartTrackingTouch(slider: Slider) = Unit
-
-            override fun onStopTrackingTouch(slider: Slider) {
-                val newScale = AppearanceManager.clampAppScale(slider.value / 100f)
-                if (abs(newScale - lastSavedScale) < 0.001f) return
-                prefs.edit { putFloat(AppearanceManager.KEY_APP_SCALE, newScale) }
-                lastSavedScale = newScale
-                activity?.recreate()
-            }
-        })
-
-        // 进度通知开关逻辑
-        val progressNotificationSwitch = view.findViewById<MaterialSwitch>(R.id.switch_progress_notification)
-        progressNotificationSwitch.isChecked = prefs.getBoolean("progressNotificationEnabled", true) // 默认开启
-        progressNotificationSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean("progressNotificationEnabled", isChecked) }
-        }
-
-        // 后台服务通知开关逻辑
-        val bgServiceNotificationSwitch = view.findViewById<MaterialSwitch>(R.id.switch_background_service_notification)
-        bgServiceNotificationSwitch.isChecked = prefs.getBoolean("backgroundServiceNotificationEnabled", true)
-        bgServiceNotificationSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean("backgroundServiceNotificationEnabled", isChecked) }
-            // 通知服务更新状态
-            val intent = Intent(requireContext(), TriggerService::class.java).apply {
-                action = TriggerService.ACTION_UPDATE_NOTIFICATION
-            }
-            requireContext().startService(intent)
-        }
-
-        // 强制保活开关逻辑
-        val forceKeepAliveSwitch = view.findViewById<MaterialSwitch>(R.id.switch_force_keep_alive)
-        forceKeepAliveSwitch.isEnabled = true
-        forceKeepAliveSwitch.isChecked = prefs.getBoolean("forceKeepAliveEnabled", false)
-        forceKeepAliveSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean("forceKeepAliveEnabled", isChecked) }
-            if (ShellManager.isShizukuActive(requireContext())) {
-                if (isChecked) {
-                    ShellManager.startWatcher(requireContext())
-                    requireContext().toast(R.string.settings_toast_shizuku_watcher_started)
-                } else {
-                    ShellManager.stopWatcher(requireContext())
-                    requireContext().toast(R.string.settings_toast_shizuku_watcher_stopped)
-                }
-            } else {
-                val toastRes = if (isChecked) {
-                    R.string.settings_toast_force_keep_alive_enabled
-                } else {
-                    R.string.settings_toast_force_keep_alive_disabled
-                }
-                requireContext().toast(toastRes)
-            }
-        }
-
-        // 自动开启无障碍服务开关逻辑
-        val autoEnableAccessibilitySwitch = view.findViewById<MaterialSwitch>(R.id.switch_auto_enable_accessibility)
-
-        // 使用 ShellManager 检查 Shizuku 或 Root 是否可用
-        val canUseShell = ShellManager.isShizukuActive(requireContext()) || ShellManager.isRootAvailable()
-
-        if (canUseShell) {
-            autoEnableAccessibilitySwitch.isEnabled = true
-            autoEnableAccessibilitySwitch.isChecked = prefs.getBoolean("autoEnableAccessibility", false)
-            autoEnableAccessibilitySwitch.setOnCheckedChangeListener { _, isChecked ->
-                prefs.edit { putBoolean("autoEnableAccessibility", isChecked) }
-                lifecycleScope.launch {
-                    val success = if (isChecked) {
-                        ShellManager.enableAccessibilityService(requireContext())
-                    } else {
-                        ShellManager.disableAccessibilityService(requireContext())
-                    }
-                    // 在主线程显示 Toast
-                    launch(Dispatchers.Main) {
-                        if (success) {
-                            val toastRes = if (isChecked) R.string.settings_toast_auto_accessibility_enabled else R.string.settings_toast_auto_accessibility_disabled
-                            requireContext().toast(toastRes)
-                        } else {
-                            requireContext().toast(R.string.settings_toast_operation_failed)
-                            autoEnableAccessibilitySwitch.isChecked = !isChecked
-                            prefs.edit { putBoolean("autoEnableAccessibility", !isChecked) }
-                        }
-                    }
-                }
-            }
-        } else {
-            autoEnableAccessibilitySwitch.isEnabled = false
-            autoEnableAccessibilitySwitch.isChecked = false
-            autoEnableAccessibilitySwitch.text = getString(R.string.settings_switch_auto_accessibility_unavailable)
-        }
-
-        // 启用变量类型限制开关（默认关闭，快捷指令风格）
-        val enableTypeFilterSwitch = view.findViewById<MaterialSwitch>(R.id.switch_enable_type_filter)
-        enableTypeFilterSwitch.isChecked = prefs.getBoolean("enableTypeFilter", false)
-        enableTypeFilterSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean("enableTypeFilter", isChecked) }
-        }
-
-        // 从最近任务中隐藏开关
-        val hideFromRecentsSwitch = view.findViewById<MaterialSwitch>(R.id.switch_hide_from_recents)
-        hideFromRecentsSwitch.isChecked = prefs.getBoolean("hideFromRecents", false)
-        hideFromRecentsSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean("hideFromRecents", isChecked) }
-            val msgRes = if (isChecked) R.string.settings_toast_hide_from_recents_enabled else R.string.settings_toast_hide_from_recents_disabled
-            requireContext().toast(msgRes)
-        }
-
-        // 权限与 Shell 设置
-        val shellModeToggle = view.findViewById<MaterialButtonToggleGroup>(R.id.toggle_shell_mode)
-        val defaultMode = prefs.getString("default_shell_mode", "shizuku")
-        if (defaultMode == "root") {
-            shellModeToggle.check(R.id.btn_shell_root)
-        } else {
-            shellModeToggle.check(R.id.btn_shell_shizuku)
-        }
-
-        shellModeToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isChecked) {
-                val mode = if (checkedId == R.id.btn_shell_root) "root" else "shizuku"
-                prefs.edit { putString("default_shell_mode", mode) }
-            }
-        }
-
-        // 权限管理器入口
-        view.findViewById<View>(R.id.btn_open_permission_manager).setOnClickListener {
-            val allPermissions = PermissionManager.getAllRegisteredPermissions()
-            val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
-                putParcelableArrayListExtra(PermissionActivity.EXTRA_PERMISSIONS, ArrayList(allPermissions))
-            }
-            startActivity(intent)
-        }
-
-        // 权限守护入口
-        view.findViewById<View>(R.id.btn_open_permission_guardian).setOnClickListener {
-            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.PermissionGuardianActivity::class.java)
-            startActivity(intent)
-        }
-
-        // --- 调试功能逻辑 ---
-        val loggingSwitch = view.findViewById<MaterialSwitch>(R.id.switch_enable_logging)
-        val exportButton = view.findViewById<Button>(R.id.button_export_logs)
-        val clearButton = view.findViewById<Button>(R.id.button_clear_logs)
-        val diagnoseButton = view.findViewById<Button>(R.id.button_run_diagnostic)
-        val keyTesterButton = view.findViewById<Button>(R.id.button_key_tester)
-
-        // 初始化状态
-        val isLoggingEnabled = DebugLogger.isLoggingEnabled()
-        loggingSwitch.isChecked = isLoggingEnabled
-        exportButton.isEnabled = isLoggingEnabled
-        clearButton.isEnabled = isLoggingEnabled
-        diagnoseButton.isEnabled = isLoggingEnabled
-        // keyTesterButton 可以保持开启，因为它主要依赖 Shizuku
-
-        loggingSwitch.setOnCheckedChangeListener { _, isChecked ->
-            DebugLogger.setLoggingEnabled(isChecked, requireContext())
-            exportButton.isEnabled = isChecked
-            clearButton.isEnabled = isChecked
-            diagnoseButton.isEnabled = isChecked
-            if (isChecked) {
-                requireContext().toast(R.string.settings_toast_logging_enabled)
-            } else {
-                requireContext().toast(R.string.settings_toast_logging_disabled)
-            }
-        }
-
-        exportButton.setOnClickListener {
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val fileName = "vflow_log_${timestamp}.txt"
-            exportLogsLauncher.launch(fileName)
-        }
-
-        clearButton.setOnClickListener {
-            DebugLogger.clearLogs()
-            requireContext().toast(R.string.settings_toast_logs_cleared)
-        }
-
-        // 运行全面诊断
-        diagnoseButton.setOnClickListener {
-            if (!ShellManager.isShizukuActive(requireContext())) {
-                requireContext().toast(R.string.settings_toast_shizuku_not_active)
-                return@setOnClickListener
-            }
-
-            requireContext().toast(R.string.settings_toast_diagnostic_running)
-            lifecycleScope.launch(Dispatchers.IO) {
-                ShellDiagnostic.diagnose(requireContext())
-                ShellDiagnostic.runKeyEventDiagnostic(requireContext())
-                launch(Dispatchers.Main) {
-                    requireContext().toast(R.string.settings_toast_diagnostic_complete)
-                }
-            }
-        }
-
-        // 启动按键测试器
-        keyTesterButton.setOnClickListener {
-            val intent = Intent(requireContext(), KeyTesterActivity::class.java)
-            startActivity(intent)
-        }
-
-        view.findViewById<View>(R.id.button_crash_reports).setOnClickListener {
-            val intent = Intent(requireContext(), CrashReportsActivity::class.java)
-            startActivity(intent)
-        }
-
-        // 语言设置
-        view.findViewById<View>(R.id.card_language).setOnClickListener {
-            showLanguageDialog()
-        }
-
-        // 显示当前语言
-        val currentLanguage = LocaleManager.getLanguage(requireContext())
-        val languageDisplayName = LocaleManager.getLanguageDisplayName(currentLanguage)
-        view.findViewById<TextView>(R.id.text_language_value).text = languageDisplayName
-
-        // 模块配置入口
-        view.findViewById<View>(R.id.btn_module_config).setOnClickListener {
-            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.ModuleConfigActivity::class.java)
-            startActivity(intent)
-        }
-
-        val allowShowOnLockScreenSwitch =
-            view.findViewById<MaterialSwitch>(R.id.switch_allow_show_on_lock_screen)
-        allowShowOnLockScreenSwitch.isChecked =
-            OverlayUiPreferences.isShowOnLockScreenAllowed(requireContext())
-        allowShowOnLockScreenSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit {
-                putBoolean(OverlayUiPreferences.KEY_ALLOW_SHOW_ON_LOCK_SCREEN, isChecked)
-            }
-        }
-
-        // API开关逻辑
-        val apiSwitch = view.findViewById<MaterialSwitch>(R.id.switch_api_enabled)
-        val workflowManager = WorkflowManager(requireContext())
-        val apiService = ApiService.getInstance(requireContext(), workflowManager)
-
-        // 根据服务器状态设置开关状态
-        fun updateSwitchState() {
-            apiSwitch.isChecked = apiService.serverState.value == ApiService.ServerState.RUNNING
-        }
-        updateSwitchState()
-
-        // 监听服务器状态变化
-        apiService.serverState.let { stateFlow ->
-            viewLifecycleOwner.lifecycleScope.launch {
-                stateFlow.collect { updateSwitchState() }
-            }
-        }
-
-        apiSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                val started = apiService.startServer()
-                if (started) {
-                    requireContext().toast(R.string.api_settings_toast_started)
-                } else {
-                    requireContext().toast(R.string.api_settings_toast_start_failed)
-                    apiSwitch.isChecked = false
-                }
-            } else {
-                apiService.stopServer()
-                requireContext().toast(R.string.api_settings_toast_stopped)
-            }
-        }
-
-        // API设置入口
-        view.findViewById<View>(R.id.btn_api_settings).setOnClickListener {
-            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.ApiSettingsActivity::class.java)
-            startActivity(intent)
-        }
-
-        // 启动Core管理
-        val CoreManagementButton = view.findViewById<Button>(R.id.button_core_management)
-        CoreManagementButton.setOnClickListener {
-            val intent = Intent(requireContext(), com.chaomixian.vflow.ui.settings.CoreManagementActivity::class.java)
-            startActivity(intent)
-        }
-
-        // 启动UI检查器
-        val uiInspectorButton = view.findViewById<Button>(R.id.button_ui_inspector)
-        uiInspectorButton.setOnClickListener {
-            val intent = Intent(requireContext(), UiInspectorService::class.java)
-            requireContext().startService(intent)
-        }
-
-        view.findViewById<MaterialCardView>(R.id.card_about).setOnClickListener {
-            showAboutDialog()
-        }
-
-        return view
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val appContext = requireContext().applicationContext
+        val workflowManager = WorkflowManager(appContext)
+        apiService = ApiService.getInstance(appContext, workflowManager)
+        settingsViewModel.refresh(requireContext(), refreshUpdateInfo = true)
+        settingsViewModel.setApiRunning(apiService.serverState.value)
     }
 
-    /**
-     * 显示"关于"对话框的方法
-     */
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        val composeContainer = InsetAwareComposeContainer(requireContext())
+        return composeContainer.apply {
+            composeView.setViewCompositionStrategy(
+                ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+            )
+            composeView.setContent {
+                val uiState = settingsViewModel.uiState.collectAsState().value
+                val density = LocalDensity.current
+
+                VFlowTheme {
+                    SettingsScreen(
+                        uiState = uiState,
+                        extraBottomContentPadding = with(density) { contentBottomInsetPx.toDp() },
+                        actions = SettingsScreenActions(
+                            onSetDynamicColorEnabled = { enabled ->
+                                settingsViewModel.setDynamicColorEnabled(requireContext(), enabled)
+                                activity?.recreate()
+                            },
+                            onSetColorfulWorkflowCardsEnabled = { enabled ->
+                                settingsViewModel.setColorfulWorkflowCardsEnabled(
+                                    requireContext(),
+                                    enabled
+                                )
+                                activity?.recreate()
+                            },
+                            onSetLiquidGlassNavBarEnabled = { enabled ->
+                                settingsViewModel.setLiquidGlassNavBarEnabled(
+                                    requireContext(),
+                                    enabled
+                                )
+                                (activity as? MainActivity)?.applyLiquidGlassNavBarEnabled(enabled)
+                            },
+                            onSetAppScale = { scale ->
+                                val currentScale = AppearanceManager.getAppScale(requireContext())
+                                val clampedScale = AppearanceManager.clampAppScale(scale)
+                                if (abs(clampedScale - currentScale) >= 0.001f) {
+                                    settingsViewModel.setAppScale(requireContext(), clampedScale)
+                                    activity?.recreate()
+                                }
+                            },
+                            onOpenLanguageDialog = ::showLanguageDialog,
+                            onOpenModuleConfig = {
+                                startActivity(Intent(requireContext(), ModuleConfigActivity::class.java))
+                            },
+                            onSetAllowShowOnLockScreen = { enabled ->
+                                settingsViewModel.setAllowShowOnLockScreen(requireContext(), enabled)
+                            },
+                            onSetApiEnabled = ::setApiEnabled,
+                            onOpenApiSettings = {
+                                startActivity(Intent(requireContext(), ApiSettingsActivity::class.java))
+                            },
+                            onSetProgressNotificationEnabled = { enabled ->
+                                settingsViewModel.setProgressNotificationEnabled(
+                                    requireContext(),
+                                    enabled
+                                )
+                            },
+                            onSetBackgroundServiceNotificationEnabled = { enabled ->
+                                settingsViewModel.setBackgroundServiceNotificationEnabled(
+                                    requireContext(),
+                                    enabled
+                                )
+                                requireContext().startService(
+                                    Intent(requireContext(), TriggerService::class.java).apply {
+                                        action = TriggerService.ACTION_UPDATE_NOTIFICATION
+                                    }
+                                )
+                            },
+                            onSetForceKeepAliveEnabled = ::setForceKeepAliveEnabled,
+                            onSetAutoEnableAccessibility = ::setAutoEnableAccessibility,
+                            onSetEnableTypeFilter = { enabled ->
+                                settingsViewModel.setEnableTypeFilter(requireContext(), enabled)
+                            },
+                            onSetHideFromRecents = { enabled ->
+                                settingsViewModel.setHideFromRecents(requireContext(), enabled)
+                                requireContext().toast(
+                                    if (enabled) {
+                                        R.string.settings_toast_hide_from_recents_enabled
+                                    } else {
+                                        R.string.settings_toast_hide_from_recents_disabled
+                                    }
+                                )
+                            },
+                            onSetDefaultShellMode = { mode ->
+                                settingsViewModel.setDefaultShellMode(requireContext(), mode)
+                            },
+                            onOpenPermissionManager = ::openPermissionManager,
+                            onOpenPermissionGuardian = {
+                                startActivity(
+                                    Intent(requireContext(), PermissionGuardianActivity::class.java)
+                                )
+                            },
+                            onSetLoggingEnabled = { enabled ->
+                                settingsViewModel.setLoggingEnabled(requireContext(), enabled)
+                                requireContext().toast(
+                                    if (enabled) {
+                                        R.string.settings_toast_logging_enabled
+                                    } else {
+                                        R.string.settings_toast_logging_disabled
+                                    }
+                                )
+                            },
+                            onOpenCrashReports = {
+                                startActivity(Intent(requireContext(), CrashReportsActivity::class.java))
+                            },
+                            onExportLogs = ::exportLogs,
+                            onClearLogs = {
+                                DebugLogger.clearLogs()
+                                requireContext().toast(R.string.settings_toast_logs_cleared)
+                            },
+                            onRunDiagnostic = ::runDiagnostic,
+                            onOpenKeyTester = {
+                                startActivity(Intent(requireContext(), KeyTesterActivity::class.java))
+                            },
+                            onOpenCoreManagement = {
+                                startActivity(
+                                    Intent(requireContext(), CoreManagementActivity::class.java)
+                                )
+                            },
+                            onStartUiInspector = {
+                                requireContext().startService(
+                                    Intent(requireContext(), UiInspectorService::class.java)
+                                )
+                            },
+                            onOpenAbout = ::showAboutDialog,
+                            onOpenUpdatePage = {
+                                startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        "https://github.com/ChaoMixian/vFlow/releases".toUri()
+                                    )
+                                )
+                            }
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                apiService.serverState.collect { serverState ->
+                    settingsViewModel.setApiRunning(serverState)
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        settingsViewModel.refresh(requireContext())
+        settingsViewModel.setApiRunning(apiService.serverState.value)
+    }
+
+    private fun openPermissionManager() {
+        val allPermissions = PermissionManager.getAllRegisteredPermissions()
+        val intent = Intent(requireContext(), PermissionActivity::class.java).apply {
+            putParcelableArrayListExtra(
+                PermissionActivity.EXTRA_PERMISSIONS,
+                ArrayList(allPermissions)
+            )
+        }
+        startActivity(intent)
+    }
+
+    private fun setApiEnabled(enabled: Boolean) {
+        if (enabled) {
+            val started = apiService.startServer()
+            requireContext().toast(
+                if (started) {
+                    R.string.api_settings_toast_started
+                } else {
+                    R.string.api_settings_toast_start_failed
+                }
+            )
+        } else {
+            apiService.stopServer()
+            requireContext().toast(R.string.api_settings_toast_stopped)
+        }
+    }
+
+    private fun setForceKeepAliveEnabled(enabled: Boolean) {
+        settingsViewModel.setForceKeepAliveEnabled(requireContext(), enabled)
+        if (ShellManager.isShizukuActive(requireContext())) {
+            if (enabled) {
+                ShellManager.startWatcher(requireContext())
+                requireContext().toast(R.string.settings_toast_shizuku_watcher_started)
+            } else {
+                ShellManager.stopWatcher(requireContext())
+                requireContext().toast(R.string.settings_toast_shizuku_watcher_stopped)
+            }
+            return
+        }
+
+        requireContext().toast(
+            if (enabled) {
+                R.string.settings_toast_force_keep_alive_enabled
+            } else {
+                R.string.settings_toast_force_keep_alive_disabled
+            }
+        )
+    }
+
+    private fun setAutoEnableAccessibility(enabled: Boolean) {
+        val canUseShell =
+            ShellManager.isShizukuActive(requireContext()) || ShellManager.isRootAvailable()
+        if (!canUseShell) {
+            requireContext().toast(R.string.settings_toast_operation_failed)
+            settingsViewModel.refresh(requireContext())
+            return
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                if (enabled) {
+                    ShellManager.enableAccessibilityService(requireContext())
+                } else {
+                    ShellManager.disableAccessibilityService(requireContext())
+                }
+            }
+
+            if (success) {
+                settingsViewModel.setAutoEnableAccessibility(requireContext(), enabled)
+                requireContext().toast(
+                    if (enabled) {
+                        R.string.settings_toast_auto_accessibility_enabled
+                    } else {
+                        R.string.settings_toast_auto_accessibility_disabled
+                    }
+                )
+            } else {
+                requireContext().toast(R.string.settings_toast_operation_failed)
+                settingsViewModel.refresh(requireContext())
+            }
+        }
+    }
+
+    private fun exportLogs() {
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        exportLogsLauncher.launch("vflow_log_${timestamp}.txt")
+    }
+
+    private fun runDiagnostic() {
+        if (!ShellManager.isShizukuActive(requireContext())) {
+            requireContext().toast(R.string.settings_toast_shizuku_not_active)
+            return
+        }
+
+        requireContext().toast(R.string.settings_toast_diagnostic_running)
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            ShellDiagnostic.diagnose(requireContext())
+            ShellDiagnostic.runKeyEventDiagnostic(requireContext())
+            withContext(Dispatchers.Main) {
+                requireContext().toast(R.string.settings_toast_diagnostic_complete)
+            }
+        }
+    }
+
     private fun showAboutDialog() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_about, null)
         val versionTextView = dialogView.findViewById<TextView>(R.id.text_version)
         val githubButton = dialogView.findViewById<Button>(R.id.button_github)
         val appIcon = dialogView.findViewById<android.widget.ImageView>(R.id.app_icon)
 
-        // 动态获取版本名
         try {
-            val pInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
-            versionTextView.text = getString(R.string.about_version_label, pInfo.versionName)
-        } catch (e: PackageManager.NameNotFoundException) {
-            e.printStackTrace()
+            val packageInfo = requireContext().packageManager.getPackageInfo(
+                requireContext().packageName,
+                0
+            )
+            versionTextView.text = getString(R.string.about_version_label, packageInfo.versionName)
+        } catch (_: PackageManager.NameNotFoundException) {
             versionTextView.visibility = View.GONE
         }
 
-        // 图标点击彩蛋 - 连续点击5次打开版本时间线
         appIcon.setOnClickListener {
             val currentTime = System.currentTimeMillis()
-            if (currentTime - lastClickTime < 2000) {  // 2秒内的点击才计数
+            if (currentTime - lastClickTime < 2000) {
                 iconClickCount++
-                lastClickTime = currentTime  // 更新最后点击时间
+                lastClickTime = currentTime
                 if (iconClickCount >= 5) {
-                    // 打开版本时间线
-                    val intent = Intent(requireContext(), ChangelogActivity::class.java)
-                    startActivity(intent)
-                    iconClickCount = 0  // 重置计数
+                    startActivity(Intent(requireContext(), ChangelogActivity::class.java))
+                    iconClickCount = 0
                 }
             } else {
-                iconClickCount = 1  // 超过时间间隔，重新计数
-                lastClickTime = currentTime  // 更新最后点击时间
+                iconClickCount = 1
+                lastClickTime = currentTime
             }
         }
 
@@ -448,23 +389,17 @@ class SettingsFragment : Fragment() {
             .create()
 
         githubButton.setOnClickListener {
-            val browserIntent = Intent(Intent.ACTION_VIEW,
-                "https://github.com/ChaoMixian/vFlow".toUri())
-            startActivity(browserIntent)
-            dialog.dismiss() // 点击后关闭对话框
+            startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/ChaoMixian/vFlow".toUri()))
+            dialog.dismiss()
         }
 
         dialog.show()
     }
 
-    /**
-     * 显示语言选择对话框
-     */
     private fun showLanguageDialog() {
         val currentLanguage = LocaleManager.getLanguage(requireContext())
         val languages = LocaleManager.SUPPORTED_LANGUAGES.keys.toList()
         val languageNames = LocaleManager.SUPPORTED_LANGUAGES.values.toList()
-
         val checkedItem = languages.indexOf(currentLanguage)
 
         MaterialAlertDialogBuilder(requireContext())
@@ -472,10 +407,7 @@ class SettingsFragment : Fragment() {
             .setSingleChoiceItems(languageNames.toTypedArray(), checkedItem) { dialog, which ->
                 val selectedLanguage = languages[which]
                 if (selectedLanguage != currentLanguage) {
-                    // 切换语言
                     LocaleManager.setLanguage(requireContext(), selectedLanguage)
-
-                    // 显示重启提示
                     showRestartDialog()
                 }
                 dialog.dismiss()
@@ -484,9 +416,6 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    /**
-     * 显示重启应用对话框
-     */
     private fun showRestartDialog() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.settings_toast_language_changed)
@@ -497,47 +426,5 @@ class SettingsFragment : Fragment() {
             .setNegativeButton(R.string.settings_button_later, null)
             .setCancelable(false)
             .show()
-    }
-
-    /**
-     * 检查更新
-     */
-    private fun checkForUpdates(view: View) {
-        lifecycleScope.launch {
-            try {
-                val pInfo = requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
-                val currentVersion = pInfo.versionName ?: "1.0.0"
-
-                val result = UpdateChecker.checkUpdate(currentVersion)
-
-                result.onSuccess { info ->
-                    if (info.hasUpdate) {
-                        updateInfo = info
-                        showUpdateCard(view, info)
-                    }
-                }
-            } catch (e: Exception) {
-                // 忽略更新检查失败
-            }
-        }
-    }
-
-    /**
-     * 显示更新卡片
-     */
-    private fun showUpdateCard(view: View, info: com.chaomixian.vflow.data.update.UpdateInfo) {
-        val updateCard = view.findViewById<MaterialCardView>(R.id.card_update_available)
-        updateCard.visibility = View.VISIBLE
-
-        val textUpdateVersion = view.findViewById<TextView>(R.id.text_update_version)
-        val buttonUpdate = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_update)
-
-        textUpdateVersion.text = getString(R.string.settings_update_available, info.latestVersion)
-
-        buttonUpdate.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW,
-                "https://github.com/ChaoMixian/vFlow/releases".toUri())
-            startActivity(intent)
-        }
     }
 }

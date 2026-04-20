@@ -32,7 +32,7 @@ import com.chaomixian.vflow.services.AccessibilityKeepAliveManager
 import com.chaomixian.vflow.services.PermissionGuardianService
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.common.AppearanceManager
-import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -81,8 +81,7 @@ class PermissionGuardianActivity : ComponentActivity() {
 private fun GuardianTheme(
     content: @Composable () -> Unit
 ) {
-    val colorScheme = ThemeUtils.getAppColorScheme()
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    VFlowTheme(content = content)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

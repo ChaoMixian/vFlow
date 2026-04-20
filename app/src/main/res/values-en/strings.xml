@@ -12,24 +12,24 @@
     <string name="settings_switch_dynamic_color">Dynamic Color</string>
     <string name="settings_switch_dynamic_color_desc">Generate the app appearance from your wallpaper colors.</string>
     <string name="settings_switch_colorful_workflow_cards">Colorful workflow cards (Beta)</string>
-    <string name="settings_switch_colorful_workflow_cards_desc">Enable icons and colorful backgrounds for workflow cards.</string>
+    <string name="settings_switch_colorful_workflow_cards_desc">Enable colorful styling for workflow cards.</string>
     <string name="settings_switch_liquid_glass_nav_bar">Liquid Glass navigation bar</string>
     <string name="settings_switch_liquid_glass_nav_bar_desc">Replace the main bottom navigation with a Liquid Glass floating bar.</string>
     <string name="settings_app_scale">Scale</string>
     <string name="settings_app_scale_default_value">100%%</string>
     <string name="settings_app_scale_value">%1$d%%</string>
-    <string name="settings_app_scale_desc">Adjust vFlow\'s UI scale independently from the system display size.</string>
+    <string name="settings_app_scale_desc">Adjust vFlow\'s UI scale independently.</string>
     <string name="settings_appearance_changed">Appearance Changed</string>
     <string name="settings_appearance_restart_needed">App restart needed to apply the new appearance settings</string>
     <string name="settings_section_general">General Settings</string>
     <string name="settings_switch_progress_notification">Show Execution Progress Notification</string>
-    <string name="settings_switch_progress_notification_desc">Display a progress notification in the status bar when workflows run in the background.</string>
+    <string name="settings_switch_progress_notification_desc">Show workflow execution status in the status bar.</string>
     <string name="settings_switch_force_keep_alive">Force Keep Alive</string>
     <string name="settings_switch_force_keep_alive_desc">Experimental feature. Pulling down Quick Settings can trigger recovery; if Shizuku is available, it adds extra process guarding. May increase battery usage.</string>
     <string name="settings_module_config">Module Config</string>
     <string name="settings_module_config_desc">Configure runtime parameters for various modules.</string>
     <string name="settings_switch_allow_show_on_lock_screen">Allow on lock screen</string>
-    <string name="settings_switch_allow_show_on_lock_screen_desc">Allow module dialogs, quick view overlays, and similar surfaces to appear over the lock screen. </string>
+    <string name="settings_switch_allow_show_on_lock_screen_desc">Allow dialogs and similar surfaces to appear on the lock screen.</string>
     <string name="settings_switch_api_enabled">Enable Remote API</string>
     <string name="settings_switch_api_enabled_desc">Allow workflow access and control through LAN</string>
 
@@ -105,8 +105,13 @@
     <string name="settings_switch_enable_logging">Record Debug Logs</string>
     <string name="settings_switch_enable_logging_desc">When enabled, all app logs will be recorded in memory until the app is force stopped. Slightly increases memory usage.</string>
     <string name="settings_button_export_logs">Export Logs</string>
+    <string name="settings_button_export_logs_desc">Export the in-memory debug log buffer to a file.</string>
     <string name="settings_button_clear_logs">Clear Logs</string>
-
+    <string name="settings_button_clear_logs_desc">Clear the debug logs recorded in the current session.</string>
+    <string name="settings_button_run_diagnostic_desc">Run shell and permission diagnostics and display the result.</string>
+    <string name="settings_button_key_tester_desc">Test key listening and key event capture.</string>
+    <string name="settings_button_core_management_desc">Manage vFlow Core installation, startup, and status.</string>
+    <string name="settings_button_ui_inspector_desc">Launch the floating UI inspector to inspect view hierarchy.</string>
 
     <string name="settings_section_permissions">Permission Manager</string>
     <string name="settings_section_permissions_desc">View and manage all permissions required by the app.</string>
@@ -346,19 +351,28 @@
     <string name="toast_folder_name_empty">Folder name cannot be empty</string>
 
     <!-- Settings Screen -->
+    <string name="settings_search_placeholder">Search settings</string>
+    <string name="settings_search_clear">Clear search</string>
+    <string name="settings_search_no_results">No matching settings found</string>
+    <string name="settings_search_no_results_hint">Try a shorter keyword or a different phrase.</string>
     <string name="settings_update_download">Download Now</string>
     <string name="settings_update_available">New version available v%s</string>
+    <string name="settings_more_info">More info</string>
     <string name="settings_switch_background_service">Show Background Service Notification</string>
+    <string name="settings_switch_background_service_summary">Keeps background work more stable</string>
     <string name="settings_switch_background_service_desc">Shows a permanent notification in the status bar when running in the background. Disabling this may cause the background service to be killed by the system, affecting trigger stability.</string>
     <string name="trigger_service_notification_channel_name">Background Trigger Service</string>
     <string name="trigger_service_notification_title">vFlow Background Service</string>
     <string name="trigger_service_notification_text">Listening for automation triggers...</string>
     <string name="settings_switch_auto_enable_accessibility">Auto Enable Accessibility Service</string>
+    <string name="settings_switch_auto_enable_accessibility_summary">Restore it when the service stops unexpectedly</string>
     <string name="settings_switch_auto_enable_accessibility_desc">Automatically re-enables the accessibility service when it closes unexpectedly via Shizuku / Root. This feature requires Shizuku / Root permissions.</string>
+    <string name="settings_switch_force_keep_alive_summary">Adds extra recovery and guarding</string>
     <string name="settings_switch_enable_type_filter">Enable Variable Type Filter</string>
+    <string name="settings_switch_enable_type_filter_summary">Filter variables and operators by type</string>
     <string name="settings_switch_enable_type_filter_desc">When enabled, the variable picker filters variables by module input type, and IF/Loop module operators are also filtered by variable type. When disabled, it uses Shortcuts-style loose typing.</string>
     <string name="settings_switch_hide_from_recents">Hide from Recents</string>
-    <string name="settings_switch_hide_from_recents_desc">When enabled, the app will be hidden from the recent tasks list when in background.</string>
+    <string name="settings_switch_hide_from_recents_desc">When enabled, it will not appear in the recent tasks list.</string>
     <string name="settings_toast_hide_from_recents_enabled">Hidden from recents enabled</string>
     <string name="settings_toast_hide_from_recents_disabled">Hidden from recents disabled</string>
     <string name="settings_section_permissions_shell">Permissions &amp; Shell</string>
@@ -369,9 +383,10 @@
     <string name="settings_button_run_diagnostic">Run Key Diagnostic</string>
     <string name="settings_button_key_tester">Key Tester</string>
     <string name="settings_button_crash_reports">Crash Reports</string>
-    <string name="settings_button_crash_reports_desc">Browse local crash history and manually test crash capture</string>
+    <string name="settings_button_crash_reports_desc">Browse local crash history</string>
     <string name="settings_button_core_management">vFlow Core Management</string>
     <string name="settings_button_ui_inspector">UI Inspector</string>
+    <string name="settings_switch_enable_logging_summary">Keep logs in memory for debugging</string>
     <string name="settings_switch_keep_alive_unavailable">%1$s (Shizuku not active)</string>
     <string name="settings_switch_auto_accessibility_unavailable">Auto Enable Accessibility Service (Shizuku/Root not authorized)</string>
     <string name="settings_toast_shizuku_watcher_started">Shizuku watcher started</string>

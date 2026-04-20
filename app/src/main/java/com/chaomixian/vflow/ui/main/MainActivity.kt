@@ -8,6 +8,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.doOnLayout
 import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
@@ -37,6 +38,7 @@ import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.common.BaseActivity
+import com.chaomixian.vflow.ui.common.InsetAwareComposeContainer
 import com.chaomixian.vflow.ui.workflow_list.WorkflowListFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
@@ -380,6 +382,10 @@ class MainActivity : BaseActivity() {
                 }
                 view.clipToPadding = false
                 view.updatePadding(bottom = basePadding + scrollableBottomInsetPx)
+            }
+
+            is InsetAwareComposeContainer -> {
+                view.contentBottomInsetPx = scrollableBottomInsetPx
             }
 
             is ViewPager2 -> {

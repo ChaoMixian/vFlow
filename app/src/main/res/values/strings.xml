@@ -10,26 +10,26 @@
     <string name="title_settings">设置</string>
     <string name="settings_section_theme">外观</string>
     <string name="settings_switch_dynamic_color">动态取色</string>
-    <string name="settings_switch_dynamic_color_desc">基于您的壁纸颜色生成应用外观主题。</string>
+    <string name="settings_switch_dynamic_color_desc">基于壁纸颜色生成应用外观主题。</string>
     <string name="settings_switch_colorful_workflow_cards">多彩配色 (Beta)</string>
-    <string name="settings_switch_colorful_workflow_cards_desc">为工作流卡片启用图标和多彩背景。</string>
+    <string name="settings_switch_colorful_workflow_cards_desc">为工作流卡片启用多彩配色。</string>
     <string name="settings_switch_liquid_glass_nav_bar">液态玻璃导航栏</string>
-    <string name="settings_switch_liquid_glass_nav_bar_desc">使用液态玻璃风格浮动底栏替换主界面底部导航。</string>
+    <string name="settings_switch_liquid_glass_nav_bar_desc">使用液态玻璃风格浮动底栏。</string>
     <string name="settings_app_scale">缩放比例</string>
     <string name="settings_app_scale_default_value">100%%</string>
     <string name="settings_app_scale_value">%1$d%%</string>
-    <string name="settings_app_scale_desc">单独调整 vFlow 的界面缩放，不跟随系统显示缩放。</string>
+    <string name="settings_app_scale_desc">单独调整 vFlow 的界面缩放。</string>
     <string name="settings_appearance_changed">外观已更改</string>
     <string name="settings_appearance_restart_needed">需要重启应用以应用新的外观设置</string>
     <string name="settings_section_general">通用设置</string>
     <string name="settings_switch_progress_notification">显示执行进度通知</string>
-    <string name="settings_switch_progress_notification_desc">当工作流在后台执行时，在状态栏显示一个进度通知。</string>
+    <string name="settings_switch_progress_notification_desc">在状态栏显示工作流执行情况。</string>
     <string name="settings_switch_force_keep_alive">强制保活</string>
     <string name="settings_switch_force_keep_alive_desc">实验性功能。启用后可通过下拉通知栏触发恢复；若 Shizuku 可用，则提供额外进程守护。可能会增加耗电。</string>
     <string name="settings_module_config">模块配置</string>
     <string name="settings_module_config_desc">配置各个模块的运行参数。</string>
     <string name="settings_switch_allow_show_on_lock_screen">允许锁屏显示</string>
-    <string name="settings_switch_allow_show_on_lock_screen_desc">允许模块弹窗、快捷查看等覆盖层在锁屏界面显示。</string>
+    <string name="settings_switch_allow_show_on_lock_screen_desc">允许弹窗等在锁屏界面显示。</string>
     <string name="settings_switch_api_enabled">启用远程API</string>
     <string name="settings_switch_api_enabled_desc">允许通过局域网访问和控制工作流</string>
 
@@ -105,15 +105,20 @@
     <string name="settings_switch_enable_logging">记录调试日志</string>
     <string name="settings_switch_enable_logging_desc">开启后，应用的所有日志将被记录在内存中，直到应用被强制终止。这会略微增加内存占用。</string>
     <string name="settings_button_export_logs">导出日志</string>
+    <string name="settings_button_export_logs_desc">将当前内存中的调试日志导出到文件。</string>
     <string name="settings_button_clear_logs">清空日志</string>
-
+    <string name="settings_button_clear_logs_desc">清除当前会话中已记录的调试日志。</string>
+    <string name="settings_button_run_diagnostic_desc">执行 Shell 与权限环境诊断并显示结果。</string>
+    <string name="settings_button_key_tester_desc">测试按键监听与按键事件捕获。</string>
+    <string name="settings_button_core_management_desc">管理 vFlow Core 的安装、启动与状态。</string>
+    <string name="settings_button_ui_inspector_desc">启动悬浮 UI 检查器以查看界面结构。</string>
 
     <string name="settings_section_permissions">权限管理器</string>
     <string name="settings_section_permissions_desc">查看和管理应用运行所需的所有权限。</string>
     <string name="settings_permission_guardian">权限守护</string>
     <string name="settings_permission_guardian_desc">自动授权并守护关键权限</string>
     <string name="settings_section_about">关于</string>
-    <string name="settings_section_about_desc">查看应用版本、开源许可和开发者信息。</string>
+    <string name="settings_section_about_desc">查看应用版本、开源许可等信息。</string>
     <string name="about_version_label">版本 %s</string>
     <string name="about_developer_label">开发者</string>
     <string name="about_developer_name">ChaoMixian</string>
@@ -354,19 +359,28 @@
     <string name="toast_folder_name_empty">文件夹名称不能为空</string>
 
     <!-- Settings Screen -->
+    <string name="settings_search_placeholder">搜索设置</string>
+    <string name="settings_search_clear">清空搜索</string>
+    <string name="settings_search_no_results">没有找到相关设置</string>
+    <string name="settings_search_no_results_hint">试试更短的关键词，或换一个描述方式。</string>
     <string name="settings_update_download">前往下载</string>
     <string name="settings_update_available">发现新版本 v%s</string>
+    <string name="settings_more_info">更多信息</string>
     <string name="settings_switch_background_service">显示后台服务通知</string>
+    <string name="settings_switch_background_service_summary">保活更稳定</string>
     <string name="settings_switch_background_service_desc">在状态栏显示后台常驻通知。关闭此项可能会导致后台服务被系统杀掉，影响触发器稳定性。</string>
     <string name="trigger_service_notification_channel_name">后台触发器服务</string>
     <string name="trigger_service_notification_title">vFlow 后台服务</string>
     <string name="trigger_service_notification_text">正在监听自动化触发器...</string>
     <string name="settings_switch_auto_enable_accessibility">自动开启无障碍服务</string>
+    <string name="settings_switch_auto_enable_accessibility_summary">异常关闭时自动恢复</string>
     <string name="settings_switch_auto_enable_accessibility_desc">当服务意外关闭时，通过 Shizuku / Root 自动重新启用无障碍服务。此功能需要 Shizuku / Root权限。</string>
+    <string name="settings_switch_force_keep_alive_summary">提供额外恢复与守护</string>
     <string name="settings_switch_enable_type_filter">启用变量类型限制</string>
+    <string name="settings_switch_enable_type_filter_summary">按类型筛选变量与操作符</string>
     <string name="settings_switch_enable_type_filter_desc">开启后，变量选择器将按模块输入类型过滤变量，IF/循环模块的操作符也会按变量类型过滤。关闭时为快捷指令风格的弱类型模式。</string>
     <string name="settings_switch_hide_from_recents">从最近任务中隐藏</string>
-    <string name="settings_switch_hide_from_recents_desc">开启后，当应用在后台时，从最近任务列表中隐藏应用。</string>
+    <string name="settings_switch_hide_from_recents_desc">不出现在最近任务列表。</string>
     <string name="settings_toast_hide_from_recents_enabled">已开启从最近任务中隐藏</string>
     <string name="settings_toast_hide_from_recents_disabled">已关闭从最近任务中隐藏</string>
     <string name="settings_section_permissions_shell">权限与 Shell</string>
@@ -377,9 +391,10 @@
     <string name="settings_button_run_diagnostic">运行按键诊断</string>
     <string name="settings_button_key_tester">按键测试器</string>
     <string name="settings_button_crash_reports">崩溃报告</string>
-    <string name="settings_button_crash_reports_desc">查看本地历史崩溃记录，并手动测试崩溃采集</string>
+    <string name="settings_button_crash_reports_desc">查看本地历史崩溃记录</string>
     <string name="settings_button_core_management">vFlow Core 管理</string>
     <string name="settings_button_ui_inspector">UI 检查器</string>
+    <string name="settings_switch_enable_logging_summary">记录日志到内存，便于排查</string>
     <string name="settings_switch_keep_alive_unavailable">%1$s (Shizuku未激活)</string>
     <string name="settings_switch_auto_accessibility_unavailable">自动开启无障碍服务 (Shizuku/Root 未授权)</string>
     <string name="settings_toast_shizuku_watcher_started">Shizuku 守护已开启</string>

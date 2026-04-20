@@ -75,7 +75,7 @@ import com.chaomixian.vflow.speech.SherpaNcnnModelProgress
 import com.chaomixian.vflow.speech.SherpaNcnnModelSpec
 import com.chaomixian.vflow.speech.SherpaNcnnModelStage
 import com.chaomixian.vflow.ui.common.BaseActivity
-import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.launch
@@ -164,9 +164,7 @@ class ModuleConfigActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            MaterialTheme(
-                colorScheme = ThemeUtils.getAppColorScheme()
-            ) {
+            VFlowTheme {
                 ModuleConfigScreen(
                     initialSection = intent?.getStringExtra(EXTRA_INITIAL_SECTION),
                     onBack = { finish() }

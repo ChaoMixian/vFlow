@@ -56,6 +56,7 @@ import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.ui.common.BaseActivity
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import com.chaomixian.vflow.ui.main.MainActivity
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -65,7 +66,7 @@ class OnboardingActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            VFlowTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
