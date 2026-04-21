@@ -4,11 +4,11 @@ import android.content.Context
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 
-class TimeTriggerHandler : BaseTriggerHandler() {
+class IntervalTriggerHandler : BaseTriggerHandler() {
     private val scheduledTriggers = mutableListOf<TriggerSpec>()
 
     companion object {
-        private const val TAG = "TimeTriggerHandler"
+        private const val TAG = "IntervalTriggerHandler"
 
         fun rescheduleAlarm(context: Context, trigger: TriggerSpec) {
             AlarmTriggerScheduler.schedule(context, trigger)
@@ -17,7 +17,7 @@ class TimeTriggerHandler : BaseTriggerHandler() {
 
     override fun start(context: Context) {
         super.start(context)
-        DebugLogger.d(TAG, "TimeTriggerHandler 已启动。")
+        DebugLogger.d(TAG, "IntervalTriggerHandler 已启动。")
     }
 
     override fun addTrigger(context: Context, trigger: TriggerSpec) {

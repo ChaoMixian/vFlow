@@ -31,6 +31,7 @@ object TriggerHandlerRegistry {
         register(AppPackageTriggerModule().id) { AppPackageTriggerHandler() }
         register(ClipboardTriggerModule().id) { ClipboardTriggerHandler() }
         register(TimeTriggerModule().id) { TimeTriggerHandler() }
+        register(IntervalTriggerModule().id) { IntervalTriggerHandler() }
         register(BatteryTriggerModule().id) { BatteryTriggerHandler() }
         register(PowerTriggerModule().id) { PowerTriggerHandler() }
         register(ScreenTriggerModule().id) { ScreenTriggerHandler() }

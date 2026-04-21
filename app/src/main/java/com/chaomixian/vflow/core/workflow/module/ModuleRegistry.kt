@@ -72,6 +72,7 @@ object ModuleRegistry {
         register(KeyEventTriggerModule(), context)
         register(BackTapTriggerModule(), context)
         register(TimeTriggerModule(), context)
+        register(IntervalTriggerModule(), context)
         register(BatteryTriggerModule(), context)
         register(PowerTriggerModule(), context)
         register(ScreenTriggerModule(), context)

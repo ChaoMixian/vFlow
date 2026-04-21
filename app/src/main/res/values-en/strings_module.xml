@@ -357,6 +357,18 @@
     <string name="day_thursday">Thu</string>
     <string name="day_friday">Fri</string>
     <string name="day_saturday">Sat</string>
+    <string name="module_vflow_trigger_interval_name">Interval Trigger</string>
+    <string name="module_vflow_trigger_interval_desc">Repeat the workflow at a fixed time interval</string>
+    <string name="param_vflow_trigger_interval_value_name">Interval</string>
+    <string name="param_vflow_trigger_interval_unit_name">Interval Unit</string>
+    <string name="option_vflow_trigger_interval_unit_second">second</string>
+    <string name="option_vflow_trigger_interval_unit_minute">minute</string>
+    <string name="option_vflow_trigger_interval_unit_hour">hour</string>
+    <string name="option_vflow_trigger_interval_unit_day">day</string>
+    <string name="summary_vflow_trigger_interval_prefix">Every</string>
+    <string name="summary_vflow_trigger_interval_suffix"> trigger once</string>
+    <string name="error_vflow_trigger_interval_invalid">Interval must be greater than 0</string>
+    <string name="error_vflow_trigger_interval_invalid_unit">Invalid interval unit</string>
     <string name="msg_vflow_trigger_time_triggered">Timed task triggered</string>
 
     <!-- vflow.trigger.app_start - App Event Trigger -->

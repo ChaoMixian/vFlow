@@ -868,6 +868,7 @@
     <string name="text_friday">五</string>
     <string name="text_saturday">六</string>
     <string name="label_trigger_time">触发时间</string>
+    <string name="label_trigger_interval">触发间隔</string>
     <string name="button_select_time">选择时间</string>
     <string name="label_repeat">重复</string>
     <string name="label_template_image">模板图片</string>

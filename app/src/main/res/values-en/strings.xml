@@ -878,6 +878,7 @@
     <string name="text_friday">Fri</string>
     <string name="text_saturday">Sat</string>
     <string name="label_trigger_time">Trigger Time</string>
+    <string name="label_trigger_interval">Trigger Interval</string>
     <string name="button_select_time">Select Time</string>
     <string name="label_repeat">Repeat</string>
     <string name="label_template_image">Template Image</string>
