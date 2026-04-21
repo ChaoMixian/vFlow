@@ -33,6 +33,7 @@ class CoreManagementService : Service() {
 
     companion object {
         private const val TAG = "CoreManagementService"
+        const val PREF_CORE_MANUAL_STOP_REQUESTED = "core_manual_stop_requested"
 
         const val ACTION_START_CORE = "com.chaomixian.vflow.action.START_CORE"
         const val ACTION_STOP_CORE = "com.chaomixian.vflow.action.STOP_CORE"
@@ -58,6 +59,12 @@ class CoreManagementService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_CORE, ACTION_RESTART_CORE -> {
+                applicationContext
+                    .getSharedPreferences("vFlowPrefs", MODE_PRIVATE)
+                    .edit()
+                    .putBoolean(PREF_CORE_MANUAL_STOP_REQUESTED, false)
+                    .apply()
+
                 val forceRestart = intent.action == ACTION_RESTART_CORE ||
                         intent.getBooleanExtra(EXTRA_FORCE_RESTART, false)
 
@@ -89,6 +96,12 @@ class CoreManagementService : Service() {
                 }
             }
             ACTION_STOP_CORE -> {
+                applicationContext
+                    .getSharedPreferences("vFlowPrefs", MODE_PRIVATE)
+                    .edit()
+                    .putBoolean(PREF_CORE_MANUAL_STOP_REQUESTED, true)
+                    .apply()
+
                 serviceScope.launch {
                     CoreManager.stop(applicationContext)
                 }

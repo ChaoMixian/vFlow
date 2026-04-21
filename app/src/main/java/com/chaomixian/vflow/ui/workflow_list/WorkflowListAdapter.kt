@@ -28,6 +28,7 @@ class WorkflowListAdapter(
     private val onExportWorkflow: (Workflow) -> Unit,
     private val onExecuteWorkflow: (Workflow) -> Unit,
     private val onExecuteWorkflowDelayed: (Workflow, Long) -> Unit, // 延迟执行回调，delayMs 为延迟毫秒数
+    private val onToggleWorkflowEnabled: ((Workflow, Boolean) -> Unit)? = null,
     private val onAddShortcut: (Workflow) -> Unit,
     private val onFolderClick: (String) -> Unit, // 文件夹点击事件
     private val onFolderRename: (String) -> Unit, // 文件夹重命名事件
@@ -121,6 +122,7 @@ class WorkflowListAdapter(
                         onDelete = onDeleteWorkflow,
                         onExecute = onExecuteWorkflow,
                         onExecuteDelayed = onExecuteWorkflowDelayed,
+                        onToggleEnabled = onToggleWorkflowEnabled,
                         notifyItemChanged = { index -> this@WorkflowListAdapter.notifyItemChanged(index) }
                     )
                 )

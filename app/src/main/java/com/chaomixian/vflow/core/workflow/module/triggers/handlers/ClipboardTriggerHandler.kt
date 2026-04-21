@@ -78,9 +78,7 @@ class ClipboardTriggerHandler : ListeningTriggerHandler() {
                     continue
                 }
 
-                val connected = VFlowCoreBridge.connect(context)
-                if (!connected) {
-                    DebugLogger.w(TAG, "Core 剪贴板监听连接失败，稍后重试")
+                if (!VFlowCoreBridge.ping()) {
                     delay(2_000)
                     continue
                 }

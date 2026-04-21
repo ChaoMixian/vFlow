@@ -46,6 +46,8 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
     private val debounceHandler = Handler(Looper.getMainLooper())
     private var searchJob: Job? = null
     private var selectedPermissions = mutableSetOf<String>()
+    private val isTriggerPicker: Boolean
+        get() = arguments?.getBoolean("is_trigger_picker", false) ?: false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -89,8 +91,6 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
         recyclerView.visibility = View.GONE
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val isTriggerPicker = arguments?.getBoolean("is_trigger_picker", false) ?: false
-
             val categorizedModules = if (isTriggerPicker) {
                 ModuleRegistry.getModulesByCategory().filterKeys { it == ModuleCategories.TRIGGER }
             } else {
@@ -103,6 +103,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
             // 加载最近使用的模块，并作为第一个分类插入
             if (!isTriggerPicker) {
                 val recentModules = RecentModulesManager.getRecentModules(requireContext())
+                    .filter { it.metadata.getResolvedCategoryId() != ModuleCategories.TRIGGER }
                 if (recentModules.isNotEmpty()) {
                     localizedModules[""] = recentModules
                 }
@@ -201,8 +202,10 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
 
     private fun onModuleSelected(module: ActionModule) {
         // 保存到最近使用记录
-        lifecycleScope.launch(Dispatchers.IO) {
-            RecentModulesManager.addRecentModule(requireContext(), module.id)
+        if (!isTriggerPicker) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                RecentModulesManager.addRecentModule(requireContext(), module.id)
+            }
         }
 
         onActionSelected?.invoke(module)

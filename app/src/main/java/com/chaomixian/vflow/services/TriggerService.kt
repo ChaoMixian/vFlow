@@ -19,6 +19,7 @@ import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.TriggerExecutionCoordinator
 import com.chaomixian.vflow.core.workflow.WorkflowPermissionRecovery
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.model.Workflow
@@ -36,6 +37,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class TriggerService : Service() {
 
@@ -46,6 +49,7 @@ class TriggerService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     // Core 守护任务
     private var coreWatcherJob: Job? = null
+    private val workflowChangeMutex = Mutex()
 
 
     companion object {
@@ -90,7 +94,7 @@ class TriggerService : Service() {
         loadAllActiveTriggers()
         WorkflowPermissionRecovery.recoverEligibleWorkflows(applicationContext)
 
-        // 启动 Core 进程守护（双进程保活机制）
+        // 启动 Core 状态监控与保活处理
         startCoreWatcher()
 
         // 在服务创建时（如开机后）检查并应用启动设置
@@ -256,16 +260,50 @@ class TriggerService : Service() {
                     workflowManager.saveWorkflow(fixedWorkflow)
                 }
             } else {
-                DebugLogger.w(TAG, "工作流 '${newWorkflow.name}' 因缺少权限 (${missingPermissions.joinToString { it.name }}) 将被自动禁用。")
-                val disabledWorkflow = newWorkflow.copy(
-                    isEnabled = false,
-                    wasEnabledBeforePermissionsLost = true
-                )
-                workflowManager.saveWorkflow(disabledWorkflow)
+                DebugLogger.d(TAG, "工作流 '${newWorkflow.name}' 缺少权限，转入后台尝试恢复。")
+                serviceScope.launch {
+                    recoverWorkflowPermissionsAndApplyState(newWorkflow.id)
+                }
             }
         } else {
             DebugLogger.d(TAG, "工作流 '${newWorkflow.name}' 已被禁用，正在从处理器中移除。")
             newHandlers.forEach { (handler, trigger) -> handler.removeTrigger(this, trigger.triggerId) }
+        }
+    }
+
+    private suspend fun recoverWorkflowPermissionsAndApplyState(workflowId: String) {
+        workflowChangeMutex.withLock {
+            val latestWorkflow = workflowManager.getWorkflow(workflowId) ?: return
+            if (!latestWorkflow.isEnabled) return
+
+            val latestHandlers = getHandlersForWorkflow(latestWorkflow)
+            if (latestHandlers.isEmpty()) {
+                return
+            }
+
+            val remainingPermissions = TriggerExecutionCoordinator
+                .recoverMissingPermissions(this@TriggerService, latestWorkflow)
+
+            if (remainingPermissions.isEmpty()) {
+                DebugLogger.d(TAG, "权限恢复成功，正在向处理器添加/更新: ${latestWorkflow.name}")
+                latestHandlers.forEach { (handler, trigger) ->
+                    handler.addTrigger(this@TriggerService, trigger)
+                }
+                if (latestWorkflow.wasEnabledBeforePermissionsLost) {
+                    workflowManager.saveWorkflow(latestWorkflow.copy(wasEnabledBeforePermissionsLost = false))
+                }
+            } else {
+                DebugLogger.w(
+                    TAG,
+                    "工作流 '${latestWorkflow.name}' 因缺少权限 (${remainingPermissions.joinToString { it.name }}) 将被自动禁用。"
+                )
+                workflowManager.saveWorkflow(
+                    latestWorkflow.copy(
+                        isEnabled = false,
+                        wasEnabledBeforePermissionsLost = true
+                    )
+                )
+            }
         }
     }
 
@@ -301,19 +339,10 @@ class TriggerService : Service() {
     }
 
     /**
-     * 启动 Core 进程守护（双进程保活机制）
-     * 定期检查 Core 是否存活，如果被杀则自动重启
+     * 启动 Core 状态监控。
+     * 当允许保活时负责自动拉起；否则将依赖 Core 的工作流转入缺权限停用状态。
      */
     private fun startCoreWatcher() {
-        // 检查是否启用了双进程保活
-        val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
-        val mutualKeepAliveEnabled = prefs.getBoolean("mutual_keep_alive_enabled", true)
-
-        if (!mutualKeepAliveEnabled) {
-            DebugLogger.d(TAG, "双进程保活未启用，跳过 Core 守护")
-            return
-        }
-
         coreWatcherJob = serviceScope.launch {
             var restartAttempts = 0
             val maxRestartAttempts = 10
@@ -323,6 +352,18 @@ class TriggerService : Service() {
 
             while (!coroutineContext[Job]?.isCancelled!!) {
                 delay(checkInterval)
+
+                val prefs = getSharedPreferences("vFlowPrefs", Context.MODE_PRIVATE)
+                val manualStopRequested = prefs.getBoolean(CoreManagementService.PREF_CORE_MANUAL_STOP_REQUESTED, false)
+                val mutualKeepAliveEnabled = prefs.getBoolean("mutual_keep_alive_enabled", true)
+
+                if (manualStopRequested || !mutualKeepAliveEnabled) {
+                    if (!VFlowCoreBridge.ping()) {
+                        disableWorkflowsMissingCorePermissions()
+                    }
+                    restartAttempts = 0
+                    continue
+                }
 
                 // 检查 Core 是否存活
                 val isCoreAlive = VFlowCoreBridge.ping()
@@ -342,9 +383,11 @@ class TriggerService : Service() {
                             restartAttempts = 0 // 重置计数器
                         } else {
                             DebugLogger.e(TAG, "Core Watcher: Failed to restart Core ($restartAttempts/$maxRestartAttempts)")
+                            disableWorkflowsMissingCorePermissions()
                         }
                     } else {
                         DebugLogger.e(TAG, "Core Watcher: Max restart attempts reached, giving up")
+                        disableWorkflowsMissingCorePermissions()
                         break
                     }
                 } else {
@@ -352,6 +395,24 @@ class TriggerService : Service() {
                     restartAttempts = 0
                 }
             }
+        }
+    }
+
+    private fun disableWorkflowsMissingCorePermissions() {
+        val affectedWorkflows = workflowManager.getAllWorkflows().filter { workflow ->
+            workflow.isEnabled && PermissionManager.getMissingPermissions(this, workflow).any { permission ->
+                permission.id == PermissionManager.CORE.id || permission.id == PermissionManager.CORE_ROOT.id
+            }
+        }
+
+        affectedWorkflows.forEach { workflow ->
+            DebugLogger.w(TAG, "Core 不可用，暂停依赖 Core 的工作流: ${workflow.name}")
+            workflowManager.saveWorkflow(
+                workflow.copy(
+                    isEnabled = false,
+                    wasEnabledBeforePermissionsLost = true
+                )
+            )
         }
     }
 

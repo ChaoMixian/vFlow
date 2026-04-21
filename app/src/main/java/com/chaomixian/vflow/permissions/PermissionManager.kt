@@ -597,6 +597,23 @@ object PermissionManager {
         return strategy.isGranted(context, permission)
     }
 
+    private suspend fun waitForPermissionGrant(
+        context: Context,
+        permission: Permission,
+        timeoutMs: Long = 2_500L
+    ): Boolean {
+        if (isGranted(context, permission)) {
+            return true
+        }
+
+        return withTimeoutOrNull(timeoutMs) {
+            while (!isGranted(context, permission)) {
+                delay(100)
+            }
+            true
+        } == true
+    }
+
     /**
      * 获取特殊权限的请求 Intent（供 PermissionActivity 使用）。
      */
@@ -632,8 +649,11 @@ object PermissionManager {
         if (strategy != null) {
             val result = strategy.autoGrant(context)
             if (result) {
-                DebugLogger.d(TAG, "成功自动授予权限: ${permission.name}")
-                return true
+                if (waitForPermissionGrant(context, permission)) {
+                    DebugLogger.d(TAG, "成功自动授予权限: ${permission.name}")
+                    return true
+                }
+                DebugLogger.w(TAG, "自动授予命令已执行，但权限状态尚未确认: ${permission.name}")
             }
         }
 
@@ -670,11 +690,16 @@ object PermissionManager {
         }
 
         if (allGranted) {
-            DebugLogger.d(TAG, "成功自动授予权限: ${permission.name}")
-        } else {
-            DebugLogger.w(TAG, "自动授予权限失败: ${permission.name}")
+            val confirmed = waitForPermissionGrant(context, permission)
+            if (confirmed) {
+                DebugLogger.d(TAG, "成功自动授予权限: ${permission.name}")
+                return true
+            }
+            DebugLogger.w(TAG, "自动授予命令已执行，但权限状态尚未确认: ${permission.name}")
         }
-        return allGranted
+
+        DebugLogger.w(TAG, "自动授予权限失败: ${permission.name}")
+        return false
     }
 
 

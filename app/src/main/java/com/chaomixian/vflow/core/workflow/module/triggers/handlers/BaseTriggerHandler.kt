@@ -4,13 +4,14 @@ package com.chaomixian.vflow.core.workflow.module.triggers.handlers
 
 import android.content.Context
 import android.os.Parcelable
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.core.workflow.TriggerExecutionCoordinator
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 abstract class BaseTriggerHandler : ITriggerHandler {
 
@@ -30,11 +31,12 @@ abstract class BaseTriggerHandler : ITriggerHandler {
         trigger: TriggerSpec,
         triggerData: Parcelable? = null
     ) {
-        WorkflowExecutor.execute(
-            workflow = trigger.workflow,
-            context = context.applicationContext,
-            triggerData = triggerData,
-            triggerStepId = trigger.stepId
-        )
+        triggerScope.launch {
+            TriggerExecutionCoordinator.executeTrigger(
+                context = context,
+                trigger = trigger,
+                triggerData = triggerData
+            )
+        }
     }
 }

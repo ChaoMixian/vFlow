@@ -31,6 +31,15 @@ internal object LogMessageFormatter {
                     arrayOf(stepNumber, moduleName)
                 )
             }
+            LogMessageKey.TRIGGER_SKIPPED_MISSING_PERMISSIONS -> {
+                val permissionNames = resolved.args.getOrNull(0)
+                    ?.takeIf { it.isNotBlank() }
+                    ?: stringResolver(R.string.ui_inspector_unknown, emptyArray())
+                stringResolver(
+                    R.string.log_message_trigger_skipped_missing_permissions,
+                    arrayOf(permissionNames)
+                )
+            }
         }
     }
 

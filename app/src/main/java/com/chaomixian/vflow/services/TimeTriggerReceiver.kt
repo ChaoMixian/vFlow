@@ -4,7 +4,7 @@ package com.chaomixian.vflow.services
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.workflow.TriggerExecutionCoordinator
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.module.triggers.handlers.TimeTriggerHandler
@@ -38,13 +38,14 @@ class TimeTriggerReceiver : BroadcastReceiver() {
                     val triggerStep = workflow?.getTrigger(triggerStepId)
 
                     if (workflow != null && triggerStep != null && workflow.isEnabled) {
-                        WorkflowExecutor.execute(
-                            workflow = workflow,
-                            context = context.applicationContext,
-                            triggerStepId = triggerStep.id
+                        val appContext = context.applicationContext
+                        TriggerExecutionCoordinator.executeTrigger(
+                            context = appContext,
+                            trigger = TriggerSpec(workflow, triggerStep)
                         )
+
                         TimeTriggerHandler.rescheduleAlarm(
-                            context.applicationContext,
+                            appContext,
                             TriggerSpec(workflow, triggerStep)
                         )
                     }

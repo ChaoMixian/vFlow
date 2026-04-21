@@ -232,15 +232,16 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         if (hasAutoTriggers) {
             enabledSwitch.setOnCheckedChangeListener(null)
             enabledSwitch.isChecked = workflow.isEnabled
-            enabledSwitch.isEnabled = missingPermissions.isEmpty()
 
             enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
-                val updatedWorkflow = workflow.copy(
-                    isEnabled = isChecked,
-                    wasEnabledBeforePermissionsLost = false
-                )
-                workflowManager.saveWorkflow(updatedWorkflow)
-                updateWorkflowInList(workflowListRef, updatedWorkflow)
+                callbacks.onToggleEnabled?.invoke(workflow, isChecked) ?: run {
+                    val updatedWorkflow = workflow.copy(
+                        isEnabled = isChecked,
+                        wasEnabledBeforePermissionsLost = false
+                    )
+                    workflowManager.saveWorkflow(updatedWorkflow)
+                    updateWorkflowInList(workflowListRef, updatedWorkflow)
+                }
             }
         }
     }
@@ -369,6 +370,7 @@ class WorkflowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val onDelete: ((Workflow) -> Unit)? = null,
         val onExecute: ((Workflow) -> Unit)? = null,
         val onExecuteDelayed: ((Workflow, Long) -> Unit)? = null,
+        val onToggleEnabled: ((Workflow, Boolean) -> Unit)? = null,
         val notifyItemChanged: ((Int) -> Unit)? = null
     )
 }

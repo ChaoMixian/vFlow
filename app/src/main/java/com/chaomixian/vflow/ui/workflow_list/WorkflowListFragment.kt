@@ -32,6 +32,7 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.FolderManager
+import com.chaomixian.vflow.core.workflow.TriggerExecutionCoordinator
 import com.chaomixian.vflow.core.workflow.WorkflowBatchEnumMigrationPreview
 import com.chaomixian.vflow.core.workflow.WorkflowEnumMigration
 import com.chaomixian.vflow.core.workflow.WorkflowManager
@@ -308,15 +309,7 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
                                 ShortcutHelper.updateShortcuts(requireContext())
                                 loadData()
                             },
-                            onToggleEnabled = { workflow, enabled ->
-                                workflowManager.saveWorkflow(
-                                    workflow.copy(
-                                        isEnabled = enabled,
-                                        wasEnabledBeforePermissionsLost = false
-                                    )
-                                )
-                                loadData()
-                            },
+                            onToggleEnabled = ::toggleWorkflowEnabled,
                             onOpenWorkflow = { workflow ->
                                 val intent = Intent(
                                     requireContext(),
@@ -437,6 +430,7 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
 
     override fun onResume() {
         super.onResume()
+        workflowListViewModel.bumpExecutionStateVersion()
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             WorkflowPermissionRecovery.recoverEligibleWorkflows(requireContext())
             withContext(Dispatchers.Main) {
@@ -520,6 +514,57 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
             action = WorkflowsFloatPanelService.ACTION_SHOW
         }
         requireContext().startService(intent)
+    }
+
+    private fun toggleWorkflowEnabled(workflow: Workflow, enabled: Boolean) {
+        val appContext = requireContext().applicationContext
+        val updatedWorkflow = workflow.copy(
+            isEnabled = enabled,
+            wasEnabledBeforePermissionsLost = false
+        )
+
+        workflowManager.saveWorkflow(updatedWorkflow)
+        loadData()
+
+        if (!enabled || !workflow.hasAutoTriggers()) {
+            return
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val latestWorkflow = workflowManager.getWorkflow(workflow.id) ?: return@launch
+            val remainingPermissions = withContext(Dispatchers.IO) {
+                TriggerExecutionCoordinator.recoverMissingPermissions(
+                    appContext,
+                    latestWorkflow
+                )
+            }
+
+            if (remainingPermissions.isEmpty()) {
+                workflowListViewModel.bumpExecutionStateVersion()
+                return@launch
+            }
+
+            val currentWorkflow = workflowManager.getWorkflow(workflow.id) ?: return@launch
+            if (!currentWorkflow.isEnabled) {
+                return@launch
+            }
+
+            workflowManager.saveWorkflow(
+                currentWorkflow.copy(
+                    isEnabled = false,
+                    wasEnabledBeforePermissionsLost = true
+                )
+            )
+            loadData()
+
+            if (isAdded) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.toast_missing_permissions_cannot_enable_workflow),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 
     private fun loadData() {

@@ -350,18 +350,14 @@ fun WorkflowCard(
     val visualColors = remember(workflow.cardThemeColor) {
         WorkflowVisuals.resolveCardColors(context, workflow.cardThemeColor)
     }
-    val missingPermissions = remember(workflow, executionStateVersion) {
-        PermissionManager.getMissingPermissions(context, workflow)
-    }
-    val requiredPermissions = remember(workflow) {
-        workflow.allSteps
-            .mapNotNull { step -> ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step) }
-            .flatten()
-            .distinct()
-            .map { it.getLocalizedName(context) }
-    }
-    val isManualTrigger = remember(workflow) { workflow.hasManualTrigger() }
-    val hasAutoTriggers = remember(workflow) { workflow.hasAutoTriggers() }
+    val missingPermissions = PermissionManager.getMissingPermissions(context, workflow)
+    val requiredPermissions = workflow.allSteps
+        .mapNotNull { step -> ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step) }
+        .flatten()
+        .distinct()
+        .map { it.getLocalizedName(context) }
+    val isManualTrigger = workflow.hasManualTrigger()
+    val hasAutoTriggers = workflow.hasAutoTriggers()
     val isRunning = remember(workflow.id, executionStateVersion) {
         WorkflowExecutor.isRunning(workflow.id)
     }
@@ -545,7 +541,6 @@ fun WorkflowCard(
                 if (hasAutoTriggers) {
                     Switch(
                         checked = workflow.isEnabled,
-                        enabled = missingPermissions.isEmpty(),
                         onCheckedChange = onToggleEnabled
                     )
                 }

@@ -357,6 +357,7 @@
     <string name="toast_workflow_moved_to_folder">已将 \"%1$s\" 移动到 \"%2$s\"</string>
     <string name="toast_workflow_moved_out_of_folder">已将 \"%s\" 移出文件夹</string>
     <string name="toast_missing_permissions_cannot_execute">缺少权限，无法执行</string>
+    <string name="toast_missing_permissions_cannot_enable_workflow">缺少权限，无法启用工作流</string>
     <string name="toast_workflow_duplicated">工作流已复制</string>
     <string name="toast_folder_name_empty">文件夹名称不能为空</string>
 
@@ -715,6 +716,7 @@
     <string name="log_message_execution_completed">执行完成</string>
     <string name="log_message_execution_cancelled">执行已停止</string>
     <string name="log_message_execution_failed_at_step">在步骤 #%1$s (%2$s) 执行失败</string>
+    <string name="log_message_trigger_skipped_missing_permissions">触发器已命中，但因缺少权限未执行：%1$s</string>
     <string name="log_workflow_id">工作流ID: %1$s</string>
     <string name="folder_workflow_count">%1$d 个工作流</string>
     <string name="text_placeholder_dash">-</string>
