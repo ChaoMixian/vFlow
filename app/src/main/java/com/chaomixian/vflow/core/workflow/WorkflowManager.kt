@@ -6,6 +6,7 @@ import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.serialization.VObjectGsonAdapter
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.WorkflowReentryBehavior
 import com.chaomixian.vflow.core.workflow.module.triggers.AppStartTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.KeyEventTriggerModule
 import com.chaomixian.vflow.core.workflow.module.triggers.ReceiveShareTriggerModule
@@ -84,7 +85,8 @@ class WorkflowManager(val context: Context) {
             tags = normalizedVisualWorkflow.tags,
             triggers = normalizedVisualWorkflow.triggers,
             steps = normalizedVisualWorkflow.steps,
-            maxExecutionTime = normalizedVisualWorkflow.maxExecutionTime
+            maxExecutionTime = normalizedVisualWorkflow.maxExecutionTime,
+            reentryBehavior = normalizedVisualWorkflow.reentryBehavior
         )
 
         if (index != -1) {
@@ -237,7 +239,8 @@ class WorkflowManager(val context: Context) {
             author = record.getString("author") ?: "",
             homepage = record.getString("homepage") ?: "",
             tags = record.getStringList("tags") ?: emptyList(),
-            maxExecutionTime = record.getInt("maxExecutionTime")
+            maxExecutionTime = record.getInt("maxExecutionTime"),
+            reentryBehavior = WorkflowReentryBehavior.fromStoredValue(record.getString("reentryBehavior"))
         )
     }
 

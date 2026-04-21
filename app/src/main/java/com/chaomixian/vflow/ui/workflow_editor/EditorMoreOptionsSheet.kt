@@ -15,11 +15,30 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.WorkflowReentryBehavior
+import com.chaomixian.vflow.ui.common.VFlowTheme
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -59,6 +78,7 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
     private lateinit var layoutMaxExecutionTimeSlider: LinearLayout
     private lateinit var textMaxExecutionTimeValue: TextView
     private lateinit var sliderMaxExecutionTime: com.google.android.material.slider.Slider
+    private lateinit var reentryBehaviorComposeView: ComposeView
     private lateinit var layoutWorkflowVisuals: LinearLayout
     private lateinit var textColorfulWorkflowCardsDisabled: TextView
     private lateinit var cardVisualPreview: MaterialCardView
@@ -72,6 +92,7 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
 
     private var selectedIconRes: String = WorkflowVisuals.defaultIconResName()
     private var selectedThemeColor: String = WorkflowVisuals.defaultThemeColorHex()
+    private var selectedReentryBehavior by mutableStateOf(WorkflowReentryBehavior.BLOCK_NEW)
 
     private var isMoreMetadataExpanded = false
 
@@ -122,6 +143,7 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
         layoutMaxExecutionTimeSlider = view.findViewById(R.id.layout_max_execution_time_slider)
         textMaxExecutionTimeValue = view.findViewById(R.id.text_max_execution_time_value)
         sliderMaxExecutionTime = view.findViewById(R.id.slider_max_execution_time)
+        reentryBehaviorComposeView = view.findViewById(R.id.compose_reentry_behavior)
         layoutWorkflowVisuals = view.findViewById(R.id.layout_workflow_visuals)
         textColorfulWorkflowCardsDisabled = view.findViewById(R.id.text_colorful_workflow_cards_disabled)
         cardVisualPreview = view.findViewById(R.id.card_visual_preview)
@@ -131,10 +153,11 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
         textVisualPreviewColor = view.findViewById(R.id.text_visual_preview_color)
         textSelectedThemeColor = view.findViewById(R.id.text_selected_theme_color)
 
+        setupReentryBehaviorSelector()
         setupVisualPickers(view)
         val colorfulCardsEnabled = ThemeUtils.isColorfulWorkflowCardsEnabled(requireContext())
         layoutWorkflowVisuals.visibility = if (colorfulCardsEnabled) View.VISIBLE else View.GONE
-        textColorfulWorkflowCardsDisabled.visibility = if (colorfulCardsEnabled) View.GONE else View.VISIBLE
+        textColorfulWorkflowCardsDisabled.visibility = View.GONE
 
         val btnSaveMetadata = view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_metadata)
 
@@ -160,6 +183,7 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             editTags.setText(wf.tags.joinToString(", "))
             selectedIconRes = WorkflowVisuals.normalizeIconResName(wf.cardIconRes)
             selectedThemeColor = WorkflowVisuals.normalizeThemeColorHex(wf.cardThemeColor)
+            selectedReentryBehavior = wf.reentryBehavior
             iconPickerAdapter.setSelectedIcon(selectedIconRes)
             themeColorAdapter.setSelectedColor(selectedThemeColor)
             updateVisualPreview()
@@ -188,6 +212,7 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             updateMaxExecutionTimeValue(60)
             selectedIconRes = WorkflowVisuals.defaultIconResName()
             selectedThemeColor = WorkflowVisuals.defaultThemeColorHex()
+            selectedReentryBehavior = WorkflowReentryBehavior.BLOCK_NEW
             iconPickerAdapter.setSelectedIcon(selectedIconRes)
             themeColorAdapter.setSelectedColor(selectedThemeColor)
             updateVisualPreview()
@@ -228,6 +253,30 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
 
     private fun updateMaxExecutionTimeValue(seconds: Int) {
         textMaxExecutionTimeValue.text = getString(R.string.workflow_max_execution_time_value, seconds)
+    }
+
+    private fun setupReentryBehaviorSelector() {
+        reentryBehaviorComposeView.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        reentryBehaviorComposeView.setContent {
+            VFlowTheme {
+                ReentryBehaviorButtonGroup(
+                    selectedBehavior = selectedReentryBehavior,
+                    labelFor = ::getReentryBehaviorLabel,
+                    onBehaviorSelected = { selectedReentryBehavior = it }
+                )
+            }
+        }
+    }
+
+    private fun getReentryBehaviorLabel(behavior: WorkflowReentryBehavior): String {
+        val stringRes = when (behavior) {
+            WorkflowReentryBehavior.BLOCK_NEW -> R.string.workflow_reentry_behavior_block_new
+            WorkflowReentryBehavior.STOP_CURRENT_AND_RUN_NEW -> R.string.workflow_reentry_behavior_stop_current_and_run_new
+            WorkflowReentryBehavior.ALLOW_PARALLEL -> R.string.workflow_reentry_behavior_allow_parallel
+        }
+        return getString(stringRes)
     }
 
     private fun setupVisualPickers(view: View) {
@@ -310,6 +359,7 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             homepage = homepage,
             tags = tags,
             maxExecutionTime = maxExecutionTime,
+            reentryBehavior = selectedReentryBehavior,
             cardIconRes = selectedIconRes,
             cardThemeColor = selectedThemeColor
         )
@@ -324,5 +374,39 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
         val clip = ClipData.newPlainText(getString(R.string.clipboard_label_workflow_id), text)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(requireContext(), R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    private fun ReentryBehaviorButtonGroup(
+        selectedBehavior: WorkflowReentryBehavior,
+        labelFor: (WorkflowReentryBehavior) -> String,
+        onBehaviorSelected: (WorkflowReentryBehavior) -> Unit
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+        ) {
+            WorkflowReentryBehavior.values().forEachIndexed { index, behavior ->
+                ToggleButton(
+                    checked = selectedBehavior == behavior,
+                    onCheckedChange = { checked ->
+                        if (checked && selectedBehavior != behavior) {
+                            onBehaviorSelected(behavior)
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics { role = Role.RadioButton },
+                    shapes = when (index) {
+                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                        WorkflowReentryBehavior.values().lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                    }
+                ) {
+                    Text(labelFor(behavior))
+                }
+            }
+        }
     }
 }

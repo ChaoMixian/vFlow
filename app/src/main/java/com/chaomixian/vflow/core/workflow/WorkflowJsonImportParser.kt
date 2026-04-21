@@ -2,6 +2,7 @@ package com.chaomixian.vflow.core.workflow
 
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.model.WorkflowFolder
+import com.chaomixian.vflow.core.workflow.model.WorkflowReentryBehavior
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -82,7 +83,10 @@ class WorkflowJsonImportParser(
             description = workflow.description ?: "",
             author = workflow.author ?: "",
             homepage = workflow.homepage ?: "",
-            tags = workflow.tags ?: emptyList()
+            tags = workflow.tags ?: emptyList(),
+            reentryBehavior = WorkflowReentryBehavior.fromStoredValue(
+                workflow.reentryBehavior?.storedValue
+            )
         )
     }
 }

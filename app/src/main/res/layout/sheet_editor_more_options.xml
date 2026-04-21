@@ -376,6 +376,19 @@
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:visibility="gone" />
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/workflow_reentry_behavior_title"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/compose_reentry_behavior"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="12dp" />
+
                 <!-- 最大执行时长开关 -->
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_max_execution_time"

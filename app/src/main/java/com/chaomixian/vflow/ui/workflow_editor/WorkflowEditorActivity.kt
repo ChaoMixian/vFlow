@@ -88,6 +88,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
     // 跟踪当前正在执行的工作流 ID（包括未保存的工作流）
     private var currentlyExecutingWorkflowId: String? = null
+    private var currentlyExecutingExecutionInstanceId: String? = null
 
     private var listBeforeDrag: List<ActionStep>? = null
     private var dragStartPosition: Int = -1
@@ -119,12 +120,18 @@ class WorkflowEditorActivity : BaseActivity() {
             pendingExecutionWorkflow?.let {
                 // 记录正在执行的工作流 ID，以便正确跟踪状态
                 currentlyExecutingWorkflowId = it.id
+                currentlyExecutingExecutionInstanceId = null
                 toast(getString(R.string.editor_toast_execution_start, it.name))
-                WorkflowExecutor.execute(
+                val executionInstanceId = WorkflowExecutor.execute(
                     workflow = it,
                     context = this,
                     triggerStepId = it.manualTrigger()?.id
                 )
+                if (executionInstanceId.isBlank()) {
+                    currentlyExecutingWorkflowId = null
+                } else {
+                    currentlyExecutingExecutionInstanceId = executionInstanceId
+                }
             }
         }
         pendingExecutionWorkflow = null
@@ -277,6 +284,7 @@ class WorkflowEditorActivity : BaseActivity() {
                     updateExecuteButton(isRunning)
                     if (isRunning) {
                         currentlyExecutingWorkflowId = it.id
+                        currentlyExecutingExecutionInstanceId = null
                     }
                     initialWorkflowJson = gson.toJson(getCurrentWorkflowState())
                 }
@@ -333,19 +341,28 @@ class WorkflowEditorActivity : BaseActivity() {
                 // 只处理当前正在执行的工作流的状态
                 val executingId = currentlyExecutingWorkflowId ?: return@collectLatest
                 if (state.workflowId != executingId) return@collectLatest
+                val executingInstanceId = currentlyExecutingExecutionInstanceId
+                if (executingInstanceId != null && state.executionInstanceId != executingInstanceId) {
+                    return@collectLatest
+                }
 
                 when (state) {
                     is ExecutionState.Running -> {
+                        if (currentlyExecutingExecutionInstanceId == null) {
+                            currentlyExecutingExecutionInstanceId = state.executionInstanceId
+                        }
                         updateExecuteButton(true)
                         highlightStep(state.stepIndex)
                     }
                     is ExecutionState.Finished, is ExecutionState.Cancelled -> {
                         currentlyExecutingWorkflowId = null
+                        currentlyExecutingExecutionInstanceId = null
                         updateExecuteButton(false)
                         clearHighlight()
                     }
                     is ExecutionState.Failure -> {
                         currentlyExecutingWorkflowId = null
+                        currentlyExecutingExecutionInstanceId = null
                         updateExecuteButton(false)
                         highlightStepAsFailed(state.stepIndex)
                     }
@@ -568,12 +585,18 @@ class WorkflowEditorActivity : BaseActivity() {
         val missingPermissions = PermissionManager.getMissingPermissions(this, workflow)
         if (missingPermissions.isEmpty()) {
             currentlyExecutingWorkflowId = workflow.id
+            currentlyExecutingExecutionInstanceId = null
             toast(getString(R.string.editor_toast_execution_start, workflow.name))
-            WorkflowExecutor.execute(
+            val executionInstanceId = WorkflowExecutor.execute(
                 workflow = workflow,
                 context = this,
                 triggerStepId = workflow.manualTrigger()?.id
             )
+            if (executionInstanceId.isBlank()) {
+                currentlyExecutingWorkflowId = null
+            } else {
+                currentlyExecutingExecutionInstanceId = executionInstanceId
+            }
         } else {
             pendingExecutionWorkflow = workflow
             val intent = Intent(this, PermissionActivity::class.java).apply {

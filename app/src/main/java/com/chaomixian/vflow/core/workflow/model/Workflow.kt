@@ -28,7 +28,8 @@ data class Workflow(
     var author: String = "",
     var homepage: String = "",
     var tags: List<String> = emptyList(),
-    var maxExecutionTime: Int? = null
+    var maxExecutionTime: Int? = null,
+    var reentryBehavior: WorkflowReentryBehavior = WorkflowReentryBehavior.BLOCK_NEW
 ) : Parcelable {
     val allSteps: List<ActionStep>
         get() = triggers + steps

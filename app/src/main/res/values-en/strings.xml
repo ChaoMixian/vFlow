@@ -669,6 +669,11 @@
 
     <!-- Workflow Config -->
     <string name="workflow_config">Workflow Config</string>
+    <string name="workflow_reentry_behavior_title">When the workflow is triggered again</string>
+    <string name="workflow_reentry_behavior_description">When the workflow is triggered again</string>
+    <string name="workflow_reentry_behavior_block_new">Block</string>
+    <string name="workflow_reentry_behavior_stop_current_and_run_new">Override</string>
+    <string name="workflow_reentry_behavior_allow_parallel">Parallel</string>
     <string name="workflow_max_execution_time_enabled">Limit Max Execution Time</string>
     <string name="workflow_max_execution_time_value">%d seconds</string>
     <string name="copied_to_clipboard">Copied to clipboard</string>
@@ -727,6 +732,8 @@
     <string name="log_message_execution_cancelled">Execution stopped</string>
     <string name="log_message_execution_failed_at_step">Failed at step #%1$s (%2$s)</string>
     <string name="log_message_trigger_skipped_missing_permissions">Trigger matched, but execution was skipped due to missing permissions: %1$s</string>
+    <string name="log_message_reentry_blocked_new_execution">Workflow is already running, so this trigger was ignored</string>
+    <string name="log_message_reentry_stopped_running_execution">Current execution was stopped because the workflow was triggered again</string>
     <string name="log_workflow_id">Workflow ID: %1$s</string>
     <string name="folder_workflow_count">%1$d workflows</string>
     <string name="text_placeholder_dash">-</string>

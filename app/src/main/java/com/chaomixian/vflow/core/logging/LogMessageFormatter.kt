@@ -40,6 +40,12 @@ internal object LogMessageFormatter {
                     arrayOf(permissionNames)
                 )
             }
+            LogMessageKey.REENTRY_BLOCKED_NEW_EXECUTION -> {
+                stringResolver(R.string.log_message_reentry_blocked_new_execution, emptyArray())
+            }
+            LogMessageKey.REENTRY_STOPPED_RUNNING_EXECUTION -> {
+                stringResolver(R.string.log_message_reentry_stopped_running_execution, emptyArray())
+            }
         }
     }
 
@@ -53,6 +59,8 @@ internal object LogMessageFormatter {
             "执行完毕",
             "执行完成" -> ResolvedMessage(LogMessageKey.EXECUTION_COMPLETED)
             "执行已停止" -> ResolvedMessage(LogMessageKey.EXECUTION_CANCELLED)
+            "工作流正在执行，本次触发已忽略" -> ResolvedMessage(LogMessageKey.REENTRY_BLOCKED_NEW_EXECUTION)
+            "因再次触发，当前执行已停止" -> ResolvedMessage(LogMessageKey.REENTRY_STOPPED_RUNNING_EXECUTION)
             else -> {
                 val match = legacyFailurePattern.matchEntire(normalizedMessage)
                     ?: legacyFailurePatternCompact.matchEntire(normalizedMessage)

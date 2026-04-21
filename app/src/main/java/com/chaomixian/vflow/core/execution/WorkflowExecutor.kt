@@ -5,6 +5,10 @@ import android.content.Context
 import android.os.Parcelable
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.locale.LocaleManager
+import com.chaomixian.vflow.core.logging.LogEntry
+import com.chaomixian.vflow.core.logging.LogManager
+import com.chaomixian.vflow.core.logging.LogMessageKey
+import com.chaomixian.vflow.core.logging.LogStatus
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
@@ -19,6 +23,7 @@ import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.core.workflow.model.WorkflowReentryBehavior
 import com.chaomixian.vflow.core.workflow.module.logic.*
 import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ExecutionNotificationState
@@ -36,11 +41,18 @@ import com.chaomixian.vflow.core.logging.DebugLogger as GlobalDebugLogger
 
 object WorkflowExecutor {
 
+    private data class ActiveExecution(
+        val instanceId: String,
+        val job: Job
+    )
+
     private val executorScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     // 使用 ConcurrentHashMap 来安全地跟踪正在运行的工作流及其对应的 Job
-    private val runningWorkflows = ConcurrentHashMap<String, Job>()
+    private val runningWorkflows = ConcurrentHashMap<String, MutableList<ActiveExecution>>()
     // 用于标记工作流是否被 Stop 信号正常终止
     private val stoppedWorkflows = ConcurrentHashMap<String, Boolean>()
+    // 用于标记某次执行是否已通过失败分支完成收尾，避免 finally 再次广播结束态
+    private val failedExecutions = ConcurrentHashMap<String, Boolean>()
 
     // 用于存储每个正在运行的工作流的详细日志
     private val executionLogs = ConcurrentHashMap<String, StringBuilder>()
@@ -94,7 +106,7 @@ object WorkflowExecutor {
      * @return 如果正在运行，则返回 true。
      */
     fun isRunning(workflowId: String): Boolean {
-        return runningWorkflows.containsKey(workflowId)
+        return runningWorkflows[workflowId]?.isNotEmpty() == true
     }
 
     /**
@@ -102,8 +114,8 @@ object WorkflowExecutor {
      * @param workflowId 要停止的工作流的ID。
      */
     fun stopExecution(workflowId: String) {
-        runningWorkflows[workflowId]?.let {
-            it.cancel() // 取消 Coroutine Job
+        runningWorkflows[workflowId]?.toList()?.forEach {
+            it.job.cancel() // 取消 Coroutine Job
             // 这里无法直接使用本地 DebugLogger 记录到日志，因为不在协程上下文中
             GlobalDebugLogger.d("WorkflowExecutor", "工作流 '$workflowId' 已被用户手动停止。")
         }
@@ -120,36 +132,62 @@ object WorkflowExecutor {
         context: Context,
         triggerData: Parcelable? = null,
         triggerStepId: String? = null
-    ) {
-        // 如果工作流已在运行，则不允许重复执行
-        if (isRunning(workflow.id)) {
-            // 这里无法直接使用本地 DebugLogger 记录到日志，因为不在协程上下文中
-            GlobalDebugLogger.w("WorkflowExecutor", "工作流 '${workflow.name}' 已在运行，忽略新的执行请求。")
-            return
+    ): String {
+        when (workflow.reentryBehavior) {
+            WorkflowReentryBehavior.BLOCK_NEW -> {
+                if (isRunning(workflow.id)) {
+                    GlobalDebugLogger.w("WorkflowExecutor", "工作流 '${workflow.name}' 已在运行，忽略新的执行请求。")
+                    addReentryLog(workflow, LogMessageKey.REENTRY_BLOCKED_NEW_EXECUTION)
+                    return ""
+                }
+            }
+            WorkflowReentryBehavior.STOP_CURRENT_AND_RUN_NEW -> {
+                if (isRunning(workflow.id)) {
+                    GlobalDebugLogger.i("WorkflowExecutor", "工作流 '${workflow.name}' 再次触发，停止当前执行并启动新执行。")
+                    addReentryLog(workflow, LogMessageKey.REENTRY_STOPPED_RUNNING_EXECUTION)
+                    stopExecution(workflow.id)
+                }
+            }
+            WorkflowReentryBehavior.ALLOW_PARALLEL -> {
+                if (isRunning(workflow.id)) {
+                    GlobalDebugLogger.i("WorkflowExecutor", "工作流 '${workflow.name}' 再次触发，允许并行执行。")
+                }
+            }
         }
-        // 重置停止标记
-        stoppedWorkflows.remove(workflow.id)
-
-        // 初始化日志缓冲区
-        executionLogs[workflow.id] = StringBuilder().apply {
-            append("--- 开始执行: ${workflow.name} ---\n")
-            append("ID: ${workflow.id}\n")
-            if (triggerData != null) append("触发数据: $triggerData\n")
+        if (!isRunning(workflow.id)) {
+            stoppedWorkflows.remove(workflow.id)
+            executionLogs.remove(workflow.id)
         }
 
+        val logBuffer = executionLogs.getOrPut(workflow.id) { StringBuilder() }
+        synchronized(logBuffer) {
+            if (logBuffer.isNotEmpty()) {
+                logBuffer.append("\n")
+            }
+            logBuffer.append("--- 开始执行: ${workflow.name} ---\n")
+            logBuffer.append("ID: ${workflow.id}\n")
+            if (triggerData != null) logBuffer.append("触发数据: $triggerData\n")
+        }
+
+        val executionInstanceId = "${workflow.id}_${UUID.randomUUID()}"
         val job = executorScope.launch {
             // 将 workflow.id 注入到当前协程及其子协程的上下文中
             // 这样，在此作用域内调用的所有本地 DebugLogger 方法都能通过 ThreadLocal 获取到 ID
             withContext(currentRootWorkflowId.asContextElement(value = workflow.id)) {
 
                 // 广播开始执行的状态，初始索引为-1表示准备阶段
-                ExecutionStateBus.postState(ExecutionState.Running(workflow.id, -1))
+                ExecutionStateBus.postState(
+                    ExecutionState.Running(
+                        workflowId = workflow.id,
+                        executionInstanceId = executionInstanceId,
+                        stepIndex = -1
+                    )
+                )
                 DebugLogger.d("WorkflowExecutor", "开始执行主工作流: ${workflow.name} (ID: ${workflow.id})")
                 ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
 
                 // 创建本次执行的独立工作目录
-                val executionId = "${workflow.id}_${System.currentTimeMillis()}"
-                val workDir = File(StorageManager.tempDir, "exec_$executionId")
+                val workDir = File(StorageManager.tempDir, "exec_$executionInstanceId")
                 if (!workDir.exists()) workDir.mkdirs()
 
                 var isTimeout = false
@@ -183,7 +221,7 @@ object WorkflowExecutor {
                         try {
                             withTimeout(maxExecutionTime * 1000L) {
                                 seedTriggerOutputs(workflow, initialContext, triggerStepId)
-                                executeWorkflowInternal(workflow, initialContext)
+                                executeWorkflowInternal(workflow, initialContext, executionInstanceId)
                             }
                         } catch (e: TimeoutCancellationException) {
                             DebugLogger.e("WorkflowExecutor", "工作流执行超时（最大 ${maxExecutionTime} 秒）")
@@ -205,7 +243,7 @@ object WorkflowExecutor {
                         }
                     } else {
                         seedTriggerOutputs(workflow, initialContext, triggerStepId)
-                        executeWorkflowInternal(workflow, initialContext)
+                        executeWorkflowInternal(workflow, initialContext, executionInstanceId)
                     }
 
                     if (!isTimeout) {
@@ -237,25 +275,46 @@ object WorkflowExecutor {
                         }
 
                         // 广播最终状态
-                        val wasStopped = stoppedWorkflows[workflow.id] == true
+                        val wasStopped = stoppedWorkflows[executionInstanceId] == true
+                        val wasFailureHandled = failedExecutions.remove(executionInstanceId) == true
                         // 如果协程不再活跃且不是因为“停止工作流”模块导致的，则视为手动取消
                         val wasCancelled = isCoroutineCancelled && !wasStopped
 
                         val fullLog = executionLogs[workflow.id]?.toString() ?: ""
+                        val hasActiveExecutions = unregisterExecution(workflow.id, executionInstanceId)
+                        stoppedWorkflows.remove(executionInstanceId)
 
-                        if (runningWorkflows.containsKey(workflow.id)) {
-                            runningWorkflows.remove(workflow.id)
-                            stoppedWorkflows.remove(workflow.id)
+                        if (!hasActiveExecutions) {
                             executionLogs.remove(workflow.id)
+                        }
 
+                        if (!wasFailureHandled) {
                             if (isTimeout) {
                                 // 超时取消，广播 Cancelled 状态
-                                ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id, fullLog))
+                                ExecutionStateBus.postState(
+                                    ExecutionState.Cancelled(
+                                        workflowId = workflow.id,
+                                        executionInstanceId = executionInstanceId,
+                                        detailedLog = fullLog
+                                    )
+                                )
                             } else if (wasCancelled) {
-                                ExecutionStateBus.postState(ExecutionState.Cancelled(workflow.id, fullLog))
+                                ExecutionStateBus.postState(
+                                    ExecutionState.Cancelled(
+                                        workflowId = workflow.id,
+                                        executionInstanceId = executionInstanceId,
+                                        detailedLog = fullLog
+                                    )
+                                )
                             } else {
                                 // 正常结束或Stop信号都视为Finished
-                                ExecutionStateBus.postState(ExecutionState.Finished(workflow.id, fullLog))
+                                ExecutionStateBus.postState(
+                                    ExecutionState.Finished(
+                                        workflowId = workflow.id,
+                                        executionInstanceId = executionInstanceId,
+                                        detailedLog = fullLog
+                                    )
+                                )
                             }
                             DebugLogger.d("WorkflowExecutor", "主工作流 '${workflow.name}' 执行完毕。")
                         }
@@ -266,8 +325,8 @@ object WorkflowExecutor {
                 }
             }
         }
-        // 将 Job 实例存入 map
-        runningWorkflows[workflow.id] = job
+        registerExecution(workflow.id, executionInstanceId, job)
+        return executionInstanceId
     }
 
     /**
@@ -292,7 +351,7 @@ object WorkflowExecutor {
         seedTriggerOutputs(workflow, subWorkflowContext, workflow.manualTrigger()?.id)
 
         // 调用内部执行循环，获取返回值
-        val returnValue = executeWorkflowInternal(workflow, subWorkflowContext)
+        val returnValue = executeWorkflowInternal(workflow, subWorkflowContext, workflow.id)
 
         // 返回值 + 命名变量
         return SubWorkflowResult(
@@ -333,7 +392,11 @@ object WorkflowExecutor {
      * @param initialContext 初始执行上下文。
      * @return 子工作流的返回值，对于主工作流总是返回 null。
      */
-    private suspend fun executeWorkflowInternal(workflow: Workflow, initialContext: ExecutionContext): Any? {
+    private suspend fun executeWorkflowInternal(
+        workflow: Workflow,
+        initialContext: ExecutionContext,
+        executionInstanceId: String
+    ): Any? {
         val stepOutputs = initialContext.stepOutputs.toMutableMap()
         val namedVariables = initialContext.namedVariables
         val loopStack = initialContext.loopStack
@@ -379,7 +442,13 @@ object WorkflowExecutor {
             }
 
             // 广播当前执行步骤的索引
-            ExecutionStateBus.postState(ExecutionState.Running(workflow.id, pc))
+            ExecutionStateBus.postState(
+                ExecutionState.Running(
+                    workflowId = workflow.id,
+                    executionInstanceId = executionInstanceId,
+                    stepIndex = pc
+                )
+            )
 
             // 更新进度通知
             val progress = (pc * 100) / workflow.steps.size
@@ -571,12 +640,20 @@ object WorkflowExecutor {
                         // 获取完整日志并广播失败状态
                         val fullLog = executionLogs[initialContext.workflowStack.first()]?.toString() ?: ""
 
-                        runningWorkflows.remove(workflow.id)
-                        executionLogs.remove(workflow.id)
-                        stoppedWorkflows.remove(workflow.id)
-
-                        // 广播失败状态和索引
-                        ExecutionStateBus.postState(ExecutionState.Failure(workflow.id, pc, fullLog))
+                        val hasActiveExecutions = unregisterExecution(workflow.id, executionInstanceId)
+                        failedExecutions[executionInstanceId] = true
+                        stoppedWorkflows.remove(executionInstanceId)
+                        if (!hasActiveExecutions) {
+                            executionLogs.remove(workflow.id)
+                        }
+                        ExecutionStateBus.postState(
+                            ExecutionState.Failure(
+                                workflowId = workflow.id,
+                                executionInstanceId = executionInstanceId,
+                                stepIndex = pc,
+                                detailedLog = fullLog
+                            )
+                        )
                         return null
                     }
                 }
@@ -636,7 +713,7 @@ object WorkflowExecutor {
                         }
                         is ExecutionSignal.Stop -> {
                             DebugLogger.d("WorkflowExecutor", "接收到Stop信号，正常终止工作流。")
-                            stoppedWorkflows[workflow.id] = true
+                            stoppedWorkflows[executionInstanceId] = true
                             pc = workflow.steps.size // 设置pc越界以跳出主循环
                         }
                         // 处理 Return 信号
@@ -675,5 +752,35 @@ object WorkflowExecutor {
             DebugLogger.w("WorkflowExecutor", "生成默认输出时出错: ${e.message}")
         }
         return outputs
+    }
+
+    private fun registerExecution(workflowId: String, instanceId: String, job: Job) {
+        runningWorkflows.compute(workflowId) { _, existing ->
+            val executions = existing ?: mutableListOf()
+            executions.add(ActiveExecution(instanceId, job))
+            executions
+        }
+    }
+
+    private fun unregisterExecution(workflowId: String, instanceId: String): Boolean {
+        var hasRemaining = false
+        runningWorkflows.computeIfPresent(workflowId) { _, existing ->
+            existing.removeAll { it.instanceId == instanceId }
+            hasRemaining = existing.isNotEmpty()
+            if (existing.isEmpty()) null else existing
+        }
+        return hasRemaining
+    }
+
+    private fun addReentryLog(workflow: Workflow, messageKey: LogMessageKey) {
+        LogManager.addLog(
+            LogEntry(
+                workflowId = workflow.id,
+                workflowName = workflow.name,
+                timestamp = System.currentTimeMillis(),
+                status = LogStatus.CANCELLED,
+                messageKey = messageKey
+            )
+        )
     }
 }

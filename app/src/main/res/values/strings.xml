@@ -659,6 +659,11 @@
     <string name="workflow_card_icon">卡片图标</string>
     <string name="workflow_theme_color">主题色</string>
     <string name="workflow_theme_color_value">当前主题色：%1$s</string>
+    <string name="workflow_reentry_behavior_title">当工作流再次触发时</string>
+    <string name="workflow_reentry_behavior_description">当工作流再次触发时</string>
+    <string name="workflow_reentry_behavior_block_new">阻止</string>
+    <string name="workflow_reentry_behavior_stop_current_and_run_new">覆盖</string>
+    <string name="workflow_reentry_behavior_allow_parallel">并发</string>
     <string name="workflow_max_execution_time_enabled">限制最大执行时长</string>
     <string name="workflow_max_execution_time_value">%d 秒</string>
     <string name="copied_to_clipboard">已复制到剪贴板</string>
@@ -717,6 +722,8 @@
     <string name="log_message_execution_cancelled">执行已停止</string>
     <string name="log_message_execution_failed_at_step">在步骤 #%1$s (%2$s) 执行失败</string>
     <string name="log_message_trigger_skipped_missing_permissions">触发器已命中，但因缺少权限未执行：%1$s</string>
+    <string name="log_message_reentry_blocked_new_execution">工作流正在执行，本次触发已忽略</string>
+    <string name="log_message_reentry_stopped_running_execution">因再次触发，当前执行已停止</string>
     <string name="log_workflow_id">工作流ID: %1$s</string>
     <string name="folder_workflow_count">%1$d 个工作流</string>
     <string name="text_placeholder_dash">-</string>
