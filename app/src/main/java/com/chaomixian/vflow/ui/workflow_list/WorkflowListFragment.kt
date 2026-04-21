@@ -573,6 +573,7 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
 
     private fun loadData(showMigrationPrompt: Boolean) {
         loadDataJob?.cancel()
+        workflowListViewModel.setLoading(true)
         loadDataJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
             val workflows = workflowManager.getAllWorkflows()
             val folders = folderManager.getAllFolders()
@@ -615,8 +616,24 @@ class WorkflowListFragment : Fragment(), MainTopBarActionHandler {
             else -> folders
         }
         sortedFolders.forEach { folder ->
-            val count = workflows.count { it.folderId == folder.id }
-            items.add(WorkflowListItem.FolderItem(folder, count))
+            val folderWorkflows = workflows.filter { it.folderId == folder.id }
+            val searchableContent = folderWorkflows.joinToString(separator = "\n") { workflow ->
+                buildString {
+                    append(workflow.name)
+                    if (workflow.description.isNotBlank()) {
+                        append('\n')
+                        append(workflow.description)
+                    }
+                }
+            }
+            items.add(
+                WorkflowListItem.FolderItem(
+                    folder = folder,
+                    workflowCount = folderWorkflows.size,
+                    searchableContent = searchableContent,
+                    childWorkflows = folderWorkflows
+                )
+            )
         }
         val rootWorkflows = workflows.filter { it.folderId == null }
         val sortedWorkflows = when (workflowSortMode) {

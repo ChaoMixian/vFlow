@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.update
 
 data class WorkflowListUiState(
     val items: List<WorkflowListItem> = emptyList(),
+    val isLoading: Boolean = true,
     val executionStateVersion: Int = 0,
     val openFolder: WorkflowFolder? = null,
     val folderWorkflows: List<Workflow> = emptyList(),
@@ -21,7 +22,11 @@ class WorkflowListViewModel : ViewModel() {
     val uiState: StateFlow<WorkflowListUiState> = _uiState.asStateFlow()
 
     fun setItems(items: List<WorkflowListItem>) {
-        _uiState.update { it.copy(items = items) }
+        _uiState.update { it.copy(items = items, isLoading = false) }
+    }
+
+    fun setLoading(isLoading: Boolean) {
+        _uiState.update { it.copy(isLoading = isLoading) }
     }
 
     fun bumpExecutionStateVersion() {

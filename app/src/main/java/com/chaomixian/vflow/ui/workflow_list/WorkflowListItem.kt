@@ -15,7 +15,9 @@ sealed class WorkflowListItem {
 
     data class FolderItem(
         val folder: WorkflowFolder,
-        val workflowCount: Int = 0
+        val workflowCount: Int = 0,
+        val searchableContent: String = "",
+        val childWorkflows: List<Workflow> = emptyList()
     ) : WorkflowListItem() {
         override val id: String = folder.id
     }

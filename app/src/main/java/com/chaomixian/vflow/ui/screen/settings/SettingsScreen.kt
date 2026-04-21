@@ -3,7 +3,6 @@ package com.chaomixian.vflow.ui.screen.settings
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,14 +24,12 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
@@ -64,20 +61,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.ui.common.SearchBarCard
+import com.chaomixian.vflow.ui.common.SearchEmptyStateCard
+import com.chaomixian.vflow.ui.common.matchesSearch
+import com.chaomixian.vflow.ui.common.normalizeSearchQuery
 import com.chaomixian.vflow.ui.viewmodel.SettingsUiState
 import kotlin.math.roundToInt
 
@@ -291,16 +286,21 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            SearchChrome(
+            SearchBarCard(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
+                placeholderRes = R.string.settings_search_placeholder,
+                clearContentDescriptionRes = R.string.settings_search_clear,
                 onClearFocus = { focusManager.clearFocus() }
             )
         }
 
         if (!hasSearchResults) {
             item {
-                EmptySearchState()
+                SearchEmptyStateCard(
+                    titleRes = R.string.settings_search_no_results,
+                    hintRes = R.string.settings_search_no_results_hint
+                )
             }
         }
 
@@ -558,108 +558,6 @@ fun SettingsScreen(
                     onClick = actions.onOpenAbout
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun SearchChrome(
-    value: String,
-    onValueChange: (String) -> Unit,
-    onClearFocus: () -> Unit
-) {
-    val focusRequester = remember { FocusRequester() }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(focusRequester),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.titleMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(
-                    onDone = { onClearFocus() }
-                ),
-                decorationBox = { innerTextField ->
-                    if (value.isBlank()) {
-                        Text(
-                            text = stringResource(R.string.settings_search_placeholder),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    innerTextField()
-                }
-            )
-            if (value.isNotBlank()) {
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(
-                    modifier = Modifier.size(28.dp),
-                    onClick = {
-                        onValueChange("")
-                        onClearFocus()
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.settings_search_clear),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptySearchState() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.settings_search_no_results),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = stringResource(R.string.settings_search_no_results_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
@@ -1116,12 +1014,3 @@ private fun settingsItemShape(position: SettingsGroupPosition): RoundedCornerSha
             bottomEnd = 28.dp
         )
     }
-
-private fun normalizeSearchQuery(query: String): String = query.trim().lowercase()
-
-private fun matchesSearch(query: String, vararg values: String?): Boolean {
-    if (query.isBlank()) return true
-    return values.any { value ->
-        value?.lowercase()?.contains(query) == true
-    }
-}

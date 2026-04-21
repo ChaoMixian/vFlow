@@ -358,6 +358,11 @@
     <string name="settings_search_clear">Clear search</string>
     <string name="settings_search_no_results">No matching settings found</string>
     <string name="settings_search_no_results_hint">Try a shorter keyword or a different phrase.</string>
+    <string name="workflow_search_placeholder">Search workflows</string>
+    <string name="workflow_search_clear">Clear search</string>
+    <string name="workflow_search_no_results">No matching workflows found</string>
+    <string name="workflow_search_no_results_hint">Try a shorter keyword or a different phrase.</string>
+    <string name="workflow_empty_hint">Create a workflow or import an existing backup to get started.</string>
     <string name="settings_update_download">Download Now</string>
     <string name="settings_update_available">New version available v%s</string>
     <string name="settings_more_info">More info</string>

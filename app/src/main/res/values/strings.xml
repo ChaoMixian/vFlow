@@ -366,6 +366,11 @@
     <string name="settings_search_clear">清空搜索</string>
     <string name="settings_search_no_results">没有找到相关设置</string>
     <string name="settings_search_no_results_hint">试试更短的关键词，或换一个描述方式。</string>
+    <string name="workflow_search_placeholder">搜索工作流</string>
+    <string name="workflow_search_clear">清空搜索</string>
+    <string name="workflow_search_no_results">没有找到相关工作流</string>
+    <string name="workflow_search_no_results_hint">试试更短的关键词，或换一个描述方式。</string>
+    <string name="workflow_empty_hint">新建一个工作流，或者导入现有备份开始使用。</string>
     <string name="settings_update_download">前往下载</string>
     <string name="settings_update_available">发现新版本 v%s</string>
     <string name="settings_more_info">更多信息</string>
