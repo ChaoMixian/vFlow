@@ -53,13 +53,13 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.ui.common.ThemeUtils
-import com.chaomixian.vflow.ui.main.fragments.HomeFragment
 import com.chaomixian.vflow.ui.main.fragments.ModuleManagementFragment
 import com.chaomixian.vflow.ui.main.fragments.SettingsFragment
 import com.chaomixian.vflow.ui.main.glass.LiquidGlassBottomBar
 import com.chaomixian.vflow.ui.main.glass.LiquidGlassBottomBarItem
 import com.chaomixian.vflow.ui.main.navigation.MainRoute
 import com.chaomixian.vflow.ui.repository.RepositoryFragment
+import com.chaomixian.vflow.ui.screen.home.HomeScreen
 import com.chaomixian.vflow.ui.workflow_list.WorkflowListFragment
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -85,7 +85,7 @@ internal enum class MainTopLevelTab(
     SETTINGS("main_tab_settings", R.id.main_compose_fragment_container_settings, R.string.title_settings, R.drawable.rounded_settings_fill_24, R.drawable.rounded_settings_24);
 
     fun createFragment(): Fragment = when (this) {
-        HOME -> HomeFragment()
+        HOME -> error("HOME tab is rendered by Compose")
         WORKFLOWS -> WorkflowListFragment()
         MODULES -> ModuleManagementFragment()
         REPOSITORY -> RepositoryFragment()
@@ -115,6 +115,7 @@ interface MainTopBarActionHandler {
     fun onMainTopBarAction(action: WorkflowTopBarAction): Boolean
 }
 
+@androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
 internal fun MainActivityContent(
     isReady: Boolean,
@@ -149,6 +150,7 @@ internal fun MainActivityContent(
     }
 }
 
+@androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
 private fun MainScreen(
     isReady: Boolean,
@@ -226,6 +228,7 @@ private fun MainScreen(
         MainContentPager(
             isReady = isReady,
             pagerState = mainPagerState.pagerState,
+            selectedPage = mainPagerState.selectedPage,
             innerPadding = innerPadding,
             liquidGlassEnabled = liquidGlassEnabled,
             backdrop = backdrop,
@@ -479,10 +482,12 @@ private fun LiquidGlassBottomBarContainer(
     }
 }
 
+@androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
 private fun MainContentPager(
     isReady: Boolean,
     pagerState: PagerState,
+    selectedPage: Int,
     innerPadding: PaddingValues,
     liquidGlassEnabled: Boolean,
     backdrop: LayerBackdrop,
@@ -512,12 +517,21 @@ private fun MainContentPager(
         beyondViewportPageCount = MainTopLevelTab.entries.size - 1,
         userScrollEnabled = false,
     ) { page ->
-        MainTabFragmentPage(
-            tab = MainTopLevelTab.entries[page],
-            bottomInsetPx = bottomInsetPx,
-            shouldDisplay = page in loadedPages,
-            onDisplayTab = onDisplayTab,
-        )
+        val tab = MainTopLevelTab.entries[page]
+        if (tab == MainTopLevelTab.HOME) {
+            HomeScreen(
+                isActive = selectedPage == page,
+                bottomContentPadding = innerPadding.calculateBottomPadding(),
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            MainTabFragmentPage(
+                tab = tab,
+                bottomInsetPx = bottomInsetPx,
+                shouldDisplay = page in loadedPages,
+                onDisplayTab = onDisplayTab,
+            )
+        }
     }
 }
 

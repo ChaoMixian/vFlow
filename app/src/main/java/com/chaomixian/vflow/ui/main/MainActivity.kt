@@ -88,6 +88,7 @@ class MainActivity : BaseActivity() {
         }
 
     /** Activity 创建时的初始化。 */
+    @androidx.compose.material3.ExperimentalMaterial3Api
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -127,6 +128,7 @@ class MainActivity : BaseActivity() {
         super.onSaveInstanceState(outState)
     }
 
+    @androidx.compose.material3.ExperimentalMaterial3Api
     private fun initializeUiShell() {
         if (uiShellReady) return
         uiShellReady = true
