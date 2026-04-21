@@ -3,7 +3,6 @@ package com.chaomixian.vflow.data.repository.api
 
 import com.chaomixian.vflow.data.repository.model.RepoIndex
 import com.chaomixian.vflow.data.repository.model.RepoModuleIndex
-import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -163,13 +162,5 @@ object RepositoryApiClient {
         } catch (e: Exception) {
             Result.failure(IOException("下载模块失败: ${e.message}", e))
         }
-    }
-
-    /**
-     * 解析工作流JSON，忽略 _meta 字段
-     * 使用 Gson 的自定义反序列化来跳过未知字段
-     */
-    private fun parseWorkflowIgnoringMeta(json: String): Workflow {
-        return gson.fromJson(json, Workflow::class.java)
     }
 }

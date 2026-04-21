@@ -533,7 +533,7 @@
     <string name="dialog_enter_list_index_title">输入列表索引</string>
     <string name="dialog_select_property_title">选择 %s 的属性</string>
 
-    <!-- ModuleRepoFragment -->
+    <!-- Repository modules -->
     <string name="text_load_failed">加载失败: %s</string>
     <string name="toast_load_failed">加载失败: %s</string>
     <string name="dialog_download_module_title">下载模块</string>
@@ -613,7 +613,7 @@
     <string name="pose_trigger_record_empty">尚未采集到姿态数据，请重试</string>
     <string name="pose_trigger_gravity_record_empty">尚未采集到重力加速度数据，请重试</string>
 
-    <!-- WorkflowRepoFragment -->
+    <!-- Repository workflows -->
     <string name="text_no_workflows">暂无工作流</string>
     <string name="dialog_download_workflow_title">下载工作流</string>
     <string name="dialog_download_workflow_message">确定要下载 \'%s\' 吗？\n\n%s</string>
@@ -634,6 +634,8 @@
     <string name="editor_more_settings">更多设置</string>
     <string name="tab_workflows">工作流</string>
     <string name="tab_modules">模块</string>
+    <string name="tab_module_store">模块商店</string>
+    <string name="tab_local_modules">本地模块</string>
 
     <!-- Workflow Editor -->
     <string name="workflow_name_hint">工作流名称</string>
@@ -698,6 +700,8 @@
     <string name="label_module_details">模块详情</string>
     <string name="label_inputs">输入参数 </string>
     <string name="label_outputs">输出变量 </string>
+    <string name="label_version">版本</string>
+    <string name="label_permissions">权限</string>
     <string name="text_none">无</string>
     <string name="button_close">关闭</string>
     <string name="label_parameter_name">参数名称</string>

@@ -548,7 +548,7 @@
     <string name="dialog_enter_list_index_title">Enter list index</string>
     <string name="dialog_select_property_title">Select property of %s</string>
 
-    <!-- ModuleRepoFragment -->
+    <!-- Repository modules -->
     <string name="text_load_failed">Load failed: %s</string>
     <string name="toast_load_failed">Load failed: %s</string>
     <string name="dialog_download_module_title">Download Module</string>
@@ -628,7 +628,7 @@
     <string name="pose_trigger_record_empty">No pose data captured yet, please try again</string>
     <string name="pose_trigger_gravity_record_empty">No gravity data captured yet, please try again</string>
 
-    <!-- WorkflowRepoFragment -->
+    <!-- Repository workflows -->
     <string name="text_no_workflows">No workflows available</string>
     <string name="dialog_download_workflow_title">Download Workflow</string>
     <string name="dialog_download_workflow_message" formatted="false">Are you sure you want to download \'%s\'?\n\n%s</string>
@@ -649,6 +649,8 @@
     <string name="editor_more_settings">More settings</string>
     <string name="tab_workflows">Workflows</string>
     <string name="tab_modules">Modules</string>
+    <string name="tab_module_store">Module Store</string>
+    <string name="tab_local_modules">Local Modules</string>
 
     <!-- Workflow Editor -->
     <string name="workflow_name_hint">Workflow name</string>
@@ -708,6 +710,8 @@
     <string name="label_module_details">Module Details</string>
     <string name="label_inputs">Input Parameters</string>
     <string name="label_outputs">Output Variables</string>
+    <string name="label_version">Version</string>
+    <string name="label_permissions">Permissions</string>
     <string name="text_none">None</string>
     <string name="button_close">Close</string>
     <string name="label_parameter_name">Parameter Name</string>

@@ -58,7 +58,7 @@ import com.chaomixian.vflow.ui.main.fragments.SettingsFragment
 import com.chaomixian.vflow.ui.main.glass.LiquidGlassBottomBar
 import com.chaomixian.vflow.ui.main.glass.LiquidGlassBottomBarItem
 import com.chaomixian.vflow.ui.main.navigation.MainRoute
-import com.chaomixian.vflow.ui.repository.RepositoryFragment
+import com.chaomixian.vflow.ui.repository.RepositoryScreen
 import com.chaomixian.vflow.ui.screen.home.HomeScreen
 import com.chaomixian.vflow.ui.workflow_list.WorkflowListFragment
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -73,22 +73,21 @@ import androidx.compose.material.icons.rounded.Check
 
 internal enum class MainTopLevelTab(
     val fragmentTag: String,
-    val containerId: Int,
+    val containerId: Int?,
     val titleRes: Int,
     val selectedIconRes: Int,
     val unselectedIconRes: Int,
 ) {
-    HOME("main_tab_home", R.id.main_compose_fragment_container_home, R.string.title_home, R.drawable.rounded_home_fill_24, R.drawable.rounded_home_24),
+    HOME("main_tab_home", null, R.string.title_home, R.drawable.rounded_home_fill_24, R.drawable.rounded_home_24),
     WORKFLOWS("main_tab_workflows", R.id.main_compose_fragment_container_workflows, R.string.title_workflows, R.drawable.rounded_dashboard_fill_24, R.drawable.rounded_dashboard_24),
     MODULES("main_tab_modules", R.id.main_compose_fragment_container_modules, R.string.title_modules, R.drawable.rounded_sdk_fill_24, R.drawable.rounded_sdk_24),
-    REPOSITORY("main_tab_repository", R.id.main_compose_fragment_container_repository, R.string.title_repository, R.drawable.rounded_extension_fill_24, R.drawable.rounded_extension_24),
+    REPOSITORY("main_tab_repository", null, R.string.title_repository, R.drawable.rounded_extension_fill_24, R.drawable.rounded_extension_24),
     SETTINGS("main_tab_settings", R.id.main_compose_fragment_container_settings, R.string.title_settings, R.drawable.rounded_settings_fill_24, R.drawable.rounded_settings_24);
 
     fun createFragment(): Fragment = when (this) {
-        HOME -> error("HOME tab is rendered by Compose")
+        HOME, REPOSITORY -> error("$name tab is rendered by Compose")
         WORKFLOWS -> WorkflowListFragment()
         MODULES -> ModuleManagementFragment()
-        REPOSITORY -> RepositoryFragment()
         SETTINGS -> SettingsFragment()
     }
 }
@@ -518,14 +517,19 @@ private fun MainContentPager(
         userScrollEnabled = false,
     ) { page ->
         val tab = MainTopLevelTab.entries[page]
-        if (tab == MainTopLevelTab.HOME) {
-            HomeScreen(
+        when (tab) {
+            MainTopLevelTab.HOME -> HomeScreen(
                 isActive = selectedPage == page,
                 bottomContentPadding = innerPadding.calculateBottomPadding(),
                 modifier = Modifier.fillMaxSize(),
             )
-        } else {
-            MainTabFragmentPage(
+
+            MainTopLevelTab.REPOSITORY -> RepositoryScreen(
+                modifier = Modifier.fillMaxSize(),
+                bottomContentPadding = innerPadding.calculateBottomPadding(),
+            )
+
+            else -> MainTabFragmentPage(
                 tab = tab,
                 bottomInsetPx = bottomInsetPx,
                 shouldDisplay = page in loadedPages,
@@ -542,11 +546,14 @@ private fun MainTabFragmentPage(
     shouldDisplay: Boolean,
     onDisplayTab: (MainTopLevelTab, Int, Int) -> Unit,
 ) {
+    val containerId = requireNotNull(tab.containerId) {
+        "${tab.name} does not have a fragment container"
+    }
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
             FragmentContainerView(context).apply {
-                id = tab.containerId
+                id = containerId
             }
         },
         update = { container ->
