@@ -28,6 +28,8 @@
     <string name="settings_switch_force_keep_alive_desc">Experimental feature. Pulling down Quick Settings can trigger recovery; if Shizuku is available, it adds extra process guarding. May increase battery usage.</string>
     <string name="settings_module_config">Module Config</string>
     <string name="settings_module_config_desc">Configure runtime parameters for various modules.</string>
+    <string name="settings_switch_auto_check_updates">Auto-check updates</string>
+    <string name="settings_switch_auto_check_updates_desc">Automatically check for new versions when opening Settings.</string>
     <string name="settings_switch_allow_show_on_lock_screen">Allow on lock screen</string>
     <string name="settings_switch_allow_show_on_lock_screen_desc">Allow dialogs and similar surfaces to appear on the lock screen.</string>
     <string name="settings_switch_api_enabled">Enable Remote API</string>

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
@@ -83,6 +84,7 @@ data class SettingsScreenActions(
     val onSetAppScale: (Float) -> Unit,
     val onOpenLanguageDialog: () -> Unit,
     val onOpenModuleConfig: () -> Unit,
+    val onSetAutoCheckUpdatesEnabled: (Boolean) -> Unit,
     val onSetAllowShowOnLockScreen: (Boolean) -> Unit,
     val onSetApiEnabled: (Boolean) -> Unit,
     val onOpenApiSettings: () -> Unit,
@@ -160,6 +162,8 @@ fun SettingsScreen(
 
     val moduleConfigTitle = stringResource(R.string.settings_module_config)
     val moduleConfigSubtitle = stringResource(R.string.settings_module_config_desc)
+    val autoCheckUpdatesTitle = stringResource(R.string.settings_switch_auto_check_updates)
+    val autoCheckUpdatesSubtitle = stringResource(R.string.settings_switch_auto_check_updates_desc)
     val lockScreenTitle = stringResource(R.string.settings_switch_allow_show_on_lock_screen)
     val lockScreenSubtitle = stringResource(R.string.settings_switch_allow_show_on_lock_screen_desc)
     val apiEnabledTitle = stringResource(R.string.settings_switch_api_enabled)
@@ -240,6 +244,7 @@ fun SettingsScreen(
     val showGeneralSection = listOf(
         generalSectionTitle,
         moduleConfigTitle, moduleConfigSubtitle,
+        autoCheckUpdatesTitle, autoCheckUpdatesSubtitle,
         lockScreenTitle, lockScreenSubtitle,
         apiEnabledTitle, apiEnabledSubtitle,
         apiSettingsTitle, apiSettingsSubtitle, apiStatusValue,
@@ -379,6 +384,15 @@ fun SettingsScreen(
                     tone = paletteTone(),
                     position = SettingsGroupPosition.Top,
                     onClick = actions.onOpenModuleConfig
+                )
+                NativeSwitchRow(
+                    title = autoCheckUpdatesTitle,
+                    subtitle = autoCheckUpdatesSubtitle,
+                    icon = Icons.Default.SystemUpdate,
+                    tone = warmTone(),
+                    position = SettingsGroupPosition.Middle,
+                    checked = uiState.autoCheckUpdatesEnabled,
+                    onCheckedChange = actions.onSetAutoCheckUpdatesEnabled
                 )
                 NativeSwitchRow(
                     title = lockScreenTitle,

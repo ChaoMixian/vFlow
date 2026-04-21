@@ -136,6 +136,9 @@ class SettingsFragment : Fragment() {
                             onOpenModuleConfig = {
                                 startActivity(Intent(requireContext(), ModuleConfigActivity::class.java))
                             },
+                            onSetAutoCheckUpdatesEnabled = { enabled ->
+                                settingsViewModel.setAutoCheckUpdatesEnabled(requireContext(), enabled)
+                            },
                             onSetAllowShowOnLockScreen = { enabled ->
                                 settingsViewModel.setAllowShowOnLockScreen(requireContext(), enabled)
                             },

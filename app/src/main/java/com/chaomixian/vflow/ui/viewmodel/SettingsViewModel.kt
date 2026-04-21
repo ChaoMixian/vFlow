@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val updateInfo: UpdateInfo? = null,
+    val autoCheckUpdatesEnabled: Boolean = true,
     val currentLanguage: String = "",
     val dynamicColorEnabled: Boolean = false,
     val colorfulWorkflowCardsEnabled: Boolean = false,
@@ -47,8 +48,11 @@ class SettingsViewModel : ViewModel() {
 
     fun refresh(context: Context, refreshUpdateInfo: Boolean = false) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val autoCheckUpdatesEnabled = prefs.getBoolean(KEY_AUTO_CHECK_UPDATES_ENABLED, true)
         _uiState.update {
             it.copy(
+                updateInfo = if (autoCheckUpdatesEnabled) it.updateInfo else null,
+                autoCheckUpdatesEnabled = autoCheckUpdatesEnabled,
                 currentLanguage = LocaleManager.getLanguageDisplayName(
                     LocaleManager.getLanguage(context)
                 ),
@@ -79,7 +83,7 @@ class SettingsViewModel : ViewModel() {
             )
         }
 
-        if (!refreshUpdateInfo) {
+        if (!refreshUpdateInfo || !autoCheckUpdatesEnabled) {
             return
         }
 
@@ -166,6 +170,19 @@ class SettingsViewModel : ViewModel() {
         _uiState.update { it.copy(defaultShellMode = mode) }
     }
 
+    fun setAutoCheckUpdatesEnabled(context: Context, enabled: Boolean) = editPref(context) {
+        putBoolean(KEY_AUTO_CHECK_UPDATES_ENABLED, enabled)
+        _uiState.update {
+            it.copy(
+                autoCheckUpdatesEnabled = enabled,
+                updateInfo = if (enabled) it.updateInfo else null
+            )
+        }
+        if (enabled) {
+            refresh(context, refreshUpdateInfo = true)
+        }
+    }
+
     fun setLoggingEnabled(context: Context, enabled: Boolean) {
         DebugLogger.setLoggingEnabled(enabled, context)
         _uiState.update { it.copy(loggingEnabled = enabled) }
@@ -183,6 +200,7 @@ class SettingsViewModel : ViewModel() {
     private companion object {
         private const val PREFS_NAME = "vFlowPrefs"
         private const val DEFAULT_SHELL_MODE = "shizuku"
+        private const val KEY_AUTO_CHECK_UPDATES_ENABLED = "autoCheckUpdatesEnabled"
         private const val KEY_DYNAMIC_COLOR_ENABLED = "dynamicColorEnabled"
         private const val KEY_PROGRESS_NOTIFICATION_ENABLED = "progressNotificationEnabled"
         private const val KEY_BACKGROUND_SERVICE_NOTIFICATION_ENABLED =
