@@ -356,9 +356,7 @@ private fun ProviderDetailScreen(
         baseUrl = providerConfig.baseUrl
         systemPrompt = providerConfig.systemPrompt
         temperature = providerConfig.temperature
-        advancedExpanded = providerConfig.baseUrl != providerConfig.providerEnum.defaultBaseUrl ||
-            providerConfig.systemPrompt != ChatPresetConfig.DEFAULT_SYSTEM_PROMPT ||
-            providerConfig.temperature != 0.7
+        advancedExpanded = false
     }
 
     if (editingPresetId != null) {
@@ -910,7 +908,6 @@ private fun AddProviderDialog(
 ) {
     val choices = addableProviderChoices()
     var selectedProvider by remember { mutableStateOf(choices.first()) }
-    var expanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -918,11 +915,15 @@ private fun AddProviderDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SettingsSectionHeader(text = stringResource(R.string.model_config_provider_type))
-                Box(modifier = Modifier.fillMaxWidth()) {
+                choices.forEach { choice ->
                     Surface(
-                        onClick = { expanded = true },
+                        onClick = { selectedProvider = choice },
                         shape = RoundedCornerShape(22.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        color = if (choice == selectedProvider) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        },
                         tonalElevation = 0.dp,
                     ) {
                         Row(
@@ -933,57 +934,21 @@ private fun AddProviderDialog(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             ProviderBadge(
-                                provider = selectedProvider.provider,
+                                provider = choice.provider,
                                 size = 28.dp,
                                 textStyle = MaterialTheme.typography.labelLarge,
                             )
                             Text(
-                                text = selectedProvider.label,
+                                text = choice.label,
                                 modifier = Modifier.weight(1f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleMedium,
                             )
-                        }
-                    }
-
-                    DropdownMenuPopup(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                    ) {
-                        DropdownMenuGroup(
-                            shapes = MenuDefaults.groupShape(index = 0, count = 1),
-                            containerColor = MenuDefaults.groupStandardContainerColor,
-                        ) {
-                            choices.forEachIndexed { index, choice ->
-                                DropdownMenuItem(
-                                    selected = choice == selectedProvider,
-                                    text = {
-                                        Text(
-                                            text = choice.label,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        ProviderBadge(
-                                            provider = choice.provider,
-                                            size = 28.dp,
-                                            textStyle = MaterialTheme.typography.labelLarge,
-                                        )
-                                    },
-                                    selectedLeadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        selectedProvider = choice
-                                        expanded = false
-                                    },
-                                    shapes = MenuDefaults.itemShape(index = index, count = choices.size),
-                                    colors = MenuDefaults.selectableItemColors(),
+                            if (choice == selectedProvider) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
                                 )
                             }
                         }

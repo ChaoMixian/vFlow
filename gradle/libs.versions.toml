@@ -19,6 +19,7 @@ navigation3 = "1.1.0"
 backdrop = "1.0.6"
 reorderable = "3.0.0"
 foundationLayout = "1.10.6"
+multiplatform-markdown-renderer = "0.39.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,6 +39,9 @@ backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 opencv = { group = "org.opencv", name = "opencv", version.ref = "opencv" }
 androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
+multiplatform-markdown-renderer-android = { module = "com.mikepenz:multiplatform-markdown-renderer-android", version.ref = "multiplatform-markdown-renderer" }
+multiplatform-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatform-markdown-renderer" }
+multiplatform-markdown-renderer-code = { module = "com.mikepenz:multiplatform-markdown-renderer-code", version.ref = "multiplatform-markdown-renderer" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

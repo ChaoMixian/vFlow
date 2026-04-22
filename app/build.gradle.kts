@@ -137,6 +137,11 @@ dependencies {
     // 扩展图标库
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Markdown 渲染
+    implementation(libs.multiplatform.markdown.renderer.android)
+    implementation(libs.multiplatform.markdown.renderer.m3)
+    implementation(libs.multiplatform.markdown.renderer.code)
+
     // 核心 UI 库
     implementation("androidx.core:core-ktx:1.18.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
