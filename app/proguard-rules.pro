@@ -179,3 +179,15 @@
 # 26. Sherpa-ncnn JNI 通过固定字段名读取 Kotlin 配置对象
 # release 混淆改名后会在 GetObjectField 时出现 fid == null
 -keep class com.k2fsa.sherpa.ncnn.** { *; }
+
+# 27. Netty / Reactor / Lettuce 可选依赖 (Android 不需要)
+-dontwarn io.netty.util.internal.logging.Log4J**
+-dontwarn io.netty.util.internal.logging.Log4J2**
+-dontwarn io.netty.util.internal.Hidden$NettyBlockHoundIntegration
+-dontwarn reactor.util.context.ReactorContextAccessor
+-dontwarn io.micrometer.context.**
+-dontwarn io.lettuce.core.support.LettuceCdiExtension
+-dontwarn javax.enterprise.inject.spi.**
+-dontwarn reactor.blockhound.integration.**
+-dontwarn org.apache.log4j.**
+-dontwarn org.apache.logging.log4j.**
