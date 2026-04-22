@@ -4,7 +4,7 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.model.WorkflowFolder
 
 /**
- * 密封类用于统一 WorkflowListAdapter 中的工作流和文件夹项
+ * 工作流列表页使用的列表项模型
  */
 sealed class WorkflowListItem {
     abstract val id: String

@@ -1,4 +1,4 @@
-package com.chaomixian.vflow.ui.screen.settings
+package com.chaomixian.vflow.ui.settings
 
 import android.os.Build
 import androidx.compose.foundation.background

@@ -6,8 +6,10 @@
     <string name="title_home">首页</string>
     <string name="title_workflows">工作流</string>
     <string name="title_modules">模块</string>
+    <string name="title_chat">对话</string>
     <string name="title_repository">仓库</string>
     <string name="title_settings">设置</string>
+    <string name="chat_placeholder_message">AI 对话功能即将加入。</string>
     <string name="settings_section_theme">外观</string>
     <string name="settings_switch_dynamic_color">动态取色</string>
     <string name="settings_switch_dynamic_color_desc">基于壁纸颜色生成应用外观主题。</string>
@@ -151,6 +153,8 @@
     <string name="workflow_item_menu_delete">删除</string>
     <string name="workflow_item_menu_add_to_tile">添加到控制中心</string>
     <string name="tile_selection_title">选择Tile位置</string>
+    <string name="tile_selection_hint">点击选择 Tile 位置，已分配的会显示工作流名称。</string>
+    <string name="tile_label">Tile %1$d</string>
     <string name="tile_empty">未分配</string>
     <string name="tile_added">已添加到Tile %1$d</string>
     <string name="tile_removed">已从Tile %1$d移除</string>
@@ -461,7 +465,7 @@
     <!-- Permission Activity -->
     <string name="permission_toast_shizuku_not_started">Shizuku 未启动，请先启动 Shizuku 服务</string>
 
-    <!-- WorkflowListFragment -->
+    <!-- Workflow List -->
     <string name="toast_overlay_permission_required">需要悬浮窗权限才能显示快速控制面板</string>
     <string name="toast_export_success">导出成功</string>
     <string name="toast_export_failed">导出失败: %s</string>
@@ -485,7 +489,7 @@
     <string name="toast_workflow_imported_name">%s (导入)</string>
     <string name="toast_workflow_imported_as_copy">\'%s\' 已作为副本导入</string>
 
-    <!-- ModuleManagementFragment -->
+    <!-- Module Management -->
     <string name="dialog_module_exists_title">模块已存在</string>
     <string name="dialog_module_exists_message">检测到 ID 为 \"%s\" 的模块已存在。\n\n是否覆盖安装？</string>
     <string name="dialog_module_dependency_title">存在依赖关系</string>

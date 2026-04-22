@@ -1,4 +1,4 @@
-package com.chaomixian.vflow.ui.screen.home
+package com.chaomixian.vflow.ui.home
 
 import android.app.Activity
 import android.content.Context

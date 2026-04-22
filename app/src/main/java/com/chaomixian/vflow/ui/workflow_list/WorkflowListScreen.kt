@@ -1,4 +1,4 @@
-package com.chaomixian.vflow.ui.screen.workflow
+package com.chaomixian.vflow.ui.workflow_list
 
 import android.os.SystemClock
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -190,17 +190,24 @@ fun WorkflowListScreen(
         }
     }
 
+    val reorderableContentStartIndex = 1
     val reorderableState = rememberReorderableLazyListState(
         lazyListState = lazyListState,
         scrollThresholdPadding = PaddingValues(
             bottom = extraBottomPadding + 88.dp
         )
     ) { from, to ->
-        val fromItem = displayItems.getOrNull(from.index)
-        val toItem = displayItems.getOrNull(to.index)
+        val fromDataIndex = from.index - reorderableContentStartIndex
+        val toDataIndex = to.index - reorderableContentStartIndex
+        if (fromDataIndex !in displayItems.indices || toDataIndex !in displayItems.indices) {
+            return@rememberReorderableLazyListState
+        }
+
+        val fromItem = displayItems[fromDataIndex]
+        val toItem = displayItems[toDataIndex]
         if (fromItem is WorkflowListItem.WorkflowItem && toItem is WorkflowListItem.WorkflowItem) {
-            displayItems.removeAt(from.index)
-            displayItems.add(to.index, fromItem)
+            displayItems.removeAt(fromDataIndex)
+            displayItems.add(toDataIndex, fromItem)
         }
     }
 

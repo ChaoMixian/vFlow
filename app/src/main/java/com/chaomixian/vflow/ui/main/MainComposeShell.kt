@@ -44,23 +44,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentContainerView
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.ui.chat.ChatScreen
 import com.chaomixian.vflow.ui.common.ThemeUtils
-import com.chaomixian.vflow.ui.main.fragments.ModuleManagementFragment
-import com.chaomixian.vflow.ui.main.fragments.SettingsFragment
+import com.chaomixian.vflow.ui.home.HomeScreen
 import com.chaomixian.vflow.ui.main.glass.LiquidGlassBottomBar
 import com.chaomixian.vflow.ui.main.glass.LiquidGlassBottomBarItem
 import com.chaomixian.vflow.ui.main.navigation.MainRoute
 import com.chaomixian.vflow.ui.repository.RepositoryScreen
-import com.chaomixian.vflow.ui.screen.home.HomeScreen
-import com.chaomixian.vflow.ui.workflow_list.WorkflowListFragment
+import com.chaomixian.vflow.ui.settings.SettingsRoute
+import com.chaomixian.vflow.ui.workflow_list.WorkflowListRoute
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -73,23 +70,15 @@ import androidx.compose.material.icons.rounded.Check
 
 internal enum class MainTopLevelTab(
     val fragmentTag: String,
-    val containerId: Int?,
     val titleRes: Int,
     val selectedIconRes: Int,
     val unselectedIconRes: Int,
 ) {
-    HOME("main_tab_home", null, R.string.title_home, R.drawable.rounded_home_fill_24, R.drawable.rounded_home_24),
-    WORKFLOWS("main_tab_workflows", R.id.main_compose_fragment_container_workflows, R.string.title_workflows, R.drawable.rounded_dashboard_fill_24, R.drawable.rounded_dashboard_24),
-    MODULES("main_tab_modules", R.id.main_compose_fragment_container_modules, R.string.title_modules, R.drawable.rounded_sdk_fill_24, R.drawable.rounded_sdk_24),
-    REPOSITORY("main_tab_repository", null, R.string.title_repository, R.drawable.rounded_extension_fill_24, R.drawable.rounded_extension_24),
-    SETTINGS("main_tab_settings", R.id.main_compose_fragment_container_settings, R.string.title_settings, R.drawable.rounded_settings_fill_24, R.drawable.rounded_settings_24);
-
-    fun createFragment(): Fragment = when (this) {
-        HOME, REPOSITORY -> error("$name tab is rendered by Compose")
-        WORKFLOWS -> WorkflowListFragment()
-        MODULES -> ModuleManagementFragment()
-        SETTINGS -> SettingsFragment()
-    }
+    HOME("main_tab_home", R.string.title_home, R.drawable.rounded_home_fill_24, R.drawable.rounded_home_24),
+    WORKFLOWS("main_tab_workflows", R.string.title_workflows, R.drawable.rounded_dashboard_fill_24, R.drawable.rounded_dashboard_24),
+    CHAT("main_tab_chat", R.string.title_chat, R.drawable.rounded_star_shine_fill_24, R.drawable.rounded_star_shine_24),
+    REPOSITORY("main_tab_repository", R.string.title_repository, R.drawable.rounded_sdk_fill_24, R.drawable.rounded_sdk_24),
+    SETTINGS("main_tab_settings", R.string.title_settings, R.drawable.rounded_settings_fill_24, R.drawable.rounded_settings_24);
 }
 
 enum class WorkflowTopBarAction {
@@ -110,21 +99,16 @@ enum class WorkflowSortMode {
     FavoritesFirst,
 }
 
-interface MainTopBarActionHandler {
-    fun onMainTopBarAction(action: WorkflowTopBarAction): Boolean
-}
-
 @androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
 internal fun MainActivityContent(
     isReady: Boolean,
     liquidGlassNavBarEnabled: Boolean,
+    activity: MainActivity,
     initialTab: MainTopLevelTab,
     initialWorkflowSortMode: WorkflowSortMode,
     onBackPressedAtRoot: () -> Unit,
-    onDisplayTab: (MainTopLevelTab, Int, Int) -> Unit,
     onPrimaryTabChanged: (MainTopLevelTab) -> Unit,
-    onWorkflowTopBarAction: (WorkflowTopBarAction) -> Unit,
 ) {
     MaterialTheme(colorScheme = ThemeUtils.getAppColorScheme()) {
         val backStack = rememberNavBackStack(MainRoute.Main)
@@ -136,12 +120,11 @@ internal fun MainActivityContent(
                 entry<MainRoute.Main> {
                     MainScreen(
                         isReady = isReady,
+                        activity = activity,
                         liquidGlassEnabled = liquidGlassNavBarEnabled,
                         initialTab = initialTab,
                         initialWorkflowSortMode = initialWorkflowSortMode,
-                        onDisplayTab = onDisplayTab,
                         onPrimaryTabChanged = onPrimaryTabChanged,
-                        onWorkflowTopBarAction = onWorkflowTopBarAction,
                     )
                 }
             }
@@ -153,12 +136,11 @@ internal fun MainActivityContent(
 @Composable
 private fun MainScreen(
     isReady: Boolean,
+    activity: MainActivity,
     liquidGlassEnabled: Boolean,
     initialTab: MainTopLevelTab,
     initialWorkflowSortMode: WorkflowSortMode,
-    onDisplayTab: (MainTopLevelTab, Int, Int) -> Unit,
     onPrimaryTabChanged: (MainTopLevelTab) -> Unit,
-    onWorkflowTopBarAction: (WorkflowTopBarAction) -> Unit,
 ) {
     val pagerState = rememberPagerState(initialPage = initialTab.ordinal, pageCount = { MainTopLevelTab.entries.size })
     val mainPagerState = rememberMainPagerState(pagerState)
@@ -166,6 +148,8 @@ private fun MainScreen(
     val loadedPages = remember(initialTab) { mutableStateListOf(initialTab.ordinal) }
     val surfaceColor = MaterialTheme.colorScheme.surface
     var workflowSortMode by rememberSaveable { mutableStateOf(initialWorkflowSortMode) }
+    var latestWorkflowAction by remember { mutableStateOf<WorkflowTopBarAction?>(null) }
+    var workflowActionVersion by remember { mutableIntStateOf(0) }
     val backdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
@@ -202,7 +186,8 @@ private fun MainScreen(
                                     WorkflowTopBarAction.SortFavoritesFirst -> WorkflowSortMode.FavoritesFirst
                                     else -> workflowSortMode
                                 }
-                                onWorkflowTopBarAction(action)
+                                latestWorkflowAction = action
+                                workflowActionVersion += 1
                             }
                         )
                     }
@@ -232,7 +217,10 @@ private fun MainScreen(
             liquidGlassEnabled = liquidGlassEnabled,
             backdrop = backdrop,
             loadedPages = loadedPages,
-            onDisplayTab = onDisplayTab,
+            activity = activity,
+            workflowSortMode = workflowSortMode,
+            workflowAction = latestWorkflowAction,
+            workflowActionVersion = workflowActionVersion,
         )
     }
 }
@@ -485,16 +473,17 @@ private fun LiquidGlassBottomBarContainer(
 @Composable
 private fun MainContentPager(
     isReady: Boolean,
+    activity: MainActivity,
     pagerState: PagerState,
     selectedPage: Int,
     innerPadding: PaddingValues,
     liquidGlassEnabled: Boolean,
     backdrop: LayerBackdrop,
     loadedPages: List<Int>,
-    onDisplayTab: (MainTopLevelTab, Int, Int) -> Unit,
+    workflowSortMode: WorkflowSortMode,
+    workflowAction: WorkflowTopBarAction?,
+    workflowActionVersion: Int,
 ) {
-    val density = LocalDensity.current
-    val bottomInsetPx = with(density) { innerPadding.calculateBottomPadding().roundToPx() }
     if (!isReady) {
         Box(
             modifier = Modifier
@@ -524,44 +513,33 @@ private fun MainContentPager(
                 modifier = Modifier.fillMaxSize(),
             )
 
+            MainTopLevelTab.WORKFLOWS -> WorkflowListRoute(
+                activity = activity,
+                isActive = selectedPage == page,
+                workflowSortMode = workflowSortMode,
+                workflowAction = workflowAction,
+                workflowActionVersion = workflowActionVersion,
+                extraBottomPadding = innerPadding.calculateBottomPadding(),
+                modifier = Modifier.fillMaxSize(),
+            )
+
             MainTopLevelTab.REPOSITORY -> RepositoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 bottomContentPadding = innerPadding.calculateBottomPadding(),
             )
 
-            else -> MainTabFragmentPage(
-                tab = tab,
-                bottomInsetPx = bottomInsetPx,
-                shouldDisplay = page in loadedPages,
-                onDisplayTab = onDisplayTab,
+            MainTopLevelTab.CHAT -> ChatScreen(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = innerPadding,
+            )
+
+            MainTopLevelTab.SETTINGS -> SettingsRoute(
+                activity = activity,
+                extraBottomContentPadding = innerPadding.calculateBottomPadding(),
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }
-}
-
-@Composable
-private fun MainTabFragmentPage(
-    tab: MainTopLevelTab,
-    bottomInsetPx: Int,
-    shouldDisplay: Boolean,
-    onDisplayTab: (MainTopLevelTab, Int, Int) -> Unit,
-) {
-    val containerId = requireNotNull(tab.containerId) {
-        "${tab.name} does not have a fragment container"
-    }
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { context ->
-            FragmentContainerView(context).apply {
-                id = containerId
-            }
-        },
-        update = { container ->
-            if (shouldDisplay) {
-                onDisplayTab(tab, container.id, bottomInsetPx)
-            }
-        }
-    )
 }
 
 private class MainPagerState(

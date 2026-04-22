@@ -1,4 +1,4 @@
-package com.chaomixian.vflow.ui.screen.workflow
+package com.chaomixian.vflow.ui.workflow_list
 
 import android.os.SystemClock
 import androidx.compose.foundation.layout.Arrangement

@@ -8,19 +8,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.platform.ComposeView
-import androidx.core.view.doOnLayout
-import androidx.core.view.updatePadding
-import androidx.core.widget.NestedScrollView
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.commitNow
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.RecyclerView
-import androidx.viewpager2.widget.ViewPager2
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.locale.toast
 import com.chaomixian.vflow.core.logging.CrashReport
@@ -38,8 +29,6 @@ import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.TriggerService
 import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.common.BaseActivity
-import com.chaomixian.vflow.ui.common.InsetAwareComposeContainer
-import com.chaomixian.vflow.ui.workflow_list.WorkflowListFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -50,7 +39,7 @@ import java.util.Locale
 
 /**
  * 应用的主 Activity。
- * 负责启动流程、主界面 Compose 外壳以及内嵌主页面 Fragment 的生命周期切换。
+ * 负责启动流程和主界面 Compose 外壳。
  */
 class MainActivity : BaseActivity() {
     companion object {
@@ -68,7 +57,6 @@ class MainActivity : BaseActivity() {
     private var currentMainTabTag: String? = null
     private var initialMainTab: MainTopLevelTab = MainTopLevelTab.HOME
     private var initialWorkflowSortMode: WorkflowSortMode = WorkflowSortMode.Default
-    private var latestMainBottomInsetPx: Int = 0
     private val exportCrashReportLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
             try {
@@ -137,12 +125,11 @@ class MainActivity : BaseActivity() {
             MainActivityContent(
                 isReady = contentReady,
                 liquidGlassNavBarEnabled = liquidGlassNavBarEnabled,
+                activity = this,
                 initialTab = initialMainTab,
                 initialWorkflowSortMode = initialWorkflowSortMode,
                 onBackPressedAtRoot = { finish() },
-                onDisplayTab = ::showMainTabFragment,
                 onPrimaryTabChanged = ::setPrimaryMainTab,
-                onWorkflowTopBarAction = ::handleWorkflowTopBarAction,
             )
         }
     }
@@ -253,216 +240,15 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    internal fun showMainTabFragment(tab: MainTopLevelTab, containerId: Int, bottomInsetPx: Int) {
-        val fragmentManager = supportFragmentManager
-        if (isDestroyed || fragmentManager.isStateSaved) return
-        latestMainBottomInsetPx = bottomInsetPx
-
-        val currentContainer = findViewById<android.view.ViewGroup?>(containerId) ?: return
-        val existingFragment = fragmentManager.findFragmentByTag(tab.fragmentTag)
-        if (existingFragment != null &&
-            isMainTabFragmentAttachedToContainer(existingFragment, currentContainer, containerId)
-        ) {
-            applyScrollableBottomInset(existingFragment, bottomInsetPx)
-            return
-        }
-        val targetFragment = if (existingFragment != null) {
-            fragmentManager.commitNow {
-                setReorderingAllowed(true)
-                remove(existingFragment)
-            }
-            tab.createFragment()
-        } else {
-            tab.createFragment()
-        }
-
-        fragmentManager.commitNow {
-            setReorderingAllowed(true)
-            add(containerId, targetFragment, tab.fragmentTag)
-        }
-        applyScrollableBottomInset(targetFragment, bottomInsetPx)
-    }
-
-    private fun isMainTabFragmentAttachedToContainer(
-        fragment: Fragment,
-        currentContainer: android.view.ViewGroup,
-        containerId: Int,
-    ): Boolean {
-        val fragmentView = fragment.view
-        val currentParent = fragmentView?.parent as? android.view.ViewGroup
-        return fragment.id == containerId &&
-            fragmentView != null &&
-            currentParent === currentContainer &&
-            currentContainer.isAttachedToWindow
-    }
-
-    private fun applyScrollableBottomInset(fragment: Fragment, bottomInsetPx: Int) {
-        fragment.view?.let { root ->
-            applyScrollableBottomInsetToRoot(root, bottomInsetPx)
-            root.doOnLayout {
-                applyScrollableBottomInsetToRoot(root, bottomInsetPx)
-            }
-            root.post {
-                if (!isDestroyed) {
-                    applyScrollableBottomInsetToRoot(root, bottomInsetPx)
-                }
-            }
-        }
-    }
-
-    private fun applyScrollableBottomInsetToRoot(root: android.view.View, bottomInsetPx: Int) {
-        val fabInsetPx = collectBottomAnchoredFabInset(root)
-        updateScrollableBottomInsetRecursive(
-            view = root,
-            scrollableBottomInsetPx = bottomInsetPx + fabInsetPx,
-            fabBottomInsetPx = bottomInsetPx,
-        )
-    }
-
-    private fun collectBottomAnchoredFabInset(view: android.view.View): Int {
-        var maxInset = 0
-        fun walk(node: android.view.View) {
-            when (node) {
-                is com.google.android.material.floatingactionbutton.FloatingActionButton,
-                is com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton -> {
-                    val layoutParams = node.layoutParams as? android.view.ViewGroup.MarginLayoutParams
-                    val baseBottomMargin =
-                        (node.getTag(R.id.main_tab_inset_base_margin_bottom) as? Int)
-                            ?: layoutParams?.bottomMargin
-                            ?: 0
-                    maxInset = maxOf(maxInset, node.height + baseBottomMargin)
-                }
-            }
-            if (node is android.view.ViewGroup) {
-                for (index in 0 until node.childCount) {
-                    walk(node.getChildAt(index))
-                }
-            }
-        }
-        walk(view)
-        return maxInset
-    }
-
-    private fun updateScrollableBottomInsetRecursive(
-        view: android.view.View,
-        scrollableBottomInsetPx: Int,
-        fabBottomInsetPx: Int,
-    ) {
-        when (view) {
-            is com.google.android.material.floatingactionbutton.FloatingActionButton,
-            is com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton -> {
-                val layoutParams = view.layoutParams as? android.view.ViewGroup.MarginLayoutParams
-                if (layoutParams != null) {
-                    val baseBottomMargin =
-                        (view.getTag(R.id.main_tab_inset_base_margin_bottom) as? Int) ?: layoutParams.bottomMargin.also {
-                            view.setTag(R.id.main_tab_inset_base_margin_bottom, it)
-                        }
-                    layoutParams.bottomMargin = baseBottomMargin + fabBottomInsetPx
-                    view.layoutParams = layoutParams
-                }
-            }
-
-            is RecyclerView -> {
-                val basePadding = (view.getTag(R.id.main_tab_inset_base_padding_bottom) as? Int) ?: view.paddingBottom.also {
-                    view.setTag(R.id.main_tab_inset_base_padding_bottom, it)
-                }
-                view.clipToPadding = false
-                view.updatePadding(bottom = basePadding + scrollableBottomInsetPx)
-            }
-
-            is ScrollView -> {
-                val basePadding = (view.getTag(R.id.main_tab_inset_base_padding_bottom) as? Int) ?: view.paddingBottom.also {
-                    view.setTag(R.id.main_tab_inset_base_padding_bottom, it)
-                }
-                view.clipToPadding = false
-                view.updatePadding(bottom = basePadding + scrollableBottomInsetPx)
-            }
-
-            is NestedScrollView -> {
-                val basePadding = (view.getTag(R.id.main_tab_inset_base_padding_bottom) as? Int) ?: view.paddingBottom.also {
-                    view.setTag(R.id.main_tab_inset_base_padding_bottom, it)
-                }
-                view.clipToPadding = false
-                view.updatePadding(bottom = basePadding + scrollableBottomInsetPx)
-            }
-
-            is InsetAwareComposeContainer -> {
-                view.contentBottomInsetPx = scrollableBottomInsetPx
-            }
-
-            is ViewPager2 -> {
-                val recyclerView = (0 until view.childCount)
-                    .map(view::getChildAt)
-                    .filterIsInstance<RecyclerView>()
-                    .firstOrNull()
-                if (recyclerView != null) {
-                    val basePadding =
-                        (recyclerView.getTag(R.id.main_tab_inset_base_padding_bottom) as? Int)
-                            ?: recyclerView.paddingBottom.also {
-                                recyclerView.setTag(R.id.main_tab_inset_base_padding_bottom, it)
-                            }
-                    recyclerView.clipToPadding = false
-                    recyclerView.updatePadding(bottom = basePadding)
-
-                    for (index in 0 until recyclerView.childCount) {
-                        updateScrollableBottomInsetRecursive(
-                            view = recyclerView.getChildAt(index),
-                            scrollableBottomInsetPx = scrollableBottomInsetPx,
-                            fabBottomInsetPx = fabBottomInsetPx,
-                        )
-                    }
-                }
-            }
-        }
-
-        if (view is android.view.ViewGroup && view !is ViewPager2) {
-            for (index in 0 until view.childCount) {
-                updateScrollableBottomInsetRecursive(
-                    view = view.getChildAt(index),
-                    scrollableBottomInsetPx = scrollableBottomInsetPx,
-                    fabBottomInsetPx = fabBottomInsetPx,
-                )
-            }
-        }
-    }
-
     internal fun setPrimaryMainTab(tab: MainTopLevelTab) {
-        val fragmentManager = supportFragmentManager
-        if (isDestroyed || fragmentManager.isStateSaved) return
-
         if (currentMainTabTag == tab.fragmentTag) {
             return
-        }
-
-        fragmentManager.commitNow {
-            setReorderingAllowed(true)
-            MainTopLevelTab.entries.forEach { entry ->
-                fragmentManager.findFragmentByTag(entry.fragmentTag)?.let { fragment ->
-                    if (fragment.isAdded) {
-                        setMaxLifecycle(
-                            fragment,
-                            if (entry == tab) Lifecycle.State.RESUMED else Lifecycle.State.STARTED
-                        )
-                        if (entry == tab) {
-                            applyScrollableBottomInset(fragment, latestMainBottomInsetPx)
-                        }
-                    }
-                }
-            }
         }
         currentMainTabTag = tab.fragmentTag
     }
 
     fun applyLiquidGlassNavBarEnabled(enabled: Boolean) {
         liquidGlassNavBarEnabled = enabled
-    }
-
-    private fun handleWorkflowTopBarAction(action: WorkflowTopBarAction) {
-        val fragment =
-            supportFragmentManager.findFragmentByTag(MainTopLevelTab.WORKFLOWS.fragmentTag)
-                as? MainTopBarActionHandler
-                ?: return
-        fragment.onMainTopBarAction(action)
     }
 
     fun safeRestart() {
@@ -484,7 +270,7 @@ class MainActivity : BaseActivity() {
 
     private fun resolveInitialWorkflowSortMode(): WorkflowSortMode {
         val storedValue = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(WorkflowListFragment.PREF_WORKFLOW_SORT_MODE, WorkflowSortMode.Default.name)
+            .getString("workflow_sort_mode", WorkflowSortMode.Default.name)
         return WorkflowSortMode.entries.firstOrNull { it.name == storedValue } ?: WorkflowSortMode.Default
     }
 
