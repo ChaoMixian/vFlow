@@ -1,22 +1,40 @@
 package com.chaomixian.vflow.ui.main
 
+import android.text.format.DateFormat
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -26,10 +44,12 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -40,22 +60,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.ui.chat.ChatConversation
+import com.chaomixian.vflow.ui.chat.ChatProvider
 import com.chaomixian.vflow.ui.chat.ChatScreen
+import com.chaomixian.vflow.ui.chat.ChatUiState
+import com.chaomixian.vflow.ui.chat.ChatViewModel
 import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.chaomixian.vflow.ui.home.HomeScreen
 import com.chaomixian.vflow.ui.main.glass.LiquidGlassBottomBar
 import com.chaomixian.vflow.ui.main.glass.LiquidGlassBottomBarItem
 import com.chaomixian.vflow.ui.main.navigation.MainRoute
 import com.chaomixian.vflow.ui.repository.RepositoryScreen
+import com.chaomixian.vflow.ui.settings.ModelConfigActivity
 import com.chaomixian.vflow.ui.settings.SettingsRoute
 import com.chaomixian.vflow.ui.workflow_list.WorkflowListRoute
 import com.kyant.backdrop.backdrops.LayerBackdrop
@@ -63,10 +91,10 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 internal enum class MainTopLevelTab(
     val fragmentTag: String,
@@ -97,6 +125,11 @@ enum class WorkflowSortMode {
     Name,
     RecentModified,
     FavoritesFirst,
+}
+
+enum class ChatTopBarAction {
+    NewConversation,
+    ToggleSideSheet,
 }
 
 @androidx.compose.material3.ExperimentalMaterial3Api
@@ -146,10 +179,14 @@ private fun MainScreen(
     val mainPagerState = rememberMainPagerState(pagerState)
     val selectedTab = MainTopLevelTab.entries[mainPagerState.selectedPage]
     val loadedPages = remember(initialTab) { mutableStateListOf(initialTab.ordinal) }
+    val chatViewModel: ChatViewModel = viewModel()
+    val chatUiState by chatViewModel.uiState.collectAsState()
     val surfaceColor = MaterialTheme.colorScheme.surface
     var workflowSortMode by rememberSaveable { mutableStateOf(initialWorkflowSortMode) }
     var latestWorkflowAction by remember { mutableStateOf<WorkflowTopBarAction?>(null) }
     var workflowActionVersion by remember { mutableIntStateOf(0) }
+    var chatSideSheetVisible by rememberSaveable { mutableStateOf(false) }
+    var chatDraftResetVersion by rememberSaveable { mutableIntStateOf(0) }
     val backdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
@@ -170,58 +207,112 @@ private fun MainScreen(
         mainPagerState.animateToPage(MainTopLevelTab.HOME.ordinal)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(selectedTab.titleRes), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                actions = {
-                    if (selectedTab == MainTopLevelTab.WORKFLOWS) {
-                        WorkflowTopBarActions(
-                            sortMode = workflowSortMode,
-                            onAction = { action ->
-                                workflowSortMode = when (action) {
-                                    WorkflowTopBarAction.SortDefault -> WorkflowSortMode.Default
-                                    WorkflowTopBarAction.SortByName -> WorkflowSortMode.Name
-                                    WorkflowTopBarAction.SortByRecentModified -> WorkflowSortMode.RecentModified
-                                    WorkflowTopBarAction.SortFavoritesFirst -> WorkflowSortMode.FavoritesFirst
-                                    else -> workflowSortMode
+    BackHandler(enabled = chatSideSheetVisible) {
+        chatSideSheetVisible = false
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        if (selectedTab == MainTopLevelTab.CHAT) {
+                            ChatTopBarTitle(
+                                uiState = chatUiState,
+                                onSelectPreset = chatViewModel::selectPreset,
+                            )
+                        } else {
+                            Text(
+                                stringResource(selectedTab.titleRes),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    },
+                    actions = {
+                        if (selectedTab == MainTopLevelTab.WORKFLOWS) {
+                            WorkflowTopBarActions(
+                                sortMode = workflowSortMode,
+                                onAction = { action ->
+                                    workflowSortMode = when (action) {
+                                        WorkflowTopBarAction.SortDefault -> WorkflowSortMode.Default
+                                        WorkflowTopBarAction.SortByName -> WorkflowSortMode.Name
+                                        WorkflowTopBarAction.SortByRecentModified -> WorkflowSortMode.RecentModified
+                                        WorkflowTopBarAction.SortFavoritesFirst -> WorkflowSortMode.FavoritesFirst
+                                        else -> workflowSortMode
+                                    }
+                                    latestWorkflowAction = action
+                                    workflowActionVersion += 1
                                 }
-                                latestWorkflowAction = action
-                                workflowActionVersion += 1
-                            }
-                        )
+                            )
+                        } else if (selectedTab == MainTopLevelTab.CHAT) {
+                            ChatTopBarActions(
+                                onAction = { action ->
+                                    when (action) {
+                                        ChatTopBarAction.NewConversation -> {
+                                            chatViewModel.newConversation()
+                                            chatDraftResetVersion += 1
+                                            chatSideSheetVisible = false
+                                        }
+
+                                        ChatTopBarAction.ToggleSideSheet -> {
+                                            chatSideSheetVisible = !chatSideSheetVisible
+                                        }
+                                    }
+                                }
+                            )
+                        }
                     }
+                )
+            },
+            bottomBar = {
+                if (liquidGlassEnabled) {
+                    LiquidGlassBottomBarContainer(
+                        selectedTab = selectedTab,
+                        onTabSelected = { mainPagerState.animateToPage(it.ordinal) },
+                        backdrop = backdrop,
+                    )
+                } else {
+                    StandardBottomBar(
+                        selectedTab = selectedTab,
+                        onTabSelected = { mainPagerState.animateToPage(it.ordinal) },
+                    )
+                }
+            }
+        ) { innerPadding ->
+            MainContentPager(
+                isReady = isReady,
+                pagerState = mainPagerState.pagerState,
+                selectedPage = mainPagerState.selectedPage,
+                innerPadding = innerPadding,
+                liquidGlassEnabled = liquidGlassEnabled,
+                backdrop = backdrop,
+                loadedPages = loadedPages,
+                activity = activity,
+                workflowSortMode = workflowSortMode,
+                workflowAction = latestWorkflowAction,
+                workflowActionVersion = workflowActionVersion,
+                chatDraftResetVersion = chatDraftResetVersion,
+                chatViewModel = chatViewModel,
+            )
+        }
+
+        if (selectedTab == MainTopLevelTab.CHAT) {
+            ChatHistorySideSheet(
+                visible = chatSideSheetVisible,
+                uiState = chatUiState,
+                onDismiss = { chatSideSheetVisible = false },
+                onNewConversation = {
+                    chatViewModel.newConversation()
+                    chatDraftResetVersion += 1
+                    chatSideSheetVisible = false
+                },
+                onSelectConversation = { conversationId ->
+                    chatViewModel.selectConversation(conversationId)
+                    chatSideSheetVisible = false
                 }
             )
-        },
-        bottomBar = {
-            if (liquidGlassEnabled) {
-                LiquidGlassBottomBarContainer(
-                    selectedTab = selectedTab,
-                    onTabSelected = { mainPagerState.animateToPage(it.ordinal) },
-                    backdrop = backdrop,
-                )
-            } else {
-                StandardBottomBar(
-                    selectedTab = selectedTab,
-                    onTabSelected = { mainPagerState.animateToPage(it.ordinal) },
-                )
-            }
         }
-    ) { innerPadding ->
-        MainContentPager(
-            isReady = isReady,
-            pagerState = mainPagerState.pagerState,
-            selectedPage = mainPagerState.selectedPage,
-            innerPadding = innerPadding,
-            liquidGlassEnabled = liquidGlassEnabled,
-            backdrop = backdrop,
-            loadedPages = loadedPages,
-            activity = activity,
-            workflowSortMode = workflowSortMode,
-            workflowAction = latestWorkflowAction,
-            workflowActionVersion = workflowActionVersion,
-        )
     }
 }
 
@@ -358,6 +449,112 @@ private fun WorkflowTopBarActions(
     }
 }
 
+@Composable
+private fun ChatTopBarActions(
+    onAction: (ChatTopBarAction) -> Unit,
+) {
+    IconButton(onClick = { onAction(ChatTopBarAction.NewConversation) }) {
+        Icon(
+            painter = painterResource(R.drawable.rounded_add_comment_24),
+            contentDescription = stringResource(R.string.chat_topbar_new_conversation)
+        )
+    }
+
+    IconButton(onClick = { onAction(ChatTopBarAction.ToggleSideSheet) }) {
+        Icon(
+            painter = painterResource(R.drawable.rounded_menu_open_24),
+            contentDescription = stringResource(R.string.chat_topbar_toggle_side_sheet)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ChatTopBarTitle(
+    uiState: ChatUiState,
+    onSelectPreset: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val activeConversation = remember(uiState.activeConversationId, uiState.conversations) {
+        uiState.conversations.firstOrNull { it.id == uiState.activeConversationId }
+    }
+    val activePreset = remember(uiState.defaultPresetId, uiState.presets, activeConversation?.presetId) {
+        val preferredId = activeConversation?.presetId ?: uiState.defaultPresetId
+        uiState.presets.firstOrNull { it.id == preferredId } ?: uiState.presets.firstOrNull()
+    }
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            onClick = { expanded = true },
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 0.dp,
+        ) {
+            Text(
+                text = buildChatToolbarLabel(activePreset?.name, activePreset?.model),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+
+        DropdownMenuPopup(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            val menuCount = uiState.presets.size + 1
+            DropdownMenuGroup(
+                shapes = MenuDefaults.groupShape(index = 0, count = 1),
+                containerColor = MenuDefaults.groupStandardContainerColor,
+            ) {
+                if (uiState.presets.isEmpty()) {
+                    DropdownMenuItem(
+                        onClick = {},
+                        enabled = false,
+                        text = { Text(stringResource(R.string.chat_no_saved_models)) },
+                        shape = MenuDefaults.itemShape(index = 0, count = menuCount).shape,
+                    )
+                } else {
+                    uiState.presets.forEachIndexed { index, preset ->
+                        DropdownMenuItem(
+                            selected = preset.id == activePreset?.id,
+                            text = {
+                                Text(
+                                    text = buildChatToolbarMenuLabel(preset.name, preset.providerEnum, preset.model),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            onClick = {
+                                expanded = false
+                                onSelectPreset(preset.id)
+                            },
+                            shapes = MenuDefaults.itemShape(index = index, count = menuCount),
+                            selectedLeadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Check,
+                                    contentDescription = null,
+                                )
+                            },
+                            colors = MenuDefaults.selectableItemColors(),
+                        )
+                    }
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.chat_config_model_action)) },
+                    onClick = {
+                        expanded = false
+                        context.startActivity(ModelConfigActivity.createIntent(context))
+                    },
+                    shape = MenuDefaults.itemShape(index = menuCount - 1, count = menuCount).shape,
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun WorkflowSortMenuItem(
@@ -395,6 +592,154 @@ private fun WorkflowActionMenuItem(
         text = { Text(text) },
         shape = MenuDefaults.itemShape(index = index, count = count).shape,
     )
+}
+
+@Composable
+private fun ChatHistorySideSheet(
+    visible: Boolean,
+    uiState: ChatUiState,
+    onDismiss: () -> Unit,
+    onNewConversation: () -> Unit,
+    onSelectConversation: (String) -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = visible,
+            modifier = Modifier.matchParentSize(),
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.22f))
+                    .clickable(onClick = onDismiss)
+            )
+        }
+        AnimatedVisibility(
+            visible = visible,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .widthIn(max = 360.dp)
+                .fillMaxWidth(0.84f),
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                shape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .padding(horizontal = 18.dp, vertical = 20.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.chat_side_sheet_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.chat_side_sheet_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+                    FilledTonalButton(
+                        onClick = onNewConversation,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                    ) {
+                        Text(stringResource(R.string.chat_topbar_new_conversation))
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(10.dp))
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(
+                            items = uiState.conversations,
+                            key = { it.id },
+                        ) { conversation ->
+                            ChatHistorySideSheetItem(
+                                conversation = conversation,
+                                selected = conversation.id == uiState.activeConversationId,
+                                presetName = uiState.presets.firstOrNull { it.id == conversation.presetId }?.name,
+                                onClick = { onSelectConversation(conversation.id) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatHistorySideSheetItem(
+    conversation: ChatConversation,
+    selected: Boolean,
+    presetName: String?,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        tonalElevation = 0.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = conversation.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = conversation.messages.lastOrNull()?.content
+                    ?.replace('\n', ' ')
+                    ?.trim()
+                    .orEmpty()
+                    .ifBlank { stringResource(R.string.chat_side_sheet_empty_preview) },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = presetName ?: stringResource(R.string.chat_model_unconfigured),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = DateFormat.format("HH:mm", conversation.updatedAtMillis).toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -483,6 +828,8 @@ private fun MainContentPager(
     workflowSortMode: WorkflowSortMode,
     workflowAction: WorkflowTopBarAction?,
     workflowActionVersion: Int,
+    chatDraftResetVersion: Int,
+    chatViewModel: ChatViewModel,
 ) {
     if (!isReady) {
         Box(
@@ -530,7 +877,9 @@ private fun MainContentPager(
 
             MainTopLevelTab.CHAT -> ChatScreen(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = innerPadding,
+                contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding()),
+                newConversationVersion = chatDraftResetVersion,
+                chatViewModel = chatViewModel,
             )
 
             MainTopLevelTab.SETTINGS -> SettingsRoute(
@@ -539,6 +888,33 @@ private fun MainContentPager(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+    }
+}
+
+private fun buildChatToolbarLabel(
+    presetName: String?,
+    modelName: String?,
+): String {
+    val primary = presetName?.trim().orEmpty().ifBlank {
+        modelName?.trim().orEmpty().ifBlank { "Chat" }
+    }
+    return if (primary.length > 20) {
+        "${primary.take(20)}..."
+    } else {
+        primary
+    }
+}
+
+private fun buildChatToolbarMenuLabel(
+    presetName: String,
+    provider: ChatProvider,
+    modelName: String,
+): String {
+    val raw = "$presetName · ${provider.displayName} · $modelName"
+    return if (raw.length > 42) {
+        "${raw.take(42)}..."
+    } else {
+        raw
     }
 }
 

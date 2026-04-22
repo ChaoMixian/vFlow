@@ -84,6 +84,7 @@ data class SettingsScreenActions(
     val onSetAppScale: (Float) -> Unit,
     val onOpenLanguageDialog: () -> Unit,
     val onOpenModuleConfig: () -> Unit,
+    val onOpenModelConfig: () -> Unit,
     val onSetAutoCheckUpdatesEnabled: (Boolean) -> Unit,
     val onSetAllowShowOnLockScreen: (Boolean) -> Unit,
     val onSetApiEnabled: (Boolean) -> Unit,
@@ -162,6 +163,8 @@ fun SettingsScreen(
 
     val moduleConfigTitle = stringResource(R.string.settings_module_config)
     val moduleConfigSubtitle = stringResource(R.string.settings_module_config_desc)
+    val modelConfigTitle = stringResource(R.string.settings_model_config)
+    val modelConfigSubtitle = stringResource(R.string.settings_model_config_desc)
     val autoCheckUpdatesTitle = stringResource(R.string.settings_switch_auto_check_updates)
     val autoCheckUpdatesSubtitle = stringResource(R.string.settings_switch_auto_check_updates_desc)
     val lockScreenTitle = stringResource(R.string.settings_switch_allow_show_on_lock_screen)
@@ -244,6 +247,7 @@ fun SettingsScreen(
     val showGeneralSection = listOf(
         generalSectionTitle,
         moduleConfigTitle, moduleConfigSubtitle,
+        modelConfigTitle, modelConfigSubtitle,
         autoCheckUpdatesTitle, autoCheckUpdatesSubtitle,
         lockScreenTitle, lockScreenSubtitle,
         apiEnabledTitle, apiEnabledSubtitle,
@@ -384,6 +388,14 @@ fun SettingsScreen(
                     tone = paletteTone(),
                     position = SettingsGroupPosition.Top,
                     onClick = actions.onOpenModuleConfig
+                )
+                NativeEntryRow(
+                    title = modelConfigTitle,
+                    subtitle = modelConfigSubtitle,
+                    icon = Icons.Default.AutoAwesome,
+                    tone = paletteTone(),
+                    position = SettingsGroupPosition.Middle,
+                    onClick = actions.onOpenModelConfig
                 )
                 NativeSwitchRow(
                     title = autoCheckUpdatesTitle,

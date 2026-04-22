@@ -81,7 +81,8 @@
 
         <activity
             android:name=".ui.main.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -314,6 +315,12 @@
             android:name=".ui.settings.ModuleConfigActivity"
             android:exported="false"
             android:label="模块配置"
+            android:theme="@style/Theme.vFlow" />
+
+        <activity
+            android:name=".ui.settings.ModelConfigActivity"
+            android:exported="false"
+            android:label="@string/settings_model_config"
             android:theme="@style/Theme.vFlow" />
 
         <activity

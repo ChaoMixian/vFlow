@@ -1,36 +1,1327 @@
 package com.chaomixian.vflow.ui.chat
 
+import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.ContentUris
+import android.content.Context
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.text.format.DateFormat
+import android.util.Size
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.carousel.CarouselItemScope
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chaomixian.vflow.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+private const val MAX_RECENT_PHOTOS = 18
+private const val MAX_PICKED_PHOTOS = 10
+
+private data class RecentPhotoItem(
+    val uri: Uri,
+    val aspectRatio: Float,
+)
+
+private data class ChatSuggestion(
+    val titleRes: Int,
+    val promptRes: Int,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    newConversationVersion: Int = 0,
+    chatViewModel: ChatViewModel = viewModel(),
 ) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val chatUiState by chatViewModel.uiState.collectAsState()
+    val activeConversation = remember(chatUiState.activeConversationId, chatUiState.conversations) {
+        chatUiState.conversations.firstOrNull { it.id == chatUiState.activeConversationId }
+    }
+    val listState = rememberLazyListState()
+    val imeBottom = WindowInsets.ime.getBottom(density)
+    val navBottom = WindowInsets.navigationBars.getBottom(density)
+    val imeVisible = imeBottom > navBottom
+    val imeExtraPadding = with(density) {
+        (imeBottom - navBottom).coerceAtLeast(0).toDp()
+    }
+    val messageListBottomPadding by animateDpAsState(
+        targetValue = contentPadding.calculateBottomPadding() + 132.dp + imeExtraPadding,
+        label = "chatMessageListBottomPadding"
+    )
+    val composerBottomPadding by animateDpAsState(
+        targetValue = if (imeVisible) 14.dp else contentPadding.calculateBottomPadding() + 14.dp,
+        label = "chatComposerBottomPadding"
+    )
+    val snackbarBottomPadding by animateDpAsState(
+        targetValue = if (imeVisible) 24.dp else contentPadding.calculateBottomPadding() + 104.dp,
+        label = "chatSnackbarBottomPadding"
+    )
+    val showJumpToBottom by remember(activeConversation?.id, activeConversation?.messages?.size) {
+        derivedStateOf {
+            activeConversation?.messages?.isNotEmpty() == true && listState.canScrollForward
+        }
+    }
+    var prompt by rememberSaveable { mutableStateOf("") }
+    var attachmentSheetVisible by rememberSaveable { mutableStateOf(false) }
+    var hasPhotoPermission by remember { mutableStateOf(hasPhotoPermission(context)) }
+    var recentPhotos by remember { mutableStateOf(emptyList<RecentPhotoItem>()) }
+    var recentPhotosLoading by remember { mutableStateOf(false) }
+    var recentPhotoReloadVersion by remember { mutableIntStateOf(0) }
+    val selectedPhotoUris = remember { mutableStateListOf<Uri>() }
+    var capturedPreview by remember { mutableStateOf<Bitmap?>(null) }
+    var webSearchSelected by rememberSaveable { mutableStateOf(false) }
+    val welcomeSuggestions = remember {
+        listOf(
+            ChatSuggestion(
+                titleRes = R.string.chat_suggestion_build_workflow,
+                promptRes = R.string.chat_suggestion_build_workflow_prompt,
+            ),
+            ChatSuggestion(
+                titleRes = R.string.chat_suggestion_pick_modules,
+                promptRes = R.string.chat_suggestion_pick_modules_prompt,
+            ),
+            ChatSuggestion(
+                titleRes = R.string.chat_suggestion_debug_workflow,
+                promptRes = R.string.chat_suggestion_debug_workflow_prompt,
+            ),
+            ChatSuggestion(
+                titleRes = R.string.chat_suggestion_refine_steps,
+                promptRes = R.string.chat_suggestion_refine_steps_prompt,
+            ),
+        )
+    }
+    val attachmentSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val pickPhotosLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_PHOTOS)
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            selectedPhotoUris.clear()
+            selectedPhotoUris.addAll(uris)
+            capturedPreview = null
+        }
+    }
+    val cameraPreviewLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        capturedPreview = bitmap
+    }
+    val requestPhotoPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPhotoPermission = granted
+        if (granted) {
+            recentPhotoReloadVersion++
+        }
+    }
+
+    LaunchedEffect(chatViewModel) {
+        chatViewModel.events.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    LaunchedEffect(chatUiState.activeConversationId) {
+        prompt = ""
+        selectedPhotoUris.clear()
+        capturedPreview = null
+        webSearchSelected = false
+    }
+
+    LaunchedEffect(activeConversation?.messages?.size) {
+        val lastIndex = activeConversation?.messages?.lastIndex ?: -1
+        if (lastIndex >= 0) {
+            listState.animateScrollToItem(lastIndex + 1)
+        }
+    }
+
+    LaunchedEffect(attachmentSheetVisible) {
+        if (attachmentSheetVisible) {
+            hasPhotoPermission = hasPhotoPermission(context)
+            if (hasPhotoPermission) {
+                recentPhotoReloadVersion++
+            }
+        }
+    }
+
+    LaunchedEffect(attachmentSheetVisible, hasPhotoPermission, recentPhotoReloadVersion) {
+        if (!attachmentSheetVisible || !hasPhotoPermission) return@LaunchedEffect
+        recentPhotosLoading = true
+        recentPhotos = withContext(Dispatchers.IO) { queryRecentPhotos(context) }
+        recentPhotosLoading = false
+    }
+
+    LaunchedEffect(newConversationVersion) {
+        prompt = ""
+        selectedPhotoUris.clear()
+        capturedPreview = null
+        webSearchSelected = false
+    }
+
+    val showWelcome = (activeConversation == null || activeConversation.messages.isEmpty()) && prompt.isBlank()
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(contentPadding)
-            .padding(horizontal = 24.dp),
-        contentAlignment = Alignment.Center,
+    ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = contentPadding.calculateTopPadding())
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(
+                top = 10.dp,
+                bottom = messageListBottomPadding,
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (activeConversation != null && activeConversation.messages.isNotEmpty()) {
+                items(
+                    items = activeConversation.messages,
+                    key = { it.id },
+                ) { message ->
+                    ChatMessageBubble(
+                        message = message,
+                        modifier = Modifier.fillMaxWidth(),
+                        onCopyMessage = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("chat_message", message.content))
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    context.getString(R.string.copied_to_clipboard)
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showWelcome,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(
+                    start = 24.dp,
+                    end = 24.dp,
+                    top = contentPadding.calculateTopPadding() + 70.dp,
+                )
+                .padding(bottom = contentPadding.calculateBottomPadding() + 96.dp),
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            ChatWelcomeState(
+                suggestions = welcomeSuggestions,
+                onSuggestionClick = { suggestion ->
+                    prompt = context.getString(suggestion.promptRes)
+                }
+            )
+        }
+
+        Card(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .imePadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = composerBottomPadding),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            TextField(
+                value = prompt,
+                onValueChange = { prompt = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text(stringResource(R.string.chat_prompt_hint))
+                },
+                leadingIcon = {
+                    IconButton(
+                        modifier = Modifier.padding(start = 4.dp),
+                        onClick = {
+                            attachmentSheetVisible = true
+                            if (!hasPhotoPermission(context)) {
+                                requestPhotoPermissionLauncher.launch(photoPermissionName())
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = stringResource(R.string.chat_more),
+                        )
+                    }
+                },
+                trailingIcon = {
+                    FilledIconButton(
+                        modifier = Modifier.padding(end = 4.dp),
+                        onClick = {
+                            if (selectedPhotoUris.isNotEmpty() || capturedPreview != null) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        context.getString(R.string.chat_attachment_not_supported)
+                                    )
+                                }
+                            }
+                            if (chatViewModel.sendMessage(prompt)) {
+                                prompt = ""
+                                selectedPhotoUris.clear()
+                                capturedPreview = null
+                                webSearchSelected = false
+                            }
+                        },
+                        enabled = prompt.isNotBlank() && !chatUiState.isSending,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = if (prompt.isNotBlank() && !chatUiState.isSending) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            },
+                            contentColor = if (prompt.isNotBlank() && !chatUiState.isSending) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.ArrowUpward,
+                            contentDescription = stringResource(R.string.chat_send),
+                        )
+                    }
+                },
+                singleLine = false,
+                maxLines = 6,
+                shape = RoundedCornerShape(28.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(
+                    onSend = {
+                        if (chatViewModel.sendMessage(prompt)) {
+                            prompt = ""
+                            selectedPhotoUris.clear()
+                            capturedPreview = null
+                            webSearchSelected = false
+                        }
+                    }
+                ),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                )
+            )
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = snackbarBottomPadding)
+        )
+
+        AnimatedVisibility(
+            visible = showJumpToBottom,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .imePadding()
+                .padding(bottom = composerBottomPadding + 86.dp),
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            FilledTonalIconButton(
+                onClick = {
+                    val lastIndex = activeConversation?.messages?.lastIndex ?: return@FilledTonalIconButton
+                    scope.launch { listState.animateScrollToItem(lastIndex) }
+                },
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = stringResource(R.string.chat_scroll_to_bottom),
+                )
+            }
+        }
+    }
+
+    if (attachmentSheetVisible) {
+        val selectedCount = selectedPhotoUris.size + if (capturedPreview != null) 1 else 0
+        ModalBottomSheet(
+            onDismissRequest = { attachmentSheetVisible = false },
+            sheetState = attachmentSheetState,
+        ) {
+            ChatAttachmentSheet(
+                recentPhotos = recentPhotos,
+                recentPhotosLoading = recentPhotosLoading,
+                hasPhotoPermission = hasPhotoPermission,
+                selectedPhotoUris = selectedPhotoUris,
+                hasCapturedPreview = capturedPreview != null,
+                onRequestPermission = {
+                    requestPhotoPermissionLauncher.launch(photoPermissionName())
+                },
+                onCameraClick = {
+                    cameraPreviewLauncher.launch(null)
+                },
+                onPhotoToggle = { uri ->
+                    if (selectedPhotoUris.contains(uri)) {
+                        selectedPhotoUris.remove(uri)
+                    } else {
+                        selectedPhotoUris.add(uri)
+                    }
+                },
+                onAddPhotos = {
+                    attachmentSheetVisible = false
+                },
+                selectedCount = selectedCount,
+                webSearchSelected = webSearchSelected,
+                onWebSearchToggle = { webSearchSelected = !webSearchSelected },
+                onPickAllPhotos = {
+                    pickPhotosLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChatWelcomeState(
+    suggestions: List<ChatSuggestion>,
+    onSuggestionClick: (ChatSuggestion) -> Unit,
+) {
+    Column(
+        modifier = Modifier.widthIn(max = 420.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.chat_welcome_eyebrow),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.chat_welcome_title),
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Medium,
+                lineHeight = MaterialTheme.typography.headlineLarge.lineHeight,
+            )
+        }
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            suggestions.forEach { suggestion ->
+                Surface(
+                    shape = RoundedCornerShape(26.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    tonalElevation = 0.dp,
+                    onClick = { onSuggestionClick(suggestion) },
+                ) {
+                    Text(
+                        text = stringResource(suggestion.titleRes),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatMessageBubble(
+    message: ChatMessage,
+    modifier: Modifier = Modifier,
+    onCopyMessage: () -> Unit,
+) {
+    when (message.role) {
+        ChatMessageRole.USER -> UserMessageBubble(
+            message = message,
+            modifier = modifier,
+            onCopyMessage = onCopyMessage,
+        )
+
+        ChatMessageRole.ASSISTANT -> AssistantMessageCard(
+            message = message,
+            modifier = modifier,
+            onCopyMessage = onCopyMessage,
+        )
+
+        ChatMessageRole.ERROR -> ErrorMessageCard(
+            message = message,
+            modifier = modifier,
+            onCopyMessage = onCopyMessage,
+        )
+    }
+}
+
+@Composable
+private fun UserMessageBubble(
+    message: ChatMessage,
+    modifier: Modifier = Modifier,
+    onCopyMessage: () -> Unit,
+) {
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Column(
+            modifier = Modifier.widthIn(max = 340.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Text(
+                text = stringResource(R.string.chat_role_you),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+            Surface(
+                shape = RoundedCornerShape(
+                    topStart = 24.dp,
+                    topEnd = 24.dp,
+                    bottomStart = 24.dp,
+                    bottomEnd = 10.dp,
+                ),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation = 0.dp,
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = message.content,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = contentColor,
+                    )
+                    MessageFooterRow(
+                        timestampMillis = message.timestampMillis,
+                        tokenCount = message.tokenCount,
+                        contentColor = contentColor,
+                        onCopyMessage = onCopyMessage,
+                        showCopy = message.content.isNotBlank(),
+                        containerTint = contentColor.copy(alpha = 0.14f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AssistantMessageCard(
+    message: ChatMessage,
+    modifier: Modifier = Modifier,
+    onCopyMessage: () -> Unit,
+) {
+    var reasoningExpanded by rememberSaveable(message.id) { mutableStateOf(false) }
+    val hasReasoning = !message.reasoningContent.isNullOrBlank()
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Surface(
+            modifier = Modifier.widthIn(max = 560.dp),
+            shape = RoundedCornerShape(30.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            tonalElevation = 0.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        tonalElevation = 0.dp,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.padding(8.dp).size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.chat_role_assistant),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (!message.isPending && message.content.isNotBlank()) {
+                        FilledTonalIconButton(
+                            onClick = onCopyMessage,
+                            modifier = Modifier.size(34.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.ContentCopy,
+                                contentDescription = stringResource(R.string.common_copy),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+                }
+
+                if (message.isPending) {
+                    Text(
+                        text = stringResource(R.string.chat_generating),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    if (hasReasoning) {
+                        Surface(
+                            onClick = { reasoningExpanded = !reasoningExpanded },
+                            shape = RoundedCornerShape(22.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 0.dp,
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = if (reasoningExpanded) {
+                                        stringResource(R.string.chat_reasoning_hide)
+                                    } else {
+                                        stringResource(R.string.chat_reasoning_show)
+                                    },
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Icon(
+                                    imageVector = if (reasoningExpanded) {
+                                        Icons.Rounded.ExpandLess
+                                    } else {
+                                        Icons.Rounded.ExpandMore
+                                    },
+                                    contentDescription = null,
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = reasoningExpanded,
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                        ) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(24.dp),
+                                tonalElevation = 0.dp,
+                            ) {
+                                ChatMarkdownContent(
+                                    markdown = message.reasoningContent.orEmpty().trim(),
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    ChatMarkdownContent(
+                        markdown = message.content,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+
+                MessageFooterRow(
+                    timestampMillis = message.timestampMillis,
+                    tokenCount = message.tokenCount,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    onCopyMessage = onCopyMessage,
+                    showCopy = false,
+                    containerTint = Color.Transparent,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorMessageCard(
+    message: ChatMessage,
+    modifier: Modifier = Modifier,
+    onCopyMessage: () -> Unit,
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Surface(
+            modifier = Modifier.widthIn(max = 520.dp),
+            shape = RoundedCornerShape(26.dp),
+            color = MaterialTheme.colorScheme.errorContainer,
+            tonalElevation = 0.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.chat_role_error),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                ChatMarkdownContent(
+                    markdown = message.content,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                MessageFooterRow(
+                    timestampMillis = message.timestampMillis,
+                    tokenCount = null,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                    onCopyMessage = onCopyMessage,
+                    showCopy = message.content.isNotBlank(),
+                    containerTint = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.12f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MessageFooterRow(
+    timestampMillis: Long,
+    tokenCount: Int?,
+    contentColor: Color,
+    onCopyMessage: () -> Unit,
+    showCopy: Boolean,
+    containerTint: Color,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(R.string.chat_placeholder_message),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
+            text = formatChatTime(timestampMillis),
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor.copy(alpha = 0.9f),
         )
+        if (tokenCount != null) {
+            Text(
+                text = stringResource(R.string.chat_tokens_value, tokenCount),
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor.copy(alpha = 0.9f),
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        if (showCopy) {
+            FilledTonalIconButton(
+                onClick = onCopyMessage,
+                modifier = Modifier.size(30.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = containerTint,
+                    contentColor = contentColor.copy(alpha = 0.9f),
+                ),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.ContentCopy,
+                    contentDescription = stringResource(R.string.common_copy),
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatConversationItem(
+    conversation: ChatConversation,
+    selected: Boolean,
+    presetName: String?,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        color = if (selected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        tonalElevation = 0.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = conversation.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = conversation.messages.lastOrNull()?.content
+                    ?.replace('\n', ' ')
+                    ?.trim()
+                    .orEmpty()
+                    .ifBlank { stringResource(R.string.chat_side_sheet_empty_preview) },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = presetName ?: stringResource(R.string.chat_model_unconfigured),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = formatChatTime(conversation.updatedAtMillis),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+private fun formatChatTime(timestampMillis: Long): String {
+    return DateFormat.format("HH:mm", timestampMillis).toString()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChatAttachmentSheet(
+    recentPhotos: List<RecentPhotoItem>,
+    recentPhotosLoading: Boolean,
+    hasPhotoPermission: Boolean,
+    selectedPhotoUris: List<Uri>,
+    hasCapturedPreview: Boolean,
+    onRequestPermission: () -> Unit,
+    onCameraClick: () -> Unit,
+    onPhotoToggle: (Uri) -> Unit,
+    onAddPhotos: () -> Unit,
+    selectedCount: Int,
+    webSearchSelected: Boolean,
+    onWebSearchToggle: () -> Unit,
+    onPickAllPhotos: () -> Unit,
+) {
+    val carouselItemCount = if (hasPhotoPermission) recentPhotos.size + 1 else 1
+    val carouselState = rememberCarouselState { carouselItemCount }
+    val scrollState = rememberScrollState()
+    val animationScope = rememberCoroutineScope()
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(bottom = if (selectedCount > 0) 112.dp else 20.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.chat_sheet_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onPickAllPhotos) {
+                    Text(stringResource(R.string.chat_all_photos))
+                }
+            }
+
+            HorizontalMultiBrowseCarousel(
+                state = carouselState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(104.dp)
+                    .padding(top = 4.dp, bottom = 8.dp),
+                preferredItemWidth = 96.dp,
+                itemSpacing = 8.dp,
+                minSmallItemWidth = 38.dp,
+                maxSmallItemWidth = 56.dp,
+                contentPadding = PaddingValues(horizontal = 20.dp),
+            ) { index ->
+                val isFocused = carouselState.currentItem == index
+                if (index == 0) {
+                    CameraCarouselItem(
+                        selected = hasCapturedPreview,
+                        focused = isFocused,
+                        onClick = {
+                            animationScope.launch { carouselState.animateScrollToItem(index) }
+                            onCameraClick()
+                        },
+                    )
+                } else {
+                    val photo = recentPhotos[index - 1]
+                    PhotoCarouselItem(
+                        photo = photo,
+                        selected = selectedPhotoUris.contains(photo.uri),
+                        focused = isFocused,
+                        onClick = {
+                            animationScope.launch { carouselState.animateScrollToItem(index) }
+                            onPhotoToggle(photo.uri)
+                        },
+                    )
+                }
+            }
+
+            when {
+                !hasPhotoPermission -> {
+                    TextButton(
+                        onClick = onRequestPermission,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    ) {
+                        Text(stringResource(R.string.chat_allow_photo_access))
+                    }
+                }
+
+                recentPhotosLoading -> {
+                    Text(
+                        text = stringResource(R.string.chat_loading_photos),
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ListItem(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .clickable(onClick = onWebSearchToggle)
+                    .padding(horizontal = 8.dp),
+                colors = ListItemDefaults.colors(
+                    containerColor = if (webSearchSelected) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        Color.Transparent
+                    }
+                ),
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.chat_web_search_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                supportingContent = {
+                    Text(
+                        text = stringResource(R.string.chat_web_search_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Rounded.Language,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (webSearchSelected) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            LocalContentColor.current
+                        }
+                    )
+                },
+                trailingContent = {
+                    AnimatedVisibility(visible = webSearchSelected, enter = fadeIn(), exit = fadeOut()) {
+                        FilledTonalIconButton(
+                            onClick = onWebSearchToggle,
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            )
+        }
+
+        if (selectedCount > 0) {
+            FilledTonalButton(
+                onClick = onAddPhotos,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .height(40.dp),
+                shape = RoundedCornerShape(20.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.chat_add_photos, selectedCount),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CarouselItemScope.CameraCarouselItem(
+    selected: Boolean,
+    focused: Boolean,
+    onClick: () -> Unit,
+) {
+    val baseModifier = Modifier
+        .fillMaxSize()
+        .maskClip(RoundedCornerShape(24.dp))
+        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+        .clickable(onClick = onClick)
+    Box(
+        modifier = if (selected || focused) {
+            baseModifier.maskBorder(
+                border = BorderStroke(
+                    width = if (focused) 2.dp else 1.dp,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                    }
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
+        } else {
+            baseModifier
+        },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.CameraAlt,
+            contentDescription = null,
+            modifier = Modifier.size(34.dp),
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun CarouselItemScope.PhotoCarouselItem(
+    photo: RecentPhotoItem,
+    selected: Boolean,
+    focused: Boolean,
+    onClick: () -> Unit,
+) {
+    val baseModifier = Modifier
+        .fillMaxSize()
+        .maskClip(RoundedCornerShape(24.dp))
+        .clickable(onClick = onClick)
+    Box(
+        modifier = if (selected || focused) {
+            baseModifier.maskBorder(
+                border = BorderStroke(
+                    width = if (focused) 2.dp else 1.dp,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                    }
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
+        } else {
+            baseModifier
+        }
+    ) {
+        PhotoThumbnail(
+            uri = photo.uri,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    when {
+                        selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                        focused -> MaterialTheme.colorScheme.surfaceTint.copy(alpha = 0.08f)
+                        else -> Color.Transparent
+                    }
+                )
+        )
+    }
+}
+
+@Composable
+private fun PhotoThumbnail(
+    uri: Uri,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val bitmap by produceState<Bitmap?>(initialValue = null, uri) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                context.contentResolver.loadThumbnail(uri, Size(720, 720), null)
+            }.getOrNull()
+        }
+    }
+
+    if (bitmap != null) {
+        androidx.compose.foundation.Image(
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Box(
+            modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center
+        ) {
+            ThumbnailPlaceholder()
+        }
+    }
+}
+
+@Composable
+private fun ThumbnailPlaceholder() {
+    val outlineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    Canvas(modifier = Modifier.size(28.dp)) {
+        val stroke = 2.5.dp.toPx()
+        drawLine(
+            color = outlineColor,
+            start = Offset(0f, size.height),
+            end = Offset(size.width * 0.36f, size.height * 0.52f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = outlineColor,
+            start = Offset(size.width * 0.36f, size.height * 0.52f),
+            end = Offset(size.width * 0.62f, size.height * 0.74f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = outlineColor,
+            start = Offset(size.width * 0.62f, size.height * 0.74f),
+            end = Offset(size.width, size.height * 0.18f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round
+        )
+        drawCircle(
+            color = outlineColor,
+            radius = size.minDimension * 0.12f,
+            center = Offset(size.width * 0.76f, size.height * 0.28f),
+            style = Stroke(stroke)
+        )
+    }
+}
+
+private fun hasPhotoPermission(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(
+        context,
+        photoPermissionName()
+    ) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun photoPermissionName(): String {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+}
+
+private fun queryRecentPhotos(context: Context): List<RecentPhotoItem> {
+    val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+    val projection = arrayOf(
+        MediaStore.Images.Media._ID,
+        MediaStore.Images.Media.WIDTH,
+        MediaStore.Images.Media.HEIGHT,
+    )
+    val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+
+    return buildList {
+        context.contentResolver.query(
+            collection,
+            projection,
+            null,
+            null,
+            sortOrder
+        )?.use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val widthIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.WIDTH)
+            val heightIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.HEIGHT)
+
+            while (cursor.moveToNext() && size < MAX_RECENT_PHOTOS) {
+                val id = cursor.getLong(idIndex)
+                val width = cursor.getInt(widthIndex)
+                val height = cursor.getInt(heightIndex)
+                val rawAspect = if (width > 0 && height > 0) {
+                    width.toFloat() / height.toFloat()
+                } else {
+                    1f
+                }
+                add(
+                    RecentPhotoItem(
+                        uri = ContentUris.withAppendedId(collection, id),
+                        aspectRatio = rawAspect.coerceIn(0.78f, 1.18f)
+                    )
+                )
+            }
+        }
     }
 }

@@ -145,6 +145,9 @@ fun SettingsRoute(
             onOpenModuleConfig = {
                 context.startActivity(Intent(context, ModuleConfigActivity::class.java))
             },
+            onOpenModelConfig = {
+                context.startActivity(ModelConfigActivity.createIntent(context))
+            },
             onSetAutoCheckUpdatesEnabled = { enabled ->
                 settingsViewModel.setAutoCheckUpdatesEnabled(context, enabled)
             },

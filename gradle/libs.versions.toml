@@ -18,6 +18,7 @@ opencv = "4.13.0"
 navigation3 = "1.1.0"
 backdrop = "1.0.6"
 reorderable = "3.0.0"
+foundationLayout = "1.10.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,6 +37,7 @@ androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", vers
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 opencv = { group = "org.opencv", name = "opencv", version.ref = "opencv" }
+androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

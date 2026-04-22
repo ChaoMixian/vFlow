@@ -106,11 +106,20 @@ android {
             isUniversalApk = true
         }
     }
+
+    packaging {
+        resources {
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/io.netty.versions.properties"
+            excludes += "META-INF/DEPENDENCIES"
+        }
+    }
 }
 
 dependencies {
 
     implementation(libs.androidx.foundation)
+    implementation(libs.androidx.foundation.layout)
     val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -149,6 +158,7 @@ dependencies {
     // JSON5 解析库，用于解析 gkd 订阅规则
     implementation("li.songe:json5:0.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+    implementation("ai.koog:koog-agents:0.8.0")
 
     // Lua 脚本解释器引擎
     implementation("org.luaj:luaj-jse:3.0.1")
