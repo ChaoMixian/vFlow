@@ -50,6 +50,17 @@ class FindTextModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     ) // 更新分类
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Find visible text on the current screen through accessibility and return an element, coordinate, or view id.",
+        inputHints = mapOf(
+            "matchMode" to "Text match mode: exact, contains, or regex.",
+            "targetText" to "Target text to search for on screen.",
+            "outputFormat" to "Choose whether the result should be an element, coordinate, or view id.",
+        ),
+        requiredInputIds = setOf("targetText"),
+    )
     // 此模块需要的权限
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 

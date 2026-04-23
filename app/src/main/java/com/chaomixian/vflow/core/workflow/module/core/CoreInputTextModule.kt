@@ -31,6 +31,15 @@ class CoreInputTextModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Type text through vFlow Core. Focus the target field first if needed.",
+        workflowStepDescription = "Type text through vFlow Core.",
+        inputHints = mapOf(
+            "text" to "Plain text to type into the currently focused field.",
+        ),
+        requiredInputIds = setOf("text"),
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

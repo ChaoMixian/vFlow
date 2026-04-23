@@ -34,6 +34,12 @@ class SystemInfoModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Read a device system info field such as model, brand, Android version, SDK, or security patch.",
+        requiredInputIds = setOf("infotype"),
+    )
 
     /**
      * 定义模块的输入参数。

@@ -61,6 +61,9 @@ class AutoGLMModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = AiModuleMetadata(
+        allowSavedWorkflow = false,
+    )
 
     override val uiProvider: ModuleUIProvider = AutoGLMModuleUIProvider()
 

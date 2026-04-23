@@ -38,6 +38,17 @@ class Base64EncodeOrDecodeModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Encode text to Base64 or decode Base64 back into plain text.",
+        inputHints = mapOf(
+            "operation" to "Use encode or decode.",
+            "source_text" to "Input text to transform."
+        ),
+        requiredInputIds = setOf("operation", "source_text")
+    )
+
     private val operations = listOf(OP_ENCODE, OP_DECODE)
 
     override fun getInputs(): List<InputDefinition> = listOf(

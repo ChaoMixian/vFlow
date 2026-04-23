@@ -154,6 +154,11 @@ private data class ChatSuggestion(
     val promptRes: Int,
 )
 
+private enum class ChatSheetSegmentPosition {
+    Top,
+    Bottom,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -1067,10 +1072,10 @@ private fun ToolMessageCard(
 ) {
     val toolResult = message.toolResult
     val containerColor = when (toolResult?.status) {
-        ChatToolResultStatus.SUCCESS -> MaterialTheme.colorScheme.tertiaryContainer
-        ChatToolResultStatus.ERROR -> MaterialTheme.colorScheme.errorContainer
+        ChatToolResultStatus.SUCCESS -> MaterialTheme.colorScheme.surfaceContainerHigh
+        ChatToolResultStatus.ERROR -> MaterialTheme.colorScheme.surfaceContainerHigh
         ChatToolResultStatus.REJECTED,
-        ChatToolResultStatus.PERMISSION_REQUIRED -> MaterialTheme.colorScheme.secondaryContainer
+        ChatToolResultStatus.PERMISSION_REQUIRED -> MaterialTheme.colorScheme.surfaceContainerHigh
         null -> MaterialTheme.colorScheme.surfaceContainerHighest
     }
     val contentColor = when (toolResult?.status) {
@@ -1079,6 +1084,13 @@ private fun ToolMessageCard(
         ChatToolResultStatus.REJECTED,
         ChatToolResultStatus.PERMISSION_REQUIRED -> MaterialTheme.colorScheme.onSecondaryContainer
         null -> MaterialTheme.colorScheme.onSurface
+    }
+    val borderColor = when (toolResult?.status) {
+        ChatToolResultStatus.SUCCESS -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.28f)
+        ChatToolResultStatus.ERROR -> MaterialTheme.colorScheme.error.copy(alpha = 0.32f)
+        ChatToolResultStatus.REJECTED,
+        ChatToolResultStatus.PERMISSION_REQUIRED -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.26f)
+        null -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     }
     val toolTitle = toolResult?.let { result ->
         availableToolsByName[result.name]?.title ?: result.summary
@@ -1099,6 +1111,7 @@ private fun ToolMessageCard(
             shape = RoundedCornerShape(24.dp),
             color = containerColor,
             tonalElevation = 0.dp,
+            border = BorderStroke(1.dp, borderColor),
         ) {
             Column(
                 modifier = Modifier
@@ -1149,7 +1162,7 @@ private fun ToolMessageCard(
                         contentColor = contentColor,
                         modifier = if (contentCollapsed) {
                             Modifier
-                                .heightIn(max = 120.dp)
+                                .heightIn(max = 64.dp)
                                 .clip(RoundedCornerShape(8.dp))
                         } else {
                             Modifier
@@ -1159,7 +1172,7 @@ private fun ToolMessageCard(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
+                                .height(12.dp)
                                 .align(Alignment.BottomCenter)
                                 .background(
                                     Brush.verticalGradient(
@@ -1173,10 +1186,14 @@ private fun ToolMessageCard(
                     }
                 }
                 if (isLongContent) {
-                    TextButton(
-                        onClick = { contentCollapsed = !contentCollapsed },
-                        modifier = Modifier.offset(y = (-4).dp),
-                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                    Row(
+                        modifier = Modifier
+                            .offset(y = (-2).dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { contentCollapsed = !contentCollapsed }
+                            .padding(horizontal = 2.dp, vertical = 0.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
                             text = stringResource(
@@ -1184,12 +1201,14 @@ private fun ToolMessageCard(
                                 else R.string.chat_tool_result_collapse
                             ),
                             style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                         Icon(
                             imageVector = if (contentCollapsed) Icons.Rounded.ExpandMore
                             else Icons.Rounded.ExpandLess,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -1485,45 +1504,13 @@ private fun ChatAttachmentSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            ListItem(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable(onClick = onWebSearchToggle)
-                    .padding(horizontal = 8.dp),
-                colors = ListItemDefaults.colors(
-                    containerColor = if (webSearchSelected) {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    } else {
-                        Color.Transparent
-                    }
-                ),
-                headlineContent = {
-                    Text(
-                        text = stringResource(R.string.chat_web_search_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                supportingContent = {
-                    Text(
-                        text = stringResource(R.string.chat_web_search_description),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                leadingContent = {
-                    Icon(
-                        imageVector = Icons.Rounded.Language,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = if (webSearchSelected) {
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        } else {
-                            LocalContentColor.current
-                        }
-                    )
-                },
+            ChatAttachmentSheetSegmentedRow(
+                title = stringResource(R.string.chat_web_search_title),
+                subtitle = stringResource(R.string.chat_web_search_description),
+                icon = Icons.Rounded.Language,
+                selected = webSearchSelected,
+                position = ChatSheetSegmentPosition.Top,
+                onClick = onWebSearchToggle,
                 trailingContent = {
                     AnimatedVisibility(visible = webSearchSelected, enter = fadeIn(), exit = fadeOut()) {
                         FilledTonalIconButton(
@@ -1540,26 +1527,15 @@ private fun ChatAttachmentSheet(
                 }
             )
 
-            ListItem(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable { onAutoApprovalScopeChange(autoApprovalScope.next()) }
-                    .padding(horizontal = 8.dp),
-                colors = ListItemDefaults.colors(
-                    containerColor = if (autoApprovalScope != ChatToolAutoApprovalScope.OFF) {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    } else {
-                        Color.Transparent
-                    }
-                ),
-                headlineContent = {
-                    Text(
-                        text = stringResource(R.string.chat_auto_approve_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
+            Spacer(modifier = Modifier.height(6.dp))
+
+            ChatAttachmentSheetSegmentedRow(
+                title = stringResource(R.string.chat_auto_approve_title),
+                subtitle = null,
+                icon = Icons.Rounded.AutoAwesome,
+                selected = autoApprovalScope != ChatToolAutoApprovalScope.OFF,
+                position = ChatSheetSegmentPosition.Bottom,
+                onClick = { onAutoApprovalScopeChange(autoApprovalScope.next()) },
                 trailingContent = {
                     Text(
                         text = autoApprovalScopeLabel,
@@ -1591,6 +1567,99 @@ private fun ChatAttachmentSheet(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ChatAttachmentSheetSegmentedRow(
+    title: String,
+    subtitle: String?,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    position: ChatSheetSegmentPosition,
+    onClick: () -> Unit,
+    trailingContent: @Composable (() -> Unit)? = null,
+) {
+    val outerShape = when (position) {
+        ChatSheetSegmentPosition.Top -> RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
+        ChatSheetSegmentPosition.Bottom -> RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 28.dp, bottomEnd = 28.dp)
+    }
+    val innerShape = when (position) {
+        ChatSheetSegmentPosition.Top -> RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 14.dp, bottomEnd = 14.dp)
+        ChatSheetSegmentPosition.Bottom -> RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 22.dp, bottomEnd = 22.dp)
+    }
+    val borderColor = if (selected) {
+        MaterialTheme.colorScheme.secondary.copy(alpha = 0.38f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        shape = outerShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, borderColor),
+        onClick = onClick
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 5.dp)
+        ) {
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(innerShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                )
+            }
+
+            ListItem(
+                modifier = Modifier.fillMaxWidth(),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                headlineContent = {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                },
+                supportingContent = subtitle?.let {
+                    {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.82f)
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (selected) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            LocalContentColor.current
+                        }
+                    )
+                },
+                trailingContent = trailingContent
+            )
         }
     }
 }

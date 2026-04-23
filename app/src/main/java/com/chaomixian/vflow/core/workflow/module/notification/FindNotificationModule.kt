@@ -25,6 +25,16 @@ class FindNotificationModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Find currently visible notifications with optional app, title, or content filters.",
+        inputHints = mapOf(
+            "app_filter" to "Optional exact package name filter.",
+            "title_filter" to "Optional substring filter for notification title.",
+            "content_filter" to "Optional substring filter for notification body text.",
+        ),
+    )
 
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATION_LISTENER_SERVICE)
 

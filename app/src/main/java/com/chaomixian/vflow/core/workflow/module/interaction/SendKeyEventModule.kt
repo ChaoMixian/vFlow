@@ -39,6 +39,15 @@ class SendKeyEventModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Run a global Android action such as back, home, recents, notifications, quick settings, or power dialog.",
+        workflowStepDescription = "Run a global Android action such as back or home.",
+        inputHints = mapOf(
+            "key_action" to "Canonical action such as back, home, recents, notifications, quick_settings, or power_dialog.",
+        ),
+        requiredInputIds = setOf("key_action"),
+    )
 
     // 需要无障碍服务权限来发送全局按键事件
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)

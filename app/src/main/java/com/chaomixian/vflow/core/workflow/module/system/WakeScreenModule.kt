@@ -5,10 +5,12 @@ import android.os.PowerManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.ActionMetadata
+import com.chaomixian.vflow.core.module.AiModuleRiskLevel
 import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.module.ProgressUpdate
+import com.chaomixian.vflow.core.module.directToolMetadata
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -32,6 +34,11 @@ class WakeScreenModule : BaseModule() {
         iconRes = R.drawable.rounded_brightness_5_24,
         category = "应用与系统",
         categoryId = "device"
+    )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Wake the screen without attempting to unlock it.",
+        workflowStepDescription = "Wake the screen without unlocking.",
     )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

@@ -38,6 +38,18 @@ class ReadSmsModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.HIGH,
+        workflowStepDescription = "Read inbox SMS messages using sender or content filters and optionally extract a verification code.",
+        inputHints = mapOf(
+            "filter_by" to "Filter mode: latest, sender, content, or both.",
+            "sender" to "Optional sender substring or phone number.",
+            "content" to "Optional message content substring.",
+            "extract_code" to "Enable to extract a verification code from the matched SMS.",
+        ),
+        requiredInputIds = setOf("filter_by"),
+    )
 
     override val requiredPermissions = listOf(PermissionManager.SMS)
     override val uiProvider: ModuleUIProvider = ReadSmsModuleUIProvider()

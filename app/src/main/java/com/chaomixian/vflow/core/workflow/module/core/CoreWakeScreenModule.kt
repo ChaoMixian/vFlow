@@ -29,6 +29,11 @@ class CoreWakeScreenModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Wake the screen through vFlow Core.",
+        workflowStepDescription = "Wake the screen through vFlow Core.",
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

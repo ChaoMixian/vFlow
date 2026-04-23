@@ -40,6 +40,16 @@ class TextExtractModule : BaseModule() {
         category = "数据",
         categoryId = "data"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Extract a substring, prefix, suffix, or character range from text.",
+        inputHints = mapOf(
+            "text" to "Source text to extract from.",
+            "mode" to "Extraction mode: substring, prefix, suffix, or char.",
+        ),
+        requiredInputIds = setOf("text", "mode"),
+    )
 
     override val uiProvider: ModuleUIProvider? = null
 

@@ -34,6 +34,15 @@ class CorePressKeyModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Send an Android key code through vFlow Core.",
+        workflowStepDescription = "Send an Android key code through vFlow Core.",
+        inputHints = mapOf(
+            "key_code" to "Numeric Android key code such as 4 for BACK or 66 for ENTER.",
+        ),
+        requiredInputIds = setOf("key_code"),
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

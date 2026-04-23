@@ -27,6 +27,18 @@ class TextReplaceModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Replace one substring with another inside a source text.",
+        inputHints = mapOf(
+            "text" to "Source text to transform.",
+            "find" to "Substring to search for.",
+            "replace" to "Replacement text."
+        ),
+        requiredInputIds = setOf("text", "find")
+    )
+
     // 使用默认 UI，无需自定义 UIProvider
 
     override fun getInputs(): List<InputDefinition> = listOf(

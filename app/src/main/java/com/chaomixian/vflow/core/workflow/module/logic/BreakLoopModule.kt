@@ -24,6 +24,10 @@ class BreakLoopModule : BaseModule() {
         category = "逻辑控制",
         categoryId = "logic"
     )
+    override val aiMetadata = temporaryWorkflowOnlyMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Exit the current loop early. Use only inside a loop body.",
+    )
 
     // 跳出循环模块没有输入和输出，它只影响控制流
     override fun getInputs(): List<InputDefinition> = emptyList()

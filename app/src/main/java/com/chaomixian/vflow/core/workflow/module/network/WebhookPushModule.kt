@@ -5,6 +5,9 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.ActionMetadata
+import com.chaomixian.vflow.core.module.AiModuleMetadata
+import com.chaomixian.vflow.core.module.AiModuleRiskLevel
+import com.chaomixian.vflow.core.module.AiModuleUsageScope
 import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
@@ -54,6 +57,19 @@ class WebhookPushModule : BaseModule() {
         iconRes = R.drawable.rounded_ios_share_24,
         category = "网络",
         categoryId = "network"
+    )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.HIGH,
+        workflowStepDescription = "Send a webhook request with JSON, custom JSON, raw text, or form data.",
+        inputHints = mapOf(
+            "url" to "Webhook endpoint URL.",
+            "method" to "Request method, usually POST.",
+            "body_type" to "Payload mode: json, custom_json, raw, or form.",
+            "message" to "Main message body when not using custom JSON mode.",
+            "custom_json_body" to "Full JSON payload for custom_json mode.",
+        ),
+        requiredInputIds = setOf("url", "method"),
     )
 
     override fun getInputs(): List<InputDefinition> = listOf(

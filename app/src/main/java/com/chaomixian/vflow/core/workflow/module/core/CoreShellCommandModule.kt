@@ -37,6 +37,15 @@ class CoreShellCommandModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.HIGH,
+        directToolDescription = "Run an arbitrary shell command through vFlow Core. Use only when safer modules are insufficient.",
+        workflowStepDescription = "Run an arbitrary shell command through vFlow Core.",
+        inputHints = mapOf(
+            "command" to "Exact shell command string to run.",
+        ),
+        requiredInputIds = setOf("command"),
+    )
 
     private val modeOptions = listOf(MODE_SHELL, MODE_ROOT, MODE_AUTO)
 

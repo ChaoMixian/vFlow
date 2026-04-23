@@ -33,6 +33,12 @@ class MobileDataModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.HIGH,
+        directToolDescription = "Enable or disable mobile data.",
+        workflowStepDescription = "Change mobile data state.",
+        requiredInputIds = setOf("action"),
+    )
 
     // 动态声明权限：需要 Root 或 Shizuku 权限执行 shell 命令
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

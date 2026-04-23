@@ -25,6 +25,16 @@ class GetVariableModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Read a named variable or magic-variable reference so later steps can reuse its value.",
+        inputHints = mapOf(
+            "source" to "Use a named variable like [[myVar]] or a magic variable like {{stepId.outputId}}."
+        ),
+        requiredInputIds = setOf("source")
+    )
+
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "source",

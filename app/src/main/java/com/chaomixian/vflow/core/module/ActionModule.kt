@@ -25,6 +25,14 @@ interface ActionModule {
     /** 模块的元数据，用于在UI中展示（名称、描述、图标、分类等）。 */
     val metadata: ActionMetadata
 
+    /**
+     * 提供给 AI / Chat Agent 的可选元数据。
+     * 模块可以在自己的代码文件中声明它是否允许直接工具调用、临时工作流使用，
+     * 以及针对 AI 的额外描述、输入提示、风险级别等。
+     */
+    val aiMetadata: AiModuleMetadata?
+        get() = null
+
     /** 模块的积木块行为定义，指示其是否为积木块的一部分以及如何表现。 */
     val blockBehavior: BlockBehavior
 

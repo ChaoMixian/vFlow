@@ -35,6 +35,20 @@ class InvokeModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.HIGH,
+        workflowStepDescription = "Invoke a URI, activity, broadcast, or service intent.",
+        inputHints = mapOf(
+            "mode" to "Invocation mode: uri, activity, broadcast, or service.",
+            "uri" to "Target URI or intent data string.",
+            "action" to "Optional Android intent action.",
+            "package" to "Optional target package name.",
+            "class" to "Optional target class name.",
+            "extras" to "Optional dictionary of intent extras.",
+        ),
+        requiredInputIds = setOf("mode"),
+    )
 
     override val uiProvider: ModuleUIProvider = InvokeModuleUIProvider()
 

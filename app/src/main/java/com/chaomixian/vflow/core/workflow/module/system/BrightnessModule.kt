@@ -27,6 +27,12 @@ class BrightnessModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Set screen brightness to a value between 0 and 255.",
+        workflowStepDescription = "Set screen brightness.",
+        requiredInputIds = setOf("brightness_level"),
+    )
 
     override val requiredPermissions = listOf(PermissionManager.WRITE_SETTINGS)
 

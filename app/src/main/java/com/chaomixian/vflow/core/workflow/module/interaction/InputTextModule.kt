@@ -59,6 +59,16 @@ class InputTextModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Type text into the currently focused input field. Focus the target field first if there is any uncertainty.",
+        workflowStepDescription = "Type text into the currently focused input field.",
+        inputHints = mapOf(
+            "text" to "Plain text to type. Do not include focus or click actions here.",
+            "action_after" to "Optional trailing key action such as enter or next after typing.",
+        ),
+        requiredInputIds = setOf("text"),
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         val modeInput = getInputs().first { it.id == "mode" }

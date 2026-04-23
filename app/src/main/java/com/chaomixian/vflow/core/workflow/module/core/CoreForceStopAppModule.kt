@@ -31,6 +31,12 @@ class CoreForceStopAppModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.HIGH,
+        directToolDescription = "Force-stop an app through vFlow Core. Use only when explicitly needed.",
+        workflowStepDescription = "Force-stop an app through vFlow Core.",
+        requiredInputIds = setOf("package_name"),
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

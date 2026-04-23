@@ -43,6 +43,18 @@ class OCRModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Read text from an image or find matching text positions inside an image. Prefer accessibility element search before OCR when possible.",
+        workflowStepDescription = "Run OCR on an image or find matching text positions.",
+        inputHints = mapOf(
+            "image" to "Usually pass an image output from a screenshot or image-processing step.",
+            "mode" to "Use recognize to read all text, or find to locate specific text.",
+            "target_text" to "Required when mode=find. Use the exact target text or a short distinctive phrase.",
+            "region" to "Optional coordinate region to limit OCR to part of the image.",
+        ),
+        requiredInputIds = setOf("image", "mode"),
+    )
 
     override val uiProvider: ModuleUIProvider? = null
 

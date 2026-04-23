@@ -37,6 +37,15 @@ class SetClipboardModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        directToolDescription = "Write text or an image handle into the system clipboard.",
+        workflowStepDescription = "Write text or an image into the clipboard.",
+        inputHints = mapOf(
+            "content" to "Usually a text value or an image output from a previous step.",
+        ),
+        requiredInputIds = setOf("content"),
+    )
 
     // 定义输入参数，现在可以接受文本或图片
     override fun getInputs(): List<InputDefinition> = listOf(

@@ -47,6 +47,15 @@ class ClickModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Tap a screen element, coordinate, or id-like string target. Prefer passing a ScreenElement or Coordinate from a previous step instead of guessing raw coordinates.",
+        workflowStepDescription = "Tap a screen element or coordinate target.",
+        inputHints = mapOf(
+            "target" to "Best inputs are a ScreenElement, a Coordinate, or a literal x,y pair. Plain strings are treated as view-id style targets when they are not coordinates.",
+        ),
+        requiredInputIds = setOf("target"),
+    )
     // 此模块需要的权限列表
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 

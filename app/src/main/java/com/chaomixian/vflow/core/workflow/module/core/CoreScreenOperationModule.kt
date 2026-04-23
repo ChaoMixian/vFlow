@@ -45,6 +45,12 @@ class CoreScreenOperationModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Perform click, long-press, or swipe gestures through vFlow Core. Prefer this when the user explicitly wants the Core path.",
+        workflowStepDescription = "Perform gestures through vFlow Core.",
+        requiredInputIds = setOf("operation_type", "target"),
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

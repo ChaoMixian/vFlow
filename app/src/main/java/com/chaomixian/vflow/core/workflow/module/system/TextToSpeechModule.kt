@@ -95,6 +95,21 @@ class TextToSpeechModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Speak text aloud with Android text-to-speech.",
+        workflowStepDescription = "Speak text aloud with Android text-to-speech, with optional language, rate, pitch, and queue settings.",
+        inputHints = mapOf(
+            "text" to "Text content to read aloud.",
+            "language" to "Optional canonical language code such as auto, zh-CN, or en-US.",
+            "speechRate" to "Optional speaking speed multiplier, usually around 1.0.",
+            "pitch" to "Optional voice pitch multiplier, usually around 1.0.",
+            "queueMode" to "Use flush to replace current speech or add to queue.",
+            "awaitCompletion" to "Set true if later steps should wait for playback to finish."
+        ),
+        requiredInputIds = setOf("text")
+    )
+
     override fun getInputs(): List<InputDefinition> = listOf(
         // 基础参数：要朗读的文本
         InputDefinition(

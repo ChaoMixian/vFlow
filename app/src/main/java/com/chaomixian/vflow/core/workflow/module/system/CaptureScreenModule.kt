@@ -57,6 +57,15 @@ class CaptureScreenModule : BaseModule() {
         nameStringRes = R.string.module_vflow_system_capture_screen_name,
         descriptionStringRes = R.string.module_vflow_system_capture_screen_desc
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Capture a screenshot when the current screen content is unknown or must be passed to OCR or image-processing steps.",
+        workflowStepDescription = "Capture a screenshot for downstream OCR or image processing.",
+        inputHints = mapOf(
+            "mode" to "Prefer auto unless the user explicitly needs screencap mode.",
+            "region" to "Optional crop rectangle as left,top,right,bottom pixels. Leave empty for full screen.",
+        ),
+    )
 
     private val modeOptions = listOf(MODE_AUTO, MODE_SCREENCAP)
 

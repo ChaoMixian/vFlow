@@ -34,6 +34,16 @@ class CallPhoneModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.HIGH,
+        directToolDescription = "Start a phone call to the specified number, or open the dialer if direct calling is unavailable.",
+        workflowStepDescription = "Start a phone call to the specified number, or open the dialer if direct calling is unavailable.",
+        inputHints = mapOf(
+            "phone_number" to "Phone number to call, including any needed country or area code."
+        ),
+        requiredInputIds = setOf("phone_number")
+    )
+
     // 定义通话权限
     private val CALL_PHONE_PERMISSION = Permission(
         id = Manifest.permission.CALL_PHONE,

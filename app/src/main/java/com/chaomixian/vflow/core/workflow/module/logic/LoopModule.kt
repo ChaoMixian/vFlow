@@ -36,6 +36,14 @@ class LoopModule : BaseBlockModule() {
         category = "逻辑控制",
         categoryId = "logic"
     )
+    override val aiMetadata = temporaryWorkflowOnlyMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Repeat the enclosed steps a fixed number of times. Pair it with vflow.logic.loop.end.",
+        inputHints = mapOf(
+            "count" to "Positive repeat count. Use a literal integer or a previous numeric output.",
+        ),
+        requiredInputIds = setOf("count"),
+    )
     override val pairingId = LOOP_PAIRING_ID
     override val stepIdsInBlock = listOf(LOOP_START_ID, LOOP_END_ID) // 定义Loop块包含的模块ID
 
@@ -129,6 +137,10 @@ class EndLoopModule : BaseModule() {
         iconRes = R.drawable.rounded_cached_24,
         category = "逻辑控制",
         categoryId = "logic"
+    )
+    override val aiMetadata = temporaryWorkflowOnlyMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Close a loop block started by vflow.logic.loop.start.",
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, LOOP_PAIRING_ID) // 标记为块结束
 

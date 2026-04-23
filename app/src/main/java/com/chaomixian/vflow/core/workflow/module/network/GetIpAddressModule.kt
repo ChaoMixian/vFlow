@@ -39,6 +39,12 @@ class GetIpAddressModule : BaseModule() {
         category = "网络",
         categoryId = "network"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Read the local or external IPv4 or IPv6 address.",
+        requiredInputIds = setOf("type", "ip_version"),
+    )
 
     private val typeOptions by lazy {
         listOf(TYPE_LOCAL, TYPE_EXTERNAL)

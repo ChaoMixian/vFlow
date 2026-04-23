@@ -30,6 +30,15 @@ class CloseAppModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.HIGH,
+        directToolDescription = "Force-stop an app by package name. This is stronger than navigating away from the app and may interrupt user state.",
+        workflowStepDescription = "Force-stop an app by package name.",
+        inputHints = mapOf(
+            "packageName" to "Android package name of the app to force stop.",
+        ),
+        requiredInputIds = setOf("packageName"),
+    )
 
     // 使用专门的 LaunchAppUIProvider（只需要选择单个应用）
     override val uiProvider: ModuleUIProvider = LaunchAppUIProvider()

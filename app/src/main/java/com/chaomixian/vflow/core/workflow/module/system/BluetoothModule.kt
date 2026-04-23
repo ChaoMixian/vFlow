@@ -35,6 +35,12 @@ class BluetoothModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Turn Bluetooth on, off, or toggle it.",
+        workflowStepDescription = "Change Bluetooth state.",
+        requiredInputIds = setOf("state"),
+    )
 
     // 动态获取 Shell 权限 + 蓝牙权限
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {

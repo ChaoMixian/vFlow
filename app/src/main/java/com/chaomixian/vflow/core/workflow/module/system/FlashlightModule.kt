@@ -35,6 +35,12 @@ class FlashlightModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        directToolDescription = "Turn the flashlight on, off, or toggle it.",
+        workflowStepDescription = "Change flashlight state.",
+        requiredInputIds = setOf("mode"),
+    )
 
     // 操作模式常量
     companion object {

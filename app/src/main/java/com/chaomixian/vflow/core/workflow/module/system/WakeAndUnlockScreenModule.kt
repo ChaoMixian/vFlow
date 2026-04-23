@@ -6,6 +6,8 @@ import android.os.PowerManager
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.ActionMetadata
+import com.chaomixian.vflow.core.module.AiModuleRiskLevel
+import com.chaomixian.vflow.core.module.directToolMetadata
 import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
@@ -42,6 +44,14 @@ class WakeAndUnlockScreenModule : BaseModule() {
         iconRes = R.drawable.rounded_brightness_5_24,
         category = "应用与系统",
         categoryId = "device"
+    )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.HIGH,
+        directToolDescription = "Wake the screen and optionally enter the lock-screen password. Use only when unlocking is explicitly requested.",
+        workflowStepDescription = "Wake the screen and optionally unlock it.",
+        inputHints = mapOf(
+            INPUT_UNLOCK_PASSWORD to "Optional ASCII PIN or password. Leave empty to only wake and attempt swipe unlock.",
+        ),
     )
 
     override val uiProvider: ModuleUIProvider = WakeAndUnlockScreenModuleUIProvider()

@@ -32,6 +32,17 @@ class LaunchAppModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        directToolDescription = "Launch an app or a specific activity. Use this instead of navigating manually through the launcher when the target app is known.",
+        workflowStepDescription = "Launch an app or a specific activity.",
+        inputHints = mapOf(
+            "packageName" to "Android package name of the target app. Prefer the exact package id when known.",
+            "activityName" to "Optional activity class name. Use LAUNCH to open the default launcher activity.",
+            "useAdb" to "Optional shell launch path. Leave false unless shell launch is specifically needed.",
+        ),
+        requiredInputIds = setOf("packageName"),
+    )
 
     // 使用专门的 LaunchAppUIProvider
     override val uiProvider: ModuleUIProvider = LaunchAppUIProvider()

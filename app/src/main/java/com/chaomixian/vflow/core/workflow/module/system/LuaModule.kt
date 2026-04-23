@@ -29,6 +29,16 @@ class LuaModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.HIGH,
+        workflowStepDescription = "Execute a Lua script with optional inputs and return a dictionary result.",
+        inputHints = mapOf(
+            "script" to "Full Lua source code.",
+            "inputs" to "Optional dictionary of script inputs.",
+        ),
+        requiredInputIds = setOf("script"),
+    )
 
     override val uiProvider: ModuleUIProvider? = LuaModuleUIProvider()
 

@@ -96,6 +96,18 @@ class CreateVariableModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Create a new variable value and optionally store it under a named variable for later steps.",
+        inputHints = mapOf(
+            "variableName" to "Optional stable variable name without surrounding brackets.",
+            "type" to "Choose the canonical variable type such as string, number, boolean, list, dictionary, image, or coordinate.",
+            "value" to "Initial value for the variable. It can reference previous outputs or named variables."
+        ),
+        requiredInputIds = setOf("type")
+    )
+
     override val uiProvider: ModuleUIProvider? = VariableModuleUIProvider(TYPE_OPTIONS)
 
     override fun getInputs(): List<InputDefinition> = listOf(

@@ -30,6 +30,11 @@ class SleepScreenModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Turn the screen off and put the device to sleep.",
+        workflowStepDescription = "Turn the screen off.",
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return ShellManager.getRequiredPermissions(com.chaomixian.vflow.core.logging.LogManager.applicationContext)

@@ -31,6 +31,11 @@ class GetCurrentActivityModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Read the current foreground app and activity information without changing device state.",
+        workflowStepDescription = "Read the current foreground app and activity information.",
+    )
 
     override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 

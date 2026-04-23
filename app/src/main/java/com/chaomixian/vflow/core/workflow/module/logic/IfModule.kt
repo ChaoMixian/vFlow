@@ -135,6 +135,17 @@ class IfModule : BaseBlockModule() {
         category = "逻辑控制",
         categoryId = "logic"
     )
+    override val aiMetadata = temporaryWorkflowOnlyMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Start a conditional block. Pair it with optional vflow.logic.if.middle and required vflow.logic.if.end.",
+        inputHints = mapOf(
+            "input1" to "Primary value to test. Usually a previous step output or variable.",
+            "operator" to "Canonical condition operator such as equals, contains, number_gt, is_true.",
+            "value1" to "Comparison value used by one-value operators.",
+            "value2" to "Upper bound used only by the number_between operator.",
+        ),
+        requiredInputIds = setOf("input1", "operator"),
+    )
     override val pairingId = IF_PAIRING_ID
     override val stepIdsInBlock = listOf(IF_START_ID, ELSE_ID, IF_END_ID)
 
@@ -364,6 +375,10 @@ class ElseModule : BaseModule() {
         category = "逻辑控制",
         categoryId = "logic"
     )
+    override val aiMetadata = temporaryWorkflowOnlyMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Optional else branch inside an if block.",
+    )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_MIDDLE, IF_PAIRING_ID, isIndividuallyDeletable = true)
     override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_else)
 
@@ -434,6 +449,10 @@ class EndIfModule : BaseModule() {
         iconRes = R.drawable.rounded_alt_route_24,
         category = "逻辑控制",
         categoryId = "logic"
+    )
+    override val aiMetadata = temporaryWorkflowOnlyMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Close an if block started by vflow.logic.if.start.",
     )
     override val blockBehavior = BlockBehavior(BlockType.BLOCK_END, IF_PAIRING_ID)
     override fun getSummary(context: Context, step: ActionStep): CharSequence = context.getString(R.string.summary_end_if)

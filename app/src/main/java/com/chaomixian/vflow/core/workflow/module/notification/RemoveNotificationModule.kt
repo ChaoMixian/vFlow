@@ -24,6 +24,16 @@ class RemoveNotificationModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Dismiss one or more existing notifications, usually notifications returned by a prior lookup or trigger step.",
+        workflowStepDescription = "Dismiss one or more existing notifications returned from notification lookup or trigger steps.",
+        inputHints = mapOf(
+            "target" to "Pass a notification object or a list of notifications, usually from a prior find-notification step."
+        ),
+        requiredInputIds = setOf("target")
+    )
+
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATION_LISTENER_SERVICE)
 
     override fun getInputs(): List<InputDefinition> = listOf(

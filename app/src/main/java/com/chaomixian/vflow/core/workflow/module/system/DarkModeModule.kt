@@ -31,6 +31,12 @@ class DarkModeModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Set Android dark mode to toggle, dark, light, or auto.",
+        workflowStepDescription = "Change Android dark mode.",
+        requiredInputIds = setOf("mode"),
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return ShellManager.getRequiredPermissions(appContext)

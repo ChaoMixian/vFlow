@@ -34,6 +34,12 @@ class VibrationModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        directToolDescription = "Trigger device vibration with a chosen mode and duration.",
+        workflowStepDescription = "Trigger device vibration.",
+        requiredInputIds = setOf("mode"),
+    )
 
     // 振动模式常量
     companion object {

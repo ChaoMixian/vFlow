@@ -36,6 +36,15 @@ class WifiModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Turn Wi-Fi on, off, or toggle it.",
+        workflowStepDescription = "Change Wi-Fi state.",
+        inputHints = mapOf(
+            "state" to "Canonical values are on, off, or toggle.",
+        ),
+        requiredInputIds = setOf("state"),
+    )
 
     private val stateOptions = listOf(STATE_ON, STATE_OFF, STATE_TOGGLE)
 

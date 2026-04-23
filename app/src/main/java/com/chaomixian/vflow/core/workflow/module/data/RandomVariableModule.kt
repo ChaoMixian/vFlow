@@ -33,6 +33,21 @@ class RandomVariableModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Generate a random number or random text and optionally save it to a named variable.",
+        inputHints = mapOf(
+            "type" to "Choose number or string.",
+            "variableName" to "Optional target named variable without brackets.",
+            "min" to "For number mode, lower bound.",
+            "max" to "For number mode, upper bound.",
+            "length" to "For string mode, desired output length.",
+            "custom_chars" to "For string mode, optional custom character set."
+        ),
+        requiredInputIds = setOf("type")
+    )
+
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
             id = "type",

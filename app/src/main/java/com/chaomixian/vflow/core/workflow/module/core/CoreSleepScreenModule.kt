@@ -29,6 +29,11 @@ class CoreSleepScreenModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Turn the screen off through vFlow Core.",
+        workflowStepDescription = "Turn the screen off through vFlow Core.",
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

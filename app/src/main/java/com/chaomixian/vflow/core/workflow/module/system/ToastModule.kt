@@ -32,6 +32,16 @@ class ToastModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Show a short toast message on screen.",
+        workflowStepDescription = "Show a short toast message on screen.",
+        inputHints = mapOf(
+            "message" to "User-visible toast text."
+        ),
+        requiredInputIds = setOf("message")
+    )
+
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("message")
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATIONS)
 

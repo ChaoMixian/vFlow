@@ -29,6 +29,11 @@ class CoreScreenStatusModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Read whether the screen is currently on through vFlow Core.",
+        workflowStepDescription = "Read screen on/off state through vFlow Core.",
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

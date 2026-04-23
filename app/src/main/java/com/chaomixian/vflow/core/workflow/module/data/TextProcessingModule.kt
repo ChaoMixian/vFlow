@@ -33,6 +33,19 @@ class TextProcessingModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Process text by joining a list, splitting text, replacing content, or extracting regex matches.",
+        inputHints = mapOf(
+            "operation" to "Use one of join, split, replace, or regex_extract.",
+            "join_list" to "For join, pass a list variable to combine into text.",
+            "source_text" to "For split, replace, or regex operations, provide the source text.",
+            "regex_pattern" to "For regex_extract, provide a valid regex pattern and optionally regex_group."
+        ),
+        requiredInputIds = setOf("operation")
+    )
+
     override val uiProvider: ModuleUIProvider? = null
 
     // 定义所有支持的操作

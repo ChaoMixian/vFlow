@@ -32,6 +32,17 @@ class CalculationModule : BaseModule() {
         category = "数据",
         categoryId = "data"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Perform arithmetic on two numeric operands.",
+        inputHints = mapOf(
+            "operand1" to "First numeric operand.",
+            "operator" to "Arithmetic operator such as +, -, *, /, or %.",
+            "operand2" to "Second numeric operand.",
+        ),
+        requiredInputIds = setOf("operand1", "operator", "operand2"),
+    )
 
     /**
      * 定义模块的输入参数。

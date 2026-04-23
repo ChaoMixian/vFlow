@@ -37,6 +37,16 @@ class GetAppUsageStatsModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Read app usage statistics for a time interval and return the most-used apps.",
+        inputHints = mapOf(
+            "interval" to "Time range such as today, last_24_hours, this_week, this_month, or this_year.",
+            "max_results" to "Maximum number of apps to return.",
+        ),
+        requiredInputIds = setOf("interval"),
+    )
 
     override val requiredPermissions = listOf(PermissionManager.USAGE_STATS)
 

@@ -34,6 +34,11 @@ class CoreCaptureScreenModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Capture a screenshot through vFlow Core. Prefer this when the user explicitly wants the Core capture path.",
+        workflowStepDescription = "Capture a screenshot through vFlow Core.",
+    )
 
     private val outputFormatOptions = listOf("PNG", "JPEG")
 

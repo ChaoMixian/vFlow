@@ -31,6 +31,11 @@ class CoreGetClipboardModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Read clipboard text through vFlow Core.",
+        workflowStepDescription = "Read clipboard text through vFlow Core.",
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

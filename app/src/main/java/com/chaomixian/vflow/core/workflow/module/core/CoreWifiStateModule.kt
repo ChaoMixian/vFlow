@@ -29,6 +29,11 @@ class CoreWifiStateModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Read the current Wi-Fi enabled state through vFlow Core.",
+        workflowStepDescription = "Read Wi-Fi state through vFlow Core.",
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

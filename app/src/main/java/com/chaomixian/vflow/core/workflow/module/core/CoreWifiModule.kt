@@ -35,6 +35,12 @@ class CoreWifiModule : BaseModule() {
         category = "Core (Beta)",
         categoryId = "core"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Turn Wi-Fi on, off, or toggle it through vFlow Core.",
+        workflowStepDescription = "Change Wi-Fi state through vFlow Core.",
+        requiredInputIds = setOf("action"),
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

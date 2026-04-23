@@ -35,6 +35,16 @@ class ShellCommandModule : BaseModule() {
         category = "Shizuku",
         categoryId = "shizuku"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.HIGH,
+        directToolDescription = "Run an arbitrary shell command through auto, Shizuku, or root mode. Use only when safer dedicated modules cannot complete the task.",
+        workflowStepDescription = "Run an arbitrary shell command.",
+        inputHints = mapOf(
+            "mode" to "Preferred privilege mode. Leave auto unless the user explicitly requires Shizuku or root.",
+            "command" to "Exact shell command string to run.",
+        ),
+        requiredInputIds = setOf("command"),
+    )
 
     private val modeOptions = listOf(MODE_AUTO, MODE_SHIZUKU, MODE_ROOT)
 

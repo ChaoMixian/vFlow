@@ -24,6 +24,10 @@ class ContinueLoopModule : BaseModule() {
         category = "逻辑控制",
         categoryId = "logic"
     )
+    override val aiMetadata = temporaryWorkflowOnlyMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Skip the rest of the current loop iteration and continue with the next iteration.",
+    )
 
     override fun getInputs(): List<InputDefinition> = emptyList()
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = emptyList()

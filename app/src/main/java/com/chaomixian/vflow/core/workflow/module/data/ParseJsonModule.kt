@@ -32,6 +32,16 @@ class ParseJsonModule : BaseModule() {
         category = "数据",
         categoryId = "data"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Parse JSON text and extract values by a dotted path such as user.name or items.0.id.",
+        inputHints = mapOf(
+            "json" to "JSON text to parse, usually from an HTTP response or a variable.",
+            "path" to "Extraction path such as user.name, users.0.name, or items.*.id.",
+        ),
+        requiredInputIds = setOf("json", "path"),
+    )
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(

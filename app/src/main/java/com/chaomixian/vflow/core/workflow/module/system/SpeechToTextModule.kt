@@ -6,6 +6,9 @@ import android.speech.SpeechRecognizer
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.ActionMetadata
+import com.chaomixian.vflow.core.module.AiModuleMetadata
+import com.chaomixian.vflow.core.module.AiModuleRiskLevel
+import com.chaomixian.vflow.core.module.AiModuleUsageScope
 import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.EditorAction
 import com.chaomixian.vflow.core.module.ExecutionResult
@@ -15,6 +18,7 @@ import com.chaomixian.vflow.core.module.InputVisibility
 import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.module.ProgressUpdate
+import com.chaomixian.vflow.core.module.directToolMetadata
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -176,6 +180,22 @@ class SpeechToTextModule : BaseModule() {
         iconRes = R.drawable.rounded_text_to_speech_24,
         category = "应用与系统",
         categoryId = "device"
+    )
+
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Capture speech through the configured recognizer UI and return recognized text.",
+        workflowStepDescription = "Capture speech through the configured recognizer UI and return recognized text.",
+        inputHints = mapOf(
+            "engine" to "Use SYSTEM for Android speech recognition or SHERPA_NCNN for the local model.",
+            "prompt" to "Short prompt shown to the user before speaking.",
+            "language" to "Optional canonical language code for the system engine.",
+            "sherpaLanguage" to "Optional canonical language code for the Sherpa engine.",
+            "preferOffline" to "For the system engine, prefer offline recognition when available.",
+            "autoStart" to "Automatically start recording when the UI opens.",
+            "autoSend" to "Automatically confirm the recognized text."
+        ),
+        requiredInputIds = setOf("engine")
     )
 
     override val requiredPermissions = listOf(

@@ -24,6 +24,17 @@ class ModifyVariableModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.LOW,
+        workflowStepDescription = "Update an existing named variable with a new value.",
+        inputHints = mapOf(
+            "variable" to "Pass a named variable reference like [[myVar]], not a plain label.",
+            "newValue" to "New value to assign. It may reference prior outputs or variables."
+        ),
+        requiredInputIds = setOf("variable", "newValue")
+    )
+
     override val uiProvider: ModuleUIProvider? = RichTextUIProvider("newValue")
 
     override fun getInputs(): List<InputDefinition> = listOf(

@@ -55,6 +55,17 @@ class FindImageModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Find a template image inside a screenshot and return matching coordinates.",
+        inputHints = mapOf(
+            "template_uri" to "Template image to search for.",
+            "threshold" to "Similarity threshold; 80 percent is the usual default.",
+            "screenshot_uri" to "Optional screenshot image. Leave empty to capture the current screen.",
+        ),
+        requiredInputIds = setOf("template_uri"),
+    )
 
     override val uiProvider: ModuleUIProvider = FindImageModuleUIProvider()
 

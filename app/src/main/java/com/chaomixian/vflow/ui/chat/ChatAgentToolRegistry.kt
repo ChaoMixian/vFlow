@@ -2,6 +2,8 @@ package com.chaomixian.vflow.ui.chat
 
 import android.content.Context
 import com.chaomixian.vflow.core.module.ActionModule
+import com.chaomixian.vflow.core.module.AiModuleRiskLevel
+import com.chaomixian.vflow.core.module.AiModuleUsageScope
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleCategories
 import com.chaomixian.vflow.core.module.ModuleRegistry
@@ -44,14 +46,16 @@ internal class ChatAgentToolRegistry(context: Context) {
     private val appContext = context.applicationContext
 
     private val toolsByName: Map<String, ChatAgentToolDefinition>
+    private val temporaryWorkflowModuleIds: List<String>
     private val savedWorkflowModuleIds: List<String>
 
     init {
         ModuleRegistry.initialize(appContext)
+        temporaryWorkflowModuleIds = buildTemporaryWorkflowModuleIds()
         savedWorkflowModuleIds = buildSavedWorkflowModuleIds()
         toolsByName = (
             listOf(buildTemporaryWorkflowToolDefinition(), buildSaveWorkflowToolDefinition()) +
-                EXPOSED_MODULE_IDS.mapNotNull(::buildToolDefinition)
+                buildDirectToolDefinitions()
             ).associateBy { it.name }
     }
 
@@ -66,7 +70,7 @@ internal class ChatAgentToolRegistry(context: Context) {
     fun getRiskLevelForModuleId(moduleId: String): ChatAgentToolRiskLevel = riskLevelForModuleId(moduleId)
 
     fun isTemporaryWorkflowModuleAllowed(moduleId: String): Boolean {
-        return moduleId in TEMPORARY_WORKFLOW_MODULE_IDS
+        return moduleId in temporaryWorkflowModuleIds
     }
 
     fun isSavedWorkflowModuleAllowed(moduleId: String): Boolean {
@@ -105,6 +109,11 @@ internal class ChatAgentToolRegistry(context: Context) {
     }
 
     private fun buildTemporaryWorkflowToolDefinition(): ChatAgentToolDefinition {
+        val stepCatalog = buildCompactModuleCatalog(
+            temporaryWorkflowModuleIds.filterNot(::isTriggerModule),
+            maxModules = 40,
+            preferWorkflowDescriptions = true,
+        )
         return ChatAgentToolDefinition(
             name = CHAT_TEMPORARY_WORKFLOW_TOOL_NAME,
             title = "临时工作流",
@@ -117,11 +126,12 @@ internal class ChatAgentToolRegistry(context: Context) {
                 append("Use vflow.logic.loop.start and vflow.logic.loop.end for compact repeated sequences. ")
                 append("Allowed steps are curated action modules only, not triggers and not this temporary workflow tool. ")
                 append("Risk level is computed from the workflow steps.")
-                append(buildVariablePassingGuide(TEMPORARY_WORKFLOW_MODULE_IDS))
+                append(stepCatalog)
+                append(buildVariablePassingGuide(temporaryWorkflowModuleIds))
             },
             moduleId = CHAT_TEMPORARY_WORKFLOW_MODULE_ID,
             moduleDisplayName = "临时工作流",
-            inputSchema = buildTemporaryWorkflowSchema(TEMPORARY_WORKFLOW_MODULE_IDS),
+            inputSchema = buildTemporaryWorkflowSchema(temporaryWorkflowModuleIds),
             permissionNames = emptyList(),
             riskLevel = ChatAgentToolRiskLevel.STANDARD,
             usageScopes = setOf(ChatAgentToolUsageScope.TEMPORARY_WORKFLOW),
@@ -132,6 +142,12 @@ internal class ChatAgentToolRegistry(context: Context) {
         val triggerCatalog = buildCompactModuleCatalog(
             savedWorkflowModuleIds.filter(::isTriggerModule),
             maxModules = 24,
+            preferWorkflowDescriptions = false,
+        )
+        val stepCatalog = buildCompactModuleCatalog(
+            savedWorkflowModuleIds.filterNot(::isTriggerModule),
+            maxModules = 48,
+            preferWorkflowDescriptions = true,
         )
         return ChatAgentToolDefinition(
             name = CHAT_SAVE_WORKFLOW_TOOL_NAME,
@@ -148,6 +164,7 @@ internal class ChatAgentToolRegistry(context: Context) {
                 append("Risk level is computed from saved modules; workflows with auto triggers or shell-like modules are high risk. ")
                 append("Usage scope: saved workflow step. ")
                 append(triggerCatalog)
+                append(stepCatalog)
                 append(buildVariablePassingGuide(savedWorkflowModuleIds))
             },
             moduleId = CHAT_SAVE_WORKFLOW_MODULE_ID,
@@ -458,7 +475,7 @@ internal class ChatAgentToolRegistry(context: Context) {
     ): String {
         val parts = mutableListOf<String>()
         parts += "vFlow module: $localizedName."
-        parts += TOOL_USAGE_NOTES[module.id]
+        parts += module.aiMetadata?.directToolDescription
             ?: module.metadata.getLocalizedDescription(appContext)
         parts += "Risk level: ${riskLevel.name.lowercase()}."
         if (usageScopes.isNotEmpty()) {
@@ -474,7 +491,7 @@ internal class ChatAgentToolRegistry(context: Context) {
         moduleId: String,
         inputs: List<InputDefinition>,
     ): JsonObject {
-        val required = REQUIRED_INPUT_IDS[moduleId].orEmpty()
+        val required = ModuleRegistry.getModule(moduleId)?.aiMetadata?.requiredInputIds.orEmpty()
             .filter { inputId -> inputs.any { it.id == inputId } }
 
         return buildJsonObject {
@@ -538,7 +555,7 @@ internal class ChatAgentToolRegistry(context: Context) {
             parts += "Can accept prior artifact handles of type ${artifactTypes.joinToString()}."
         }
 
-        INPUT_USAGE_NOTES["${moduleId}#${input.id}"]
+        ModuleRegistry.getModule(moduleId)?.aiMetadata?.inputHints?.get(input.id)
             ?.let(parts::add)
 
         if (input.staticType == ParameterType.ENUM && input.options.isNotEmpty()) {
@@ -572,15 +589,40 @@ internal class ChatAgentToolRegistry(context: Context) {
     }
 
     private fun buildModuleUsageScopes(moduleId: String): Set<ChatAgentToolUsageScope> {
+        val metadata = ModuleRegistry.getModule(moduleId)?.aiMetadata
         return buildSet {
-            add(ChatAgentToolUsageScope.DIRECT_TOOL)
-            if (moduleId in TEMPORARY_WORKFLOW_MODULE_IDS) {
+            if (metadata?.usageScopes?.contains(AiModuleUsageScope.DIRECT_TOOL) == true) {
+                add(ChatAgentToolUsageScope.DIRECT_TOOL)
+            }
+            if (metadata?.usageScopes?.contains(AiModuleUsageScope.TEMPORARY_WORKFLOW) == true) {
                 add(ChatAgentToolUsageScope.TEMPORARY_WORKFLOW)
             }
             if (moduleId in savedWorkflowModuleIds) {
                 add(ChatAgentToolUsageScope.SAVED_WORKFLOW)
             }
         }
+    }
+
+    private fun buildDirectToolDefinitions(): List<ChatAgentToolDefinition> {
+        val moduleIds = ModuleRegistry.getAllModules()
+            .filter { module ->
+                module.aiMetadata?.usageScopes?.contains(AiModuleUsageScope.DIRECT_TOOL) == true ||
+                    module.id in LEGACY_DIRECT_TOOL_MODULE_IDS
+            }
+            .map { it.id }
+            .distinct()
+            .sorted()
+        return moduleIds.mapNotNull(::buildToolDefinition)
+    }
+
+    private fun buildTemporaryWorkflowModuleIds(): List<String> {
+        return ModuleRegistry.getAllModules()
+            .filter { module ->
+                module.aiMetadata?.usageScopes?.contains(AiModuleUsageScope.TEMPORARY_WORKFLOW) == true ||
+                    module.id in LEGACY_TEMPORARY_WORKFLOW_MODULE_IDS
+            }
+            .sortedWith(compareBy<ActionModule> { ModuleCategories.getSortOrder(it.metadata.getResolvedCategoryId()) }.thenBy { it.id })
+            .map { it.id }
     }
 
     private fun buildSavedWorkflowModuleIds(): List<String> {
@@ -594,7 +636,8 @@ internal class ChatAgentToolRegistry(context: Context) {
         val category = module.metadata.getResolvedCategoryId()
         if (category == ModuleCategories.TEMPLATE) return false
         if (module.id.startsWith("vflow.snippet.")) return false
-        if (module.id in SAVED_WORKFLOW_EXCLUDED_MODULE_IDS) return false
+        if (module.id in LEGACY_SAVED_WORKFLOW_EXCLUDED_MODULE_IDS) return false
+        if (module.aiMetadata?.allowSavedWorkflow == false) return false
         return true
     }
 
@@ -606,6 +649,7 @@ internal class ChatAgentToolRegistry(context: Context) {
     private fun buildCompactModuleCatalog(
         moduleIds: List<String>,
         maxModules: Int,
+        preferWorkflowDescriptions: Boolean,
     ): String {
         val entries = moduleIds
             .take(maxModules)
@@ -625,14 +669,19 @@ internal class ChatAgentToolRegistry(context: Context) {
                         "${input.id}$options"
                     }
                 val name = module.metadata.getLocalizedName(appContext)
-                if (inputs.isBlank()) {
-                    "${module.id}($name)"
+                val description = if (preferWorkflowDescriptions) {
+                    module.aiMetadata?.workflowStepDescription
                 } else {
-                    "${module.id}($name: $inputs)"
+                    module.aiMetadata?.directToolDescription
+                } ?: module.metadata.getLocalizedDescription(appContext)
+                if (inputs.isBlank()) {
+                    "${module.id}($name: $description)"
+                } else {
+                    "${module.id}($name: $description; inputs: $inputs)"
                 }
             }
         if (entries.isEmpty()) return ""
-        return " Trigger catalog: ${entries.joinToString("; ")}."
+        return " Module catalog: ${entries.joinToString("; ")}."
     }
 
     private fun buildModuleOutputCatalog(moduleIds: List<String>): String {
@@ -665,7 +714,7 @@ Block structure rules:
     private companion object {
         private const val TRIGGER_MODULE_PREFIX = "vflow.trigger."
 
-        private val EXPOSED_MODULE_IDS = listOf(
+        private val LEGACY_DIRECT_TOOL_MODULE_IDS = setOf(
             "vflow.interaction.get_current_activity",
             "vflow.system.capture_screen",
             "vflow.core.capture_screen",
@@ -700,7 +749,7 @@ Block structure rules:
             "vflow.core.shell_command",
         )
 
-        private val TEMPORARY_WORKFLOW_EXTRA_MODULE_IDS = listOf(
+        private val LEGACY_TEMPORARY_WORKFLOW_MODULE_IDS = LEGACY_DIRECT_TOOL_MODULE_IDS + setOf(
             "vflow.logic.loop.start",
             "vflow.logic.loop.end",
             "vflow.logic.if.start",
@@ -710,149 +759,19 @@ Block structure rules:
             "vflow.logic.continue_loop",
         )
 
-        private val TEMPORARY_WORKFLOW_MODULE_IDS =
-            (EXPOSED_MODULE_IDS + TEMPORARY_WORKFLOW_EXTRA_MODULE_IDS).distinct()
-
-        private val SAVED_WORKFLOW_EXCLUDED_MODULE_IDS = setOf(
+        private val LEGACY_SAVED_WORKFLOW_EXCLUDED_MODULE_IDS = setOf(
             "vflow.ai.agent",
             "vflow.ai.autoglm",
             "vflow.interaction.operit",
         )
 
-        private val REQUIRED_INPUT_IDS = mapOf(
-            "vflow.interaction.ocr" to listOf("image"),
-            "vflow.device.click" to listOf("target"),
-            "vflow.interaction.screen_operation" to listOf("target"),
-            "vflow.interaction.input_text" to listOf("text"),
-            "vflow.core.screen_operation" to listOf("target"),
-            "vflow.core.input_text" to listOf("text"),
-            "vflow.system.launch_app" to listOf("packageName"),
-            "vflow.system.close_app" to listOf("packageName"),
-            "vflow.core.force_stop_app" to listOf("package_name"),
-            "vflow.system.wifi" to listOf("state"),
-            "vflow.system.bluetooth" to listOf("state"),
-            "vflow.system.brightness" to listOf("brightness_level"),
-            "vflow.system.mobile_data" to listOf("action"),
-            "vflow.system.set_clipboard" to listOf("content"),
-            "vflow.core.set_clipboard" to listOf("text"),
-            "vflow.system.darkmode" to listOf("mode"),
-            "vflow.device.vibration" to listOf("mode"),
-            "vflow.device.flashlight" to listOf("mode"),
-            "vflow.device.delay" to listOf("duration"),
-            "vflow.shizuku.shell_command" to listOf("command"),
-            "vflow.core.shell_command" to listOf("command"),
-            "vflow.logic.loop.start" to listOf("count"),
-        )
-
         private fun riskLevelForModuleId(moduleId: String): ChatAgentToolRiskLevel {
-            return when (moduleId) {
-                "vflow.interaction.get_current_activity",
-                "vflow.system.capture_screen",
-                "vflow.core.capture_screen",
-                "vflow.interaction.ocr",
-                "vflow.interaction.find_element",
-                "vflow.system.get_clipboard",
-                "vflow.core.get_clipboard" -> ChatAgentToolRiskLevel.READ_ONLY
-
-                "vflow.device.delay",
-                "vflow.logic.loop.start",
-                "vflow.logic.loop.end",
-                "vflow.logic.if.start",
-                "vflow.logic.if.middle",
-                "vflow.logic.if.end",
-                "vflow.logic.break_loop",
-                "vflow.logic.continue_loop" -> ChatAgentToolRiskLevel.LOW
-
-                "vflow.shizuku.shell_command",
-                "vflow.core.shell_command",
-                "vflow.core.uinput_screen_operation",
-                "vflow.data.file_operation",
-                "vflow.system.lua",
-                "vflow.system.js",
-                "vflow.system.invoke",
-                "vflow.system.read_sms",
-                "vflow.device.call_phone",
-                "vflow.logic.call_workflow",
-                "vflow.logic.stop_workflow" -> ChatAgentToolRiskLevel.HIGH
-
-                else -> ChatAgentToolRiskLevel.STANDARD
+            return when (ModuleRegistry.getModule(moduleId)?.aiMetadata?.riskLevel) {
+                AiModuleRiskLevel.READ_ONLY -> ChatAgentToolRiskLevel.READ_ONLY
+                AiModuleRiskLevel.LOW -> ChatAgentToolRiskLevel.LOW
+                AiModuleRiskLevel.HIGH -> ChatAgentToolRiskLevel.HIGH
+                AiModuleRiskLevel.STANDARD, null -> ChatAgentToolRiskLevel.STANDARD
             }
         }
-
-        private val TOOL_USAGE_NOTES = mapOf(
-            "vflow.interaction.get_current_activity" to "Read the current foreground app and activity. Use this to verify which screen the device is on before acting.",
-            "vflow.system.capture_screen" to "Capture the current screen. Prefer this before OCR or visual reasoning. Returns an image artifact handle that can be reused by later tools.",
-            "vflow.core.capture_screen" to "Capture the current screen through vFlow Core when Core is available. Returns an image artifact handle.",
-            "vflow.interaction.ocr" to "Run OCR on an image artifact and optionally find target text coordinates. Use `mode=find` with `target_text` when you need a location. Prefer vflow.interaction.find_element over OCR; use OCR only as a fallback when accessibility cannot find the target.",
-            "vflow.interaction.find_element" to "Search the accessibility tree for UI elements by text, id, class, or region. Returns screen element artifacts for later actions. Prefer this over OCR when the target element is accessible.",
-            "vflow.device.click" to "Click a target UI element, coordinate, or text/id string.",
-            "vflow.interaction.screen_operation" to "Perform tap, long press, or swipe on a coordinate or element. Prefer this for gestures instead of shell commands.",
-            "vflow.interaction.input_text" to "Type text into the currently focused input field.",
-            "vflow.device.send_key_event" to "Trigger global Android actions like back, home, recents, notifications, or quick settings. Do not use quick settings to control Wi-Fi, Bluetooth, flashlight, brightness, or dark mode when a direct vFlow tool exists.",
-            "vflow.core.screen_operation" to "Perform tap, long press, or swipe through vFlow Core when Core is available.",
-            "vflow.core.input_text" to "Type text through vFlow Core when Core is available.",
-            "vflow.core.press_key" to "Send a raw Android key code through vFlow Core.",
-            "vflow.system.launch_app" to "Launch an app or a specific activity by package name.",
-            "vflow.system.close_app" to "Force-stop an app by package name.",
-            "vflow.core.force_stop_app" to "Force-stop an app through vFlow Core by package name.",
-            "vflow.system.wifi" to "Turn Wi-Fi on, off, or toggle it directly. Prefer this single-purpose tool over opening quick settings.",
-            "vflow.system.bluetooth" to "Turn Bluetooth on, off, or toggle it directly. Prefer this single-purpose tool over opening quick settings.",
-            "vflow.system.brightness" to "Set screen brightness directly with a value from 0 to 255. Prefer this over opening system settings.",
-            "vflow.system.mobile_data" to "Enable or disable mobile data directly when shell privileges are available.",
-            "vflow.system.get_clipboard" to "Read the current clipboard. May return text and/or an image artifact.",
-            "vflow.system.set_clipboard" to "Write text or an image artifact into the clipboard.",
-            "vflow.core.get_clipboard" to "Read clipboard text through vFlow Core.",
-            "vflow.core.set_clipboard" to "Write clipboard text through vFlow Core.",
-            "vflow.system.wake_screen" to "Wake the screen only. Prefer this over wake-and-unlock when unlocking is not requested.",
-            "vflow.system.wake_and_unlock_screen" to "Wake the device and optionally enter a lock-screen PIN or password. Use only when the task really needs the device unlocked.",
-            "vflow.system.sleep_screen" to "Turn the screen off directly. Prefer this single-purpose tool over simulating UI navigation.",
-            "vflow.system.darkmode" to "Switch the system dark/light mode directly.",
-            "vflow.device.vibration" to "Trigger device vibration directly.",
-            "vflow.device.flashlight" to "Turn the flashlight on, off, or toggle it directly. Prefer this single-purpose tool over opening quick settings or using OCR.",
-            "vflow.device.delay" to "Wait for the requested number of milliseconds. Use this when the UI needs time to settle after an action.",
-            "vflow.shizuku.shell_command" to "Execute a shell command through Shizuku or Root. This is high risk; use only when no safer single-purpose vFlow module can satisfy the request.",
-            "vflow.core.shell_command" to "Execute a shell command through vFlow Core with shell or root privileges. This is high risk; use only when no safer single-purpose vFlow module can satisfy the request.",
-            "vflow.logic.loop.start" to "Start a fixed-count loop. Close it later with vflow.logic.loop.end. Loop outputs are 1-based.",
-            "vflow.logic.loop.end" to "End the nearest fixed-count loop.",
-            "vflow.logic.if.start" to "Start an if block. Close it later with vflow.logic.if.end; optionally use vflow.logic.if.middle for else.",
-            "vflow.logic.if.middle" to "Else branch for the nearest if block.",
-            "vflow.logic.if.end" to "End the nearest if block.",
-            "vflow.logic.break_loop" to "Break out of the current loop.",
-            "vflow.logic.continue_loop" to "Continue to the next iteration of the current loop.",
-        )
-
-        private val INPUT_USAGE_NOTES = mapOf(
-            "vflow.system.capture_screen#region" to "Format: `left,top,right,bottom` in pixels.",
-            "vflow.interaction.ocr#image" to "Pass an image artifact handle returned by a capture or clipboard tool.",
-            "vflow.interaction.find_element#search_region" to "Pass a coordinate-region artifact handle to limit the search area.",
-            "vflow.device.click#target" to "Use a coordinate string like `540,1200`, a plain text/view-id string, or an artifact handle for a screen element or coordinate.",
-            "vflow.interaction.screen_operation#target" to "Use a coordinate string or an artifact handle for a screen element or coordinate.",
-            "vflow.interaction.screen_operation#target_end" to "For swipe, use a coordinate string or an artifact handle for a screen element or coordinate.",
-            "vflow.core.screen_operation#target" to "Use a coordinate string or an artifact handle for a coordinate.",
-            "vflow.core.screen_operation#target_end" to "For swipe, use a coordinate string or an artifact handle for a coordinate.",
-            "vflow.interaction.input_text#text" to "Use plain text only; do not include JSON.",
-            "vflow.system.launch_app#packageName" to "Use the Android package name, for example `com.tencent.mm`.",
-            "vflow.system.launch_app#activityName" to "Use `LAUNCH` for the app default entry point, or a fully qualified activity class name.",
-            "vflow.system.close_app#packageName" to "Use the Android package name.",
-            "vflow.core.force_stop_app#package_name" to "Use the Android package name.",
-            "vflow.system.wifi#state" to "Use `on` to enable Wi-Fi, `off` to disable it, or `toggle` only when the user explicitly asks to toggle.",
-            "vflow.system.bluetooth#state" to "Use `on` to enable Bluetooth, `off` to disable it, or `toggle` only when the user explicitly asks to toggle.",
-            "vflow.system.brightness#brightness_level" to "Use a number from 0 to 255.",
-            "vflow.system.mobile_data#action" to "Use `enable` to turn mobile data on or `disable` to turn it off.",
-            "vflow.system.set_clipboard#content" to "Use plain text or an image artifact handle.",
-            "vflow.core.set_clipboard#text" to "Use plain text only.",
-            "vflow.system.darkmode#mode" to "Use `dark`, `light`, `auto`, or `toggle` only when the user explicitly asks to toggle.",
-            "vflow.device.vibration#mode" to "Use `once` for a simple vibration unless the user asks for a notification, ringtone, or custom pattern.",
-            "vflow.device.vibration#duration" to "Duration in milliseconds for `once` mode.",
-            "vflow.device.flashlight#mode" to "Use `on` to turn the flashlight on, `off` to turn it off, or `toggle` only when the user explicitly asks to toggle.",
-            "vflow.device.flashlight#strengthPercent" to "Optional Android 13+ flashlight strength from 1 to 100. Omit it for ordinary on/off requests.",
-            "vflow.system.wake_and_unlock_screen#unlock_password" to "Leave empty to only wake and swipe. Provide an ASCII PIN or password only when necessary.",
-            "vflow.device.delay#duration" to "Duration in milliseconds.",
-            "vflow.shizuku.shell_command#mode" to "Use `auto` unless the user explicitly requests Root or Shizuku.",
-            "vflow.shizuku.shell_command#command" to "Shell command to execute. Avoid destructive or broad commands unless the user explicitly asked for them.",
-            "vflow.core.shell_command#mode" to "Use `auto` unless the user explicitly requests shell or root mode.",
-            "vflow.core.shell_command#command" to "Shell command to execute through vFlow Core. Avoid destructive or broad commands unless the user explicitly asked for them.",
-            "vflow.logic.loop.start#count" to "Positive repeat count. For 'ten times', use 10.",
-        )
     }
 }

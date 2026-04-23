@@ -33,6 +33,16 @@ class ShareModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Open the Android share sheet for text or image content.",
+        workflowStepDescription = "Open the Android share sheet for text or image content.",
+        inputHints = mapOf(
+            "content" to "Provide shareable text or an image object from a previous step."
+        ),
+        requiredInputIds = setOf("content")
+    )
+
     // 定义输入参数
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(

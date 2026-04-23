@@ -64,6 +64,21 @@ class HttpRequestModule : BaseModule() {
         category = "网络",
         categoryId = "network"
     )
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.HIGH,
+        workflowStepDescription = "Send an HTTP request and capture the response body, status, and headers.",
+        inputHints = mapOf(
+            "url" to "Absolute URL. Include https:// when possible.",
+            "method" to "HTTP method such as GET, POST, PUT, DELETE, or PATCH.",
+            "headers" to "Dictionary of request headers.",
+            "query_params" to "Dictionary of query parameters appended to the URL.",
+            "body_type" to "Request body mode: none, json, form, raw, or file.",
+            "body" to "Body payload. For file mode, pass an image handle or file-like source supported by the module.",
+            "timeout" to "Timeout in seconds.",
+        ),
+        requiredInputIds = setOf("url", "method"),
+    )
 
     // 为该模块提供自定义的编辑器UI
     override val uiProvider: ModuleUIProvider? = HttpRequestModuleUIProvider()

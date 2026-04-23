@@ -66,6 +66,17 @@ class InputModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Prompt the user for text, number, time, or date input and return the entered value.",
+        workflowStepDescription = "Prompt the user for text, number, time, or date input and return the entered value.",
+        inputHints = mapOf(
+            "inputType" to "Use text, number, time, or date.",
+            "prompt" to "Short user-visible prompt explaining what to enter."
+        ),
+        requiredInputIds = setOf("inputType")
+    )
+
     // 声明此模块需要悬浮窗权限
     override val requiredPermissions = listOf(PermissionManager.OVERLAY)
 

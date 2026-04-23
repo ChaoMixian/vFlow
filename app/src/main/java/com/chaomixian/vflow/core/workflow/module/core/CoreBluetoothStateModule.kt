@@ -29,6 +29,11 @@ class CoreBluetoothStateModule : BaseModule() {
         nameStringRes = R.string.module_vflow_core_bluetooth_state_name,
         descriptionStringRes = R.string.module_vflow_core_bluetooth_state_desc
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Read the current Bluetooth enabled state through vFlow Core.",
+        workflowStepDescription = "Read Bluetooth state through vFlow Core.",
+    )
 
     override fun getRequiredPermissions(step: ActionStep?): List<Permission> {
         return listOf(PermissionManager.CORE)

@@ -39,6 +39,17 @@ class GetCurrentTimeModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Read the current time in a requested format and optional timezone.",
+        inputHints = mapOf(
+            "format" to "Choose a canonical format such as datetime, date, time, iso_8601, or timestamp.",
+            "timezone" to "Optional IANA timezone like Asia/Shanghai. Leave empty to use the device timezone."
+        ),
+        requiredInputIds = setOf("format")
+    )
+
     // 时间格式选项
     private val formatOptions = listOf(
         FORMAT_TIMESTAMP_MILLIS,

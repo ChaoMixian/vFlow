@@ -35,6 +35,18 @@ class FindElementModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Find accessibility UI elements by text, view id, class, region, or state filters. Prefer this over OCR when the target is part of the accessibility tree.",
+        workflowStepDescription = "Find accessibility UI elements by text, id, class, or region filters.",
+        inputHints = mapOf(
+            "text" to "Visible UI text to match. Leave blank if you are filtering by id or class instead.",
+            "view_id" to "Android accessibility view id such as com.android.settings:id/title when known.",
+            "class_name" to "Android widget class such as android.widget.Button when needed.",
+            "search_region" to "Optional coordinate region to limit the search area.",
+            "result_selection" to "How to choose one element when multiple matches are found.",
+        ),
+    )
 
     companion object {
         const val MATCH_CONTAINS = "contains"

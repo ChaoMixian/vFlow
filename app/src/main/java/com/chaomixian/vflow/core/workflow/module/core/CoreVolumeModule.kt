@@ -4,6 +4,7 @@ import android.content.Context
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.ActionMetadata
+import com.chaomixian.vflow.core.module.AiModuleRiskLevel
 import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
@@ -11,6 +12,7 @@ import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.module.ProgressUpdate
+import com.chaomixian.vflow.core.module.directToolMetadata
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -48,6 +50,18 @@ class CoreVolumeModule : BaseModule() {
         iconRes = R.drawable.rounded_volume_up_24,
         category = "Core (Beta)",
         categoryId = "core"
+    )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Adjust one or more audio stream volumes through vFlow Core.",
+        workflowStepDescription = "Adjust audio stream volumes through vFlow Core.",
+        inputHints = mapOf(
+            "music_action" to "Action for the music stream: keep, set, mute, or unmute.",
+            "notification_action" to "Action for the notification stream: keep, set, mute, or unmute.",
+            "ring_action" to "Action for the ring stream: keep, set, mute, or unmute.",
+            "system_action" to "Action for the system stream: keep, set, mute, or unmute.",
+            "alarm_action" to "Action for the alarm stream: keep, set, mute, or unmute.",
+        ),
     )
 
     override val uiProvider: ModuleUIProvider = CoreVolumeModuleUIProvider()

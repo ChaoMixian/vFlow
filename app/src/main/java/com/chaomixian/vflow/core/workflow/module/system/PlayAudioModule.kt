@@ -33,6 +33,20 @@ class PlayAudioModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Play a system sound or a local audio file, optionally waiting for playback to finish.",
+        workflowStepDescription = "Play a system sound or a local audio file, optionally waiting for playback to finish.",
+        inputHints = mapOf(
+            "audioType" to "Use system to play a built-in sound or local to play a file path.",
+            "systemSound" to "For system audio, choose a canonical built-in sound id like notification or alarm.",
+            "localFile" to "For local audio, provide a readable file path.",
+            "volume" to "Optional volume percentage from 0 to 100.",
+            "await" to "Set true if later steps should wait for playback to finish."
+        ),
+        requiredInputIds = setOf("audioType")
+    )
+
     override val uiProvider: ModuleUIProvider = PlayAudioUIProvider()
 
     override fun getInputs(): List<InputDefinition> = listOf(

@@ -31,6 +31,17 @@ class SendNotificationModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Post a custom system notification with a title and message.",
+        workflowStepDescription = "Post a custom system notification with a title and message.",
+        inputHints = mapOf(
+            "title" to "Notification title shown in the status bar.",
+            "message" to "Main notification body text."
+        ),
+        requiredInputIds = setOf("title", "message")
+    )
+
     // 需要通知权限
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATIONS)
 

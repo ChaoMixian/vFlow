@@ -28,6 +28,17 @@ class TextSplitModule : BaseModule() {
         categoryId = "data"
     )
 
+    override val aiMetadata = AiModuleMetadata(
+        usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        workflowStepDescription = "Split a text into a list using a delimiter, or split into characters when the delimiter is empty.",
+        inputHints = mapOf(
+            "text" to "Source text to split.",
+            "delimiter" to "Separator string. Leave empty to split into individual characters."
+        ),
+        requiredInputIds = setOf("text")
+    )
+
     // 使用默认 UI，无需自定义 UIProvider
 
     override fun getInputs(): List<InputDefinition> = listOf(

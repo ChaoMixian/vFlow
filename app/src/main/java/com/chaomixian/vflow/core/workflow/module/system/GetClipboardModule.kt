@@ -33,6 +33,11 @@ class GetClipboardModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.READ_ONLY,
+        directToolDescription = "Read the current clipboard contents as text or image without modifying device state.",
+        workflowStepDescription = "Read clipboard contents.",
+    )
 
     // 此模块没有输入参数
     override fun getInputs(): List<InputDefinition> = emptyList()

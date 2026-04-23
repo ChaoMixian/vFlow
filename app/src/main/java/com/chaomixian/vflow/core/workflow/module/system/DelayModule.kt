@@ -34,6 +34,15 @@ class DelayModule : BaseModule() {
         category = "应用与系统",
         categoryId = "device"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.LOW,
+        directToolDescription = "Pause workflow execution for a number of milliseconds.",
+        workflowStepDescription = "Pause for a number of milliseconds.",
+        inputHints = mapOf(
+            "duration" to "Delay duration in milliseconds. Use positive integers.",
+        ),
+        requiredInputIds = setOf("duration"),
+    )
 
     /**
      * 定义模块的输入参数。

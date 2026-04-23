@@ -40,6 +40,16 @@ class QuickViewModule : BaseModule() {
         categoryId = "device"
     )
 
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Show text, numbers, images, or other content in a quick overlay preview.",
+        workflowStepDescription = "Show text, numbers, images, or other content in a quick overlay preview.",
+        inputHints = mapOf(
+            "content" to "Content to preview. It may be plain text, a variable value, or an image object."
+        ),
+        requiredInputIds = setOf("content")
+    )
+
     // 此模块需要悬浮窗权限才能显示UI
     override val requiredPermissions = listOf(PermissionManager.OVERLAY)
 

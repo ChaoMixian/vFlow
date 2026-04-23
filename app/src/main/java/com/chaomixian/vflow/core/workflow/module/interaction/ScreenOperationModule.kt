@@ -53,6 +53,19 @@ class ScreenOperationModule : BaseModule() {
         category = "界面交互",
         categoryId = "interaction"
     )
+    override val aiMetadata = directToolMetadata(
+        riskLevel = AiModuleRiskLevel.STANDARD,
+        directToolDescription = "Perform tap, long-press, or swipe gestures on screen targets. Use this when a simple click tool is not enough.",
+        workflowStepDescription = "Perform tap, long-press, or swipe gestures.",
+        inputHints = mapOf(
+            "operation_type" to "Canonical values are tap, long_press, or swipe.",
+            "target" to "Start point or target element. Prefer a previous Coordinate or ScreenElement output.",
+            "target_end" to "Required for swipe. Provide the destination coordinate or element.",
+            "duration" to "Duration in milliseconds. Leave at default for natural gestures unless timing matters.",
+            "execution_mode" to "Prefer auto unless the user explicitly needs accessibility-only or shell-only behavior.",
+        ),
+        requiredInputIds = setOf("operation_type", "target"),
+    )
 
     override val uiProvider: ModuleUIProvider = ScreenOperationModuleUIProvider()
 
