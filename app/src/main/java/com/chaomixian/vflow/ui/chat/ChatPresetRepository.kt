@@ -14,6 +14,8 @@ class ChatPresetRepository(context: Context) {
         private const val KEY_CHAT_PROVIDER_CONFIGS_JSON = "chat_provider_configs_json"
         private const val KEY_CHAT_DEFAULT_PRESET_ID = "chat_default_preset_id"
         private const val KEY_CHAT_SESSION_STATE_JSON = "chat_session_state_json"
+        private const val KEY_CHAT_AUTO_APPROVE_TOOLS = "chat_auto_approve_tools"
+        private const val KEY_CHAT_AUTO_APPROVAL_SCOPE = "chat_auto_approval_scope"
 
         const val BUILTIN_OPENAI_ID = "builtin-openai"
         const val BUILTIN_DEEPSEEK_ID = "builtin-deepseek"
@@ -47,6 +49,24 @@ class ChatPresetRepository(context: Context) {
         return runCatching {
             json.decodeFromString<ChatSessionState>(raw)
         }.getOrDefault(ChatSessionState())
+    }
+
+    fun getAutoApprovalScope(): ChatToolAutoApprovalScope {
+        prefs.getString(KEY_CHAT_AUTO_APPROVAL_SCOPE, null)?.let { raw ->
+            return ChatToolAutoApprovalScope.fromStorage(raw)
+        }
+        return if (prefs.getBoolean(KEY_CHAT_AUTO_APPROVE_TOOLS, false)) {
+            ChatToolAutoApprovalScope.STANDARD
+        } else {
+            ChatToolAutoApprovalScope.OFF
+        }
+    }
+
+    fun setAutoApprovalScope(scope: ChatToolAutoApprovalScope) {
+        prefs.edit {
+            putString(KEY_CHAT_AUTO_APPROVAL_SCOPE, scope.storageValue)
+            putBoolean(KEY_CHAT_AUTO_APPROVE_TOOLS, scope != ChatToolAutoApprovalScope.OFF)
+        }
     }
 
     fun saveSessionState(state: ChatSessionState) {

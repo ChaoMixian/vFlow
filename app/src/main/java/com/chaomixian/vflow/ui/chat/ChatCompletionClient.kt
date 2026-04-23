@@ -28,10 +28,12 @@ class ChatCompletionClient(
     suspend fun generateReply(
         preset: ChatPresetConfig,
         history: List<ChatMessage>,
+        availableTools: List<ChatAgentToolDefinition> = emptyList(),
     ): ChatCompletionResult = withContext(Dispatchers.IO) {
         val request = ChatProviderRequest(
             preset = preset,
             history = history.filter { it.role != ChatMessageRole.ERROR },
+            availableTools = availableTools,
         )
         val adapter = when (preset.providerEnum) {
             ChatProvider.OPENAI -> OpenAICompatibleChatAdapter(httpClient, preset.providerEnum)
@@ -61,6 +63,7 @@ class ChatCompletionClient(
     private data class ChatProviderRequest(
         val preset: ChatPresetConfig,
         val history: List<ChatMessage>,
+        val availableTools: List<ChatAgentToolDefinition>,
     )
 
     private interface ChatProviderAdapter {
@@ -119,10 +122,19 @@ class ChatCompletionClient(
                 put("model", request.preset.model)
                 put("temperature", request.preset.temperature)
                 put("stream", false)
+                if (request.availableTools.isNotEmpty()) {
+                    put("parallel_tool_calls", false)
+                    put(
+                        "tools",
+                        buildJsonArray {
+                            buildOpenAiChatToolDefinitions(request.availableTools).forEach(::add)
+                        }
+                    )
+                }
                 put(
                     "messages",
                     buildJsonArray {
-                        buildHistoryMessages(request).forEach(::add)
+                        buildChatCompletionHistoryMessages(request).forEach(::add)
                     }
                 )
             }
@@ -133,18 +145,27 @@ class ChatCompletionClient(
                 put("model", request.preset.model)
                 put("temperature", request.preset.temperature)
                 put("store", false)
+                if (request.availableTools.isNotEmpty()) {
+                    put("parallel_tool_calls", false)
+                    put(
+                        "tools",
+                        buildJsonArray {
+                            buildOpenAiResponsesToolDefinitions(request.availableTools).forEach(::add)
+                        }
+                    )
+                }
                 put(
                     "input",
                     buildJsonArray {
-                        buildHistoryMessages(request).forEach(::add)
+                        buildResponsesInputItems(request).forEach(::add)
                     }
                 )
             }
         }
 
-        private fun buildHistoryMessages(request: ChatProviderRequest): List<JsonObject> {
+        private fun buildChatCompletionHistoryMessages(request: ChatProviderRequest): List<JsonObject> {
             val items = mutableListOf<JsonObject>()
-            val systemPrompt = request.preset.systemPrompt.trim()
+            val systemPrompt = buildSystemPrompt(request)
             if (systemPrompt.isNotBlank()) {
                 items += buildJsonObject {
                     put("role", "system")
@@ -152,16 +173,108 @@ class ChatCompletionClient(
                 }
             }
             request.history.forEach { message ->
-                val role = when (message.role) {
-                    ChatMessageRole.USER -> "user"
-                    ChatMessageRole.ASSISTANT -> "assistant"
-                    ChatMessageRole.ERROR -> null
-                } ?: return@forEach
-                val content = message.content.trim()
-                if (content.isBlank()) return@forEach
-                items += buildJsonObject {
-                    put("role", role)
-                    put("content", content)
+                when (message.role) {
+                    ChatMessageRole.USER -> {
+                        val content = message.content.trim()
+                        if (content.isBlank()) return@forEach
+                        items += buildJsonObject {
+                            put("role", "user")
+                            put("content", content)
+                        }
+                    }
+
+                    ChatMessageRole.ASSISTANT -> {
+                        val assistantObject = buildJsonObject {
+                            put("role", "assistant")
+                            if (message.content.isNotBlank()) {
+                                put("content", message.content)
+                            } else {
+                                put("content", JsonNull)
+                            }
+                            if (message.toolCalls.isNotEmpty()) {
+                                put(
+                                    "tool_calls",
+                                    buildJsonArray {
+                                        message.toolCalls.forEach { toolCall ->
+                                            add(
+                                                buildJsonObject {
+                                                    put("id", toolCall.id ?: "call_${message.id}")
+                                                    put("type", "function")
+                                                    put(
+                                                        "function",
+                                                        buildJsonObject {
+                                                            put("name", toolCall.name)
+                                                            put("arguments", toolCall.argumentsJson)
+                                                        }
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        if (message.content.isNotBlank() || message.toolCalls.isNotEmpty()) {
+                            items += assistantObject
+                        }
+                    }
+
+                    ChatMessageRole.TOOL -> {
+                        val toolResult = message.toolResult ?: return@forEach
+                        val callId = toolResult.callId ?: return@forEach
+                        items += buildJsonObject {
+                            put("role", "tool")
+                            put("tool_call_id", callId)
+                            put("content", message.content.ifBlank { toolResult.outputText })
+                        }
+                    }
+
+                    ChatMessageRole.ERROR -> Unit
+                }
+            }
+            return items
+        }
+
+        private fun buildResponsesInputItems(request: ChatProviderRequest): List<JsonObject> {
+            val items = mutableListOf<JsonObject>()
+            val systemPrompt = buildSystemPrompt(request)
+            if (systemPrompt.isNotBlank()) {
+                items += buildMessageInput(role = "system", text = systemPrompt)
+            }
+            request.history.forEach { message ->
+                when (message.role) {
+                    ChatMessageRole.USER -> {
+                        val content = message.content.trim()
+                        if (content.isBlank()) return@forEach
+                        items += buildMessageInput(role = "user", text = content)
+                    }
+
+                    ChatMessageRole.ASSISTANT -> {
+                        val content = message.content.trim()
+                        if (content.isNotBlank()) {
+                            items += buildMessageInput(role = "assistant", text = content)
+                        }
+                        message.toolCalls.forEach { toolCall ->
+                            items += buildJsonObject {
+                                put("type", "function_call")
+                                put("call_id", toolCall.id ?: "call_${message.id}")
+                                put("name", toolCall.name)
+                                put("arguments", toolCall.argumentsJson)
+                            }
+                        }
+                    }
+
+                    ChatMessageRole.TOOL -> {
+                        val toolResult = message.toolResult ?: return@forEach
+                        val callId = toolResult.callId ?: return@forEach
+                        items += buildJsonObject {
+                            put("type", "function_call_output")
+                            put("call_id", callId)
+                            put("output", message.content.ifBlank { toolResult.outputText })
+                        }
+                    }
+
+                    ChatMessageRole.ERROR -> Unit
                 }
             }
             return items
@@ -287,25 +400,19 @@ class ChatCompletionClient(
                 put("model", request.preset.model)
                 put("max_tokens", 4096)
                 put("temperature", request.preset.temperature)
-                put("system", request.preset.systemPrompt)
+                put("system", buildSystemPrompt(request))
+                if (request.availableTools.isNotEmpty()) {
+                    put(
+                        "tools",
+                        buildJsonArray {
+                            buildAnthropicToolDefinitions(request.availableTools).forEach(::add)
+                        }
+                    )
+                }
                 put(
                     "messages",
                     buildJsonArray {
-                        request.history.forEach { message ->
-                            val role = when (message.role) {
-                                ChatMessageRole.USER -> "user"
-                                ChatMessageRole.ASSISTANT -> "assistant"
-                                ChatMessageRole.ERROR -> null
-                            } ?: return@forEach
-                            val content = message.content.trim()
-                            if (content.isBlank()) return@forEach
-                            add(
-                                buildJsonObject {
-                                    put("role", role)
-                                    put("content", content)
-                                }
-                            )
-                        }
+                        buildAnthropicHistoryMessages(request).forEach(::add)
                     }
                 )
             }
@@ -517,6 +624,173 @@ class ChatCompletionClient(
 
     private fun firstNonBlank(vararg values: String?): String? {
         return values.firstOrNull { !it.isNullOrBlank() }?.trim()
+    }
+
+    private fun buildSystemPrompt(request: ChatProviderRequest): String {
+        val basePrompt = request.preset.systemPrompt.trim()
+        if (request.availableTools.isEmpty()) return basePrompt
+        val toolAppendix = """
+            You are the vFlow chat agent inside an Android automation app.
+            Use the provided vFlow tools whenever device observation or device action is required.
+            Prefer the shortest safe plan: if the user asks for a clear one-step device action, call the matching single-purpose tool directly.
+            If the user asks for a deterministic multi-step or repeated device action, generate one complete temporary vFlow workflow and execute the whole sequence in one approval instead of spreading it across multiple assistant turns.
+            The temporary workflow tool expects a workflow object with real ActionStep entries: each step must use moduleId and parameters with canonical values, not localized labels.
+            Use stable, descriptive snake_case step ids such as find_search_box or tap_confirm; later magic-variable references depend on these ids.
+            Only emit parameters that are present in the selected tool or module schema. Do not invent parameter names, localized parameter keys, or output ids.
+            If the user asks to create, generate, or save a reusable automation, call vflow_agent_save_workflow instead of saying you cannot save workflows.
+            Saved workflows may use trigger modules in workflow.triggers; temporary workflows must never include trigger modules.
+            For saved workflows, include trigger modules only when the user asks for a schedule, event, or automatic condition. If no trigger is requested, omit workflow.triggers and let the app add a manual trigger.
+            Trigger modules define when a saved workflow runs and are not useful for one-off temporary execution.
+            For repeated actions, prefer vflow.logic.loop.start plus vflow.logic.loop.end over emitting many repeated tool calls. Loop output indices are 1-based.
+            Every block start module must be closed by its matching block end module.
+            Input-text tools type into the currently focused field. If focus is uncertain, first locate and click the target field using accessibility or coordinates.
+            Do not open quick settings, take screenshots, run OCR, or search UI elements when a direct tool can complete the request.
+            Shell tools are high risk. Use them only when no safer direct vFlow module can complete the task.
+            Use read-only observation tools only when the target screen, current state, or required coordinates are actually unknown.
+            Ask one concise clarification only when a missing target app, screen, time, account, or condition would make the action ambiguous or risky; otherwise act with the available tools.
+            When you decide to act, include a brief natural-language explanation for the user, then call the tool.
+            Never claim a tool succeeded until you receive a tool result.
+            Tool results may contain reusable artifact handles like artifact://... . Pass those handles back into later tool arguments when appropriate.
+            If a tool is rejected or a required Android permission is unavailable, adapt the plan instead of assuming the action happened.
+        """.trimIndent()
+        return listOf(basePrompt, toolAppendix)
+            .filter { it.isNotBlank() }
+            .joinToString(separator = "\n\n")
+    }
+
+    private fun buildMessageInput(role: String, text: String): JsonObject {
+        return buildJsonObject {
+            put("type", "message")
+            put("role", role)
+            put(
+                "content",
+                buildJsonArray {
+                    add(
+                        buildJsonObject {
+                            put("type", "input_text")
+                            put("text", text)
+                        }
+                    )
+                }
+            )
+        }
+    }
+
+    private fun buildOpenAiChatToolDefinitions(
+        tools: List<ChatAgentToolDefinition>,
+    ): List<JsonObject> {
+        return tools.map { tool ->
+            buildJsonObject {
+                put("type", "function")
+                put(
+                    "function",
+                    buildJsonObject {
+                        put("name", tool.name)
+                        put("description", tool.description)
+                        put("parameters", tool.inputSchema)
+                    }
+                )
+            }
+        }
+    }
+
+    private fun buildOpenAiResponsesToolDefinitions(
+        tools: List<ChatAgentToolDefinition>,
+    ): List<JsonObject> {
+        return tools.map { tool ->
+            buildJsonObject {
+                put("type", "function")
+                put("name", tool.name)
+                put("description", tool.description)
+                put("parameters", tool.inputSchema)
+            }
+        }
+    }
+
+    private fun buildAnthropicToolDefinitions(
+        tools: List<ChatAgentToolDefinition>,
+    ): List<JsonObject> {
+        return tools.map { tool ->
+            buildJsonObject {
+                put("name", tool.name)
+                put("description", tool.description)
+                put("input_schema", tool.inputSchema)
+                put("strict", true)
+            }
+        }
+    }
+
+    private fun buildAnthropicHistoryMessages(request: ChatProviderRequest): List<JsonObject> {
+        val items = mutableListOf<JsonObject>()
+        request.history.forEach { message ->
+            when (message.role) {
+                ChatMessageRole.USER -> {
+                    val content = message.content.trim()
+                    if (content.isBlank()) return@forEach
+                    items += buildJsonObject {
+                        put("role", "user")
+                        put("content", content)
+                    }
+                }
+
+                ChatMessageRole.ASSISTANT -> {
+                    val contentBlocks = buildJsonArray {
+                        message.content.trim().takeIf { it.isNotBlank() }?.let { content ->
+                            add(
+                                buildJsonObject {
+                                    put("type", "text")
+                                    put("text", content)
+                                }
+                            )
+                        }
+                        message.toolCalls.forEach { toolCall ->
+                            add(
+                                buildJsonObject {
+                                    put("type", "tool_use")
+                                    put("id", toolCall.id ?: "call_${message.id}")
+                                    put("name", toolCall.name)
+                                    put(
+                                        "input",
+                                        runCatching { json.parseToJsonElement(toolCall.argumentsJson) }
+                                            .getOrNull() ?: buildJsonObject { }
+                                    )
+                                }
+                            )
+                        }
+                    }
+                    if (contentBlocks.isNotEmpty()) {
+                        items += buildJsonObject {
+                            put("role", "assistant")
+                            put("content", contentBlocks)
+                        }
+                    }
+                }
+
+                ChatMessageRole.TOOL -> {
+                    val toolResult = message.toolResult ?: return@forEach
+                    val callId = toolResult.callId ?: return@forEach
+                    items += buildJsonObject {
+                        put("role", "user")
+                        put(
+                            "content",
+                            buildJsonArray {
+                                add(
+                                    buildJsonObject {
+                                        put("type", "tool_result")
+                                        put("tool_use_id", callId)
+                                        put("content", message.content.ifBlank { toolResult.outputText })
+                                        put("is_error", toolResult.status != ChatToolResultStatus.SUCCESS)
+                                    }
+                                )
+                            }
+                        )
+                    }
+                }
+
+                ChatMessageRole.ERROR -> Unit
+            }
+        }
+        return items
     }
 
     private fun normalizeAssistantReply(

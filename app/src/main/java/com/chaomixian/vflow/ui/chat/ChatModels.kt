@@ -94,8 +94,94 @@ data class ChatPresetConfig(
 enum class ChatMessageRole {
     USER,
     ASSISTANT,
+    TOOL,
     ERROR,
 }
+
+@Serializable
+enum class ChatToolApprovalState {
+    PENDING,
+    RUNNING,
+    APPROVED,
+    REJECTED,
+}
+
+@Serializable
+enum class ChatToolResultStatus {
+    SUCCESS,
+    ERROR,
+    REJECTED,
+    PERMISSION_REQUIRED,
+}
+
+enum class ChatAgentToolRiskLevel(val rank: Int) {
+    READ_ONLY(0),
+    LOW(1),
+    STANDARD(2),
+    HIGH(3);
+
+    companion object {
+        fun maxOf(levels: Iterable<ChatAgentToolRiskLevel>): ChatAgentToolRiskLevel {
+            return levels.maxByOrNull { it.rank } ?: READ_ONLY
+        }
+    }
+}
+
+enum class ChatAgentToolUsageScope(val label: String) {
+    DIRECT_TOOL("direct tool call"),
+    TEMPORARY_WORKFLOW("temporary workflow step"),
+    SAVED_WORKFLOW("saved workflow step"),
+}
+
+enum class ChatToolAutoApprovalScope(
+    val storageValue: String,
+    val maxRiskLevel: ChatAgentToolRiskLevel?,
+) {
+    OFF("off", null),
+    READ_ONLY("read_only", ChatAgentToolRiskLevel.READ_ONLY),
+    LOW_RISK("low_risk", ChatAgentToolRiskLevel.LOW),
+    STANDARD("standard", ChatAgentToolRiskLevel.STANDARD),
+    ALL("all", ChatAgentToolRiskLevel.HIGH);
+
+    fun allows(level: ChatAgentToolRiskLevel): Boolean {
+        return maxRiskLevel?.let { level.rank <= it.rank } == true
+    }
+
+    fun next(): ChatToolAutoApprovalScope {
+        val values = entries
+        return values[(ordinal + 1) % values.size]
+    }
+
+    companion object {
+        fun fromStorage(value: String?): ChatToolAutoApprovalScope {
+            return entries.firstOrNull { it.storageValue == value } ?: OFF
+        }
+    }
+}
+
+@Serializable
+data class ChatToolCall(
+    val id: String? = null,
+    val name: String,
+    val argumentsJson: String,
+)
+
+@Serializable
+data class ChatArtifactReference(
+    val key: String,
+    val handle: String,
+    val typeLabel: String,
+)
+
+@Serializable
+data class ChatToolResult(
+    val callId: String? = null,
+    val name: String,
+    val status: ChatToolResultStatus,
+    val summary: String,
+    val outputText: String,
+    val artifacts: List<ChatArtifactReference> = emptyList(),
+)
 
 @Serializable
 data class ChatMessage(
@@ -106,6 +192,9 @@ data class ChatMessage(
     val timestampMillis: Long,
     val tokenCount: Int? = null,
     val isPending: Boolean = false,
+    val toolCalls: List<ChatToolCall> = emptyList(),
+    val toolApprovalState: ChatToolApprovalState? = null,
+    val toolResult: ChatToolResult? = null,
 )
 
 @Serializable

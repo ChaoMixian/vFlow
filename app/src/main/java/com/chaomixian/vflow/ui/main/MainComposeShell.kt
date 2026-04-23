@@ -3,6 +3,7 @@ package com.chaomixian.vflow.ui.main
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.items
@@ -94,6 +96,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 internal enum class MainTopLevelTab(
@@ -298,6 +301,7 @@ private fun MainScreen(
         }
 
         if (selectedTab == MainTopLevelTab.CHAT) {
+            val context = LocalContext.current
             ChatHistorySideSheet(
                 visible = chatSideSheetVisible,
                 uiState = chatUiState,
@@ -310,7 +314,18 @@ private fun MainScreen(
                 onSelectConversation = { conversationId ->
                     chatViewModel.selectConversation(conversationId)
                     chatSideSheetVisible = false
-                }
+                },
+                onDeleteConversation = { conversationId ->
+                    val title = chatUiState.conversations.find { it.id == conversationId }?.title.orEmpty()
+                    MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.dialog_delete_title)
+                        .setMessage(context.getString(R.string.chat_delete_conversation_message, title))
+                        .setNegativeButton(R.string.common_cancel, null)
+                        .setPositiveButton(R.string.common_delete) { _, _ ->
+                            chatViewModel.deleteConversation(conversationId)
+                        }
+                        .show()
+                },
             )
         }
     }
@@ -601,6 +616,7 @@ private fun ChatHistorySideSheet(
     onDismiss: () -> Unit,
     onNewConversation: () -> Unit,
     onSelectConversation: (String) -> Unit,
+    onDeleteConversation: (String) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
@@ -673,6 +689,7 @@ private fun ChatHistorySideSheet(
                                 selected = conversation.id == uiState.activeConversationId,
                                 presetName = uiState.presets.firstOrNull { it.id == conversation.presetId }?.name,
                                 onClick = { onSelectConversation(conversation.id) },
+                                onDelete = { onDeleteConversation(conversation.id) },
                             )
                         }
                     }
@@ -688,6 +705,7 @@ private fun ChatHistorySideSheetItem(
     selected: Boolean,
     presetName: String?,
     onClick: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     Surface(
         onClick = onClick,
@@ -705,12 +723,31 @@ private fun ChatHistorySideSheetItem(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
-                text = conversation.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = conversation.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(28.dp),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.common_delete),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
             Text(
                 text = conversation.messages.lastOrNull()?.content
                     ?.replace('\n', ' ')

@@ -1,10 +1,12 @@
 package com.chaomixian.vflow.ui.chat
 
+import android.app.Activity
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
@@ -24,6 +26,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,6 +68,7 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DividerDefaults
@@ -109,6 +113,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -124,13 +129,20 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.permissions.PermissionActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 private const val MAX_RECENT_PHOTOS = 18
 private const val MAX_PICKED_PHOTOS = 10
+
+private val prettyToolArgumentsJson = Json {
+    prettyPrint = true
+    prettyPrintIndent = "  "
+}
 
 private data class RecentPhotoItem(
     val uri: Uri,
@@ -157,6 +169,9 @@ fun ChatScreen(
     val chatUiState by chatViewModel.uiState.collectAsState()
     val activeConversation = remember(chatUiState.activeConversationId, chatUiState.conversations) {
         chatUiState.conversations.firstOrNull { it.id == chatUiState.activeConversationId }
+    }
+    val availableToolsByName = remember(chatUiState.availableTools) {
+        chatUiState.availableTools.associateBy { it.name }
     }
     val listState = rememberLazyListState()
     val imeBottom = WindowInsets.ime.getBottom(density)
@@ -191,6 +206,18 @@ fun ChatScreen(
     val selectedPhotoUris = remember { mutableStateListOf<Uri>() }
     var capturedPreview by remember { mutableStateOf<Bitmap?>(null) }
     var webSearchSelected by rememberSaveable { mutableStateOf(false) }
+    val hasPendingToolApproval = remember(activeConversation?.messages) {
+        activeConversation?.messages?.any { message ->
+            message.role == ChatMessageRole.ASSISTANT &&
+                message.toolApprovalState == ChatToolApprovalState.PENDING
+        } == true
+    }
+    val isAgentActive = chatUiState.isAgentRunning ||
+        chatUiState.isSending ||
+        hasPendingToolApproval ||
+        chatUiState.pendingPermissionRequest != null
+    val shouldShowStopButton = isAgentActive && prompt.isBlank()
+    val canUseComposerAction = shouldShowStopButton || prompt.isNotBlank()
     val welcomeSuggestions = remember {
         listOf(
             ChatSuggestion(
@@ -233,6 +260,11 @@ fun ChatScreen(
         if (granted) {
             recentPhotoReloadVersion++
         }
+    }
+    val toolPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        chatViewModel.onToolPermissionResult(result.resultCode == Activity.RESULT_OK)
     }
 
     LaunchedEffect(chatViewModel) {
@@ -278,6 +310,22 @@ fun ChatScreen(
         webSearchSelected = false
     }
 
+    LaunchedEffect(chatUiState.pendingPermissionRequest?.requestId) {
+        val request = chatUiState.pendingPermissionRequest ?: return@LaunchedEffect
+        chatViewModel.markPermissionRequestLaunched()
+        val intent = Intent(context, PermissionActivity::class.java).apply {
+            putParcelableArrayListExtra(
+                PermissionActivity.EXTRA_PERMISSIONS,
+                ArrayList(request.permissions)
+            )
+            putExtra(
+                PermissionActivity.EXTRA_WORKFLOW_NAME,
+                context.getString(R.string.chat_tool_permission_workflow_name)
+            )
+        }
+        toolPermissionLauncher.launch(intent)
+    }
+
     val showWelcome = (activeConversation == null || activeConversation.messages.isEmpty()) && prompt.isBlank()
 
     Box(
@@ -303,7 +351,12 @@ fun ChatScreen(
                 ) { message ->
                     ChatMessageBubble(
                         message = message,
+                        availableToolsByName = availableToolsByName,
                         modifier = Modifier.fillMaxWidth(),
+                        onApproveToolCalls = chatViewModel::approveToolCalls,
+                        onRejectToolCalls = chatViewModel::rejectToolCalls,
+                        onRerunToolCalls = chatViewModel::rerunToolCalls,
+                        actionsEnabled = !chatUiState.isSending,
                         onCopyMessage = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("chat_message", message.content))
@@ -313,6 +366,8 @@ fun ChatScreen(
                                 )
                             }
                         },
+                        canSaveWorkflow = chatViewModel.canSaveTemporaryWorkflow(message.id),
+                        onSaveWorkflow = { chatViewModel.saveTemporaryWorkflow(message.id) },
                     )
                 }
             }
@@ -379,6 +434,10 @@ fun ChatScreen(
                     FilledIconButton(
                         modifier = Modifier.padding(end = 4.dp),
                         onClick = {
+                            if (shouldShowStopButton) {
+                                chatViewModel.stopAgent()
+                                return@FilledIconButton
+                            }
                             if (selectedPhotoUris.isNotEmpty() || capturedPreview != null) {
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
@@ -393,23 +452,25 @@ fun ChatScreen(
                                 webSearchSelected = false
                             }
                         },
-                        enabled = prompt.isNotBlank() && !chatUiState.isSending,
+                        enabled = canUseComposerAction,
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (prompt.isNotBlank() && !chatUiState.isSending) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            containerColor = when {
+                                shouldShowStopButton -> MaterialTheme.colorScheme.error
+                                prompt.isNotBlank() -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.surfaceContainerHighest
                             },
-                            contentColor = if (prompt.isNotBlank() && !chatUiState.isSending) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                            contentColor = when {
+                                shouldShowStopButton -> MaterialTheme.colorScheme.onError
+                                prompt.isNotBlank() -> MaterialTheme.colorScheme.onPrimary
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
                             }
                         ),
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.ArrowUpward,
-                            contentDescription = stringResource(R.string.chat_send),
+                            imageVector = if (shouldShowStopButton) Icons.Rounded.Stop else Icons.Rounded.ArrowUpward,
+                            contentDescription = stringResource(
+                                if (shouldShowStopButton) R.string.chat_stop else R.string.chat_send
+                            ),
                         )
                     }
                 },
@@ -419,6 +480,10 @@ fun ChatScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(
                     onSend = {
+                        if (shouldShowStopButton) {
+                            chatViewModel.stopAgent()
+                            return@KeyboardActions
+                        }
                         if (chatViewModel.sendMessage(prompt)) {
                             prompt = ""
                             selectedPhotoUris.clear()
@@ -500,6 +565,8 @@ fun ChatScreen(
                 selectedCount = selectedCount,
                 webSearchSelected = webSearchSelected,
                 onWebSearchToggle = { webSearchSelected = !webSearchSelected },
+                autoApprovalScope = chatUiState.autoApprovalScope,
+                onAutoApprovalScopeChange = chatViewModel::setAutoApprovalScope,
                 onPickAllPhotos = {
                     pickPhotosLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 }
@@ -557,8 +624,15 @@ private fun ChatWelcomeState(
 @Composable
 private fun ChatMessageBubble(
     message: ChatMessage,
+    availableToolsByName: Map<String, ChatAgentToolDefinition>,
     modifier: Modifier = Modifier,
+    onApproveToolCalls: (String) -> Unit,
+    onRejectToolCalls: (String) -> Unit,
+    onRerunToolCalls: (String) -> Unit,
+    actionsEnabled: Boolean,
     onCopyMessage: () -> Unit,
+    canSaveWorkflow: Boolean = false,
+    onSaveWorkflow: () -> Unit = {},
 ) {
     when (message.role) {
         ChatMessageRole.USER -> UserMessageBubble(
@@ -569,6 +643,20 @@ private fun ChatMessageBubble(
 
         ChatMessageRole.ASSISTANT -> AssistantMessageCard(
             message = message,
+            availableToolsByName = availableToolsByName,
+            modifier = modifier,
+            onApproveToolCalls = onApproveToolCalls,
+            onRejectToolCalls = onRejectToolCalls,
+            onRerunToolCalls = onRerunToolCalls,
+            actionsEnabled = actionsEnabled,
+            onCopyMessage = onCopyMessage,
+            canSaveWorkflow = canSaveWorkflow,
+            onSaveWorkflow = onSaveWorkflow,
+        )
+
+        ChatMessageRole.TOOL -> ToolMessageCard(
+            message = message,
+            availableToolsByName = availableToolsByName,
             modifier = modifier,
             onCopyMessage = onCopyMessage,
         )
@@ -638,8 +726,15 @@ private fun UserMessageBubble(
 @Composable
 private fun AssistantMessageCard(
     message: ChatMessage,
+    availableToolsByName: Map<String, ChatAgentToolDefinition>,
     modifier: Modifier = Modifier,
+    onApproveToolCalls: (String) -> Unit,
+    onRejectToolCalls: (String) -> Unit,
+    onRerunToolCalls: (String) -> Unit,
+    actionsEnabled: Boolean,
     onCopyMessage: () -> Unit,
+    canSaveWorkflow: Boolean = false,
+    onSaveWorkflow: () -> Unit = {},
 ) {
     var reasoningExpanded by rememberSaveable(message.id) { mutableStateOf(false) }
     val hasReasoning = !message.reasoningContent.isNullOrBlank()
@@ -761,16 +856,347 @@ private fun AssistantMessageCard(
                         }
                     }
 
-                    ChatMarkdownContent(
-                        markdown = message.content,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                    )
+                    if (message.content.isNotBlank()) {
+                        ChatMarkdownContent(
+                            markdown = message.content,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+
+                    if (message.toolCalls.isNotEmpty()) {
+                        AssistantToolProposalSection(
+                            message = message,
+                            availableToolsByName = availableToolsByName,
+                            actionsEnabled = actionsEnabled,
+                            onApprove = { onApproveToolCalls(message.id) },
+                            onReject = { onRejectToolCalls(message.id) },
+                            onRerun = { onRerunToolCalls(message.id) },
+                            canSaveWorkflow = canSaveWorkflow,
+                            onSaveWorkflow = onSaveWorkflow,
+                        )
+                    }
                 }
 
                 MessageFooterRow(
                     timestampMillis = message.timestampMillis,
                     tokenCount = message.tokenCount,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    onCopyMessage = onCopyMessage,
+                    showCopy = false,
+                    containerTint = Color.Transparent,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AssistantToolProposalSection(
+    message: ChatMessage,
+    availableToolsByName: Map<String, ChatAgentToolDefinition>,
+    actionsEnabled: Boolean,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+    onRerun: () -> Unit,
+    canSaveWorkflow: Boolean = false,
+    onSaveWorkflow: () -> Unit = {},
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.chat_tool_section_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                ToolApprovalBadge(state = message.toolApprovalState)
+            }
+
+            message.toolCalls.forEach { toolCall ->
+                val tool = availableToolsByName[toolCall.name]
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    tonalElevation = 0.dp,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = tool?.title ?: toolCall.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text = tool?.description ?: toolCall.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = prettyFormatToolArguments(toolCall.argumentsJson),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        val permissionNames = tool?.permissionNames.orEmpty()
+                        if (permissionNames.isNotEmpty()) {
+                            Text(
+                                text = stringResource(
+                                    R.string.chat_tool_permissions_value,
+                                    permissionNames.joinToString()
+                                ),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (message.toolApprovalState == ChatToolApprovalState.PENDING) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(
+                        onClick = onReject,
+                        enabled = actionsEnabled,
+                    ) {
+                        Text(text = stringResource(R.string.chat_tool_reject))
+                    }
+                    FilledTonalButton(
+                        onClick = onApprove,
+                        enabled = actionsEnabled,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(modifier = Modifier.widthIn(min = 8.dp))
+                        Text(text = stringResource(R.string.chat_tool_approve))
+                    }
+                }
+            } else if (message.toolApprovalState in setOf(
+                    ChatToolApprovalState.APPROVED,
+                    ChatToolApprovalState.REJECTED,
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (canSaveWorkflow) {
+                        TextButton(
+                            onClick = onSaveWorkflow,
+                            enabled = actionsEnabled,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.widthIn(min = 4.dp))
+                            Text(text = stringResource(R.string.chat_tool_save_workflow))
+                        }
+                    }
+                    FilledTonalButton(
+                        onClick = onRerun,
+                        enabled = actionsEnabled,
+                    ) {
+                        Text(text = stringResource(R.string.chat_tool_rerun))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolApprovalBadge(state: ChatToolApprovalState?) {
+    val label = when (state) {
+        ChatToolApprovalState.PENDING -> stringResource(R.string.chat_tool_pending)
+        ChatToolApprovalState.RUNNING -> stringResource(R.string.chat_tool_running)
+        ChatToolApprovalState.APPROVED -> stringResource(R.string.chat_tool_approved)
+        ChatToolApprovalState.REJECTED -> stringResource(R.string.chat_tool_rejected)
+        null -> return
+    }
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        tonalElevation = 0.dp,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+@Composable
+private fun ToolMessageCard(
+    message: ChatMessage,
+    availableToolsByName: Map<String, ChatAgentToolDefinition>,
+    modifier: Modifier = Modifier,
+    onCopyMessage: () -> Unit,
+) {
+    val toolResult = message.toolResult
+    val containerColor = when (toolResult?.status) {
+        ChatToolResultStatus.SUCCESS -> MaterialTheme.colorScheme.tertiaryContainer
+        ChatToolResultStatus.ERROR -> MaterialTheme.colorScheme.errorContainer
+        ChatToolResultStatus.REJECTED,
+        ChatToolResultStatus.PERMISSION_REQUIRED -> MaterialTheme.colorScheme.secondaryContainer
+        null -> MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val contentColor = when (toolResult?.status) {
+        ChatToolResultStatus.ERROR -> MaterialTheme.colorScheme.onErrorContainer
+        ChatToolResultStatus.SUCCESS -> MaterialTheme.colorScheme.onTertiaryContainer
+        ChatToolResultStatus.REJECTED,
+        ChatToolResultStatus.PERMISSION_REQUIRED -> MaterialTheme.colorScheme.onSecondaryContainer
+        null -> MaterialTheme.colorScheme.onSurface
+    }
+    val toolTitle = toolResult?.let { result ->
+        availableToolsByName[result.name]?.title ?: result.summary
+    }.orEmpty()
+
+    val lineCount = remember(message.content) {
+        message.content.count { it == '\n' }.let { if (it == 0) 1 else it + 1 }
+    }
+    val isLongContent = lineCount > 6
+    var contentCollapsed by rememberSaveable(message.id) { mutableStateOf(isLongContent) }
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Surface(
+            modifier = Modifier.widthIn(max = 540.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = containerColor,
+            tonalElevation = 0.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chat_role_tool),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = contentColor,
+                        )
+                        if (toolTitle.isNotBlank()) {
+                            Text(
+                                text = toolTitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = contentColor.copy(alpha = 0.85f),
+                            )
+                        }
+                    }
+                    FilledTonalIconButton(
+                        onClick = onCopyMessage,
+                        modifier = Modifier.size(32.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = contentColor.copy(alpha = 0.12f),
+                            contentColor = contentColor,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.ContentCopy,
+                            contentDescription = stringResource(R.string.common_copy),
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    ChatMarkdownContent(
+                        markdown = message.content,
+                        contentColor = contentColor,
+                        modifier = if (contentCollapsed) {
+                            Modifier
+                                .heightIn(max = 120.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        } else {
+                            Modifier
+                        },
+                    )
+                    if (contentCollapsed) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            containerColor,
+                                        )
+                                    )
+                                )
+                        )
+                    }
+                }
+                if (isLongContent) {
+                    TextButton(
+                        onClick = { contentCollapsed = !contentCollapsed },
+                        modifier = Modifier.offset(y = (-4).dp),
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (contentCollapsed) R.string.chat_tool_result_expand
+                                else R.string.chat_tool_result_collapse
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                        Icon(
+                            imageVector = if (contentCollapsed) Icons.Rounded.ExpandMore
+                            else Icons.Rounded.ExpandLess,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                MessageFooterRow(
+                    timestampMillis = message.timestampMillis,
+                    tokenCount = null,
+                    contentColor = contentColor.copy(alpha = 0.9f),
                     onCopyMessage = onCopyMessage,
                     showCopy = false,
                     containerTint = Color.Transparent,
@@ -935,6 +1361,13 @@ private fun formatChatTime(timestampMillis: Long): String {
     return DateFormat.format("HH:mm", timestampMillis).toString()
 }
 
+private fun prettyFormatToolArguments(argumentsJson: String): String {
+    if (argumentsJson.isBlank()) return "{}"
+    return runCatching {
+        prettyToolArgumentsJson.parseToJsonElement(argumentsJson).toString()
+    }.getOrDefault(argumentsJson)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatAttachmentSheet(
@@ -950,12 +1383,21 @@ private fun ChatAttachmentSheet(
     selectedCount: Int,
     webSearchSelected: Boolean,
     onWebSearchToggle: () -> Unit,
+    autoApprovalScope: ChatToolAutoApprovalScope,
+    onAutoApprovalScopeChange: (ChatToolAutoApprovalScope) -> Unit,
     onPickAllPhotos: () -> Unit,
 ) {
     val carouselItemCount = if (hasPhotoPermission) recentPhotos.size + 1 else 1
     val carouselState = rememberCarouselState { carouselItemCount }
     val scrollState = rememberScrollState()
     val animationScope = rememberCoroutineScope()
+    val autoApprovalScopeLabel = when (autoApprovalScope) {
+        ChatToolAutoApprovalScope.OFF -> stringResource(R.string.chat_auto_approve_scope_off)
+        ChatToolAutoApprovalScope.READ_ONLY -> stringResource(R.string.chat_auto_approve_scope_read_only)
+        ChatToolAutoApprovalScope.LOW_RISK -> stringResource(R.string.chat_auto_approve_scope_low_risk)
+        ChatToolAutoApprovalScope.STANDARD -> stringResource(R.string.chat_auto_approve_scope_standard)
+        ChatToolAutoApprovalScope.ALL -> stringResource(R.string.chat_auto_approve_scope_all)
+    }
 
     Box(
         modifier = Modifier
@@ -1095,6 +1537,39 @@ private fun ChatAttachmentSheet(
                             )
                         }
                     }
+                }
+            )
+
+            ListItem(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .clickable { onAutoApprovalScopeChange(autoApprovalScope.next()) }
+                    .padding(horizontal = 8.dp),
+                colors = ListItemDefaults.colors(
+                    containerColor = if (autoApprovalScope != ChatToolAutoApprovalScope.OFF) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        Color.Transparent
+                    }
+                ),
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.chat_auto_approve_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                trailingContent = {
+                    Text(
+                        text = autoApprovalScopeLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (autoApprovalScope != ChatToolAutoApprovalScope.OFF) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
                 }
             )
         }
