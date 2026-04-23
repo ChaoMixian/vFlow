@@ -59,6 +59,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -130,6 +131,7 @@ private data class ProviderDraft(
     val baseUrl: String,
     val systemPrompt: String,
     val temperature: Double,
+    val useResponsesApi: Boolean,
 )
 
 private data class ProviderTone(
@@ -253,6 +255,7 @@ private fun ModelConfigRoute(
                             baseUrl = draft.baseUrl,
                             systemPrompt = draft.systemPrompt,
                             temperature = draft.temperature,
+                            useResponsesApi = draft.useResponsesApi,
                         )
                     )
                     refresh()
@@ -344,6 +347,7 @@ private fun ProviderDetailScreen(
     var baseUrl by remember(providerConfig.id) { mutableStateOf(providerConfig.baseUrl) }
     var systemPrompt by remember(providerConfig.id) { mutableStateOf(providerConfig.systemPrompt) }
     var temperature by remember(providerConfig.id) { mutableDoubleStateOf(providerConfig.temperature) }
+    var useResponsesApi by remember(providerConfig.id) { mutableStateOf(providerConfig.useResponsesApi) }
     var advancedExpanded by rememberSaveable(providerConfig.id) { mutableStateOf(false) }
     var showApiKey by rememberSaveable(providerConfig.id) { mutableStateOf(false) }
     var editingPresetId by rememberSaveable(providerConfig.id) { mutableStateOf<String?>(null) }
@@ -356,6 +360,7 @@ private fun ProviderDetailScreen(
         baseUrl = providerConfig.baseUrl
         systemPrompt = providerConfig.systemPrompt
         temperature = providerConfig.temperature
+        useResponsesApi = providerConfig.useResponsesApi
         advancedExpanded = false
     }
 
@@ -438,6 +443,7 @@ private fun ProviderDetailScreen(
                     baseUrl = baseUrl,
                     systemPrompt = systemPrompt,
                     temperature = temperature,
+                    useResponsesApi = useResponsesApi,
                     advancedExpanded = advancedExpanded,
                     showApiKey = showApiKey,
                     onProviderNameChange = { providerName = it },
@@ -445,6 +451,7 @@ private fun ProviderDetailScreen(
                     onBaseUrlChange = { baseUrl = it },
                     onSystemPromptChange = { systemPrompt = it },
                     onTemperatureChange = { temperature = it },
+                    onUseResponsesApiChange = { useResponsesApi = it },
                     onToggleAdvanced = { advancedExpanded = !advancedExpanded },
                     onToggleApiKeyVisibility = { showApiKey = !showApiKey },
                     onSave = {
@@ -455,6 +462,7 @@ private fun ProviderDetailScreen(
                                 baseUrl = baseUrl.trim(),
                                 systemPrompt = systemPrompt.trim(),
                                 temperature = temperature,
+                                useResponsesApi = useResponsesApi,
                             )
                         )
                     },
@@ -600,6 +608,7 @@ private fun ProviderConfigurationCard(
     baseUrl: String,
     systemPrompt: String,
     temperature: Double,
+    useResponsesApi: Boolean,
     advancedExpanded: Boolean,
     showApiKey: Boolean,
     onProviderNameChange: (String) -> Unit,
@@ -607,6 +616,7 @@ private fun ProviderConfigurationCard(
     onBaseUrlChange: (String) -> Unit,
     onSystemPromptChange: (String) -> Unit,
     onTemperatureChange: (Double) -> Unit,
+    onUseResponsesApiChange: (Boolean) -> Unit,
     onToggleAdvanced: () -> Unit,
     onToggleApiKeyVisibility: () -> Unit,
     onSave: () -> Unit,
@@ -702,6 +712,12 @@ private fun ProviderConfigurationCard(
 
             AnimatedVisibility(visible = advancedExpanded) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    if (providerConfig.providerEnum.supportsResponsesApiToggle) {
+                        ResponseApiToggleRow(
+                            checked = useResponsesApi,
+                            onCheckedChange = onUseResponsesApiChange,
+                        )
+                    }
                     OutlinedTextField(
                         value = systemPrompt,
                         onValueChange = onSystemPromptChange,
@@ -754,6 +770,41 @@ private fun ProviderConfigurationCard(
                     }
                 }
             }
+        }
+    }
+}
+
+private val ChatProvider.supportsResponsesApiToggle: Boolean
+    get() = this == ChatProvider.OPENAI
+
+@Composable
+private fun ResponseApiToggleRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.model_config_responses_api_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
         }
     }
 }
@@ -1155,10 +1206,6 @@ private fun providerTone(provider: ChatProvider): ProviderTone {
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
         )
-        ChatProvider.CUSTOM_OPENAI -> ProviderTone(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
     }
 }
 
@@ -1169,7 +1216,6 @@ private fun providerBadgeLabel(provider: ChatProvider): String {
         ChatProvider.DEEPSEEK -> "D"
         ChatProvider.OPENROUTER -> "R"
         ChatProvider.OLLAMA -> "L"
-        ChatProvider.CUSTOM_OPENAI -> "A"
     }
 }
 
@@ -1178,7 +1224,7 @@ private fun addableProviderChoices(): List<AddProviderChoice> {
         AddProviderChoice(
             defaultName = "OpenAI Compatible",
             label = "OpenAI Compatible",
-            provider = ChatProvider.CUSTOM_OPENAI,
+            provider = ChatProvider.OPENAI,
         ),
         AddProviderChoice(
             defaultName = "Claude Compatible",

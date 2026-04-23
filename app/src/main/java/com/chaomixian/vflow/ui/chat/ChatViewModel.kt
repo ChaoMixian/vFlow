@@ -24,7 +24,7 @@ data class ChatUiState(
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = ChatPresetRepository(application)
-    private val chatClient = KoogChatClient()
+    private val chatClient = ChatCompletionClient()
     private val _uiState = MutableStateFlow(ChatUiState())
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 8)
     private var conversationCounter = 1
@@ -123,16 +123,28 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             runCatching {
                 chatClient.generateReply(preset, historyForRequest)
             }.onSuccess { result ->
-                replacePendingMessage(
-                    conversationId = updatedConversation.id,
-                    pendingMessageId = pendingMessage.id,
-                    replacement = ChatMessage(
+                val timestamp = System.currentTimeMillis()
+                val replacement = if (result.toolCalls.isNotEmpty()) {
+                    ChatMessage(
+                        role = ChatMessageRole.ERROR,
+                        content = "当前聊天界面暂不支持执行模型工具调用。",
+                        reasoningContent = result.reasoningContent,
+                        timestampMillis = timestamp,
+                        tokenCount = result.totalTokens,
+                    )
+                } else {
+                    ChatMessage(
                         role = ChatMessageRole.ASSISTANT,
                         content = result.content.ifBlank { "模型返回了空内容。" },
                         reasoningContent = result.reasoningContent,
-                        timestampMillis = System.currentTimeMillis(),
+                        timestampMillis = timestamp,
                         tokenCount = result.totalTokens,
                     )
+                }
+                replacePendingMessage(
+                    conversationId = updatedConversation.id,
+                    pendingMessageId = pendingMessage.id,
+                    replacement = replacement,
                 )
             }.onFailure { throwable ->
                 replacePendingMessage(

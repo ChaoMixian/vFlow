@@ -163,8 +163,6 @@ dependencies {
     // JSON5 解析库，用于解析 gkd 订阅规则
     implementation("li.songe:json5:0.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
-    implementation("ai.koog:koog-agents:0.8.0")
-
     // Lua 脚本解释器引擎
     implementation("org.luaj:luaj-jse:3.0.1")
 

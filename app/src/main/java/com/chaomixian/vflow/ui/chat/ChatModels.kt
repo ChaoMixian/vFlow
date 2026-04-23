@@ -14,7 +14,7 @@ enum class ChatProvider(
     OPENAI(
         storageValue = "openai",
         displayName = "OpenAI",
-        defaultBaseUrl = "https://api.openai.com",
+        defaultBaseUrl = "https://api.openai.com/v1",
         defaultModel = "gpt-5.4",
     ),
     DEEPSEEK(
@@ -41,17 +41,14 @@ enum class ChatProvider(
         defaultBaseUrl = "http://127.0.0.1:11434",
         defaultModel = "qwen3:8b",
         requiresApiKey = false,
-    ),
-    CUSTOM_OPENAI(
-        storageValue = "custom_openai",
-        displayName = "OpenAI Compatible",
-        defaultBaseUrl = "https://api.openai.com",
-        defaultModel = "gpt-5.4",
     );
 
     companion object {
         fun fromStorage(value: String?): ChatProvider {
-            return entries.firstOrNull { it.storageValue == value } ?: OPENAI
+            return when (value) {
+                "custom_openai" -> OPENAI
+                else -> entries.firstOrNull { it.storageValue == value } ?: OPENAI
+            }
         }
     }
 }
@@ -65,6 +62,7 @@ data class ChatProviderConfig(
     val baseUrl: String = ChatProvider.OPENAI.defaultBaseUrl,
     val systemPrompt: String = ChatPresetConfig.DEFAULT_SYSTEM_PROMPT,
     val temperature: Double = 0.7,
+    val useResponsesApi: Boolean = false,
     val isBuiltIn: Boolean = false,
 ) {
     val providerEnum: ChatProvider
@@ -82,6 +80,7 @@ data class ChatPresetConfig(
     val baseUrl: String = ChatProvider.OPENAI.defaultBaseUrl,
     val systemPrompt: String = DEFAULT_SYSTEM_PROMPT,
     val temperature: Double = 0.7,
+    val useResponsesApi: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant. Keep responses concise and clear."

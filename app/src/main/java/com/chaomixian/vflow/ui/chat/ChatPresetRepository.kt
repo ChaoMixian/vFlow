@@ -95,6 +95,7 @@ class ChatPresetRepository(context: Context) {
                 baseUrl = preset.baseUrl,
                 systemPrompt = preset.systemPrompt,
                 temperature = preset.temperature,
+                useResponsesApi = preset.useResponsesApi,
             ).normalize()
 
         val normalizedPreset = preset.normalize(provider)
@@ -166,6 +167,7 @@ class ChatPresetRepository(context: Context) {
                 baseUrl = rawPreset.baseUrl,
                 systemPrompt = rawPreset.systemPrompt,
                 temperature = rawPreset.temperature,
+                useResponsesApi = rawPreset.useResponsesApi,
                 isBuiltIn = false,
             ).normalize().also { normalizedProviders[it.id] = it }
             rawPreset.normalize(linkedProvider)
@@ -223,14 +225,19 @@ class ChatPresetRepository(context: Context) {
 
     private fun ChatProviderConfig.normalize(): ChatProviderConfig {
         val resolvedProvider = providerEnum
+        val normalizedBaseUrl = normalizeBaseUrl(
+            provider = resolvedProvider,
+            raw = baseUrl,
+        )
         return copy(
             id = id.ifBlank { UUID.randomUUID().toString() },
             name = name.trim().ifBlank { resolvedProvider.displayName },
             provider = resolvedProvider.storageValue,
             apiKey = apiKey.trim(),
-            baseUrl = baseUrl.trim().ifBlank { resolvedProvider.defaultBaseUrl },
+            baseUrl = normalizedBaseUrl,
             systemPrompt = systemPrompt.trim().ifBlank { ChatPresetConfig.DEFAULT_SYSTEM_PROMPT },
             temperature = temperature.coerceIn(0.0, 2.0),
+            useResponsesApi = useResponsesApi && resolvedProvider == ChatProvider.OPENAI,
             isBuiltIn = isBuiltIn,
         )
     }
@@ -247,6 +254,7 @@ class ChatPresetRepository(context: Context) {
             baseUrl = providerConfig.baseUrl,
             systemPrompt = providerConfig.systemPrompt,
             temperature = providerConfig.temperature,
+            useResponsesApi = providerConfig.useResponsesApi,
         )
     }
 
@@ -305,6 +313,18 @@ class ChatPresetRepository(context: Context) {
             BUILTIN_OPENROUTER_ID -> 3
             BUILTIN_OLLAMA_ID -> 4
             else -> Int.MAX_VALUE
+        }
+    }
+
+    private fun normalizeBaseUrl(
+        provider: ChatProvider,
+        raw: String,
+    ): String {
+        val normalized = raw.trim().ifBlank { provider.defaultBaseUrl }.removeSuffix("/")
+        return if (provider == ChatProvider.OPENAI && normalized == "https://api.openai.com") {
+            provider.defaultBaseUrl.removeSuffix("/")
+        } else {
+            normalized
         }
     }
 }
