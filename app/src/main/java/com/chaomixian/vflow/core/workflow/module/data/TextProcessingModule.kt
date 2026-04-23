@@ -41,7 +41,7 @@ class TextProcessingModule : BaseModule() {
             "operation" to "Use one of join, split, replace, or regex_extract.",
             "join_list" to "For join, pass a list variable to combine into text.",
             "source_text" to "For split, replace, or regex operations, provide the source text.",
-            "regex_pattern" to "For regex_extract, provide a valid regex pattern and optionally regex_group."
+            "regex_pattern" to "For regex_extract, provide a valid regex pattern. Use regex_group=0 for the full match, or 1 and above for capturing groups."
         ),
         requiredInputIds = setOf("operation")
     )
@@ -67,7 +67,7 @@ class TextProcessingModule : BaseModule() {
         InputDefinition("replace_to", "替换为", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_REPLACE), nameStringRes = R.string.param_vflow_data_text_processing_replace_to_name),
         // --- 正则 ---
         InputDefinition("regex_pattern", "正则表达式", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, visibility = InputVisibility.whenEquals("operation", OP_REGEX), nameStringRes = R.string.param_vflow_data_text_processing_regex_pattern_name),
-        InputDefinition("regex_group", "匹配组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), visibility = InputVisibility.whenEquals("operation", OP_REGEX), nameStringRes = R.string.param_vflow_data_text_processing_regex_group_name)
+        InputDefinition("regex_group", "提取组号", ParameterType.NUMBER, 0.0, acceptsMagicVariable = true, acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id), visibility = InputVisibility.whenEquals("operation", OP_REGEX), nameStringRes = R.string.param_vflow_data_text_processing_regex_group_name)
     )
 
     /**
@@ -222,20 +222,14 @@ class TextProcessingModule : BaseModule() {
         // 获取原始变量值
         val sourceVar = context.getVariable("source_text")
         val patternVar = context.getVariable("regex_pattern")
-        val groupVar = context.getVariable("regex_group")
-
         // 解析为字符串
         val source = if (sourceVar is com.chaomixian.vflow.core.types.basic.VString) sourceVar.raw
                      else VariableResolver.resolve(context.getVariableAsString("source_text", ""), context)
         val patternStr = if (patternVar is com.chaomixian.vflow.core.types.basic.VString) patternVar.raw
                          else VariableResolver.resolve(context.getVariableAsString("regex_pattern", ""), context)
 
-        // 组号通常是数字
-        val group = when(groupVar) {
-            is VNumber -> groupVar.raw.toInt()
-            is com.chaomixian.vflow.core.types.basic.VString -> groupVar.raw.toIntOrNull() ?: 0
-            else -> 0
-        }
+        // 0 表示完整匹配，1 及以上表示括号捕获组
+        val group = context.getVariableAsInt("regex_group") ?: 0
 
         if (source.isEmpty() || patternStr.isEmpty()) {
             return ExecutionResult.Failure(appContext.getString(R.string.error_vflow_data_text_processing_input_error), appContext.getString(R.string.error_vflow_data_text_processing_pattern_empty))

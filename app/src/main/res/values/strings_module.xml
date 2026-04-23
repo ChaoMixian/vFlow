@@ -645,7 +645,7 @@
     <string name="param_vflow_data_text_processing_replace_from_name">查找</string>
     <string name="param_vflow_data_text_processing_replace_to_name">替换为</string>
     <string name="param_vflow_data_text_processing_regex_pattern_name">正则表达式</string>
-    <string name="param_vflow_data_text_processing_regex_group_name">匹配组号</string>
+    <string name="param_vflow_data_text_processing_regex_group_name">提取组号（0=匹配项，1起=子匹配项）</string>
     <string name="output_vflow_data_text_processing_result_text_name">结果文本</string>
     <string name="output_vflow_data_text_processing_result_list_name">结果列表</string>
     <string name="error_vflow_data_text_processing_param_error">参数错误</string>
