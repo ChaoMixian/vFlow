@@ -102,7 +102,7 @@ class DelayModule : BaseModule() {
         if (duration is String) {
             try {
                 // 如果不是魔法变量，尝试转换为长整型并检查是否为负
-                if (!duration.isMagicVariable()) {
+                if (!duration.isMagicVariable() && !duration.isNamedVariable()) {
                     if (duration.toLong() < 0) {
                         return ValidationResult(
                             false,
@@ -112,7 +112,7 @@ class DelayModule : BaseModule() {
                 }
             } catch (e: Exception) {
                 // 如果转换失败且不是魔法变量，则格式无效
-                if (!duration.isMagicVariable()) {
+                if (!duration.isMagicVariable() && !duration.isNamedVariable()) {
                     return ValidationResult(
                         false,
                         appContext.getString(R.string.error_vflow_device_delay_invalid_format)
