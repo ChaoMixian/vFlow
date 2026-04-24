@@ -787,6 +787,17 @@
     <string name="error_vflow_data_parse_json_path_empty">Path cannot be empty</string>
     <string name="error_vflow_data_parse_json_invalid_format">Invalid JSON format</string>
     <string name="error_vflow_data_parse_json_parse_error">JSON parsing error</string>
+    <string name="module_vflow_data_parse_xml_name">Parse XML</string>
+    <string name="module_vflow_data_parse_xml_desc">Extract data from XML text using XPath</string>
+    <string name="param_vflow_data_parse_xml_xml_name">XML Text</string>
+    <string name="param_vflow_data_parse_xml_xpath_name">XPath</string>
+    <string name="output_vflow_data_parse_xml_first_value_name">First Matched Value</string>
+    <string name="output_vflow_data_parse_xml_all_values_name">All Matched Values</string>
+    <string name="error_vflow_data_parse_xml_param_error">Parameter Error</string>
+    <string name="error_vflow_data_parse_xml_empty">XML text cannot be empty</string>
+    <string name="error_vflow_data_parse_xml_xpath_empty">XPath cannot be empty</string>
+    <string name="error_vflow_data_parse_xml_parse_error">XML parsing error</string>
+    <string name="error_vflow_data_parse_xml_xpath_error">XPath evaluation error</string>
 
     <string name="module_vflow_data_comment_name">Comment</string>
     <string name="module_vflow_data_comment_desc">Add comments to document your workflow design. Will be skipped during execution.</string>

@@ -740,6 +740,17 @@
     <string name="error_vflow_data_parse_json_path_empty">路径不能为空</string>
     <string name="error_vflow_data_parse_json_invalid_format">JSON 格式错误</string>
     <string name="error_vflow_data_parse_json_parse_error">JSON 解析错误</string>
+    <string name="module_vflow_data_parse_xml_name">解析 XML</string>
+    <string name="module_vflow_data_parse_xml_desc">从 XML 文本中通过 XPath 提取数据</string>
+    <string name="param_vflow_data_parse_xml_xml_name">XML 文本</string>
+    <string name="param_vflow_data_parse_xml_xpath_name">XPath</string>
+    <string name="output_vflow_data_parse_xml_first_value_name">第一个匹配值</string>
+    <string name="output_vflow_data_parse_xml_all_values_name">所有匹配值</string>
+    <string name="error_vflow_data_parse_xml_param_error">参数错误</string>
+    <string name="error_vflow_data_parse_xml_empty">XML 文本不能为空</string>
+    <string name="error_vflow_data_parse_xml_xpath_empty">XPath 不能为空</string>
+    <string name="error_vflow_data_parse_xml_parse_error">XML 解析错误</string>
+    <string name="error_vflow_data_parse_xml_xpath_error">XPath 解析错误</string>
     <string name="module_vflow_data_comment_name">注释</string>
     <string name="module_vflow_data_comment_desc">添加注释说明，用于记录工作流的设计思路和目的。执行时会被跳过。</string>
     <string name="param_vflow_data_comment_content_name">注释内容</string>
