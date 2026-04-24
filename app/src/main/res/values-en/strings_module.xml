@@ -45,6 +45,29 @@
     <string name="msg_vflow_system_get_clipboard_image_read">Read clipboard image content</string>
     <string name="msg_vflow_system_get_clipboard_image_failed">Failed to read clipboard image: %s</string>
     <string name="summary_vflow_system_get_clipboard">Get clipboard content</string>
+    <string name="module_vflow_system_find_installed_app_name">Find Installed App</string>
+    <string name="module_vflow_system_find_installed_app_desc">Search installed local apps by app name or package name and return the best-matching package id.</string>
+    <string name="param_vflow_system_find_installed_app_query_name">App Name or Package</string>
+    <string name="param_vflow_system_find_installed_app_launchable_only_name">Launchable Only</string>
+    <string name="param_vflow_system_find_installed_app_user_id_name">User ID</string>
+    <string name="param_vflow_system_find_installed_app_max_results_name">Max Results</string>
+    <string name="output_vflow_system_find_installed_app_success_name">Success</string>
+    <string name="output_vflow_system_find_installed_app_found_name">Found Match</string>
+    <string name="output_vflow_system_find_installed_app_query_name">Query</string>
+    <string name="output_vflow_system_find_installed_app_package_name_name">Package Name</string>
+    <string name="output_vflow_system_find_installed_app_app_name_name">App Name</string>
+    <string name="output_vflow_system_find_installed_app_activity_name_name">Activity Name</string>
+    <string name="output_vflow_system_find_installed_app_user_id_name">User ID</string>
+    <string name="output_vflow_system_find_installed_app_match_count_name">Match Count</string>
+    <string name="output_vflow_system_find_installed_app_exact_match_name">Exact Match</string>
+    <string name="output_vflow_system_find_installed_app_best_match_name">Best Match</string>
+    <string name="output_vflow_system_find_installed_app_all_matches_name">All Matches</string>
+    <string name="error_vflow_system_find_installed_app_empty_query">Query cannot be empty</string>
+    <string name="error_vflow_system_find_installed_app_query_required">Please provide an app name or package name to search for.</string>
+    <string name="summary_vflow_system_find_installed_app_prefix">Find app</string>
+    <string name="msg_vflow_system_find_installed_app_searching">Searching apps: %s</string>
+    <string name="msg_vflow_system_find_installed_app_found">Found app match: %1$s (%2$s)</string>
+    <string name="msg_vflow_system_find_installed_app_not_found">No app match found: %s</string>
 
     <!-- vflow.system.launch_app - Launch App Module -->
     <string name="module_vflow_system_launch_app_name">Launch App/Activity</string>

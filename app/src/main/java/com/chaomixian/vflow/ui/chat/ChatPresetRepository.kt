@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 class ChatPresetRepository(context: Context) {
     companion object {
         private const val PREFS_NAME = "module_config_prefs"
+        private const val CHAT_SESSION_PREFS_NAME = "chat_session_prefs"
         private const val KEY_CHAT_PRESETS_JSON = "chat_presets_json"
         private const val KEY_CHAT_PROVIDER_CONFIGS_JSON = "chat_provider_configs_json"
         private const val KEY_CHAT_DEFAULT_PRESET_ID = "chat_default_preset_id"
@@ -26,6 +27,8 @@ class ChatPresetRepository(context: Context) {
 
     private val prefs =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val sessionPrefs =
+        context.applicationContext.getSharedPreferences(CHAT_SESSION_PREFS_NAME, Context.MODE_PRIVATE)
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -44,7 +47,9 @@ class ChatPresetRepository(context: Context) {
     }
 
     fun getSessionState(): ChatSessionState {
-        val raw = prefs.getString(KEY_CHAT_SESSION_STATE_JSON, null).orEmpty()
+        val raw = sessionPrefs.getString(KEY_CHAT_SESSION_STATE_JSON, null)
+            ?: prefs.getString(KEY_CHAT_SESSION_STATE_JSON, null)
+            ?: ""
         if (raw.isBlank()) return ChatSessionState()
         return runCatching {
             json.decodeFromString<ChatSessionState>(raw)
@@ -70,8 +75,11 @@ class ChatPresetRepository(context: Context) {
     }
 
     fun saveSessionState(state: ChatSessionState) {
-        prefs.edit {
+        sessionPrefs.edit {
             putString(KEY_CHAT_SESSION_STATE_JSON, json.encodeToString(state))
+        }
+        prefs.edit {
+            remove(KEY_CHAT_SESSION_STATE_JSON)
         }
     }
 

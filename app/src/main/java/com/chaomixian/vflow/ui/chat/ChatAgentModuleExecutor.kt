@@ -6,6 +6,7 @@ import com.chaomixian.vflow.core.execution.ExecutionState
 import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.ExecutionServices
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.module.ActionModule
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
@@ -54,24 +55,48 @@ import kotlinx.serialization.json.put
 
 internal class ChatAgentArtifactStore {
     private val artifacts = linkedMapOf<String, Any?>()
+    private val sessionState = linkedMapOf<String, Any?>()
 
     fun createReferences(
         callId: String,
         outputs: Map<String, Any?>,
     ): List<ChatArtifactReference> {
         return outputs.mapNotNull { (key, value) ->
-            val typeLabel = chatArtifactTypeLabel(value) ?: return@mapNotNull null
-            val handle = "artifact://$callId/$key"
-            artifacts[handle] = value
-            ChatArtifactReference(
-                key = key,
-                handle = handle,
-                typeLabel = typeLabel,
-            )
+            store(callId = callId, key = key, value = value)
         }
     }
 
+    fun store(
+        callId: String,
+        key: String,
+        value: Any?,
+        explicitTypeLabel: String? = null,
+    ): ChatArtifactReference? {
+        val typeLabel = explicitTypeLabel ?: chatArtifactTypeLabel(value) ?: return null
+        val handle = "artifact://$callId/$key"
+        artifacts[handle] = value
+        return ChatArtifactReference(
+            key = key,
+            handle = handle,
+            typeLabel = typeLabel,
+        )
+    }
+
     fun resolve(handle: String): Any? = artifacts[handle]
+
+    fun snapshotArtifacts(): Map<String, Any?> = LinkedHashMap(artifacts)
+
+    fun rememberSessionValue(
+        key: String,
+        value: Any?,
+    ) {
+        sessionState[key] = value
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T> recallSessionValue(key: String): T? = sessionState[key] as? T
+
+    fun snapshotSessionState(): Map<String, Any?> = LinkedHashMap(sessionState)
 }
 
 internal fun chatArtifactTypeLabel(value: Any?): String? {
@@ -80,6 +105,7 @@ internal fun chatArtifactTypeLabel(value: Any?): String? {
         is VCoordinate -> "coordinate"
         is VCoordinateRegion -> "coordinate region"
         is VScreenElement -> "screen element"
+        is ChatAgentUiSnapshot -> "ui snapshot"
         else -> null
     }
 }
@@ -92,6 +118,13 @@ internal sealed interface ChatPreparedToolItem {
         val definition: ChatAgentToolDefinition,
         val module: ActionModule,
         val step: ActionStep,
+        val missingPermissions: List<Permission>,
+    ) : ChatPreparedToolItem
+
+    data class NativeReady(
+        override val toolCall: ChatToolCall,
+        val definition: ChatAgentToolDefinition,
+        val request: ChatAgentNativeRequest,
         val missingPermissions: List<Permission>,
     ) : ChatPreparedToolItem
 
@@ -132,6 +165,7 @@ internal class ChatAgentModuleExecutor(
 ) {
     private val appContext = context.applicationContext
     private val json = Json { ignoreUnknownKeys = true }
+    private val nativeToolExecutor = ChatAgentNativeToolExecutor(appContext)
 
     fun prepareBatch(
         toolCalls: List<ChatToolCall>,
@@ -142,30 +176,46 @@ internal class ChatAgentModuleExecutor(
             .flatMap { item ->
                 when (item) {
                     is ChatPreparedToolItem.Ready -> item.missingPermissions
+                    is ChatPreparedToolItem.NativeReady -> item.missingPermissions
                     is ChatPreparedToolItem.TemporaryWorkflow -> item.missingPermissions
                     is ChatPreparedToolItem.SaveWorkflow -> emptyList()
                     is ChatPreparedToolItem.ImmediateResult -> emptyList()
                 }
             }
             .distinctBy { it.id }
-
         return ChatPreparedToolBatch(
             items = items,
             missingPermissions = missingPermissions,
             riskLevel = ChatAgentToolRiskLevel.maxOf(items.map(::riskLevelOf)),
-        )
+        ).also { batch ->
+            DebugLogger.i(
+                LOG_TAG,
+                "Prepared tool batch tools=${toolCalls.joinToString { it.name }} items=${batch.items.size} risk=${batch.riskLevel} missingPermissions=${batch.missingPermissions.joinToString { it.id }}"
+            )
+        }
     }
 
     suspend fun executeBatch(
         batch: ChatPreparedToolBatch,
         artifactStore: ChatAgentArtifactStore,
     ): List<ChatToolResult> {
+        DebugLogger.i(
+            LOG_TAG,
+            "Executing prepared batch items=${batch.items.size} risk=${batch.riskLevel}"
+        )
         return batch.items.map { item ->
+            DebugLogger.i(LOG_TAG, "Tool start ${item.describeForLog()}")
             when (item) {
                 is ChatPreparedToolItem.ImmediateResult -> item.result
                 is ChatPreparedToolItem.Ready -> executeReadyTool(item, artifactStore)
+                is ChatPreparedToolItem.NativeReady -> nativeToolExecutor.execute(item, artifactStore)
                 is ChatPreparedToolItem.TemporaryWorkflow -> executeTemporaryWorkflow(item, artifactStore)
                 is ChatPreparedToolItem.SaveWorkflow -> executeSaveWorkflow(item)
+            }.also { result ->
+                DebugLogger.i(
+                    LOG_TAG,
+                    "Tool end ${item.describeForLog()} status=${result.status} output=${result.outputText.compactForLog()}"
+                )
             }
         }
     }
@@ -212,7 +262,10 @@ internal class ChatAgentModuleExecutor(
                 name = toolCall.name,
                 status = ChatToolResultStatus.REJECTED,
                 summary = title,
-                outputText = "Tool execution was rejected by the user for `$title`.",
+                outputText = chatAgentAppendNextStep(
+                    baseMessage = "Tool execution was rejected by the user for `$title`.",
+                    nextStep = "choose a lower-risk tool, ask the user for approval, or explain what still needs confirmation.",
+                ),
             )
         }
     }
@@ -221,13 +274,31 @@ internal class ChatAgentModuleExecutor(
         return batch.items.map { item ->
             when (item) {
                 is ChatPreparedToolItem.ImmediateResult -> item.result
+                is ChatPreparedToolItem.NativeReady -> {
+                    val permissionNames = item.missingPermissions
+                        .map { it.getLocalizedName(appContext) }
+                        .distinct()
+                    ChatToolResult(
+                        callId = item.toolCall.id,
+                        name = item.toolCall.name,
+                        status = ChatToolResultStatus.PERMISSION_REQUIRED,
+                        summary = item.definition.title,
+                        outputText = chatAgentAppendNextStep(
+                            baseMessage = "Tool `${item.definition.title}` could not run because the following permissions are not granted: ${permissionNames.joinToString()}.",
+                            nextStep = "ask the user to grant those permissions, then retry the same tool. ${item.definition.nativeHelperId?.let(::chatAgentNativeRecoveryHint).orEmpty()}".trim(),
+                        ),
+                    )
+                }
                 is ChatPreparedToolItem.SaveWorkflow -> {
                     ChatToolResult(
                         callId = item.toolCall.id,
                         name = item.toolCall.name,
                         status = ChatToolResultStatus.PERMISSION_REQUIRED,
                         summary = item.definition.title,
-                        outputText = "Saved workflow `${item.workflow.name}` could not be saved because required permissions are not granted.",
+                        outputText = chatAgentAppendNextStep(
+                            baseMessage = "Saved workflow `${item.workflow.name}` could not be saved because required permissions are not granted.",
+                            nextStep = "ask the user to grant the missing permissions, then save the workflow again.",
+                        ),
                     )
                 }
                 is ChatPreparedToolItem.TemporaryWorkflow -> {
@@ -239,7 +310,10 @@ internal class ChatAgentModuleExecutor(
                         name = item.toolCall.name,
                         status = ChatToolResultStatus.PERMISSION_REQUIRED,
                         summary = item.definition.title,
-                        outputText = "Temporary workflow `${item.definition.title}` could not run because the following permissions are not granted: ${permissionNames.joinToString()}.",
+                        outputText = chatAgentAppendNextStep(
+                            baseMessage = "Temporary workflow `${item.definition.title}` could not run because the following permissions are not granted: ${permissionNames.joinToString()}.",
+                            nextStep = "ask the user to grant those permissions, then retry the workflow.",
+                        ),
                     )
                 }
                 is ChatPreparedToolItem.Ready -> {
@@ -251,7 +325,10 @@ internal class ChatAgentModuleExecutor(
                         name = item.toolCall.name,
                         status = ChatToolResultStatus.PERMISSION_REQUIRED,
                         summary = item.definition.title,
-                        outputText = "Tool `${item.definition.title}` could not run because the following permissions are not granted: ${permissionNames.joinToString()}.",
+                        outputText = chatAgentAppendNextStep(
+                            baseMessage = "Tool `${item.definition.title}` could not run because the following permissions are not granted: ${permissionNames.joinToString()}.",
+                            nextStep = "ask the user to grant those permissions, then retry the same tool.",
+                        ),
                     )
                 }
             }
@@ -261,6 +338,7 @@ internal class ChatAgentModuleExecutor(
     private fun riskLevelOf(item: ChatPreparedToolItem): ChatAgentToolRiskLevel {
         return when (item) {
             is ChatPreparedToolItem.Ready -> item.definition.riskLevel
+            is ChatPreparedToolItem.NativeReady -> item.definition.riskLevel
             is ChatPreparedToolItem.TemporaryWorkflow -> item.riskLevel
             is ChatPreparedToolItem.SaveWorkflow -> item.riskLevel
             is ChatPreparedToolItem.ImmediateResult -> ChatAgentToolRiskLevel.HIGH
@@ -289,6 +367,10 @@ internal class ChatAgentModuleExecutor(
                     outputText = "Unknown tool `${toolCall.name}`.",
                 )
             )
+
+        if (definition.backend == ChatAgentToolBackend.NATIVE_HELPER) {
+            return nativeToolExecutor.prepare(definition, toolCall, artifactStore)
+        }
 
         val module = ModuleRegistry.getModule(definition.moduleId)
             ?: return ChatPreparedToolItem.ImmediateResult(
@@ -416,6 +498,7 @@ internal class ChatAgentModuleExecutor(
                         description = stepSpec.moduleId,
                         moduleId = stepSpec.moduleId,
                         moduleDisplayName = stepSpec.moduleId,
+                        routingHints = setOf(stepSpec.moduleId),
                         inputSchema = buildJsonObject { },
                         permissionNames = emptyList(),
                         riskLevel = toolRegistry.getRiskLevelForModuleId(stepSpec.moduleId),
@@ -431,6 +514,13 @@ internal class ChatAgentModuleExecutor(
                     indentationLevel = stepSpec.indentationLevel,
                 )) {
                     is ChatPreparedToolItem.Ready -> readySteps += prepared
+                    is ChatPreparedToolItem.NativeReady -> validationErrors += ChatToolResult(
+                        callId = preparedToolCall.id,
+                        name = preparedToolCall.name,
+                        status = ChatToolResultStatus.ERROR,
+                        summary = definition.title,
+                        outputText = "Native helper tools cannot be embedded inside temporary workflows.",
+                    )
                     is ChatPreparedToolItem.ImmediateResult -> validationErrors += prepared.result
                     is ChatPreparedToolItem.TemporaryWorkflow -> validationErrors += ChatToolResult(
                         callId = preparedToolCall.id,
@@ -1158,6 +1248,21 @@ internal class ChatAgentModuleExecutor(
         return defaults
     }
 
+    private fun ChatPreparedToolItem.describeForLog(): String {
+        return when (this) {
+            is ChatPreparedToolItem.ImmediateResult -> "immediate name=${toolCall.name}"
+            is ChatPreparedToolItem.NativeReady -> "native name=${toolCall.name} helper=${definition.nativeHelperId}"
+            is ChatPreparedToolItem.Ready -> "module name=${toolCall.name} module=${module.id}"
+            is ChatPreparedToolItem.SaveWorkflow -> "save_workflow name=${toolCall.name} workflow=${workflow.name}"
+            is ChatPreparedToolItem.TemporaryWorkflow -> "temporary_workflow name=${toolCall.name} workflow=${workflow.name}"
+        }
+    }
+
+    private fun String.compactForLog(maxLength: Int = 160): String {
+        val compact = replace(Regex("""\s+"""), " ").trim()
+        return if (compact.length > maxLength) compact.take(maxLength) + "…" else compact
+    }
+
     private fun parseArguments(rawArgumentsJson: String): Map<String, Any?> {
         if (rawArgumentsJson.isBlank()) return emptyMap()
         val element = json.parseToJsonElement(rawArgumentsJson)
@@ -1377,6 +1482,12 @@ internal class ChatAgentModuleExecutor(
                 append(",")
                 append(value.centerY)
             }
+            is ChatAgentUiSnapshot -> buildString {
+                append(value.currentUi)
+                append(" (")
+                append(value.elements.size)
+                append(" elements)")
+            }
             is VObject -> truncate(value.asString())
             is String -> truncate(value)
             else -> truncate(value.toString())
@@ -1438,6 +1549,7 @@ internal class ChatAgentModuleExecutor(
     )
 
     private companion object {
+        private const val LOG_TAG = "ChatToolExec"
         const val DEFAULT_TEMPORARY_WORKFLOW_MAX_SECONDS = 120
         const val MAX_TEMPORARY_WORKFLOW_MAX_SECONDS = 300
         const val MAX_TEMPORARY_WORKFLOW_REPEAT = 50

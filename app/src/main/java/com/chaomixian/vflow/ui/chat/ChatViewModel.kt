@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.permissions.Permission
 import java.util.Locale
@@ -71,6 +72,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private var currentAgentConversationId: String? = null
     private val queuedUserPrompts = mutableListOf<QueuedUserPrompt>()
     private val newConversationTitlePattern = Regex("""新对话\s+(\d+)""")
+
+    private companion object {
+        private const val LOG_TAG = "ChatAgentFlow"
+        private const val MAX_LOG_SNIPPET = 180
+    }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "chat_presets_json" ||
@@ -273,6 +279,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         content: String,
         preset: ChatPresetConfig,
     ) {
+        DebugLogger.i(
+            LOG_TAG,
+            "User message received conversation=${conversation.id} preset=${preset.name.ifBlank { preset.model }} text=${content.compactForLog()}"
+        )
         val now = System.currentTimeMillis()
         val userMessage = ChatMessage(
             role = ChatMessageRole.USER,
@@ -344,6 +354,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             content = content,
             timestampMillis = System.currentTimeMillis(),
         )
+        DebugLogger.i(
+            LOG_TAG,
+            "Queued user message conversation=$conversationId queued=${queuedUserPrompts.size} text=${content.compactForLog()}"
+        )
         _uiState.update { state ->
             state.copy(queuedPromptCount = queuedUserPrompts.size)
         }
@@ -410,6 +424,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         val artifactStore = artifactStores.getOrPut(conversation.id, ::ChatAgentArtifactStore)
         val batch = toolExecutor.prepareBatch(message.toolCalls, artifactStore)
+        DebugLogger.i(
+            LOG_TAG,
+            "Approving tool batch conversation=${conversation.id} message=${message.id} risk=${batch.riskLevel} tools=${message.toolCalls.summarizeToolCalls()} missingPermissions=${batch.missingPermissions.joinToString { it.id }}"
+        )
         pendingToolExecution = PendingToolExecution(
             conversationId = conversation.id,
             messageId = message.id,
@@ -578,6 +596,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             processNextQueuedPromptIfIdle()
             return
         }
+        DebugLogger.i(
+            LOG_TAG,
+            "Tool permission result conversation=${pending.conversationId} granted=$granted pendingTools=${pending.batch.items.size}"
+        )
         if (granted) {
             launchPendingToolBatch()
         } else {
@@ -595,6 +617,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun executePendingToolBatch() {
         val pending = pendingToolExecution ?: return
+        DebugLogger.i(
+            LOG_TAG,
+            "Executing tool batch conversation=${pending.conversationId} tools=${pending.batch.items.size} risk=${pending.batch.riskLevel}"
+        )
         val artifactStore = artifactStores.getOrPut(pending.conversationId, ::ChatAgentArtifactStore)
         val toolResults = toolExecutor.executeBatch(pending.batch, artifactStore)
         pendingToolExecution = null
@@ -649,6 +675,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         approvalState: ChatToolApprovalState,
         toolResults: List<ChatToolResult>,
     ) {
+        DebugLogger.i(
+            LOG_TAG,
+            "Appending tool results conversation=$conversationId message=$messageId approval=$approvalState results=${toolResults.summarizeToolResults()}"
+        )
         val conversation = _uiState.value.conversations.firstOrNull { it.id == conversationId } ?: return
         val updatedAssistantMessages = conversation.messages.map { message ->
             if (message.id == messageId) {
@@ -682,6 +712,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         historyForRequest: List<ChatMessage>,
         preset: ChatPresetConfig,
     ) {
+        DebugLogger.i(
+            LOG_TAG,
+            "Requesting assistant reply conversation=${conversation.id} messages=${historyForRequest.size} preset=${preset.name.ifBlank { preset.model }}"
+        )
         val now = System.currentTimeMillis()
         val pendingMessage = ChatMessage(
             role = ChatMessageRole.ASSISTANT,
@@ -704,10 +738,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         currentAgentConversationId = updatedConversation.id
         currentAgentJob = viewModelScope.launch {
             try {
+                val skillSelection = ChatAgentSkillRouter.selectSkills(
+                    history = historyForRequest,
+                    availableTools = _uiState.value.availableTools,
+                )
+                DebugLogger.i(
+                    LOG_TAG,
+                    "Skill selection conversation=${updatedConversation.id} skills=${skillSelection.skills.joinToString { it.id }} tools=${skillSelection.availableTools.joinToString { it.name }}"
+                )
                 val result = chatClient.generateReply(
                     preset = preset,
                     history = historyForRequest,
-                    availableTools = _uiState.value.availableTools,
+                    skillSelection = skillSelection,
+                )
+                DebugLogger.i(
+                    LOG_TAG,
+                    "Model reply conversation=${updatedConversation.id} tokens=${result.totalTokens ?: -1} reasoningChars=${result.reasoningContent?.length ?: 0} toolCalls=${result.toolCalls.summarizeToolCalls()} content=${result.content.compactForLog()}"
                 )
                 val timestamp = System.currentTimeMillis()
                 var shouldAutoApproveMessageId: String? = null
@@ -746,6 +792,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 val autoApproveMessageId = shouldAutoApproveMessageId
                 if (autoApproveMessageId != null) {
+                    DebugLogger.i(
+                        LOG_TAG,
+                        "Auto-approving tool calls conversation=${updatedConversation.id} message=$autoApproveMessageId"
+                    )
                     approveToolCalls(autoApproveMessageId)
                 } else {
                     processNextQueuedPromptIfIdle()
@@ -753,6 +803,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (throwable: Throwable) {
+                DebugLogger.e(
+                    LOG_TAG,
+                    "Assistant request failed conversation=${updatedConversation.id}: ${throwable.message}",
+                    throwable
+                )
                 pendingToolExecution = null
                 replacePendingMessage(
                     conversationId = updatedConversation.id,
@@ -1008,6 +1063,25 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return messages.firstOrNull { message ->
             message.role == ChatMessageRole.ASSISTANT &&
                 message.toolApprovalState == ChatToolApprovalState.PENDING
+        }
+    }
+
+    private fun String.compactForLog(maxLength: Int = MAX_LOG_SNIPPET): String {
+        val compact = replace(Regex("""\s+"""), " ").trim()
+        return if (compact.length > maxLength) compact.take(maxLength) + "…" else compact
+    }
+
+    private fun List<ChatToolCall>.summarizeToolCalls(): String {
+        if (isEmpty()) return "none"
+        return joinToString(separator = "; ") { toolCall ->
+            "${toolCall.name} args=${toolCall.argumentsJson.compactForLog(120)}"
+        }
+    }
+
+    private fun List<ChatToolResult>.summarizeToolResults(): String {
+        if (isEmpty()) return "none"
+        return joinToString(separator = "; ") { result ->
+            "${result.name}:${result.status} summary=${result.summary.compactForLog(80)} output=${result.outputText.compactForLog(120)}"
         }
     }
 }

@@ -33,8 +33,11 @@ class DarkModeModule : BaseModule() {
     )
     override val aiMetadata = directToolMetadata(
         riskLevel = AiModuleRiskLevel.STANDARD,
-        directToolDescription = "Set Android dark mode to toggle, dark, light, or auto.",
+        directToolDescription = "Set Android dark mode directly to toggle, dark, light, or auto. For requests such as switching to light mode or dark mode, use this tool instead of navigating through Settings screens.",
         workflowStepDescription = "Change Android dark mode.",
+        inputHints = mapOf(
+            "mode" to "Use canonical values: toggle, dark, light, or auto. Prefer dark/light/auto when the user names the target state explicitly.",
+        ),
         requiredInputIds = setOf("mode"),
     )
 

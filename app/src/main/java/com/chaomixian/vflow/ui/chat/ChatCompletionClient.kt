@@ -1,5 +1,6 @@
 package com.chaomixian.vflow.ui.chat
 
+import com.chaomixian.vflow.core.logging.DebugLogger
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,18 +23,85 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class ChatCompletionClient(
+internal const val CHAT_MAX_TOOL_RESULT_INPUT_CHARS = 1_600
+
+internal fun stripInlineToolMarkup(content: String): String {
+    return content
+        .replace(Regex("(?is)<tool_call\\b[^>]*>.*?</tool_call>"), " ")
+        .replace(Regex("(?is)</?function_calls?\\b[^>]*>"), " ")
+        .replace(Regex("(?is)</?tool_calls?\\b[^>]*>"), " ")
+        .replace(Regex("(?m)^[ \t]+$"), "")
+        .replace(Regex("[ \t]+\n"), "\n")
+        .replace(Regex("""\n\s*\n+"""), "\n")
+        .trim()
+}
+
+internal object ChatToolResultInputFormatter {
+    fun format(
+        message: ChatMessage,
+        toolResult: ChatToolResult,
+    ): String {
+        val raw = message.content.ifBlank { toolResult.outputText }.trim()
+        if (raw.length <= CHAT_MAX_TOOL_RESULT_INPUT_CHARS) return raw
+
+        val marker = "... truncated"
+        val maxArtifactBudget = (CHAT_MAX_TOOL_RESULT_INPUT_CHARS - marker.length - 2).coerceAtLeast(0)
+        val artifactSection = buildArtifactSection(toolResult.artifacts, maxArtifactBudget)
+        val suffix = listOf(marker, artifactSection.takeIf { it.isNotBlank() })
+            .filterNotNull()
+            .joinToString(separator = "\n\n")
+        val headBudget = (CHAT_MAX_TOOL_RESULT_INPUT_CHARS - suffix.length - 2).coerceAtLeast(0)
+        val head = raw.take(headBudget).trimEnd()
+
+        return listOf(head.takeIf { it.isNotBlank() }, suffix)
+            .filterNotNull()
+            .joinToString(separator = "\n\n")
+    }
+
+    private fun buildArtifactSection(
+        artifacts: List<ChatArtifactReference>,
+        budget: Int,
+    ): String {
+        if (artifacts.isEmpty() || budget <= 0) return ""
+
+        val lines = mutableListOf<String>()
+        var remaining = budget
+
+        fun appendLine(line: String): Boolean {
+            val lineCost = if (lines.isEmpty()) line.length else line.length + 1
+            if (lineCost > remaining) return false
+            lines += line
+            remaining -= lineCost
+            return true
+        }
+
+        if (!appendLine("Artifacts:")) return ""
+
+        artifacts.forEach { artifact ->
+            val line = "- ${artifact.key} (${artifact.typeLabel}): ${artifact.handle}"
+            if (!appendLine(line)) return@forEach
+        }
+
+        return lines.joinToString(separator = "\n")
+    }
+}
+
+internal class ChatCompletionClient(
     private val httpClient: OkHttpClient = sharedHttpClient,
 ) {
     suspend fun generateReply(
         preset: ChatPresetConfig,
         history: List<ChatMessage>,
-        availableTools: List<ChatAgentToolDefinition> = emptyList(),
+        skillSelection: ChatAgentSkillSelection = ChatAgentSkillSelection.EMPTY,
     ): ChatCompletionResult = withContext(Dispatchers.IO) {
+        DebugLogger.i(
+            LOG_TAG,
+            "Generating reply provider=${preset.providerEnum.storageValue} model=${preset.model} history=${history.size} tools=${skillSelection.availableTools.joinToString { it.name }} lastUser=${history.lastOrNull { it.role == ChatMessageRole.USER }?.content.orEmpty().compactForLog()}"
+        )
         val request = ChatProviderRequest(
             preset = preset,
             history = history.filter { it.role != ChatMessageRole.ERROR },
-            availableTools = availableTools,
+            skillSelection = skillSelection,
         )
         val adapter = when (preset.providerEnum) {
             ChatProvider.OPENAI -> OpenAICompatibleChatAdapter(httpClient, preset.providerEnum)
@@ -42,10 +110,16 @@ class ChatCompletionClient(
             ChatProvider.OLLAMA -> OpenAICompatibleChatAdapter(httpClient, preset.providerEnum)
             ChatProvider.ANTHROPIC -> AnthropicChatAdapter(httpClient)
         }
-        adapter.complete(request)
+        adapter.complete(request).also { result ->
+            DebugLogger.i(
+                LOG_TAG,
+                "Reply ready provider=${preset.providerEnum.storageValue} model=${preset.model} tokens=${result.totalTokens ?: -1} reasoningChars=${result.reasoningContent?.length ?: 0} toolCalls=${result.toolCalls.joinToString { it.name }} content=${result.content.compactForLog()}"
+            )
+        }
     }
 
     private companion object {
+        private const val LOG_TAG = "ChatCompletion"
         private val json = Json {
             ignoreUnknownKeys = true
             encodeDefaults = false
@@ -63,7 +137,7 @@ class ChatCompletionClient(
     private data class ChatProviderRequest(
         val preset: ChatPresetConfig,
         val history: List<ChatMessage>,
-        val availableTools: List<ChatAgentToolDefinition>,
+        val skillSelection: ChatAgentSkillSelection,
     )
 
     private interface ChatProviderAdapter {
@@ -122,12 +196,12 @@ class ChatCompletionClient(
                 put("model", request.preset.model)
                 put("temperature", request.preset.temperature)
                 put("stream", false)
-                if (request.availableTools.isNotEmpty()) {
+                if (request.skillSelection.availableTools.isNotEmpty()) {
                     put("parallel_tool_calls", false)
                     put(
                         "tools",
                         buildJsonArray {
-                            buildOpenAiChatToolDefinitions(request.availableTools).forEach(::add)
+                            buildOpenAiChatToolDefinitions(request.skillSelection.availableTools).forEach(::add)
                         }
                     )
                 }
@@ -145,12 +219,12 @@ class ChatCompletionClient(
                 put("model", request.preset.model)
                 put("temperature", request.preset.temperature)
                 put("store", false)
-                if (request.availableTools.isNotEmpty()) {
+                if (request.skillSelection.availableTools.isNotEmpty()) {
                     put("parallel_tool_calls", false)
                     put(
                         "tools",
                         buildJsonArray {
-                            buildOpenAiResponsesToolDefinitions(request.availableTools).forEach(::add)
+                            buildOpenAiResponsesToolDefinitions(request.skillSelection.availableTools).forEach(::add)
                         }
                     )
                 }
@@ -225,7 +299,7 @@ class ChatCompletionClient(
                         items += buildJsonObject {
                             put("role", "tool")
                             put("tool_call_id", callId)
-                            put("content", message.content.ifBlank { toolResult.outputText })
+                            put("content", ChatToolResultInputFormatter.format(message, toolResult))
                         }
                     }
 
@@ -270,7 +344,7 @@ class ChatCompletionClient(
                         items += buildJsonObject {
                             put("type", "function_call_output")
                             put("call_id", callId)
-                            put("output", message.content.ifBlank { toolResult.outputText })
+                            put("output", ChatToolResultInputFormatter.format(message, toolResult))
                         }
                     }
 
@@ -401,11 +475,11 @@ class ChatCompletionClient(
                 put("max_tokens", 4096)
                 put("temperature", request.preset.temperature)
                 put("system", buildSystemPrompt(request))
-                if (request.availableTools.isNotEmpty()) {
+                if (request.skillSelection.availableTools.isNotEmpty()) {
                     put(
                         "tools",
                         buildJsonArray {
-                            buildAnthropicToolDefinitions(request.availableTools).forEach(::add)
+                            buildAnthropicToolDefinitions(request.skillSelection.availableTools).forEach(::add)
                         }
                     )
                 }
@@ -471,6 +545,10 @@ class ChatCompletionClient(
         payload: JsonObject,
         headers: Map<String, String>,
     ): JsonObject {
+        DebugLogger.d(
+            LOG_TAG,
+            "HTTP request url=$url payloadChars=${payload.toString().length} headers=${headers.keys.joinToString()}"
+        )
         val requestBuilder = Request.Builder()
             .url(url)
             .post(payload.toString().toRequestBody(jsonMediaType))
@@ -483,6 +561,10 @@ class ChatCompletionClient(
             val rawBody = response.body?.string().orEmpty().trim()
             val root = parseJsonObject(rawBody)
             val errorMessage = root?.let(::extractServiceError)
+            DebugLogger.d(
+                LOG_TAG,
+                "HTTP response url=$url code=${response.code} bodyChars=${rawBody.length} error=${errorMessage ?: "none"}"
+            )
             if (!response.isSuccessful) {
                 val detail = errorMessage ?: rawBody.ifBlank { "HTTP ${response.code}" }
                 throw IllegalStateException("Status code: ${response.code}\nError body:\n$detail")
@@ -627,35 +709,10 @@ class ChatCompletionClient(
     }
 
     private fun buildSystemPrompt(request: ChatProviderRequest): String {
-        val basePrompt = request.preset.systemPrompt.trim()
-        if (request.availableTools.isEmpty()) return basePrompt
-        val toolAppendix = """
-            You are the vFlow chat agent inside an Android automation app.
-            Use the provided vFlow tools whenever device observation or device action is required.
-            Prefer the shortest safe plan: if the user asks for a clear one-step device action, call the matching single-purpose tool directly.
-            If the user asks for a deterministic multi-step or repeated device action, generate one complete temporary vFlow workflow and execute the whole sequence in one approval instead of spreading it across multiple assistant turns.
-            The temporary workflow tool expects a workflow object with real ActionStep entries: each step must use moduleId and parameters with canonical values, not localized labels.
-            Use stable, descriptive snake_case step ids such as find_search_box or tap_confirm; later magic-variable references depend on these ids.
-            Only emit parameters that are present in the selected tool or module schema. Do not invent parameter names, localized parameter keys, or output ids.
-            If the user asks to create, generate, or save a reusable automation, call vflow_agent_save_workflow instead of saying you cannot save workflows.
-            Saved workflows may use trigger modules in workflow.triggers; temporary workflows must never include trigger modules.
-            For saved workflows, include trigger modules only when the user asks for a schedule, event, or automatic condition. If no trigger is requested, omit workflow.triggers and let the app add a manual trigger.
-            Trigger modules define when a saved workflow runs and are not useful for one-off temporary execution.
-            For repeated actions, prefer vflow.logic.loop.start plus vflow.logic.loop.end over emitting many repeated tool calls. Loop output indices are 1-based.
-            Every block start module must be closed by its matching block end module.
-            Input-text tools type into the currently focused field. If focus is uncertain, first locate and click the target field using accessibility or coordinates.
-            Do not open quick settings, take screenshots, run OCR, or search UI elements when a direct tool can complete the request.
-            Shell tools are high risk. Use them only when no safer direct vFlow module can complete the task.
-            Use read-only observation tools only when the target screen, current state, or required coordinates are actually unknown.
-            Ask one concise clarification only when a missing target app, screen, time, account, or condition would make the action ambiguous or risky; otherwise act with the available tools.
-            When you decide to act, include a brief natural-language explanation for the user, then call the tool.
-            Never claim a tool succeeded until you receive a tool result.
-            Tool results may contain reusable artifact handles like artifact://... . Pass those handles back into later tool arguments when appropriate.
-            If a tool is rejected or a required Android permission is unavailable, adapt the plan instead of assuming the action happened.
-        """.trimIndent()
-        return listOf(basePrompt, toolAppendix)
-            .filter { it.isNotBlank() }
-            .joinToString(separator = "\n\n")
+        return ChatAgentSkillRouter.buildSystemPrompt(
+            basePrompt = request.preset.systemPrompt,
+            skillSelection = request.skillSelection,
+        )
     }
 
     private fun buildMessageInput(role: String, text: String): JsonObject {
@@ -778,7 +835,7 @@ class ChatCompletionClient(
                                     buildJsonObject {
                                         put("type", "tool_result")
                                         put("tool_use_id", callId)
-                                        put("content", message.content.ifBlank { toolResult.outputText })
+                                        put("content", ChatToolResultInputFormatter.format(message, toolResult))
                                         put("is_error", toolResult.status != ChatToolResultStatus.SUCCESS)
                                     }
                                 )
@@ -803,9 +860,9 @@ class ChatCompletionClient(
             .trim()
             .ifBlank { null }
         val visibleContent = if (matches.isEmpty()) {
-            content.trim()
+            stripInlineToolMarkup(content)
         } else {
-            thinkRegex.replace(content, "").trim()
+            stripInlineToolMarkup(thinkRegex.replace(content, ""))
         }
         val mergedReasoning = firstNonBlank(reasoningContent, inlineReasoning)
         val normalizedContent = when {
@@ -818,5 +875,10 @@ class ChatCompletionClient(
             reasoningContent = mergedReasoning,
             totalTokens = null,
         )
+    }
+
+    private fun String.compactForLog(maxLength: Int = 180): String {
+        val compact = replace(Regex("""\s+"""), " ").trim()
+        return if (compact.length > maxLength) compact.take(maxLength) + "…" else compact
     }
 }

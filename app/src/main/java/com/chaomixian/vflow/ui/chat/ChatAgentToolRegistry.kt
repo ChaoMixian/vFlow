@@ -23,10 +23,13 @@ data class ChatAgentToolDefinition(
     val description: String,
     val moduleId: String,
     val moduleDisplayName: String,
+    val routingHints: Set<String> = emptySet(),
     val inputSchema: JsonObject,
     val permissionNames: List<String>,
     val riskLevel: ChatAgentToolRiskLevel,
     val usageScopes: Set<ChatAgentToolUsageScope>,
+    val backend: ChatAgentToolBackend = ChatAgentToolBackend.MODULE,
+    val nativeHelperId: ChatAgentNativeHelperId? = null,
 )
 
 internal const val CHAT_TEMPORARY_WORKFLOW_TOOL_NAME = "vflow_agent_run_temporary_workflow"
@@ -55,6 +58,7 @@ internal class ChatAgentToolRegistry(context: Context) {
         savedWorkflowModuleIds = buildSavedWorkflowModuleIds()
         toolsByName = (
             listOf(buildTemporaryWorkflowToolDefinition(), buildSaveWorkflowToolDefinition()) +
+                ChatAgentNativeToolExecutor.buildDefinitions(appContext) +
                 buildDirectToolDefinitions()
             ).associateBy { it.name }
     }
@@ -101,6 +105,7 @@ internal class ChatAgentToolRegistry(context: Context) {
             description = buildToolDescription(module, localizedName, permissions, riskLevel, usageScopes),
             moduleId = module.id,
             moduleDisplayName = localizedName,
+            routingHints = buildToolRoutingHints(module, localizedName, inputs),
             inputSchema = buildToolSchema(module.id, inputs),
             permissionNames = permissions,
             riskLevel = riskLevel,
@@ -131,10 +136,12 @@ internal class ChatAgentToolRegistry(context: Context) {
             },
             moduleId = CHAT_TEMPORARY_WORKFLOW_MODULE_ID,
             moduleDisplayName = "临时工作流",
+            routingHints = setOf("临时工作流", "执行工作流", "temporary workflow", "run workflow"),
             inputSchema = buildTemporaryWorkflowSchema(temporaryWorkflowModuleIds),
             permissionNames = emptyList(),
             riskLevel = ChatAgentToolRiskLevel.STANDARD,
             usageScopes = setOf(ChatAgentToolUsageScope.TEMPORARY_WORKFLOW),
+            backend = ChatAgentToolBackend.TEMPORARY_WORKFLOW,
         )
     }
 
@@ -169,10 +176,12 @@ internal class ChatAgentToolRegistry(context: Context) {
             },
             moduleId = CHAT_SAVE_WORKFLOW_MODULE_ID,
             moduleDisplayName = "保存工作流",
+            routingHints = setOf("保存工作流", "创建工作流", "自动化", "workflow", "automation"),
             inputSchema = buildSaveWorkflowSchema(savedWorkflowModuleIds),
             permissionNames = emptyList(),
             riskLevel = ChatAgentToolRiskLevel.HIGH,
             usageScopes = setOf(ChatAgentToolUsageScope.SAVED_WORKFLOW),
+            backend = ChatAgentToolBackend.SAVED_WORKFLOW,
         )
     }
 
@@ -487,6 +496,63 @@ internal class ChatAgentToolRegistry(context: Context) {
         return parts.joinToString(separator = " ")
     }
 
+    private fun buildToolRoutingHints(
+        module: ActionModule,
+        localizedName: String,
+        inputs: List<InputDefinition>,
+    ): Set<String> {
+        val phrases = linkedSetOf<String>()
+
+        fun addPhrase(value: String?) {
+            val phrase = value?.trim()?.takeIf { it.isNotBlank() } ?: return
+            phrases += phrase
+        }
+
+        addPhrase(localizedName)
+        addPhrase(module.metadata.getLocalizedDescription(appContext))
+        addPhrase(module.aiMetadata?.directToolDescription)
+        addPhrase(module.aiMetadata?.workflowStepDescription)
+        addPhrase(module.id.replace('.', ' '))
+
+        inputs.forEach { input ->
+            addPhrase(input.id.replace('_', ' '))
+            addPhrase(input.getLocalizedName(appContext))
+            addPhrase(input.getLocalizedHint(appContext))
+            input.options.forEach(::addPhrase)
+            input.getLocalizedOptions(appContext).forEach(::addPhrase)
+            input.legacyValueMap?.keys?.forEach(::addPhrase)
+            addPhrase(module.aiMetadata?.inputHints?.get(input.id))
+        }
+
+        return phrases
+            .flatMap(::expandRoutingHints)
+            .toSet()
+    }
+
+    private fun expandRoutingHints(raw: String): Set<String> {
+        val normalized = raw
+            .lowercase()
+            .replace("wi-fi", "wifi")
+            .replace('_', ' ')
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+        if (normalized.isBlank()) return emptySet()
+
+        val hints = linkedSetOf<String>()
+        hints += normalized
+
+        Regex("""[\p{L}\p{N}]+""").findAll(normalized)
+            .map { it.value.trim() }
+            .filter { token ->
+                token.length >= 2 &&
+                    token !in ROUTING_HINT_STOP_WORDS &&
+                    !(token.length < 4 && token.all { char -> char.code < 128 })
+            }
+            .forEach(hints::add)
+
+        return hints
+    }
+
     private fun buildToolSchema(
         moduleId: String,
         inputs: List<InputDefinition>,
@@ -704,6 +770,7 @@ To pass data from one step to another, give each step a meaningful `id` and use 
 - Coordinate passing: When a step outputs a Coordinate or a property like .center, pass the whole object directly (e.g. "target": "{{find_btn.elements.0.center}}"). Do NOT manually splice x,y components unless the target format requires separate values.
 - List indexing: {{step.list.0}} for first item; String slicing: {{step.str.0}} for first character, {{step.str.0:3}} for substring.
 - Element finding preference: Prefer vflow.interaction.find_element (accessibility service) over OCR whenever possible; use OCR only as a fallback when accessibility cannot find the target.
+- UI interaction preference: For multi-step screen actions, first collect a fresh control snapshot with a read-only observation step, act on returned ScreenElement outputs instead of guessed labels when possible, and re-check the final screen state before claiming success.
 
 Block structure rules:
 - Loop.start/Loop.end and If.start/If.middle/If.end must be paired. Set indentationLevel=1 for steps inside a loop or if block.
@@ -713,6 +780,27 @@ Block structure rules:
 
     private companion object {
         private const val TRIGGER_MODULE_PREFIX = "vflow.trigger."
+        private val ROUTING_HINT_STOP_WORDS = setOf(
+            "mode",
+            "type",
+            "text",
+            "input",
+            "result",
+            "selection",
+            "module",
+            "tool",
+            "screen",
+            "ui",
+            "操作",
+            "模式",
+            "结果",
+            "选择",
+            "输入",
+            "目标",
+            "模块",
+            "工具",
+            "系统",
+        )
 
         private val LEGACY_DIRECT_TOOL_MODULE_IDS = setOf(
             "vflow.interaction.get_current_activity",

@@ -34,11 +34,11 @@ class LaunchAppModule : BaseModule() {
     )
     override val aiMetadata = directToolMetadata(
         riskLevel = AiModuleRiskLevel.LOW,
-        directToolDescription = "Launch an app or a specific activity. Use this instead of navigating manually through the launcher when the target app is known.",
+        directToolDescription = "Launch an app or a specific activity. Use this instead of navigating manually through the launcher when the target app is known. If the user only names the app label or brand and not the Android package, resolve it with the installed-app lookup tool first.",
         workflowStepDescription = "Launch an app or a specific activity.",
         inputHints = mapOf(
-            "packageName" to "Android package name of the target app. Prefer the exact package id when known.",
-            "activityName" to "Optional activity class name. Use LAUNCH to open the default launcher activity.",
+            "packageName" to "Android package name of the target app. Prefer the exact package id when known, or reuse `package_name` from the installed-app lookup tool.",
+            "activityName" to "Optional activity class name. Use LAUNCH to open the default launcher activity. Reuse `activity_name` from the installed-app lookup tool when provided.",
             "useAdb" to "Optional shell launch path. Leave false unless shell launch is specifically needed.",
         ),
         requiredInputIds = setOf("packageName"),
@@ -53,7 +53,8 @@ class LaunchAppModule : BaseModule() {
             name = "应用包名",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "",
-            acceptsMagicVariable = false,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
             nameStringRes = R.string.param_vflow_system_launch_app_packageName_name
         ),
         InputDefinition(
@@ -61,7 +62,8 @@ class LaunchAppModule : BaseModule() {
             name = "Activity 名称",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "LAUNCH", // "LAUNCH" 是一个特殊值，代表仅启动应用
-            acceptsMagicVariable = false,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
             nameStringRes = R.string.param_vflow_system_launch_app_activityName_name
         ),
         InputDefinition(
@@ -69,7 +71,8 @@ class LaunchAppModule : BaseModule() {
             name = "用户 ID",
             staticType = ParameterType.NUMBER,
             defaultValue = null,
-            acceptsMagicVariable = false,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
             isHidden = true
         ),
         InputDefinition(

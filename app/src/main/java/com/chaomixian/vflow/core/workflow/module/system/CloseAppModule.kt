@@ -32,10 +32,10 @@ class CloseAppModule : BaseModule() {
     )
     override val aiMetadata = directToolMetadata(
         riskLevel = AiModuleRiskLevel.HIGH,
-        directToolDescription = "Force-stop an app by package name. This is stronger than navigating away from the app and may interrupt user state.",
+        directToolDescription = "Force-stop an app by package name. This is stronger than navigating away from the app and may interrupt user state. If only the app label is known, resolve the package with the installed-app lookup tool first.",
         workflowStepDescription = "Force-stop an app by package name.",
         inputHints = mapOf(
-            "packageName" to "Android package name of the app to force stop.",
+            "packageName" to "Android package name of the app to force stop. Reuse `package_name` from the installed-app lookup tool when needed.",
         ),
         requiredInputIds = setOf("packageName"),
     )
@@ -54,7 +54,8 @@ class CloseAppModule : BaseModule() {
             name = "应用包名",  // Fallback
             staticType = ParameterType.STRING,
             defaultValue = "",
-            acceptsMagicVariable = true
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.STRING.id),
         ),
         // 定义 activityName 只是为了兼容 AppPicker 的返回结果，设为隐藏
         InputDefinition(
@@ -70,7 +71,8 @@ class CloseAppModule : BaseModule() {
             name = "用户 ID",
             staticType = ParameterType.NUMBER,
             defaultValue = null,
-            acceptsMagicVariable = false,
+            acceptsMagicVariable = true,
+            acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id),
             isHidden = true
         )
     )

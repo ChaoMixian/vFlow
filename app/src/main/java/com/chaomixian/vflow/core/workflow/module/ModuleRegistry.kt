@@ -165,6 +165,7 @@ object ModuleRegistry {
         register(ToastModule(), context)
         register(LuaModule(), context)
         register(JsModule(), context)
+        register(FindInstalledAppModule(), context)
         register(LaunchAppModule(), context)
         register(CloseAppModule(), context)
         register(GetClipboardModule(), context)

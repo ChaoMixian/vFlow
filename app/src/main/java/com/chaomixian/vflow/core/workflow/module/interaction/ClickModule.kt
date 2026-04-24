@@ -49,10 +49,10 @@ class ClickModule : BaseModule() {
     )
     override val aiMetadata = directToolMetadata(
         riskLevel = AiModuleRiskLevel.STANDARD,
-        directToolDescription = "Tap a screen element, coordinate, or id-like string target. Prefer passing a ScreenElement or Coordinate from a previous step instead of guessing raw coordinates.",
+        directToolDescription = "Tap a screen element, coordinate, or id-like string target. Prefer passing a ScreenElement or Coordinate from a fresh observation step instead of guessing raw coordinates or text.",
         workflowStepDescription = "Tap a screen element or coordinate target.",
         inputHints = mapOf(
-            "target" to "Best inputs are a ScreenElement, a Coordinate, or a literal x,y pair. Plain strings are treated as view-id style targets when they are not coordinates.",
+            "target" to "Best inputs are a ScreenElement, a Coordinate, or a literal x,y pair. For UI flows, observe first and reuse the returned element instead of guessing a plain string target.",
         ),
         requiredInputIds = setOf("target"),
     )

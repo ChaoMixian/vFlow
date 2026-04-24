@@ -27,7 +27,12 @@ debug-signing.properties
 
 # Claude Code settings
 .claude/
+.codex/
 
 # Release builds and modules
 /release/
 /application.backup
+
+# Python local cache
+__pycache__/
+*.py[cod]

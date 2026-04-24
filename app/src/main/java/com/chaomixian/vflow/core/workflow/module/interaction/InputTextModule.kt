@@ -61,7 +61,7 @@ class InputTextModule : BaseModule() {
     )
     override val aiMetadata = directToolMetadata(
         riskLevel = AiModuleRiskLevel.STANDARD,
-        directToolDescription = "Type text into the currently focused input field. Focus the target field first if there is any uncertainty.",
+        directToolDescription = "Type text into the currently focused input field. Observe and focus the target field first if there is any uncertainty, and verify the resulting screen state before concluding a multi-step UI task.",
         workflowStepDescription = "Type text into the currently focused input field.",
         inputHints = mapOf(
             "text" to "Plain text to type. Do not include focus or click actions here.",

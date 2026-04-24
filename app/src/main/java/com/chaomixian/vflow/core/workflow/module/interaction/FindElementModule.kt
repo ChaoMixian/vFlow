@@ -37,14 +37,14 @@ class FindElementModule : BaseModule() {
     )
     override val aiMetadata = directToolMetadata(
         riskLevel = AiModuleRiskLevel.READ_ONLY,
-        directToolDescription = "Find accessibility UI elements by text, view id, class, region, or state filters. Prefer this over OCR when the target is part of the accessibility tree.",
+        directToolDescription = "Find accessibility UI elements by text, view id, class, region, or state filters. Use this both to locate a specific control and to inspect the current screen via `all_elements` before interacting. Prefer this over OCR when the target is part of the accessibility tree.",
         workflowStepDescription = "Find accessibility UI elements by text, id, class, or region filters.",
         inputHints = mapOf(
-            "text" to "Visible UI text to match. Leave blank if you are filtering by id or class instead.",
+            "text" to "Visible UI text to match. Leave blank when the text is unknown and you want a broader screen scan.",
             "view_id" to "Android accessibility view id such as com.android.settings:id/title when known.",
             "class_name" to "Android widget class such as android.widget.Button when needed.",
-            "search_region" to "Optional coordinate region to limit the search area.",
-            "result_selection" to "How to choose one element when multiple matches are found.",
+            "search_region" to "Optional coordinate region to limit the search area. When text/id/class are unknown, combine a region or boolean filters with `all_elements` to inspect the screen first.",
+            "result_selection" to "How to choose one element when multiple matches are found. Read `all_elements` when you need the whole control snapshot instead of just one match.",
         ),
     )
 
