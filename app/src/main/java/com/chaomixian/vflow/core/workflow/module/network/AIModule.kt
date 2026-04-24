@@ -122,10 +122,12 @@ class AIModule : BaseModule() {
         if (prompt.isBlank()) return ExecutionResult.Failure("配置错误", "提示词不能为空")
 
         // 准备网络请求
-        val client = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build()
+        val client = applyProxyIfConfigured(
+            OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS),
+            appContext
+        ).build()
 
         // 构建 JSON Body
         // 格式: { "model": "...", "messages": [...], "temperature": ... }

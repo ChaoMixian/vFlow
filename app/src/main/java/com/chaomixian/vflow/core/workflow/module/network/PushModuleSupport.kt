@@ -1,8 +1,60 @@
 package com.chaomixian.vflow.core.workflow.module.network
 
+import android.content.Context
+import com.chaomixian.vflow.ui.settings.ModuleConfigActivity
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import okhttp3.OkHttpClient
+import java.net.InetSocketAddress
+import java.net.Proxy
+
+internal fun applyProxyIfConfigured(builder: OkHttpClient.Builder, context: Context): OkHttpClient.Builder {
+    val proxy = readConfiguredProxy(context) ?: return builder
+    return builder.proxy(proxy)
+}
+
+internal fun readConfiguredProxy(context: Context): Proxy? {
+    val proxyAddress = context.getSharedPreferences(ModuleConfigActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        .getString(ModuleConfigActivity.KEY_NETWORK_PROXY, null)
+        ?.trim()
+        ?: return null
+
+    return parseProxy(proxyAddress) ?: return null
+}
+
+internal fun parseProxy(address: String): Proxy? {
+    return try {
+        val (host, port, type) = when {
+            address.startsWith("socks5://", ignoreCase = true) -> {
+                val stripped = address.removePrefix("socks5://").removePrefix("SOCKS5://")
+                val idx = stripped.lastIndexOf(':')
+                if (idx < 0) return null
+                Triple(stripped.substring(0, idx), stripped.substring(idx + 1).toInt(), Proxy.Type.SOCKS)
+            }
+            address.startsWith("socks://", ignoreCase = true) -> {
+                val stripped = address.removePrefix("socks://").removePrefix("SOCKS://")
+                val idx = stripped.lastIndexOf(':')
+                if (idx < 0) return null
+                Triple(stripped.substring(0, idx), stripped.substring(idx + 1).toInt(), Proxy.Type.SOCKS)
+            }
+            address.startsWith("http://", ignoreCase = true) || address.startsWith("https://", ignoreCase = true) -> {
+                val stripped = address.substringAfter("://")
+                val idx = stripped.lastIndexOf(':')
+                if (idx < 0) return null
+                Triple(stripped.substring(0, idx), stripped.substring(idx + 1).toInt(), Proxy.Type.HTTP)
+            }
+            else -> {
+                val idx = address.lastIndexOf(':')
+                if (idx < 0) return null
+                Triple(address.substring(0, idx), address.substring(idx + 1).toInt(), Proxy.Type.HTTP)
+            }
+        }
+        Proxy(type, InetSocketAddress.createUnresolved(host, port))
+    } catch (_: Exception) {
+        null
+    }
+}
 
 internal data class BarkPushResponse(
     val code: Int,

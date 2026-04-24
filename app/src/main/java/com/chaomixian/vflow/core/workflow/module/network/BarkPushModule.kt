@@ -273,12 +273,14 @@ class BarkPushModule : BaseModule() {
                     jumpUrl = jumpUrl
                 )
                     .toRequestBody("application/json; charset=utf-8".toMediaType())
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(timeout, TimeUnit.SECONDS)
-                    .readTimeout(timeout, TimeUnit.SECONDS)
-                    .writeTimeout(timeout, TimeUnit.SECONDS)
-                    .callTimeout(timeout, TimeUnit.SECONDS)
-                    .build()
+                val client = applyProxyIfConfigured(
+                    OkHttpClient.Builder()
+                        .connectTimeout(timeout, TimeUnit.SECONDS)
+                        .readTimeout(timeout, TimeUnit.SECONDS)
+                        .writeTimeout(timeout, TimeUnit.SECONDS)
+                        .callTimeout(timeout, TimeUnit.SECONDS),
+                    appContext
+                ).build()
 
                 onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_network_bark_push_sending, requestUrl)))
                 val request = Request.Builder().url(requestUrl).post(requestBody).build()

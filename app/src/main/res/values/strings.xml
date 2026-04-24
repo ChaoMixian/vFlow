@@ -144,6 +144,10 @@
     <string name="module_config_sherpa_status_deleted">已删除：%1$s</string>
     <string name="module_config_sherpa_status_failed">Sherpa 模型操作失败：%1$s</string>
     <string name="module_config_section_feishu">飞书</string>
+    <string name="module_config_section_network">网络</string>
+    <string name="module_config_network_proxy">自定义代理</string>
+    <string name="module_config_network_proxy_hint">host:port 或 socks5://host:port</string>
+    <string name="module_config_network_proxy_desc">设置后所有网络模块将通过此代理发送请求，留空则不使用代理。</string>
     <string name="module_config_feishu_app_id">App ID</string>
     <string name="module_config_feishu_app_id_hint">填写飞书自建应用的 app_id</string>
     <string name="module_config_feishu_app_secret">App Secret</string>

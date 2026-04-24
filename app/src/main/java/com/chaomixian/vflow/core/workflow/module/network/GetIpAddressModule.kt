@@ -176,7 +176,8 @@ class GetIpAddressModule : BaseModule() {
     private fun getExternalIpAddress(useIPv6: Boolean): String? {
         val apiUrl = if (useIPv6) "https://6.ipw.cn" else "https://4.ipw.cn"
         val url = URL(apiUrl)
-        val connection = url.openConnection() as HttpURLConnection
+        val proxy = readConfiguredProxy(appContext)
+        val connection = (if (proxy != null) url.openConnection(proxy) else url.openConnection()) as HttpURLConnection
         try {
             connection.requestMethod = "GET"
             connection.connectTimeout = 5000

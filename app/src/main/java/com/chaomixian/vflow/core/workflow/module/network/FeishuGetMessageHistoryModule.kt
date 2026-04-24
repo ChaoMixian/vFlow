@@ -319,12 +319,14 @@ class FeishuGetMessageHistoryModule : BaseModule() {
                     urlBuilder.addQueryParameter("page_token", pageToken)
                 }
 
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(timeout, TimeUnit.SECONDS)
-                    .readTimeout(timeout, TimeUnit.SECONDS)
-                    .writeTimeout(timeout, TimeUnit.SECONDS)
-                    .callTimeout(timeout, TimeUnit.SECONDS)
-                    .build()
+                val client = applyProxyIfConfigured(
+                    OkHttpClient.Builder()
+                        .connectTimeout(timeout, TimeUnit.SECONDS)
+                        .readTimeout(timeout, TimeUnit.SECONDS)
+                        .writeTimeout(timeout, TimeUnit.SECONDS)
+                        .callTimeout(timeout, TimeUnit.SECONDS),
+                    appContext
+                ).build()
 
                 val request = Request.Builder()
                     .url(urlBuilder.build())

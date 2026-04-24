@@ -260,12 +260,14 @@ class FeishuSendMessageModule : BaseModule() {
                     requestJson["uuid"] = uuid
                 }
 
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(timeout, TimeUnit.SECONDS)
-                    .readTimeout(timeout, TimeUnit.SECONDS)
-                    .writeTimeout(timeout, TimeUnit.SECONDS)
-                    .callTimeout(timeout, TimeUnit.SECONDS)
-                    .build()
+                val client = applyProxyIfConfigured(
+                    OkHttpClient.Builder()
+                        .connectTimeout(timeout, TimeUnit.SECONDS)
+                        .readTimeout(timeout, TimeUnit.SECONDS)
+                        .writeTimeout(timeout, TimeUnit.SECONDS)
+                        .callTimeout(timeout, TimeUnit.SECONDS),
+                    appContext
+                ).build()
 
                 val body = Gson().toJson(requestJson)
                     .toRequestBody("application/json; charset=utf-8".toMediaType())

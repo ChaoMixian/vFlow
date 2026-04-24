@@ -293,12 +293,14 @@ class WebhookPushModule : BaseModule() {
                         appContext.getString(R.string.error_vflow_network_webhook_push_invalid_payload)
                     )
 
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(timeout, TimeUnit.SECONDS)
-                    .readTimeout(timeout, TimeUnit.SECONDS)
-                    .writeTimeout(timeout, TimeUnit.SECONDS)
-                    .callTimeout(timeout, TimeUnit.SECONDS)
-                    .build()
+                val client = applyProxyIfConfigured(
+                    OkHttpClient.Builder()
+                        .connectTimeout(timeout, TimeUnit.SECONDS)
+                        .readTimeout(timeout, TimeUnit.SECONDS)
+                        .writeTimeout(timeout, TimeUnit.SECONDS)
+                        .callTimeout(timeout, TimeUnit.SECONDS),
+                    appContext
+                ).build()
 
                 onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_network_webhook_push_sending, method, url)))
                 val requestBuilder = Request.Builder().url(url)

@@ -190,12 +190,14 @@ class TelegramPushModule : BaseModule() {
                     messageThreadId = messageThreadId
                 )
 
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(timeout, TimeUnit.SECONDS)
-                    .readTimeout(timeout, TimeUnit.SECONDS)
-                    .writeTimeout(timeout, TimeUnit.SECONDS)
-                    .callTimeout(timeout, TimeUnit.SECONDS)
-                    .build()
+                val client = applyProxyIfConfigured(
+                    OkHttpClient.Builder()
+                        .connectTimeout(timeout, TimeUnit.SECONDS)
+                        .readTimeout(timeout, TimeUnit.SECONDS)
+                        .writeTimeout(timeout, TimeUnit.SECONDS)
+                        .callTimeout(timeout, TimeUnit.SECONDS),
+                    appContext
+                ).build()
 
                 onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_network_telegram_push_sending, chatId)))
                 val request = Request.Builder()

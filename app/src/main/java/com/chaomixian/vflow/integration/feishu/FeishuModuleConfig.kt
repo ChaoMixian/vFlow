@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.chaomixian.vflow.ui.settings.ModuleConfigActivity
+import com.chaomixian.vflow.core.workflow.module.network.applyProxyIfConfigured
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -158,7 +159,8 @@ object FeishuModuleConfig {
                         appSecret = appSecret,
                         refreshToken = refreshToken,
                         scope = oauthConfig.scope,
-                        timeoutSeconds = safeTimeoutSeconds
+                        timeoutSeconds = safeTimeoutSeconds,
+                        context = appContext
                     )
                     saveCachedUserTokens(prefs, refreshedTokens)
                     return TokenResolution.Success(refreshedTokens.userAccessToken.token)
@@ -193,7 +195,8 @@ object FeishuModuleConfig {
                     appId = appId,
                     appSecret = appSecret,
                     oauthConfig = oauthConfig,
-                    timeoutSeconds = safeTimeoutSeconds
+                    timeoutSeconds = safeTimeoutSeconds,
+                    context = appContext
                 )
                 saveCachedUserTokens(prefs, exchangedTokens)
                 clearUserAuthorizationCode(prefs)
@@ -280,7 +283,8 @@ object FeishuModuleConfig {
                         codeVerifier = "",
                         scope = ""
                     ),
-                    timeoutSeconds = safeTimeoutSeconds
+                    timeoutSeconds = safeTimeoutSeconds,
+                    context = appContext
                 )
                 saveCachedUserTokens(prefs, exchangedTokens)
                 clearUserAuthorizationCode(prefs)
@@ -353,7 +357,8 @@ object FeishuModuleConfig {
                 val refreshedTokens = requestAppScopedTokens(
                     appId = appId,
                     appSecret = appSecret,
-                    timeoutSeconds = safeTimeoutSeconds
+                    timeoutSeconds = safeTimeoutSeconds,
+                    context = appContext
                 )
                 saveCachedAppTokens(prefs, refreshedTokens)
                 val resolvedToken = tokenSelector(refreshedTokens, System.currentTimeMillis())
@@ -381,7 +386,8 @@ object FeishuModuleConfig {
     private fun requestAppScopedTokens(
         appId: String,
         appSecret: String,
-        timeoutSeconds: Long
+        timeoutSeconds: Long,
+        context: Context
     ): CachedAccessTokens {
         val responseJson = postJson(
             url = APP_TOKEN_URL,
@@ -389,7 +395,8 @@ object FeishuModuleConfig {
                 "app_id" to appId,
                 "app_secret" to appSecret
             ),
-            timeoutSeconds = timeoutSeconds
+            timeoutSeconds = timeoutSeconds,
+            context = context
         )
 
         val code = responseJson.get("code")?.asInt ?: -1
@@ -426,7 +433,8 @@ object FeishuModuleConfig {
         appId: String,
         appSecret: String,
         oauthConfig: UserOAuthConfig,
-        timeoutSeconds: Long
+        timeoutSeconds: Long,
+        context: Context
     ): UserTokenResponse {
         val requestBody = linkedMapOf<String, String>(
             "grant_type" to "authorization_code",
@@ -443,7 +451,7 @@ object FeishuModuleConfig {
         oauthConfig.scope.takeIf { it.isNotBlank() }?.let {
             requestBody["scope"] = it
         }
-        return requestUserTokens(requestBody, timeoutSeconds)
+        return requestUserTokens(requestBody, timeoutSeconds, context)
     }
 
     private fun refreshUserAccessToken(
@@ -451,7 +459,8 @@ object FeishuModuleConfig {
         appSecret: String,
         refreshToken: String,
         scope: String,
-        timeoutSeconds: Long
+        timeoutSeconds: Long,
+        context: Context
     ): UserTokenResponse {
         val requestBody = linkedMapOf<String, String>(
             "grant_type" to "refresh_token",
@@ -462,17 +471,19 @@ object FeishuModuleConfig {
         scope.takeIf { it.isNotBlank() }?.let {
             requestBody["scope"] = it
         }
-        return requestUserTokens(requestBody, timeoutSeconds)
+        return requestUserTokens(requestBody, timeoutSeconds, context)
     }
 
     private fun requestUserTokens(
         requestBody: Map<String, String>,
-        timeoutSeconds: Long
+        timeoutSeconds: Long,
+        context: Context
     ): UserTokenResponse {
         val responseJson = postJson(
             url = USER_TOKEN_URL,
             bodyMap = requestBody,
-            timeoutSeconds = timeoutSeconds
+            timeoutSeconds = timeoutSeconds,
+            context = context
         )
 
         val code = responseJson.get("code")?.asInt ?: -1
@@ -512,14 +523,17 @@ object FeishuModuleConfig {
     private fun postJson(
         url: String,
         bodyMap: Map<String, String>,
-        timeoutSeconds: Long
+        timeoutSeconds: Long,
+        context: Context
     ): JsonObject {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            .readTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            .writeTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            .callTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            .build()
+        val client = applyProxyIfConfigured(
+            OkHttpClient.Builder()
+                .connectTimeout(timeoutSeconds, TimeUnit.SECONDS)
+                .readTimeout(timeoutSeconds, TimeUnit.SECONDS)
+                .writeTimeout(timeoutSeconds, TimeUnit.SECONDS)
+                .callTimeout(timeoutSeconds, TimeUnit.SECONDS),
+            context
+        ).build()
 
         val request = Request.Builder()
             .url(url)

@@ -222,12 +222,14 @@ class HttpRequestModule : BaseModule() {
 
                 val timeout = context.getVariableAsLong("timeout") ?: 10
 
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
-                    .readTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
-                    .writeTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
-                    .callTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
-                    .build()
+                val client = applyProxyIfConfigured(
+                    OkHttpClient.Builder()
+                        .connectTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
+                        .readTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
+                        .writeTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
+                        .callTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS),
+                    appContext
+                ).build()
 
                 val httpUrlBuilder = urlString.toHttpUrlOrNull()?.newBuilder() ?: return@withContext ExecutionResult.Failure(
                     appContext.getString(R.string.error_vflow_network_http_request_url_format_error),

@@ -304,9 +304,11 @@ class FeishuMediaUploadModule : BaseModule() {
                     fileBytes.toRequestBody(mimeType.toMediaTypeOrNull())
                 )
 
-                val client = OkHttpClient.Builder()
-                    .callTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS)
-                    .build()
+                val client = applyProxyIfConfigured(
+                    OkHttpClient.Builder()
+                        .callTimeout(timeout, java.util.concurrent.TimeUnit.SECONDS),
+                    appContext
+                ).build()
 
                 val request = Request.Builder()
                     .url("https://open.feishu.cn/open-apis/drive/v1/medias/upload_all")

@@ -93,6 +93,7 @@ class ModuleConfigActivity : BaseActivity() {
         const val KEY_APP_START_CLOSE_CHECK_DELAY = "app_start_close_check_delay"
         const val KEY_APP_START_VERIFICATION_DELAY = "app_start_verification_delay"
         const val KEY_APP_START_MIN_CHECK_INTERVAL = "app_start_min_check_interval"
+        const val KEY_NETWORK_PROXY = "network_proxy"
         const val KEY_FEISHU_APP_ID = "feishu_app_id"
         const val KEY_FEISHU_APP_SECRET = "feishu_app_secret"
         const val KEY_FEISHU_APP_ACCESS_TOKEN = "feishu_app_access_token"
@@ -208,6 +209,11 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
     var feishuAppSecret by remember {
         mutableStateOf(
             prefs.getString(ModuleConfigActivity.KEY_FEISHU_APP_SECRET, "").orEmpty()
+        )
+    }
+    var networkProxy by remember {
+        mutableStateOf(
+            prefs.getString(ModuleConfigActivity.KEY_NETWORK_PROXY, "").orEmpty()
         )
     }
     var userAuthStatusVersion by remember { mutableIntStateOf(0) }
@@ -997,6 +1003,46 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
             renderBacktapSection()
             renderAppStartSection()
             renderSherpaSection()
+
+            val renderNetworkSection: @Composable () -> Unit = {
+                ModuleConfigSection(title = stringResource(R.string.module_config_section_network)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.module_config_network_proxy),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = networkProxy,
+                            onValueChange = {
+                                networkProxy = it
+                                prefs.edit {
+                                    putString(ModuleConfigActivity.KEY_NETWORK_PROXY, it.trim())
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.module_config_network_proxy)) },
+                            placeholder = { Text(stringResource(R.string.module_config_network_proxy_hint)) },
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_network_proxy_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            renderNetworkSection()
             renderFeishuSection()
         }
     }
