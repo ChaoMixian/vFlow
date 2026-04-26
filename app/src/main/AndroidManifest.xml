@@ -160,6 +160,12 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.vFlow" />
 
+        <activity
+            android:name=".ui.chat.ChatBenchmarkHostActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.vFlow" />
+
         <service
             android:name=".services.TriggerService"
             android:exported="true" android:permission="android.permission.FOREGROUND_SERVICE"
