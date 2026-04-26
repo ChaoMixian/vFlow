@@ -15,6 +15,7 @@ import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VCoordinateRegion
 import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.util.regex.Pattern
@@ -47,6 +48,7 @@ class FindElementModule : BaseModule() {
             "result_selection" to "How to choose one element when multiple matches are found. Read `all_elements` when you need the whole control snapshot instead of just one match.",
         ),
     )
+    override val requiredPermissions = listOf(PermissionManager.ACCESSIBILITY)
 
     companion object {
         const val MATCH_CONTAINS = "contains"
@@ -169,7 +171,7 @@ class FindElementModule : BaseModule() {
     ): ExecutionResult {
         // 获取服务
         val service = context.services.get(VFlowAccessibilityService::class)
-            ?: return ExecutionResult.Failure("服务不可用", "无障碍服务未启动")
+            ?: return failure("服务不可用", "无障碍服务未启动")
 
         // === 解析参数 ===
         val inputsById = getInputs().associateBy { it.id }
@@ -221,7 +223,7 @@ class FindElementModule : BaseModule() {
 
         if (!hasTextCondition && !hasIdCondition && !hasClassCondition &&
             !hasRegionCondition && !hasBooleanCondition && !hasValidParameter) {
-            return ExecutionResult.Failure("参数错误", "请至少设置一个查找条件")
+            return failure("参数错误", "请至少设置一个查找条件")
         }
 
         // === 验证正则表达式 ===
@@ -229,17 +231,9 @@ class FindElementModule : BaseModule() {
             try {
                 Pattern.compile(text, Pattern.CASE_INSENSITIVE)
             } catch (e: Exception) {
-                return ExecutionResult.Failure(
+                return failure(
                     "正则表达式错误",
                     "文本匹配的正则表达式无效: ${e.localizedMessage}",
-                    partialOutputs = mapOf(
-                        "success" to VBoolean(false),
-                        "found" to VBoolean(false),
-                        "count" to VNumber(0.0),
-                        "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>(),
-                        "all_text" to emptyList<VString>()
-                    )
                 )
             }
         }
@@ -248,17 +242,9 @@ class FindElementModule : BaseModule() {
             try {
                 Pattern.compile(viewId, Pattern.CASE_INSENSITIVE)
             } catch (e: Exception) {
-                return ExecutionResult.Failure(
+                return failure(
                     "正则表达式错误",
                     "ID匹配的正则表达式无效: ${e.localizedMessage}",
-                    partialOutputs = mapOf(
-                        "success" to VBoolean(false),
-                        "found" to VBoolean(false),
-                        "count" to VNumber(0.0),
-                        "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>(),
-                        "all_text" to VString("")
-                    )
                 )
             }
         }
@@ -267,17 +253,9 @@ class FindElementModule : BaseModule() {
             try {
                 Pattern.compile(className, Pattern.CASE_INSENSITIVE)
             } catch (e: Exception) {
-                return ExecutionResult.Failure(
+                return failure(
                     "正则表达式错误",
                     "类名匹配的正则表达式无效: ${e.localizedMessage}",
-                    partialOutputs = mapOf(
-                        "success" to VBoolean(false),
-                        "found" to VBoolean(false),
-                        "count" to VNumber(0.0),
-                        "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>(),
-                        "all_text" to VString("")
-                    )
                 )
             }
         }
@@ -286,7 +264,7 @@ class FindElementModule : BaseModule() {
 
         // === 查找控件 ===
         val rootNode = service.rootInActiveWindow
-            ?: return ExecutionResult.Failure("无法访问屏幕", "无法获取当前界面")
+            ?: return failure("无法访问屏幕", "无法获取当前界面")
 
         try {
             val allElements = mutableListOf<VScreenElement>()
@@ -334,17 +312,9 @@ class FindElementModule : BaseModule() {
 
             // === 检查结果 ===
             if (finalElements.isEmpty()) {
-                return ExecutionResult.Failure(
+                return failure(
                     "未找到控件",
                     "没有匹配的控件",
-                    partialOutputs = mapOf(
-                        "success" to VBoolean(false),
-                        "found" to VBoolean(false),
-                        "count" to VNumber(0.0),
-                        "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>(),
-                        "all_text" to emptyList<VString>()
-                    )
                 )
             }
 
@@ -384,8 +354,29 @@ class FindElementModule : BaseModule() {
             ))
 
         } catch (e: Exception) {
-            return ExecutionResult.Failure("查找失败", e.localizedMessage ?: "发生了未知错误")
+            return failure("查找失败", e.localizedMessage ?: "发生了未知错误")
+        } finally {
+            rootNode.recycle()
         }
+    }
+
+    private fun failure(title: String, message: String): ExecutionResult.Failure {
+        return ExecutionResult.Failure(
+            title,
+            message,
+            partialOutputs = emptyFailureOutputs()
+        )
+    }
+
+    private fun emptyFailureOutputs(): Map<String, Any?> {
+        return mapOf(
+            "success" to VBoolean(false),
+            "found" to VBoolean(false),
+            "count" to VNumber(0.0),
+            "element" to VNull,
+            "all_elements" to emptyList<VScreenElement>(),
+            "all_text" to emptyList<VString>(),
+        )
     }
 
     /**
