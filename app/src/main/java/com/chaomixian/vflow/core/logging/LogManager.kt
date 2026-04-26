@@ -94,6 +94,14 @@ object LogManager {
         return getLogs()
     }
 
+    @Synchronized
+    fun deleteLog(entry: LogEntry) {
+        val logs = getLogs().toMutableList()
+        if (logs.remove(entry)) {
+            saveLogs(logs)
+        }
+    }
+
     private fun saveLogs(logs: List<LogEntry>) {
         val json = gson.toJson(logs)
         applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
