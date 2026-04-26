@@ -37,7 +37,7 @@ class JumpModule : BaseModule() {
             nameStringRes = R.string.param_vflow_logic_jump_target_step_index_name,
             name = "目标步骤编号",
             staticType = ParameterType.NUMBER,
-            defaultValue = 0L,
+            defaultValue = 1L,
             acceptsMagicVariable = true,
             acceptedMagicVariableTypes = setOf(VTypeRegistry.NUMBER.id)
         )
@@ -63,10 +63,15 @@ class JumpModule : BaseModule() {
             return ValidationResult(true)
         }
 
-        // 对于直接输入的值，验证是否为有效的非负整数
-        val index = (targetIndex as? Number)?.toInt()
-        if (index == null || index < 0) {
-            return ValidationResult(false, "步骤编号必须是一个非负整数。")
+        // 编辑器显示的步骤编号从 1 开始，这里保持一致。
+        val rawIndex = targetIndex as? Number
+        val index = rawIndex?.toDouble()
+        if (index == null || index.isNaN() || index % 1.0 != 0.0) {
+            return ValidationResult(false, "步骤编号必须是一个整数。")
+        }
+
+        if (index.toInt() < 1) {
+            return ValidationResult(false, "步骤编号必须大于等于 1。")
         }
 
         // 注意：无法在这里验证索引是否超出范围，因为工作流的步骤列表是动态的
@@ -83,7 +88,7 @@ class JumpModule : BaseModule() {
             is VString -> rawValue.raw
             is VNull -> "空值"
             is VNumber -> rawValue.raw.toString()
-            else -> rawValue?.toString() ?: "未知"
+            else -> rawValue.toString()
         }
 
         // 使用 getVariableAsNumber 获取可空值
@@ -96,12 +101,24 @@ class JumpModule : BaseModule() {
             )
         }
 
-        val targetIndex = targetIndexDouble.toInt()
-        if (targetIndex < 0 || targetIndex >= context.allSteps.size) {
-            return ExecutionResult.Failure("无效的步骤编号", "目标步骤编号 $targetIndex 无效或超出范围。")
+        if (targetIndexDouble % 1.0 != 0.0) {
+            return ExecutionResult.Failure(
+                "无效的步骤编号",
+                "目标步骤编号 '$rawValueStr' 不是有效的整数。"
+            )
         }
 
-        onProgress(ProgressUpdate("跳转到步骤: #$targetIndex"))
+        val displayStepNumber = targetIndexDouble.toInt()
+        val targetIndex = displayStepNumber - 1
+
+        if (targetIndex !in context.allSteps.indices) {
+            return ExecutionResult.Failure(
+                "无效的步骤编号",
+                "目标步骤编号 $displayStepNumber 无效或超出范围。"
+            )
+        }
+
+        onProgress(ProgressUpdate("跳转到步骤: #$displayStepNumber"))
         return ExecutionResult.Signal(ExecutionSignal.Jump(targetIndex))
     }
 }
