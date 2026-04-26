@@ -36,6 +36,7 @@ import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.WorkflowEnumMigration
+import com.chaomixian.vflow.core.workflow.WorkflowJumpReferenceUpdater
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.WorkflowVisuals
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -1167,8 +1168,9 @@ class WorkflowEditorActivity : BaseActivity() {
                 val newList = moveBlockInList(originalList, fromPos, toPos)
 
                 if (isBlockStructureValid(newList)) {
+                    val updatedList = WorkflowJumpReferenceUpdater.remapAfterReorder(originalList, newList)
                     actionSteps.clear()
-                    actionSteps.addAll(newList)
+                    actionSteps.addAll(updatedList)
                 } else {
                     toast(R.string.editor_toast_invalid_move)
                     actionSteps.clear()
