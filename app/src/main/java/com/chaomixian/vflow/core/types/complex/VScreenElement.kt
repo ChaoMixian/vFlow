@@ -197,7 +197,7 @@ data class VScreenElement(
                 isEditable = node.isEditable,
                 depth = depth,
                 childCount = node.childCount,
-                accessibilityId = node.uniqueId?.toIntOrNull()
+                accessibilityId = node.hashCode()
             )
         }
 
