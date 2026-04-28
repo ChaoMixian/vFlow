@@ -9,6 +9,8 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.DisplayMetrics
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -17,6 +19,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.Toast
 import com.chaomixian.vflow.core.locale.toast
 import androidx.activity.OnBackPressedCallback
@@ -82,6 +85,7 @@ class WorkflowEditorActivity : BaseActivity() {
     private lateinit var editorMoreButton: ImageButton
     private lateinit var recyclerView: RecyclerView
     private val gson = Gson()
+    private val delayedExecuteHandler = Handler(Looper.getMainLooper())
 
     private var initialWorkflowJson: String? = null
 
@@ -275,12 +279,6 @@ class WorkflowEditorActivity : BaseActivity() {
         findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow(false) }
 
         executeButton.setOnClickListener {
-            val name = nameEditText.text.toString().trim()
-            if (name.isBlank()) {
-                toast(R.string.editor_toast_workflow_name_empty)
-                return@setOnClickListener
-            }
-
             // 如果当前有正在执行的工作流，则停止它
             if (currentlyExecutingWorkflowId != null &&
                 WorkflowExecutor.isRunning(currentlyExecutingWorkflowId!!)) {
@@ -288,18 +286,16 @@ class WorkflowEditorActivity : BaseActivity() {
                 return@setOnClickListener
             }
 
-            // 确保已有 currentWorkflow 对象（未保存的工作流在执行时创建）
-            if (currentWorkflow == null) {
-                currentWorkflow = createDraftWorkflow(name)
-            }
-
-            val workflowToExecute = currentWorkflow!!.copy(
-                name = name,
-                triggers = triggerSteps.toList(),
-                steps = actionSteps.toList()
-            )
-
+            val workflowToExecute = buildWorkflowForExecution() ?: return@setOnClickListener
             executeWorkflow(workflowToExecute)
+        }
+        executeButton.setOnLongClickListener {
+            if (currentlyExecutingWorkflowId != null &&
+                WorkflowExecutor.isRunning(currentlyExecutingWorkflowId!!)) {
+                return@setOnLongClickListener true
+            }
+            showExecuteDelayedMenu()
+            true
         }
 
         // 更多选项按钮点击事件
@@ -1389,7 +1385,67 @@ class WorkflowEditorActivity : BaseActivity() {
 
     override fun onDestroy() {
         inspectorInsertController.unregister()
+        delayedExecuteHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
+    }
+
+    private fun showExecuteDelayedMenu() {
+        val workflow = buildWorkflowForExecution() ?: return
+        val popupMenu = PopupMenu(this, executeButton)
+        popupMenu.inflate(R.menu.workflow_execute_delayed_menu)
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.menu_execute_in_5s -> {
+                    scheduleDelayedExecution(workflow, 5_000L)
+                    true
+                }
+                R.id.menu_execute_in_15s -> {
+                    scheduleDelayedExecution(workflow, 15_000L)
+                    true
+                }
+                R.id.menu_execute_in_1min -> {
+                    scheduleDelayedExecution(workflow, 60_000L)
+                    true
+                }
+                else -> false
+            }
+        }
+        popupMenu.show()
+    }
+
+    private fun buildWorkflowForExecution(name: String = nameEditText.text.toString().trim()): Workflow? {
+        if (name.isBlank()) {
+            toast(R.string.editor_toast_workflow_name_empty)
+            return null
+        }
+        if (currentWorkflow == null) {
+            currentWorkflow = createDraftWorkflow(name)
+        }
+        return currentWorkflow!!.copy(
+            name = name,
+            triggers = triggerSteps.toList(),
+            steps = actionSteps.toList()
+        )
+    }
+
+    private fun scheduleDelayedExecution(workflow: Workflow, delayMs: Long) {
+        val delayText = when (delayMs) {
+            5_000L -> getString(R.string.workflow_execute_delay_5s)
+            15_000L -> getString(R.string.workflow_execute_delay_15s)
+            60_000L -> getString(R.string.workflow_execute_delay_1min)
+            else -> getString(R.string.workflow_execute_delay_seconds, delayMs / 1000)
+        }
+        toast(getString(R.string.workflow_execute_delayed, delayText, workflow.name))
+        delayedExecuteHandler.postDelayed({
+            val missingPermissions = PermissionManager.getMissingPermissions(this, workflow)
+            if (missingPermissions.isEmpty()) {
+                WorkflowExecutor.execute(
+                    workflow = workflow,
+                    context = this,
+                    triggerStepId = workflow.manualTrigger()?.id
+                )
+            }
+        }, delayMs)
     }
 
     private fun updateExecuteButton(isRunning: Boolean) {
