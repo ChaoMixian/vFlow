@@ -145,54 +145,24 @@ class WorkflowEditorActivity : BaseActivity() {
         pickerHandler?.handleIntentResult(result.resultCode, result.data)
     }
 
-    // 文件选择器 launcher - 使用 OpenDocument 获取持久权限
-    private val filePickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        // 尝试获取持久权限
-        uri?.let {
-            try {
-                contentResolver.takePersistableUriPermission(
-                    it,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-            } catch (e: SecurityException) {
-                // 无法获取持久权限，继续使用临时 URI
-            }
-        }
+    // 文件选择器 launcher - 使用 GET_CONTENT 以允许第三方选择器入口（如 MT 文件管理器）
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
         pickerHandler?.handleFilePickerResult(uri)
     }
 
-    // 目录选择器 launcher - 使用 OpenDocumentTree 获取持久权限
+    // 目录选择器 launcher - 使用 OpenDocumentTree 选择本地目录
     private val directoryPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let {
-            try {
-                // 持久化 URI 权限
-                contentResolver.takePersistableUriPermission(
-                    it,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-            } catch (e: SecurityException) {
-                // 无法获取持久权限，继续使用临时 URI
-            }
-        }
         pickerHandler?.handleDirectoryPickerResult(uri)
     }
 
-    // 媒体选择器 launcher - 使用 OpenDocument 获取持久权限
-    private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        // 尝试获取持久权限
-        uri?.let {
-            try {
-                contentResolver.takePersistableUriPermission(
-                    it,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-            } catch (e: SecurityException) {
-                // 无法获取持久权限，继续使用临时 URI
-            }
-        }
+    // 媒体选择器 launcher - 使用 GET_CONTENT 以允许第三方选择器入口（如 MT 文件管理器）
+    private val mediaPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
         pickerHandler?.handleMediaPickerResult(uri)
     }
 

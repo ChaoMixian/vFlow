@@ -5,6 +5,7 @@ package com.chaomixian.vflow.ui.workflow_editor
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
 import com.chaomixian.vflow.R
@@ -25,8 +26,8 @@ import java.time.ZoneId
 class PickerHandler(
     private val activity: AppCompatActivity,
     private val appPickerLauncher: ActivityResultLauncher<Intent>,
-    private val filePickerLauncher: ActivityResultLauncher<Array<String>>,
-    private val mediaPickerLauncher: ActivityResultLauncher<Array<String>>,
+    private val filePickerLauncher: ActivityResultLauncher<Intent>,
+    private val mediaPickerLauncher: ActivityResultLauncher<Intent>,
     private val directoryPickerLauncher: ActivityResultLauncher<Uri?>,
     private val generalIntentLauncher: ActivityResultLauncher<Intent>,
     private val onUpdateParameters: (Map<String, Any?>) -> Unit
@@ -127,8 +128,12 @@ class PickerHandler(
         // 优先使用 currentInputDef，如果为空则使用 pendingFileInputDef
         val inputDef = currentInputDef ?: pendingFileInputDef
         if (uri != null && inputDef != null) {
-            val value = uri.toString()
-            onUpdateParameters(mapOf(inputDef.id to value))
+            val value = StableFilePathResolver.resolveFilePath(activity, uri)
+            if (value != null) {
+                onUpdateParameters(mapOf(inputDef.id to value))
+            } else {
+                Toast.makeText(activity, "仅支持本地文件，请选择本地存储中的文件", Toast.LENGTH_SHORT).show()
+            }
         } else if (uri == null) {
             android.util.Log.d("PickerHandler", "文件选择已取消或失败")
         } else if (inputDef == null) {
@@ -145,18 +150,13 @@ class PickerHandler(
     fun handleDirectoryPickerResult(uri: Uri?) {
         val inputDef = currentInputDef ?: pendingFileInputDef
         if (uri != null && inputDef != null) {
-            // 持久化 URI 权限
-            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            try {
-                activity.contentResolver.takePersistableUriPermission(uri, takeFlags)
-            } catch (e: SecurityException) {
-                // 无法获取持久权限，继续使用临时 URI
+            val value = StableFilePathResolver.resolveDirectoryPath(activity, uri)
+            if (value != null) {
+                onUpdateParameters(mapOf(inputDef.id to value))
+                android.util.Log.d("PickerHandler", "目录选择成功: $value")
+            } else {
+                Toast.makeText(activity, "仅支持本地目录，请选择本地存储中的目录", Toast.LENGTH_SHORT).show()
             }
-
-            val value = uri.toString()
-            onUpdateParameters(mapOf(inputDef.id to value))
-            android.util.Log.d("PickerHandler", "目录选择成功: $value")
         } else if (uri == null) {
             android.util.Log.d("PickerHandler", "目录选择已取消")
         } else if (inputDef == null) {
@@ -278,7 +278,11 @@ class PickerHandler(
     private fun handleFilePicker(inputDef: InputDefinition) {
         // 保存 pending 输入定义，防止在文件选择过程中被其他操作清空
         pendingFileInputDef = inputDef
-        filePickerLauncher.launch(arrayOf("*/*"))
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        filePickerLauncher.launch(intent)
     }
 
     private fun handleDirectoryPicker(inputDef: InputDefinition) {
@@ -291,7 +295,11 @@ class PickerHandler(
     private fun handleMediaPicker(inputDef: InputDefinition) {
         // 保存 pending 输入定义，防止在媒体选择过程中被其他操作清空
         pendingFileInputDef = inputDef
-        mediaPickerLauncher.launch(arrayOf("image/*"))
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        mediaPickerLauncher.launch(intent)
     }
 
     private var getCurrentValue: (InputDefinition) -> Any? = { null }

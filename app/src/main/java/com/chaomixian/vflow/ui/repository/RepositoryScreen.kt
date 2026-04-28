@@ -1,5 +1,6 @@
 package com.chaomixian.vflow.ui.repository
 
+import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -203,8 +204,9 @@ fun RepositoryScreen(
     }
 
     val installModuleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             val prepareResult = withContext(Dispatchers.IO) {
@@ -318,7 +320,14 @@ fun RepositoryScreen(
                 .padding(end = 16.dp, bottom = bottomContentPadding + 16.dp),
             onClick = {
                 installModuleLauncher.launch(
-                    arrayOf("application/zip", "application/x-zip-compressed")
+                    Intent(Intent.ACTION_GET_CONTENT).apply {
+                        type = "application/zip"
+                        putExtra(
+                            Intent.EXTRA_MIME_TYPES,
+                            arrayOf("application/zip", "application/x-zip-compressed")
+                        )
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
                 )
             },
             icon = {

@@ -242,8 +242,9 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
             authUiState.phase == FeishuOAuthManager.Phase.ExchangingToken
 
     val sherpaImportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
         if (uri == null) return@rememberLauncherForActivityResult
         sherpaBusyAction = "import"
         sherpaProgress = null
@@ -472,7 +473,14 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             OutlinedButton(
-                                onClick = { sherpaImportLauncher.launch(arrayOf("*/*")) },
+                                onClick = {
+                                    sherpaImportLauncher.launch(
+                                        Intent(Intent.ACTION_GET_CONTENT).apply {
+                                            type = "*/*"
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                    )
+                                },
                                 enabled = sherpaBusyAction == null,
                                 modifier = Modifier.weight(1f)
                             ) {

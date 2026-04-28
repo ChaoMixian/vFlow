@@ -40,7 +40,10 @@ class ShortcutConfigActivity : BaseActivity() {
     }
 
     // 相册选择结果
-    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    private val pickImage = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
         uri?.let {
             handleImageSelection(it)
         }
@@ -124,7 +127,12 @@ class ShortcutConfigActivity : BaseActivity() {
     }
 
     private fun openImagePicker() {
-        pickImage.launch("image/*")
+        pickImage.launch(
+            Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        )
     }
 
     private fun handleImageSelection(uri: Uri) {

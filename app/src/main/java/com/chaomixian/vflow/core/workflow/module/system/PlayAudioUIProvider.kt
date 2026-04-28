@@ -106,7 +106,7 @@ class PlayAudioUIProvider : ModuleUIProvider {
         selectLocalFileButton.setOnClickListener {
             val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
                 type = "audio/*"
-                addCategory(Intent.CATEGORY_OPENABLE)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             onStartActivityForResult?.invoke(intent) { resultCode, data ->
                 if (resultCode == android.app.Activity.RESULT_OK && data != null) {
