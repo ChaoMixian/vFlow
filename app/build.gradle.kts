@@ -212,3 +212,7 @@ afterEvaluate {
         dependsOn(":core:buildDex")
     }
 }
+
+ndk {
+    abiFilters 'arm64-v8a'
+}
