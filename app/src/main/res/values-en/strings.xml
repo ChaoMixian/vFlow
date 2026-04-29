@@ -315,6 +315,11 @@
     <string name="settings_permission_guardian_desc">Auto-grant and guard key permissions</string>
     <string name="settings_section_about">About</string>
     <string name="settings_section_about_desc">View app version, open source licenses, and developer info.</string>
+
+    <string name="settings_section_experimental">Experimental</string>
+    <string name="settings_switch_accessibility_disguise">Accessibility Service Disguise</string>
+    <string name="settings_switch_accessibility_disguise_desc">Disguise as a system accessibility service.</string>
+    <string name="settings_toast_accessibility_disguise_changed">Please re-enable the accessibility service after toggling</string>
     <string name="about_version_label">Version %s</string>
     <string name="about_developer_label">Developer</string>
     <string name="about_developer_name">ChaoMixian</string>

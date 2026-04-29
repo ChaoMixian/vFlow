@@ -315,6 +315,11 @@
     <string name="settings_permission_guardian_desc">自动授权并守护关键权限</string>
     <string name="settings_section_about">关于</string>
     <string name="settings_section_about_desc">查看应用版本、开源许可等信息。</string>
+
+    <string name="settings_section_experimental">实验性</string>
+    <string name="settings_switch_accessibility_disguise">无障碍服务伪装</string>
+    <string name="settings_switch_accessibility_disguise_desc">伪装为系统无障碍服务。</string>
+    <string name="settings_toast_accessibility_disguise_changed">切换后请重新开启无障碍服务</string>
     <string name="about_version_label">版本 %s</string>
     <string name="about_developer_label">开发者</string>
     <string name="about_developer_name">ChaoMixian</string>

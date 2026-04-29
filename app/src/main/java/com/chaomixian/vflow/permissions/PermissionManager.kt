@@ -289,7 +289,8 @@ object PermissionManager {
     /** 无障碍服务策略 */
     private val accessibilityStrategy = object : PermissionStrategy {
         override fun isGranted(context: Context, permission: Permission): Boolean {
-            return AccessibilityServiceStatus.isRunning(context)
+            return AccessibilityServiceStatus.isRunning(context) &&
+                    AccessibilityServiceStatus.isEnabledInSettings(context)
         }
         override fun createRequestIntent(context: Context, permission: Permission) =
             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)

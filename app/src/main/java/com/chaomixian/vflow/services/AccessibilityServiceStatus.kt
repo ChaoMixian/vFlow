@@ -3,11 +3,20 @@ package com.chaomixian.vflow.services
 import android.content.ComponentName
 import android.content.Context
 import android.provider.Settings
+import com.chaomixian.vflow.ui.viewmodel.SettingsViewModel
+import com.google.android.accessibility.selecttospeak.SelectToSpeakService
 
 object AccessibilityServiceStatus {
 
     fun getServiceId(context: Context): String {
-        return ComponentName(context, AccessibilityService::class.java).flattenToString()
+        val prefs = context.getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
+        val disguised = prefs.getBoolean(SettingsViewModel.KEY_ACCESSIBILITY_DISGUISE, false)
+        val serviceClass = if (disguised) {
+            SelectToSpeakService::class.java
+        } else {
+            AccessibilityService::class.java
+        }
+        return ComponentName(context, serviceClass).flattenToString()
     }
 
     fun isEnabledInSettings(context: Context): Boolean {

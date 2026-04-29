@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.BugReport
@@ -107,7 +108,8 @@ data class SettingsScreenActions(
     val onOpenCoreManagement: () -> Unit,
     val onStartUiInspector: () -> Unit,
     val onOpenAbout: () -> Unit,
-    val onOpenUpdatePage: () -> Unit
+    val onOpenUpdatePage: () -> Unit,
+    val onSetAccessibilityDisguiseEnabled: (Boolean) -> Unit
 )
 
 private data class NativeSettingsTone(
@@ -139,6 +141,9 @@ fun SettingsScreen(
     val permissionsSectionTitle = stringResource(R.string.settings_section_permissions_shell)
     val debuggingSectionTitle = stringResource(R.string.settings_section_debugging)
     val aboutSectionTitle = stringResource(R.string.settings_section_about)
+    val experimentalSectionTitle = stringResource(R.string.settings_section_experimental)
+    val accessibilityDisguiseTitle = stringResource(R.string.settings_switch_accessibility_disguise)
+    val accessibilityDisguiseSubtitle = stringResource(R.string.settings_switch_accessibility_disguise_desc)
 
     val updateVersionLabel = uiState.updateInfo?.let {
         stringResource(R.string.settings_update_available, it.latestVersion)
@@ -279,8 +284,15 @@ fun SettingsScreen(
         aboutTitle,
         aboutSubtitle
     )
+    val showExperimentalSection = matchesSearch(
+        normalizedQuery,
+        experimentalSectionTitle,
+        accessibilityDisguiseTitle,
+        accessibilityDisguiseSubtitle
+    )
     val hasSearchResults = showUpdateCard || showLanguageSection || showThemeSection ||
-        showGeneralSection || showPermissionsSection || showDebuggingSection || showAboutSection
+        showGeneralSection || showPermissionsSection || showExperimentalSection ||
+        showDebuggingSection || showAboutSection
 
     LazyColumn(
         modifier = modifier.pointerInput(Unit) {
@@ -522,6 +534,20 @@ fun SettingsScreen(
                     tone = warningTone(),
                     position = SettingsGroupPosition.Bottom,
                     onClick = actions.onOpenPermissionGuardian
+                )
+            }
+        }
+
+        if (showExperimentalSection) item {
+            SettingsSection(title = experimentalSectionTitle) {
+                NativeSwitchRow(
+                    title = accessibilityDisguiseTitle,
+                    subtitle = accessibilityDisguiseSubtitle,
+                    icon = Icons.Default.AccessibilityNew,
+                    tone = softTone(),
+                    position = SettingsGroupPosition.Single,
+                    checked = uiState.accessibilityDisguiseEnabled,
+                    onCheckedChange = actions.onSetAccessibilityDisguiseEnabled
                 )
             }
         }
