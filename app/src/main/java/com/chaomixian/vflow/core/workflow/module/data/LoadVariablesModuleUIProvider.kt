@@ -15,7 +15,8 @@ import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.model.Workflow
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.chaomixian.vflow.ui.common.SearchableWorkflowDialog
+import com.chaomixian.vflow.ui.common.WorkflowDialogItem
 
 class LoadVariablesModuleUIProvider : ModuleUIProvider {
 
@@ -44,6 +45,12 @@ class LoadVariablesModuleUIProvider : ModuleUIProvider {
     ): CustomEditorViewHolder {
         val view = LayoutInflater.from(context).inflate(R.layout.partial_load_variables_editor, parent, false)
         val holder = ViewHolder(view)
+        val workflowManager = WorkflowManager(context)
+
+        fun updateSelectedWorkflowText(selectedWorkflowId: String?) {
+            val selectedWorkflowName = selectedWorkflowId?.let { workflowManager.getWorkflow(it)?.name }
+            holder.selectedWorkflowText.text = selectedWorkflowName ?: context.getString(R.string.label_workflow_not_selected)
+        }
 
         // 恢复状态
         val workflowId = currentParameters["workflow_id"] as? String
@@ -55,13 +62,7 @@ class LoadVariablesModuleUIProvider : ModuleUIProvider {
             ?.filter { it.isNotBlank() }
             .orEmpty()
 
-        if (workflowId != null) {
-            val workflowManager = WorkflowManager(context)
-            val workflow = workflowManager.getWorkflow(workflowId)
-            holder.selectedWorkflowText.text = workflow?.name ?: context.getString(R.string.label_workflow_not_selected)
-        } else {
-            holder.selectedWorkflowText.text = context.getString(R.string.label_workflow_not_selected)
-        }
+        updateSelectedWorkflowText(workflowId)
 
         // 设置模式
         when (mode) {
@@ -79,28 +80,24 @@ class LoadVariablesModuleUIProvider : ModuleUIProvider {
         }
 
         holder.selectButton.setOnClickListener {
-            val workflowManager = WorkflowManager(context)
             val allWorkflows = workflowManager.getAllWorkflows()
-            val workflowNames = allWorkflows.map { it.name }.toTypedArray()
-            val workflowIds = allWorkflows.map { it.id }.toTypedArray()
-
-            MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.label_load_variables_select_workflow)
-                .setItems(workflowNames) { _, which ->
-                    val selectedId = workflowIds[which]
+            SearchableWorkflowDialog.show(
+                context = context,
+                titleResId = R.string.label_load_variables_select_workflow,
+                items = allWorkflows.map { WorkflowDialogItem(id = it.id, name = it.name) },
+                onSelected = {
+                    val selectedId = it.id
                     val workflow = workflowManager.getWorkflow(selectedId)
 
-                    holder.selectedWorkflowText.text = workflow?.name ?: context.getString(R.string.label_workflow_not_selected)
-
                     holder.selectedWorkflowId = selectedId
+                    updateSelectedWorkflowText(selectedId)
 
                     // 获取所有变量名
-                    val varNames = getNamedVariableNames(workflow)
-                    holder.selectedVariableNames = varNames
+                    holder.selectedVariableNames = getNamedVariableNames(workflow)
 
                     onParametersChanged()
                 }
-                .show()
+            )
         }
 
         // 复制模式帮助文本切换

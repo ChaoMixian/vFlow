@@ -59,6 +59,7 @@ class TriggerService : Service() {
         // 新增的精确指令 Actions
         const val ACTION_WORKFLOW_CHANGED = "com.chaomixian.vflow.ACTION_WORKFLOW_CHANGED"
         const val ACTION_WORKFLOW_REMOVED = "com.chaomixian.vflow.ACTION_WORKFLOW_REMOVED"
+        const val ACTION_RELOAD_TRIGGERS = "com.chaomixian.vflow.ACTION_RELOAD_TRIGGERS"
         const val EXTRA_WORKFLOW = "extra_workflow"
         const val EXTRA_OLD_WORKFLOW = "extra_old_workflow"
         // 新增的通知更新 Action
@@ -154,6 +155,10 @@ class TriggerService : Service() {
                 // updateForegroundState 已在上面被调用
                 DebugLogger.d(TAG, "收到通知设置更新请求，状态已刷新。")
             }
+            ACTION_RELOAD_TRIGGERS -> {
+                DebugLogger.d(TAG, "收到触发器重载请求。")
+                reloadAllHandlers()
+            }
             ACTION_WORKFLOW_CHANGED -> {
                 val newWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_WORKFLOW)
                 val oldWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_OLD_WORKFLOW)
@@ -214,6 +219,15 @@ class TriggerService : Service() {
         }
         // 启动所有处理器
         triggerHandlers.values.forEach { it.start(this) }
+    }
+
+    private fun reloadAllHandlers() {
+        triggerHandlers.values.forEach { handler ->
+            runCatching { handler.stop(this) }
+        }
+        triggerHandlers.clear()
+        registerAndStartHandlers()
+        loadAllActiveTriggers()
     }
 
 

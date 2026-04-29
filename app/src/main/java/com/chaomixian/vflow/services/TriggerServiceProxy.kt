@@ -11,9 +11,11 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
  * 它负责构建 Intent 并启动服务来传递指令。
  */
 object TriggerServiceProxy {
+    private const val VOICE_TRIGGER_MODULE_ID = "vflow.trigger.voice_template"
 
     private const val ACTION_WORKFLOW_CHANGED = "com.chaomixian.vflow.ACTION_WORKFLOW_CHANGED"
     private const val ACTION_WORKFLOW_REMOVED = "com.chaomixian.vflow.ACTION_WORKFLOW_REMOVED"
+    private const val ACTION_RELOAD_TRIGGERS = "com.chaomixian.vflow.ACTION_RELOAD_TRIGGERS"
     private const val EXTRA_WORKFLOW = "extra_workflow"
     private const val EXTRA_OLD_WORKFLOW = "extra_old_workflow"
 
@@ -24,6 +26,12 @@ object TriggerServiceProxy {
             putExtra(EXTRA_OLD_WORKFLOW, oldWorkflow)
         }
         context.startService(intent)
+
+        if (newWorkflow.hasTriggerType(VOICE_TRIGGER_MODULE_ID) ||
+            oldWorkflow?.hasTriggerType(VOICE_TRIGGER_MODULE_ID) == true
+        ) {
+            VoiceTriggerService.notifyWorkflowChanged(context, newWorkflow, oldWorkflow)
+        }
     }
 
     fun notifyWorkflowRemoved(context: Context, removedWorkflow: Workflow) {
@@ -32,5 +40,18 @@ object TriggerServiceProxy {
             putExtra(EXTRA_WORKFLOW, removedWorkflow)
         }
         context.startService(intent)
+
+        if (removedWorkflow.hasTriggerType(VOICE_TRIGGER_MODULE_ID)) {
+            VoiceTriggerService.notifyWorkflowRemoved(context, removedWorkflow)
+        }
+    }
+
+    fun reloadTriggers(context: Context) {
+        val intent = Intent(context, TriggerService::class.java).apply {
+            action = ACTION_RELOAD_TRIGGERS
+        }
+        context.startService(intent)
+
+        VoiceTriggerService.reloadTriggers(context)
     }
 }

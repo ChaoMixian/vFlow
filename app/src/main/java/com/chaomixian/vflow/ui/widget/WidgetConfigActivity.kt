@@ -14,10 +14,11 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.ui.common.BaseActivity
+import com.chaomixian.vflow.ui.common.SearchableWorkflowDialog
+import com.chaomixian.vflow.ui.common.WorkflowDialogItem
 import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputLayout
 
 /**
@@ -158,13 +159,7 @@ class WidgetConfigActivity : BaseActivity() {
 
         slotButtons.forEachIndexed { index, button ->
             if (index < currentSlotCount) {
-                val name = selectedWorkflowNames[index]
-                if (name != null) {
-                    button.text = "插槽 ${index + 1}: $name"
-                } else {
-                    button.text = "选择插槽 ${index + 1}"
-                }
-
+                updateSlotButtonText(index, button, selectedWorkflowNames[index])
                 button.setOnClickListener {
                     showWorkflowSelectionDialog(index, button)
                 }
@@ -172,33 +167,36 @@ class WidgetConfigActivity : BaseActivity() {
         }
     }
 
+    private fun updateSlotButtonText(slotIndex: Int, button: MaterialButton, workflowName: String?) {
+        button.text = if (workflowName != null) {
+            "插槽 ${slotIndex + 1}: $workflowName"
+        } else {
+            "选择插槽 ${slotIndex + 1}"
+        }
+    }
+
     private fun showWorkflowSelectionDialog(slotIndex: Int, button: MaterialButton) {
         val workflows = workflowManager.getAllWorkflows()
-        val names = workflows.map { it.name }.toMutableList()
-        val ids = workflows.map { it.id }.toMutableList()
+        val items = buildList {
+            add(WorkflowDialogItem(id = "", name = "[清空插槽]"))
+            addAll(workflows.map { WorkflowDialogItem(id = it.id, name = it.name) })
+        }
 
-        // 添加一个"清空插槽"的选项
-        names.add(0, "[清空插槽]")
-        ids.add(0, "") // 使用空字符串标记清空
-
-        MaterialAlertDialogBuilder(this)
-            .setTitle("选择插槽 ${slotIndex + 1} 的工作流")
-            .setItems(names.toTypedArray()) { _, which ->
-                val selectedId = ids[which]
-
-                if (selectedId.isEmpty()) {
-                    // 清空逻辑
+        SearchableWorkflowDialog.show(
+            context = this,
+            title = "选择插槽 ${slotIndex + 1} 的工作流",
+            items = items,
+            onSelected = { selectedItem ->
+                if (selectedItem.id.isEmpty()) {
                     selectedWorkflows[slotIndex] = null
                     selectedWorkflowNames[slotIndex] = null
-                    button.text = "选择插槽 ${slotIndex + 1}"
                 } else {
-                    // 选择逻辑
-                    selectedWorkflows[slotIndex] = selectedId
-                    selectedWorkflowNames[slotIndex] = names[which]
-                    button.text = "插槽 ${slotIndex + 1}: ${names[which]}"
+                    selectedWorkflows[slotIndex] = selectedItem.id
+                    selectedWorkflowNames[slotIndex] = selectedItem.name
                 }
+                updateSlotButtonText(slotIndex, button, selectedWorkflowNames[slotIndex])
             }
-            .show()
+        )
     }
 
     private fun saveWidgetConfig() {

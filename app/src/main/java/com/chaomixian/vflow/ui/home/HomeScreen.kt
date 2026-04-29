@@ -372,6 +372,15 @@ fun HomeScreen(
             LogDetailDialog(
                 log = log,
                 onDismiss = { selectedLog = null },
+                onDelete = {
+                    LogManager.deleteLog(it)
+                    selectedLog = null
+                    uiState = uiState.copy(
+                        recentLogs = LogManager.getRecentLogs(5),
+                        allLogs = LogManager.getAllLogs(),
+                    )
+                    context.toast(context.getString(R.string.toast_module_deleted))
+                },
             )
         }
     }
@@ -806,6 +815,7 @@ private fun LogViewerBottomSheet(
 private fun LogDetailDialog(
     log: LogEntry,
     onDismiss: () -> Unit,
+    onDelete: (LogEntry) -> Unit,
 ) {
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
@@ -815,6 +825,11 @@ private fun LogDetailDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.button_close))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onDelete(log) }) {
+                Text(stringResource(R.string.common_delete))
             }
         },
         title = {

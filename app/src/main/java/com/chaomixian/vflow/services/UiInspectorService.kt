@@ -54,6 +54,7 @@ class UiInspectorService : Service() {
     }
 
     private lateinit var windowManager: WindowManager
+    private var overlayWindowType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
     private var floatIconView: ImageView? = null
     private var coordinateLabelView: TextView? = null
     private var selectionFrameView: View? = null
@@ -102,23 +103,64 @@ class UiInspectorService : Service() {
             WorkflowInspectorInsertRequest.EXTRA_ENABLE_WORKFLOW_INSERT,
             false
         ) == true
+        if (floatIconView != null) {
+            setupViews()
+        }
         Toast.makeText(this, getString(R.string.ui_inspector_service_started), Toast.LENGTH_SHORT).show()
         return START_NOT_STICKY
     }
 
     override fun onCreate() {
         super.onCreate()
-        try {
-            windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        setupViews()
+    }
+
+    private fun setupViews() {
+        cleanupViews()
+        val service = ServiceStateBus.getAccessibilityService()
+        val useAccessibilityOverlay = service != null && tryCreateWith(
+            service.getSystemService(WINDOW_SERVICE) as WindowManager,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        )
+        if (!useAccessibilityOverlay) {
+            try {
+                windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+                overlayWindowType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                updateScreenMetrics()
+                createFloatIcon()
+                createSelectionFrame()
+            } catch (e: Exception) {
+                DebugLogger.e("UiInspector", "Error creating UI Inspector", e)
+                Toast.makeText(this, getString(R.string.ui_inspector_start_failed, e.message), Toast.LENGTH_LONG).show()
+                stopSelf()
+                return
+            }
+        }
+        DebugLogger.d("UiInspector", "UI Inspector Created")
+    }
+
+    private fun tryCreateWith(wm: WindowManager, windowType: Int): Boolean {
+        return try {
+            windowManager = wm
+            overlayWindowType = windowType
             updateScreenMetrics()
             createFloatIcon()
             createSelectionFrame()
-            DebugLogger.d("UiInspector", "UI Inspector Created")
-        } catch (e: Exception) {
-            DebugLogger.e("UiInspector", "Error creating UI Inspector", e)
-            Toast.makeText(this, getString(R.string.ui_inspector_start_failed, e.message), Toast.LENGTH_LONG).show()
-            stopSelf()
+            true
+        } catch (_: Exception) {
+            false
         }
+    }
+
+    private fun cleanupViews() {
+        listOf(coordinateLabelView, floatIconView, selectionFrameView).forEach { view ->
+            view?.let {
+                try { windowManager.removeView(it) } catch (_: Exception) {}
+            }
+        }
+        coordinateLabelView = null
+        floatIconView = null
+        selectionFrameView = null
     }
 
     private fun updateScreenMetrics() {
@@ -142,11 +184,7 @@ class UiInspectorService : Service() {
         }
 
         frameParams = WindowManager.LayoutParams().apply {
-            type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                WindowManager.LayoutParams.TYPE_PHONE
-            }
+            type = overlayWindowType
             flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
@@ -202,11 +240,7 @@ class UiInspectorService : Service() {
         }
 
         coordinateLabelParams = WindowManager.LayoutParams().apply {
-            type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                WindowManager.LayoutParams.TYPE_PHONE
-            }
+            type = overlayWindowType
             flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
             format = PixelFormat.TRANSLUCENT
@@ -227,11 +261,7 @@ class UiInspectorService : Service() {
         }
 
         iconParams = WindowManager.LayoutParams().apply {
-            type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                WindowManager.LayoutParams.TYPE_PHONE
-            }
+            type = overlayWindowType
             flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
             format = PixelFormat.TRANSLUCENT
@@ -431,7 +461,9 @@ class UiInspectorService : Service() {
 
         val items = collectNodeInfo(node)
 
-        val dialogContext = ThemeUtils.createThemedContext(this)
+        val dialogContext = ThemeUtils.createThemedContext(
+            ServiceStateBus.getAccessibilityService() ?: this
+        )
 
         val detailsView = createDetailsListView(dialogContext, items)
 
@@ -463,10 +495,7 @@ class UiInspectorService : Service() {
 
         dialog = builder.create()
 
-        dialog.window?.setType(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        else
-            WindowManager.LayoutParams.TYPE_PHONE)
+        dialog.window?.setType(overlayWindowType)
 
         dialog.show()
     }

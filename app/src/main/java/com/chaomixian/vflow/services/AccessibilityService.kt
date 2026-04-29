@@ -16,7 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class AccessibilityService : AccessibilityService() {
+open class AccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "VFlowAccessibility"

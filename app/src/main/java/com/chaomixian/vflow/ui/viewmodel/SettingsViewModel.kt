@@ -38,7 +38,8 @@ data class SettingsUiState(
     val loggingEnabled: Boolean = false,
     val isShizukuActive: Boolean = false,
     val isRootAvailable: Boolean = false,
-    val apiRunning: Boolean = false
+    val apiRunning: Boolean = false,
+    val accessibilityDisguiseEnabled: Boolean = false
 )
 
 class SettingsViewModel : ViewModel() {
@@ -79,6 +80,7 @@ class SettingsViewModel : ViewModel() {
                 ) ?: DEFAULT_SHELL_MODE,
                 loggingEnabled = DebugLogger.isLoggingEnabled(),
                 isShizukuActive = ShellManager.isShizukuActive(context),
+                accessibilityDisguiseEnabled = prefs.getBoolean(KEY_ACCESSIBILITY_DISGUISE, false),
                 isRootAvailable = ShellManager.isRootAvailable()
             )
         }
@@ -188,6 +190,11 @@ class SettingsViewModel : ViewModel() {
         _uiState.update { it.copy(loggingEnabled = enabled) }
     }
 
+    fun setAccessibilityDisguiseEnabled(context: Context, enabled: Boolean) = editPref(context) {
+        putBoolean(KEY_ACCESSIBILITY_DISGUISE, enabled)
+        _uiState.update { it.copy(accessibilityDisguiseEnabled = enabled) }
+    }
+
     private inline fun editPref(
         context: Context,
         crossinline block: android.content.SharedPreferences.Editor.() -> Unit
@@ -197,8 +204,10 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    private companion object {
-        private const val PREFS_NAME = "vFlowPrefs"
+    companion object {
+        const val PREFS_NAME = "vFlowPrefs"
+        const val KEY_ACCESSIBILITY_DISGUISE = "accessibilityDisguiseEnabled"
+
         private const val DEFAULT_SHELL_MODE = "shizuku"
         private const val KEY_AUTO_CHECK_UPDATES_ENABLED = "autoCheckUpdatesEnabled"
         private const val KEY_DYNAMIC_COLOR_ENABLED = "dynamicColorEnabled"

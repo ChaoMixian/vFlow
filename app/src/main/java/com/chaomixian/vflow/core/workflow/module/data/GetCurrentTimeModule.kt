@@ -115,6 +115,11 @@ class GetCurrentTimeModule : BaseModule() {
             typeName = VTypeRegistry.NUMBER.id
         ),
         OutputDefinition(
+            id = "timestamp_seconds",
+            name = "时间戳 (秒)",
+            typeName = VTypeRegistry.NUMBER.id
+        ),
+        OutputDefinition(
             id = "year",
             name = "年份",
             typeName = VTypeRegistry.NUMBER.id
@@ -214,6 +219,8 @@ class GetCurrentTimeModule : BaseModule() {
                 }
             }
 
+            val timestampSeconds = now / 1000
+
             // 获取时间分量
             val year = calendar.get(Calendar.YEAR)
             val month = calendar.get(Calendar.MONTH) + 1 // Calendar.MONTH 从0开始
@@ -234,6 +241,7 @@ class GetCurrentTimeModule : BaseModule() {
             return ExecutionResult.Success(mapOf(
                 "time" to VString(timeString),
                 "timestamp" to VNumber(now.toDouble()),
+                "timestamp_seconds" to VNumber(timestampSeconds.toDouble()),
                 "year" to VNumber(year.toDouble()),
                 "month" to VNumber(month.toDouble()),
                 "day" to VNumber(day.toDouble()),

@@ -177,6 +177,17 @@
     <string name="summary_vflow_device_speech_to_text_prefix">语音转文字，提示信息为</string>
     <string name="msg_vflow_device_speech_to_text_waiting">等待用户语音输入...</string>
     <string name="msg_vflow_device_speech_to_text_received">已获取语音识别结果</string>
+    <string name="module_vflow_trigger_voice_template_name">语音触发器</string>
+    <string name="module_vflow_trigger_voice_template_desc">使用模块配置里的全局三次语音模板，在后台持续监听相似语音片段并触发工作流。</string>
+    <string name="param_vflow_trigger_voice_template_templates_name">全局语音模板</string>
+    <string name="output_vflow_trigger_voice_template_similarity_name">相似度</string>
+    <string name="output_vflow_trigger_voice_template_segment_duration_name">语音时长</string>
+    <string name="output_vflow_trigger_voice_template_hit_count_name">命中模板数</string>
+    <string name="summary_vflow_trigger_voice_template_prefix">语音触发</string>
+    <string name="summary_vflow_trigger_voice_template_not_recorded">模块配置中尚未录入全局语音模板</string>
+    <string name="summary_vflow_trigger_voice_template_templates_ready">全局模板已就绪</string>
+    <string name="summary_vflow_trigger_voice_template_ready">%1$s · %2$s</string>
+    <string name="msg_vflow_trigger_voice_template_triggered">语音触发器已触发</string>
     <string name="module_vflow_device_click_name">点击</string>
     <string name="module_vflow_device_click_desc">点击一个屏幕元素、坐标或视图ID</string>
     <string name="param_vflow_device_click_target_name">目标</string>

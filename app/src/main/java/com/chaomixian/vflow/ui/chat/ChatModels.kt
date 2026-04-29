@@ -211,4 +211,5 @@ data class ChatConversation(
 data class ChatSessionState(
     val conversations: List<ChatConversation> = emptyList(),
     val activeConversationId: String? = null,
+    val benchmarkRuns: List<ChatBenchmarkRun> = emptyList(),
 )

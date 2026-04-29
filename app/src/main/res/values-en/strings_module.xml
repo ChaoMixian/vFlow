@@ -196,6 +196,17 @@
     <string name="summary_vflow_device_speech_to_text_prefix">Speech to text, prompt is</string>
     <string name="msg_vflow_device_speech_to_text_waiting">Waiting for speech input...</string>
     <string name="msg_vflow_device_speech_to_text_received">Speech recognition result received</string>
+    <string name="module_vflow_trigger_voice_template_name">Voice Trigger</string>
+    <string name="module_vflow_trigger_voice_template_desc">Use the shared 3-recording template from Module Config and keep listening in the background for similar speech segments.</string>
+    <string name="param_vflow_trigger_voice_template_templates_name">Shared voice template</string>
+    <string name="output_vflow_trigger_voice_template_similarity_name">Similarity</string>
+    <string name="output_vflow_trigger_voice_template_segment_duration_name">Speech duration</string>
+    <string name="output_vflow_trigger_voice_template_hit_count_name">Matched template count</string>
+    <string name="summary_vflow_trigger_voice_template_prefix">Voice trigger</string>
+    <string name="summary_vflow_trigger_voice_template_not_recorded">The shared voice templates in Module Config have not been recorded yet</string>
+    <string name="summary_vflow_trigger_voice_template_templates_ready">Shared templates ready</string>
+    <string name="summary_vflow_trigger_voice_template_ready">%1$s · %2$s</string>
+    <string name="msg_vflow_trigger_voice_template_triggered">Voice trigger fired</string>
 
     <!-- vflow.device.click - Click Module -->
     <string name="module_vflow_device_click_name">Click</string>

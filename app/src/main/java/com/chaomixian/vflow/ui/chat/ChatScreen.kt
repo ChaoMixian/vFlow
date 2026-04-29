@@ -64,11 +64,13 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DividerDefaults
@@ -157,6 +159,7 @@ private data class ChatSuggestion(
 private enum class ChatSheetSegmentPosition {
     Top,
     Bottom,
+    Single,
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -204,6 +207,7 @@ fun ChatScreen(
     }
     var prompt by rememberSaveable { mutableStateOf("") }
     var attachmentSheetVisible by rememberSaveable { mutableStateOf(false) }
+    var benchmarkSheetVisible by rememberSaveable { mutableStateOf(false) }
     var hasPhotoPermission by remember { mutableStateOf(hasPhotoPermission(context)) }
     var recentPhotos by remember { mutableStateOf(emptyList<RecentPhotoItem>()) }
     var recentPhotosLoading by remember { mutableStateOf(false) }
@@ -211,6 +215,7 @@ fun ChatScreen(
     val selectedPhotoUris = remember { mutableStateListOf<Uri>() }
     var capturedPreview by remember { mutableStateOf<Bitmap?>(null) }
     var webSearchSelected by rememberSaveable { mutableStateOf(false) }
+    var benchmarkDeleteTarget by remember { mutableStateOf<ChatBenchmarkRun?>(null) }
     val hasPendingToolApproval = remember(activeConversation?.messages) {
         activeConversation?.messages?.any { message ->
             message.role == ChatMessageRole.ASSISTANT &&
@@ -332,6 +337,16 @@ fun ChatScreen(
     }
 
     val showWelcome = (activeConversation == null || activeConversation.messages.isEmpty()) && prompt.isBlank()
+    val activePreset = remember(activeConversation?.presetId, chatUiState.presets, chatUiState.defaultPresetId) {
+        val preferredId = activeConversation?.presetId ?: chatUiState.defaultPresetId
+        chatUiState.presets.firstOrNull { it.id == preferredId } ?: chatUiState.presets.firstOrNull()
+    }
+
+    LaunchedEffect(benchmarkSheetVisible, activePreset?.id, chatUiState.isBenchmarkRunning) {
+        if (benchmarkSheetVisible) {
+            chatViewModel.refreshBenchmarkPreflight()
+        }
+    }
 
     Box(
         modifier = modifier
@@ -572,10 +587,326 @@ fun ChatScreen(
                 onWebSearchToggle = { webSearchSelected = !webSearchSelected },
                 autoApprovalScope = chatUiState.autoApprovalScope,
                 onAutoApprovalScopeChange = chatViewModel::setAutoApprovalScope,
+                onBenchmarkClick = {
+                    attachmentSheetVisible = false
+                    benchmarkSheetVisible = true
+                },
                 onPickAllPhotos = {
                     pickPhotosLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 }
             )
+        }
+    }
+
+    if (benchmarkSheetVisible) {
+        ModalBottomSheet(
+            onDismissRequest = { benchmarkSheetVisible = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            ChatBenchmarkSheet(
+                benchmarkUi = chatUiState.benchmarkUi,
+                preset = activePreset,
+                isRunning = chatUiState.isBenchmarkRunning,
+                onStartBenchmark = chatViewModel::startBenchmarkRun,
+                onExportRun = { run ->
+                    chatViewModel.exportBenchmarkRun(run)?.let(context::startActivity)
+                },
+                onDeleteRun = { run ->
+                    benchmarkDeleteTarget = run
+                },
+            )
+        }
+    }
+
+    if (benchmarkDeleteTarget != null) {
+        AlertDialog(
+            onDismissRequest = { benchmarkDeleteTarget = null },
+            title = { Text(stringResource(R.string.dialog_delete_title)) },
+            text = { Text(stringResource(R.string.chat_benchmark_delete_run_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val target = benchmarkDeleteTarget ?: return@TextButton
+                        chatViewModel.deleteBenchmarkRun(target.id)
+                        benchmarkDeleteTarget = null
+                    }
+                ) {
+                    Text(stringResource(R.string.common_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { benchmarkDeleteTarget = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ChatBenchmarkSheet(
+    benchmarkUi: ChatBenchmarkUiState,
+    preset: ChatPresetConfig?,
+    isRunning: Boolean,
+    onStartBenchmark: () -> Unit,
+    onExportRun: (ChatBenchmarkRun) -> Unit,
+    onDeleteRun: (ChatBenchmarkRun) -> Unit,
+) {
+    val scrollState = rememberScrollState()
+    val activeRun = benchmarkUi.activeRun
+    val totalCases = benchmarkUi.suite.cases.size
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(scrollState)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .navigationBarsPadding(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.chat_benchmark_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = stringResource(R.string.chat_benchmark_panel_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.chat_benchmark_selected_preset),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = preset?.name?.ifBlank { preset.model } ?: stringResource(R.string.chat_model_unconfigured),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "${benchmarkUi.suite.scenes.size} scenes · $totalCases cases",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FilledTonalButton(
+                    onClick = onStartBenchmark,
+                    enabled = benchmarkUi.preflight?.isReady == true && !isRunning,
+                ) {
+                    Text(
+                        text = if (isRunning) {
+                            stringResource(R.string.chat_benchmark_running)
+                        } else {
+                            stringResource(R.string.chat_benchmark_start)
+                        }
+                    )
+                }
+                if (activeRun != null) {
+                    Text(
+                        text = stringResource(
+                            R.string.chat_benchmark_progress_value,
+                            activeRun.caseResults.size,
+                            totalCases,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.chat_benchmark_preflight_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                benchmarkUi.preflight?.checks?.forEach { check ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = check.title,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            Text(
+                                text = check.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text(
+                            text = if (check.status == ChatBenchmarkCheckStatus.PASS) "OK" else "Blocked",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (check.status == ChatBenchmarkCheckStatus.PASS) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                        )
+                    }
+                } ?: Text(
+                    text = stringResource(R.string.chat_benchmark_preflight_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        if (benchmarkUi.recentRuns.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.chat_benchmark_history_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            benchmarkUi.recentRuns.forEach { run ->
+                ChatBenchmarkRunCard(
+                    run = run,
+                    onExportRun = onExportRun,
+                    onDeleteRun = onDeleteRun,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatBenchmarkRunCard(
+    run: ChatBenchmarkRun,
+    onExportRun: (ChatBenchmarkRun) -> Unit,
+    onDeleteRun: (ChatBenchmarkRun) -> Unit,
+) {
+    var expanded by rememberSaveable(run.id) { mutableStateOf(false) }
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        onClick = { expanded = !expanded },
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = run.presetName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "${run.provider} · ${run.modelName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = run.score?.overall?.let { "$it" } ?: run.status.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = when (run.status) {
+                        ChatBenchmarkRunStatus.COMPLETED -> MaterialTheme.colorScheme.primary
+                        ChatBenchmarkRunStatus.BLOCKED -> MaterialTheme.colorScheme.error
+                        ChatBenchmarkRunStatus.CANCELLED -> MaterialTheme.colorScheme.error
+                        ChatBenchmarkRunStatus.RUNNING -> MaterialTheme.colorScheme.tertiary
+                    },
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = formatChatTime(run.startedAtMillis),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                run.score?.let { score ->
+                    Text(
+                        text = "E2E ${score.endToEnd} · R&S ${score.robustnessSafety}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    run.preflight?.checks?.takeIf { run.caseResults.isEmpty() }?.forEach { check ->
+                        Text(
+                            text = "${check.title}: ${check.message}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    run.caseResults.forEach { result ->
+                        HorizontalDivider()
+                        Text(
+                            text = "${result.title} · ${result.outcome.name} · ${result.score}",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    Text(
+                        text = result.failureReason ?: result.finalAssistantMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                        if (result.trace.toolExecutions.isNotEmpty()) {
+                            Text(
+                                text = stringResource(R.string.chat_benchmark_trace_title),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            result.trace.toolExecutions.forEach { execution ->
+                                Text(
+                                    text = "${execution.sequence}. ${execution.toolName} · ${execution.status ?: "-"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    TextButton(
+                        onClick = { onExportRun(run) },
+                        modifier = Modifier.align(Alignment.End),
+                    ) {
+                        Text(stringResource(R.string.chat_benchmark_export_logs))
+                    }
+                    TextButton(
+                        onClick = { onDeleteRun(run) },
+                        modifier = Modifier.align(Alignment.End),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.size(6.dp))
+                        Text(stringResource(R.string.chat_benchmark_delete_run))
+                    }
+                }
+            }
         }
     }
 }
@@ -1404,6 +1735,7 @@ private fun ChatAttachmentSheet(
     onWebSearchToggle: () -> Unit,
     autoApprovalScope: ChatToolAutoApprovalScope,
     onAutoApprovalScopeChange: (ChatToolAutoApprovalScope) -> Unit,
+    onBenchmarkClick: () -> Unit,
     onPickAllPhotos: () -> Unit,
 ) {
     val carouselItemCount = if (hasPhotoPermission) recentPhotos.size + 1 else 1
@@ -1530,8 +1862,26 @@ private fun ChatAttachmentSheet(
             Spacer(modifier = Modifier.height(6.dp))
 
             ChatAttachmentSheetSegmentedRow(
+                title = stringResource(R.string.chat_benchmark_title),
+                subtitle = stringResource(R.string.chat_benchmark_description),
+                icon = Icons.Rounded.AutoAwesome,
+                selected = false,
+                position = ChatSheetSegmentPosition.Single,
+                onClick = onBenchmarkClick,
+                trailingContent = {
+                    Text(
+                        text = stringResource(R.string.chat_benchmark_action),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            ChatAttachmentSheetSegmentedRow(
                 title = stringResource(R.string.chat_auto_approve_title),
-                subtitle = null,
+                subtitle = stringResource(R.string.chat_auto_approve_description),
                 icon = Icons.Rounded.AutoAwesome,
                 selected = autoApprovalScope != ChatToolAutoApprovalScope.OFF,
                 position = ChatSheetSegmentPosition.Bottom,
@@ -1584,10 +1934,12 @@ private fun ChatAttachmentSheetSegmentedRow(
     val outerShape = when (position) {
         ChatSheetSegmentPosition.Top -> RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
         ChatSheetSegmentPosition.Bottom -> RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 28.dp, bottomEnd = 28.dp)
+        ChatSheetSegmentPosition.Single -> RoundedCornerShape(18.dp)
     }
     val innerShape = when (position) {
         ChatSheetSegmentPosition.Top -> RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 14.dp, bottomEnd = 14.dp)
         ChatSheetSegmentPosition.Bottom -> RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 22.dp, bottomEnd = 22.dp)
+        ChatSheetSegmentPosition.Single -> RoundedCornerShape(14.dp)
     }
     val borderColor = if (selected) {
         MaterialTheme.colorScheme.secondary.copy(alpha = 0.38f)

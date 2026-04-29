@@ -1,5 +1,6 @@
 package com.chaomixian.vflow.ui.repository
 
+import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -125,9 +126,16 @@ private sealed interface ModuleInstallResult {
 fun RepositoryScreen(
     modifier: Modifier = Modifier,
     bottomContentPadding: Dp = 0.dp,
+    isActive: Boolean = false,
 ) {
     val context = LocalContext.current
     val appContext = remember(context) { context.applicationContext }
+    val prefs = remember(appContext) {
+        appContext.getSharedPreferences("vFlowPrefs", android.content.Context.MODE_PRIVATE)
+    }
+    val autoCheckUpdatesEnabled = remember(prefs) {
+        prefs.getBoolean("autoCheckUpdatesEnabled", true)
+    }
     val scope = rememberCoroutineScope()
     val workflowManager = remember(appContext) { WorkflowManager(appContext) }
     val folderManager = remember(appContext) { FolderManager(appContext) }
@@ -136,8 +144,8 @@ fun RepositoryScreen(
     }
 
     var selectedTab by rememberSaveable { mutableStateOf(RepositoryTab.WORKFLOWS) }
-    var workflowsState by remember { mutableStateOf(RepositoryListState<RepoWorkflow>(isLoading = true)) }
-    var moduleStoreState by remember { mutableStateOf(RepositoryListState<RepoModule>(isLoading = true)) }
+    var workflowsState by remember { mutableStateOf(RepositoryListState<RepoWorkflow>()) }
+    var moduleStoreState by remember { mutableStateOf(RepositoryListState<RepoModule>()) }
     var localModulesState by remember { mutableStateOf(LocalModulesState()) }
     var pendingWorkflow by remember { mutableStateOf<RepoWorkflow?>(null) }
     var pendingStoreModule by remember { mutableStateOf<RepoModule?>(null) }
@@ -203,8 +211,9 @@ fun RepositoryScreen(
     }
 
     val installModuleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             val prepareResult = withContext(Dispatchers.IO) {
@@ -232,12 +241,15 @@ fun RepositoryScreen(
     }
 
     LaunchedEffect(Unit) {
-        loadWorkflows()
-        loadModuleStore()
+        if (autoCheckUpdatesEnabled) {
+            loadWorkflows()
+            loadModuleStore()
+        }
         refreshLocalModules()
     }
 
-    LaunchedEffect(selectedTab) {
+    LaunchedEffect(isActive, selectedTab) {
+        if (!isActive) return@LaunchedEffect
         if (
             selectedTab == RepositoryTab.WORKFLOWS &&
             workflowsState.items.isEmpty() &&
@@ -318,7 +330,14 @@ fun RepositoryScreen(
                 .padding(end = 16.dp, bottom = bottomContentPadding + 16.dp),
             onClick = {
                 installModuleLauncher.launch(
-                    arrayOf("application/zip", "application/x-zip-compressed")
+                    Intent(Intent.ACTION_GET_CONTENT).apply {
+                        type = "application/zip"
+                        putExtra(
+                            Intent.EXTRA_MIME_TYPES,
+                            arrayOf("application/zip", "application/x-zip-compressed")
+                        )
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
                 )
             },
             icon = {

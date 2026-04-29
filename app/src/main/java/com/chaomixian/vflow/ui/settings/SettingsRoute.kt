@@ -306,6 +306,31 @@ fun SettingsRoute(
                         "https://github.com/ChaoMixian/vFlow/releases".toUri()
                     )
                 )
+            },
+            onSetAccessibilityDisguiseEnabled = { enabled ->
+                // 先清理旧的无障碍服务状态，确保权限检查器立即反映正确状态
+                com.chaomixian.vflow.services.ServiceStateBus.onAccessibilityServiceDisconnected(context)
+                val pm = context.packageManager
+                val originalComponent = android.content.ComponentName(
+                    context,
+                    com.chaomixian.vflow.services.AccessibilityService::class.java
+                )
+                val disguisedComponent = android.content.ComponentName(
+                    context,
+                    com.google.android.accessibility.selecttospeak.SelectToSpeakService::class.java
+                )
+                val newState = if (enabled)
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                else
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                val oppositeState = if (enabled)
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                else
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                pm.setComponentEnabledSetting(originalComponent, newState, PackageManager.DONT_KILL_APP)
+                pm.setComponentEnabledSetting(disguisedComponent, oppositeState, PackageManager.DONT_KILL_APP)
+                settingsViewModel.setAccessibilityDisguiseEnabled(context, enabled)
+                context.toast(R.string.settings_toast_accessibility_disguise_changed)
             }
         )
     )

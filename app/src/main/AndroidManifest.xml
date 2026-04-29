@@ -11,6 +11,7 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -98,6 +99,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.workflow_editor.VoiceTriggerRecorderActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".permissions.PermissionActivity"
             android:exported="false" />
 
@@ -160,16 +165,40 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.vFlow" />
 
+        <activity
+            android:name=".ui.chat.ChatBenchmarkHostActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.vFlow" />
+
         <service
             android:name=".services.TriggerService"
             android:exported="true" android:permission="android.permission.FOREGROUND_SERVICE"
             android:foregroundServiceType="specialUse" />
 
         <service
-            android:name=".services.AccessibilityService"
+            android:name=".services.VoiceTriggerService"
             android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <service
+            android:name=".services.AccessibilityService"
+            android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <service
+            android:name="com.google.android.accessibility.selecttospeak.SelectToSpeakService"
+            android:enabled="false"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter android:priority="10000">
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
             <meta-data

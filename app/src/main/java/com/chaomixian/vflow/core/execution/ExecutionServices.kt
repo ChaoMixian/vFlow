@@ -29,6 +29,7 @@ class ExecutionServices {
      */
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> get(serviceClass: KClass<T>): T? {
-        return services[serviceClass] as? T
+        services[serviceClass]?.let { return it as? T }
+        return services.values.firstOrNull { serviceClass.isInstance(it) } as? T
     }
 }

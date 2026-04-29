@@ -374,8 +374,9 @@ fun WorkflowListRoute(
     requestBackup = backupLauncher::launch
 
     val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
         uri?.let { fileUri ->
             try {
                 val jsonString = context.contentResolver.openInputStream(fileUri)?.use {
@@ -459,7 +460,12 @@ fun WorkflowListRoute(
             }
 
             WorkflowTopBarAction.ImportWorkflows -> {
-                importLauncher.launch(arrayOf("application/json"))
+                importLauncher.launch(
+                    Intent(Intent.ACTION_GET_CONTENT).apply {
+                        type = "application/json"
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                )
             }
 
             WorkflowTopBarAction.SortDefault,

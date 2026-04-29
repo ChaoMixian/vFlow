@@ -910,6 +910,7 @@ private fun MainContentPager(
             MainTopLevelTab.REPOSITORY -> RepositoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 bottomContentPadding = innerPadding.calculateBottomPadding(),
+                isActive = selectedPage == page,
             )
 
             MainTopLevelTab.CHAT -> ChatScreen(

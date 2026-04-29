@@ -1,6 +1,7 @@
 package com.chaomixian.vflow.ui.chat
 
 import android.app.Application
+import android.content.Intent
 import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -37,6 +38,8 @@ data class ChatUiState(
     val pendingPermissionRequest: ChatPermissionRequest? = null,
     val autoApprovalScope: ChatToolAutoApprovalScope = ChatToolAutoApprovalScope.OFF,
     val queuedPromptCount: Int = 0,
+    val isBenchmarkRunning: Boolean = false,
+    val benchmarkUi: ChatBenchmarkUiState = ChatBenchmarkUiState(),
 )
 
 private data class PendingToolExecution(
@@ -57,6 +60,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val toolRegistry = ChatAgentToolRegistry(application)
     private val toolExecutor = ChatAgentModuleExecutor(application, toolRegistry)
     private val chatClient = ChatCompletionClient()
+    private val benchmarkRunner = ChatBenchmarkRunner(application, chatClient, toolRegistry, toolExecutor)
     private val artifactStores = mutableMapOf<String, ChatAgentArtifactStore>()
 
     private val _uiState = MutableStateFlow(
@@ -70,6 +74,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private var pendingToolExecution: PendingToolExecution? = null
     private var currentAgentJob: Job? = null
     private var currentAgentConversationId: String? = null
+    private var currentBenchmarkJob: Job? = null
     private val queuedUserPrompts = mutableListOf<QueuedUserPrompt>()
     private val newConversationTitlePattern = Regex("""新对话\s+(\d+)""")
 
@@ -99,6 +104,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         repository.unregisterChangeListener(prefsListener)
+        currentBenchmarkJob?.cancel()
         super.onCleared()
     }
 
@@ -180,7 +186,107 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { state -> state.copy(autoApprovalScope = scope) }
     }
 
+    fun refreshBenchmarkPreflight() {
+        val preset = resolveBenchmarkPreset()
+        viewModelScope.launch {
+            val preflight = benchmarkRunner.inspectPreflight(preset)
+            _uiState.update { state ->
+                state.copy(
+                    benchmarkUi = state.benchmarkUi.copy(preflight = preflight)
+                )
+            }
+        }
+    }
+
+    fun startBenchmarkRun() {
+        val state = _uiState.value
+        if (state.isBenchmarkRunning || currentBenchmarkJob != null) {
+            _events.tryEmit("Benchmark 已经在运行中。")
+            return
+        }
+        if (state.isSending || pendingToolExecution != null) {
+            _events.tryEmit("请先等待当前聊天任务完成。")
+            return
+        }
+        val preset = resolveBenchmarkPreset()
+        if (preset == null) {
+            _events.tryEmit("请先在设置 -> 模型配置里配置聊天模型。")
+            return
+        }
+
+        currentBenchmarkJob = viewModelScope.launch {
+            try {
+                benchmarkRunner.runSuite(
+                    suite = _uiState.value.benchmarkUi.suite,
+                    preset = preset,
+                ) { updatedRun ->
+                    _uiState.update { current ->
+                        val mergedRuns = listOf(updatedRun) + current.benchmarkUi.recentRuns
+                            .filterNot { it.id == updatedRun.id }
+                        current.copy(
+                            isBenchmarkRunning = updatedRun.status == ChatBenchmarkRunStatus.RUNNING,
+                            benchmarkUi = current.benchmarkUi.copy(
+                                preflight = updatedRun.preflight ?: current.benchmarkUi.preflight,
+                                activeRun = updatedRun.takeIf { it.status == ChatBenchmarkRunStatus.RUNNING },
+                                recentRuns = mergedRuns.take(10),
+                            ),
+                        )
+                    }
+                    persistSessionState()
+                }
+                _events.tryEmit("Benchmark 已完成。")
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (throwable: Throwable) {
+                _events.tryEmit(
+                    throwable.message?.trim().orEmpty().ifBlank { "Benchmark 执行失败。" }
+                )
+                _uiState.update { current ->
+                    current.copy(
+                        isBenchmarkRunning = false,
+                        benchmarkUi = current.benchmarkUi.copy(activeRun = null),
+                    )
+                }
+                persistSessionState()
+            } finally {
+                currentBenchmarkJob = null
+            }
+        }
+    }
+
+    fun exportBenchmarkRun(run: ChatBenchmarkRun): Intent? {
+        return runCatching {
+            ChatBenchmarkExportManager.buildShareIntent(getApplication(), run)
+        }.getOrElse { throwable ->
+            _events.tryEmit(
+                throwable.message?.trim().orEmpty().ifBlank { "Benchmark 日志导出失败。" }
+            )
+            null
+        }
+    }
+
+    fun deleteBenchmarkRun(runId: String) {
+        val state = _uiState.value
+        val activeRun = state.benchmarkUi.activeRun
+        val target = state.benchmarkUi.recentRuns.firstOrNull { it.id == runId } ?: return
+        if (target.status == ChatBenchmarkRunStatus.RUNNING || activeRun?.id == runId) {
+            _events.tryEmit("Benchmark 正在运行，无法删除当前记录。")
+            return
+        }
+        updateUiStateAndPersist { current ->
+            current.copy(
+                benchmarkUi = current.benchmarkUi.copy(
+                    recentRuns = current.benchmarkUi.recentRuns.filterNot { it.id == runId }
+                )
+            )
+        }
+    }
+
     fun stopAgent() {
+        if (_uiState.value.isBenchmarkRunning) {
+            _events.tryEmit("Benchmark 正在运行，当前版本不支持中途停止。")
+            return
+        }
         currentAgentJob?.cancel()
         currentAgentJob = null
         currentAgentConversationId = null
@@ -246,6 +352,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val content = prompt.trim()
         if (content.isBlank()) return false
         val state = _uiState.value
+        if (state.isBenchmarkRunning) {
+            _events.tryEmit("Benchmark 正在运行，暂时无法发送新的对话消息。")
+            return false
+        }
         val conversation = state.activeConversation ?: return false
         val preset = resolvePreset(conversation, state)
         if (preset == null) {
@@ -977,7 +1087,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun restoreSessionState() {
         val persisted = repository.getSessionState().sanitizeForRestore()
-        if (persisted.conversations.isEmpty()) return
+        if (persisted.conversations.isEmpty() && persisted.benchmarkRuns.isEmpty()) return
         _uiState.update { state ->
             val activeConversationId = persisted.activeConversationId
                 ?.takeIf { id -> persisted.conversations.any { it.id == id } }
@@ -987,6 +1097,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 activeConversationId = activeConversationId,
                 isSending = false,
                 isAgentRunning = false,
+                isBenchmarkRunning = false,
+                benchmarkUi = state.benchmarkUi.copy(
+                    recentRuns = persisted.benchmarkRuns.map { run ->
+                        if (run.status == ChatBenchmarkRunStatus.RUNNING) {
+                            run.copy(
+                                status = ChatBenchmarkRunStatus.CANCELLED,
+                                finishedAtMillis = run.finishedAtMillis ?: System.currentTimeMillis(),
+                            )
+                        } else {
+                            run
+                        }
+                    },
+                    activeRun = null,
+                ),
             )
         }
         conversationCounter = persisted.nextConversationCounter()
@@ -1007,6 +1131,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 },
                 activeConversationId = state.activeConversationId,
+                benchmarkRuns = state.benchmarkUi.recentRuns,
             )
         )
     }
@@ -1023,6 +1148,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return copy(
             conversations = sanitizedConversations,
             activeConversationId = sanitizedActiveId,
+            benchmarkRuns = benchmarkRuns,
         )
     }
 
@@ -1035,6 +1161,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val ChatUiState.activeConversation: ChatConversation?
         get() = conversations.firstOrNull { it.id == activeConversationId }
+
+    private fun resolveBenchmarkPreset(state: ChatUiState = _uiState.value): ChatPresetConfig? {
+        return state.activeConversation?.let { resolvePreset(it, state) }
+            ?: state.presets.firstOrNull { it.id == state.defaultPresetId }
+            ?: state.presets.firstOrNull()
+    }
 
     private fun List<ChatConversation>.reorderedWith(updated: ChatConversation): List<ChatConversation> {
         return listOf(updated) + filterNot { it.id == updated.id }

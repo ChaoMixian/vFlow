@@ -80,7 +80,10 @@ class OverlayUIActivity : AppCompatActivity() {
         super.attachBaseContext(context)
     }
 
-    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
         if (uri != null) {
             ExecutionUIService.inputCompletable?.complete(uri.toString())
         } else {
@@ -154,7 +157,14 @@ class OverlayUIActivity : AppCompatActivity() {
                 }
             }
             SpeechToTextOverlayContract.REQUEST_TYPE -> handleSpeechToTextRequest(title)
-            "pick_image" -> pickImageLauncher.launch("image/*")
+            "pick_image" -> {
+                pickImageLauncher.launch(
+                    Intent(Intent.ACTION_GET_CONTENT).apply {
+                        type = "image/*"
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                )
+            }
             "media_projection" -> {
                 val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
                 mediaProjectionLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
@@ -622,13 +632,13 @@ class OverlayUIActivity : AppCompatActivity() {
     }
 
     private fun showWorkflowChooserDialog(workflows: Map<String, String>) {
-        val items = workflows.values.toTypedArray()
-        val itemIds = workflows.keys.toTypedArray()
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.overlay_ui_workflow_chooser_title)
-            .setItems(items) { _, which -> complete(itemIds[which]) }
-            .setOnCancelListener { cancel() }
-            .show()
+        SearchableWorkflowDialog.show(
+            context = this,
+            titleResId = R.string.overlay_ui_workflow_chooser_title,
+            items = workflows.map { WorkflowDialogItem(id = it.key, name = it.value) },
+            onSelected = { complete(it.id) },
+            onCancelled = { cancel() }
+        )
     }
 
     /**

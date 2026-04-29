@@ -2,9 +2,7 @@
 package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
-import android.net.Uri
-import android.provider.DocumentsContract
-import androidx.documentfile.provider.DocumentFile
+import android.webkit.MimeTypeMap
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.BaseModule
@@ -21,9 +19,10 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import java.io.BufferedReader
+import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
-import androidx.core.net.toUri
 
 /**
  * 文件操作模块
@@ -229,14 +228,12 @@ class FileOperationModule : BaseModule() {
             }
             else -> {
                 val filePath = step.parameters["file_path"] as? String ?: context.getString(R.string.summary_vflow_data_file_operation_no_file_selected)
-                // 提取文件名
-                val fileName = try {
-                    val uri = filePath.toUri()
-                    uri.lastPathSegment ?: filePath
-                } catch (e: Exception) {
-                    // 如果不是有效的 URI，尝试从路径中提取文件名
-                    java.io.File(filePath).name.takeIf { it.isNotEmpty() } ?: filePath
+                val normalizedPath = if (filePath.startsWith("file://")) {
+                    filePath.removePrefix("file://")
+                } else {
+                    filePath
                 }
+                val fileName = File(normalizedPath).name.takeIf { it.isNotEmpty() } ?: filePath
                 "${getOperationDisplayName(context, operation)}: $fileName"
             }
         }
@@ -370,14 +367,20 @@ class FileOperationModule : BaseModule() {
     ): ExecutionResult {
         onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_reading)))
 
-        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
+        val file = resolveLocalFile(filePath)
+            ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
+        if (!file.exists() || !file.isFile) {
+            return ExecutionResult.Failure(
+                context.getString(R.string.error_vflow_data_file_operation_execution_error),
+                context.getString(R.string.error_vflow_data_file_operation_open_failed)
+            )
+        }
 
         return try {
-            // 提取文件名和MIME类型
-            val fileName = getFileName(context, uri) ?: "unknown"
-            val mimeType = getMimeType(context, uri) ?: "application/octet-stream"
+            val fileName = file.name.ifBlank { "unknown" }
+            val mimeType = getMimeType(file)
 
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            file.inputStream().use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream, encoding)).use { reader ->
                     val content = StringBuilder()
                     val buffer = CharArray(bufferSize)
@@ -397,7 +400,7 @@ class FileOperationModule : BaseModule() {
                         "size" to size
                     ))
                 }
-            } ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_open_failed))
+            }
         } catch (e: java.io.UnsupportedEncodingException) {
             ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_encoding_error), context.getString(R.string.error_vflow_data_file_operation_unsupported_encoding, encoding))
         }
@@ -417,22 +420,19 @@ class FileOperationModule : BaseModule() {
         val action = if (overwrite) OP_WRITE else OP_APPEND
         onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_writing, getOperationDisplayName(context, action))))
 
-        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
+        val file = resolveLocalFile(filePath)
+            ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
 
-        // 如果是覆盖写入且文件存在，先删除
-        if (overwrite) {
-            try {
-                deleteDocument(context, uri)
-            } catch (e: Exception) {
-                // 忽略删除错误，可能是新建文件
-            }
+        val parent = file.parentFile
+        if (parent != null && !parent.exists()) {
+            return ExecutionResult.Failure(
+                context.getString(R.string.error_vflow_data_file_operation_execution_error),
+                context.getString(R.string.error_vflow_data_file_operation_open_for_write_failed)
+            )
         }
 
         return try {
-            val outputStream = context.contentResolver.openOutputStream(uri, if (overwrite) "wt" else "at")
-                ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_open_for_write_failed))
-
-            outputStream.use { stream ->
+            FileOutputStream(file, !overwrite).use { stream ->
                 OutputStreamWriter(stream, encoding).use { writer ->
                     writer.write(content)
                 }
@@ -487,10 +487,11 @@ class FileOperationModule : BaseModule() {
     ): ExecutionResult {
         onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_deleting)))
 
-        val uri = parseUri(context, filePath) ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
+        val file = resolveLocalFile(filePath)
+            ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_file_path))
 
         val deleted = try {
-            deleteDocument(context, uri)
+            file.exists() && file.delete()
         } catch (e: Exception) {
             false
         }
@@ -502,20 +503,6 @@ class FileOperationModule : BaseModule() {
                 "message" to context.getString(R.string.message_vflow_data_file_operation_deleted, filePath)
             ))
         } else {
-            // 尝试使用普通删除
-            try {
-                val file = java.io.File(filePath)
-                if (file.exists() && file.delete()) {
-                    onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_delete_complete), 100))
-                    return ExecutionResult.Success(mapOf(
-                        "success" to true,
-                        "message" to context.getString(R.string.message_vflow_data_file_operation_deleted, filePath)
-                    ))
-                }
-            } catch (e: Exception) {
-                // 忽略
-            }
-
             ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_delete_failed), context.getString(R.string.error_vflow_data_file_operation_cannot_delete, filePath))
         }
     }
@@ -534,57 +521,12 @@ class FileOperationModule : BaseModule() {
         onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_creating, fileName)))
 
         return try {
-            if (isFileUri(directoryPath)) {
-                // 使用传统 File API 处理 file:// 路径
-                executeCreateWithFileApi(context, directoryPath, fileName, encoding, content, onProgress)
-            } else {
-                // 使用 DocumentFile API 处理 content:// 路径
-                val directoryUri = parseDirectoryUri(context, directoryPath)
-                    ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_execution_error), context.getString(R.string.error_vflow_data_file_operation_invalid_directory_path, directoryPath))
-
-                executeCreateWithDocumentFile(context, directoryUri, fileName, encoding, content, onProgress)
-            }
+            executeCreateWithFileApi(context, directoryPath, fileName, encoding, content, onProgress)
         } catch (e: java.io.UnsupportedEncodingException) {
             ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_encoding_error), context.getString(R.string.error_vflow_data_file_operation_unsupported_encoding, encoding))
         } catch (e: Exception) {
             ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_create_failed_with_reason, e.message ?: ""))
         }
-    }
-
-    /**
-     * 使用 DocumentFile API 创建文件（处理 content:// URI）
-     */
-    private suspend fun executeCreateWithDocumentFile(
-        context: Context,
-        directoryUri: Uri,
-        fileName: String,
-        encoding: String,
-        content: String,
-        onProgress: suspend (ProgressUpdate) -> Unit
-    ): ExecutionResult {
-        val directoryDoc = DocumentFile.fromTreeUri(context, directoryUri)
-            ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_cannot_access_directory))
-
-        val newFile = directoryDoc.createFile("*/*", fileName)
-            ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_cannot_create_file))
-
-        // 写入内容
-        if (content.isNotEmpty()) {
-            context.contentResolver.openOutputStream(newFile.uri)?.use { outputStream ->
-                OutputStreamWriter(outputStream, encoding).use { writer ->
-                    writer.write(content)
-                }
-            } ?: return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_open_for_write_failed))
-        }
-
-        onProgress(ProgressUpdate(context.getString(R.string.progress_vflow_data_file_operation_create_complete, fileName), 100))
-
-        return ExecutionResult.Success(mapOf(
-            "success" to true,
-            "message" to context.getString(R.string.message_vflow_data_file_operation_created, fileName),
-            "file_path" to newFile.uri.toString(),
-            "file_name" to fileName
-        ))
     }
 
     /**
@@ -598,9 +540,12 @@ class FileOperationModule : BaseModule() {
         content: String,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        // 解析 file:// 路径
-        val dirPath = directoryPath.removePrefix("file://")
-        val directory = java.io.File(dirPath)
+        val directory = resolveLocalFile(directoryPath)
+            ?: return ExecutionResult.Failure(
+                context.getString(R.string.error_vflow_data_file_operation_execution_error),
+                context.getString(R.string.error_vflow_data_file_operation_invalid_directory_path, directoryPath)
+            )
+        val dirPath = directory.absolutePath
 
         if (!directory.exists()) {
             return ExecutionResult.Failure(context.getString(R.string.error_vflow_data_file_operation_create_failed), context.getString(R.string.error_vflow_data_file_operation_directory_not_exists, dirPath))
@@ -629,107 +574,32 @@ class FileOperationModule : BaseModule() {
         return ExecutionResult.Success(mapOf(
             "success" to true,
             "message" to context.getString(R.string.message_vflow_data_file_operation_created, fileName),
-            "file_path" to newFile.toURI().toString(),
+            "file_path" to newFile.absolutePath,
             "file_name" to fileName
         ))
     }
 
-    /**
-     * 解析目录路径为 URI
-     * 对于 file:// 路径，返回 null 并在调用处使用 File API
-     */
-    private fun parseDirectoryUri(context: Context, path: String): Uri? {
+    private fun resolveLocalFile(path: String): File? {
+        val trimmed = path.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith("content://")) return null
+
+        val normalizedPath = if (trimmed.startsWith("file://")) {
+            trimmed.removePrefix("file://")
+        } else {
+            trimmed
+        }
+        if (!normalizedPath.startsWith("/")) return null
+
         return try {
-            when {
-                path.startsWith("content://") -> path.toUri()
-                path.startsWith("file://") -> null // 需要使用 File API
-                else -> Uri.fromFile(java.io.File(path))
-            }
+            File(normalizedPath)
         } catch (e: Exception) {
             null
         }
     }
 
-    /**
-     * 判断是否为 file:// URI（需要使用传统 File API）
-     */
-    private fun isFileUri(path: String): Boolean {
-        return path.startsWith("file://")
-    }
-
-    /**
-     * 解析文件路径为 URI
-     */
-    private fun parseUri(context: Context, path: String): Uri? {
-        return try {
-            // 如果已经是 content:// URI
-            if (path.startsWith("content://")) {
-                path.toUri()
-            }
-            // 如果是 file:// URI
-            else if (path.startsWith("file://")) {
-                Uri.fromFile(java.io.File(path.substring(7)))
-            }
-            // 如果是普通路径，尝试作为文件路径处理
-            else {
-                Uri.fromFile(java.io.File(path))
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
-     * 使用 DocumentsContract 删除文档
-     */
-    private fun deleteDocument(context: Context, uri: Uri): Boolean {
-        return try {
-            val docId = DocumentsContract.getDocumentId(uri)
-            // 如果是 content:// URI，尝试使用 DocumentsContract 删除
-            if (uri.toString().startsWith("content://")) {
-                DocumentsContract.deleteDocument(context.contentResolver, uri)
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    /**
-     * 从 URI 获取文件名
-     */
-    private fun getFileName(context: Context, uri: Uri): String? {
-        return try {
-            // 尝试使用 ContentResolver.query 获取显示名称
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                    if (nameIndex != -1) {
-                        cursor.getString(nameIndex)
-                    } else {
-                        null
-                    }
-                } else {
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            null
-        } ?: run {
-            // 备选：从 URI 路径提取
-            uri.lastPathSegment ?: uri.path?.substringAfterLast('/')
-        }
-    }
-
-    /**
-     * 获取文件的 MIME 类型
-     */
-    private fun getMimeType(context: Context, uri: Uri): String? {
-        return try {
-            context.contentResolver.getType(uri)
-        } catch (e: Exception) {
-            null
-        }
+    private fun getMimeType(file: File): String {
+        val extension = file.extension.lowercase()
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+            ?: "application/octet-stream"
     }
 }

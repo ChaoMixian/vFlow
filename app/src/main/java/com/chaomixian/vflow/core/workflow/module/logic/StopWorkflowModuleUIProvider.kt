@@ -15,9 +15,10 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.common.SearchableWorkflowDialog
+import com.chaomixian.vflow.ui.common.WorkflowDialogItem
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class StopWorkflowModuleUIProvider : ModuleUIProvider {
 
@@ -86,18 +87,17 @@ class StopWorkflowModuleUIProvider : ModuleUIProvider {
         // 监听器：选择工作流
         holder.selectButton.setOnClickListener {
             val allWorkflows = workflowManager.getAllWorkflows()
-            val workflowNames = allWorkflows.map { it.name }.toTypedArray()
-            val workflowIds = allWorkflows.map { it.id }.toTypedArray()
-
-            MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.dialog_stop_workflow_select_title)
-                .setItems(workflowNames) { _, which ->
-                    val selectedId = workflowIds[which]
+            SearchableWorkflowDialog.show(
+                context = context,
+                titleResId = R.string.dialog_stop_workflow_select_title,
+                items = allWorkflows.map { WorkflowDialogItem(id = it.id, name = it.name) },
+                onSelected = {
+                    val selectedId = it.id
                     holder.selectedWorkflowId = selectedId
                     updateSelectedWorkflowText(selectedId)
                     onParametersChanged()
                 }
-                .show()
+            )
         }
 
         return holder
