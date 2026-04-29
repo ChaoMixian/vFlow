@@ -13,7 +13,8 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.chaomixian.vflow.ui.common.SearchableWorkflowDialog
+import com.chaomixian.vflow.ui.common.WorkflowDialogItem
 
 class CallWorkflowModuleUIProvider : ModuleUIProvider {
 
@@ -49,19 +50,17 @@ class CallWorkflowModuleUIProvider : ModuleUIProvider {
 
         holder.selectButton.setOnClickListener {
             val allWorkflows = workflowManager.getAllWorkflows()
-            val workflowNames = allWorkflows.map { it.name }.toTypedArray()
-            val workflowIds = allWorkflows.map { it.id }.toTypedArray()
-
-            MaterialAlertDialogBuilder(context)
-                .setTitle(R.string.dialog_call_workflow_select_title)
-                .setItems(workflowNames) { _, which ->
-                    val selectedId = workflowIds[which]
+            SearchableWorkflowDialog.show(
+                context = context,
+                titleResId = R.string.dialog_call_workflow_select_title,
+                items = allWorkflows.map { WorkflowDialogItem(id = it.id, name = it.name) },
+                onSelected = {
+                    val selectedId = it.id
                     updateSelectedWorkflowText(selectedId)
-                    // 手动更新参数并通知变更
                     (currentParameters as MutableMap<String, Any?>)["workflow_id"] = selectedId
                     onParametersChanged()
                 }
-                .show()
+            )
         }
 
         return holder

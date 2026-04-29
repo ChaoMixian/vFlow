@@ -632,13 +632,13 @@ class OverlayUIActivity : AppCompatActivity() {
     }
 
     private fun showWorkflowChooserDialog(workflows: Map<String, String>) {
-        val items = workflows.values.toTypedArray()
-        val itemIds = workflows.keys.toTypedArray()
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.overlay_ui_workflow_chooser_title)
-            .setItems(items) { _, which -> complete(itemIds[which]) }
-            .setOnCancelListener { cancel() }
-            .show()
+        SearchableWorkflowDialog.show(
+            context = this,
+            titleResId = R.string.overlay_ui_workflow_chooser_title,
+            items = workflows.map { WorkflowDialogItem(id = it.key, name = it.value) },
+            onSelected = { complete(it.id) },
+            onCancelled = { cancel() }
+        )
     }
 
     /**
