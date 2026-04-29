@@ -7,6 +7,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.app.Activity
 import android.os.Bundle
 import android.text.format.Formatter
 import android.widget.Toast
@@ -69,13 +70,18 @@ import androidx.core.net.toUri
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.integration.feishu.FeishuModuleConfig
 import com.chaomixian.vflow.integration.feishu.FeishuOAuthManager
+import com.chaomixian.vflow.services.TriggerServiceProxy
 import com.chaomixian.vflow.speech.SherpaNcnnDownloadSource
 import com.chaomixian.vflow.speech.SherpaNcnnModelManager
 import com.chaomixian.vflow.speech.SherpaNcnnModelProgress
 import com.chaomixian.vflow.speech.SherpaNcnnModelSpec
 import com.chaomixian.vflow.speech.SherpaNcnnModelStage
+import com.chaomixian.vflow.speech.voice.VoiceTriggerConfig
+import com.chaomixian.vflow.speech.voice.VoiceTriggerModelManager
+import com.chaomixian.vflow.speech.voice.VoiceTriggerModelProgress
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.chaomixian.vflow.ui.common.VFlowTheme
+import com.chaomixian.vflow.ui.workflow_editor.VoiceTriggerRecorderActivity
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.launch
@@ -86,6 +92,7 @@ class ModuleConfigActivity : BaseActivity() {
         const val EXTRA_INITIAL_SECTION = "initial_section"
         const val SECTION_BACKTAP = "backtap"
         const val SECTION_APP_START = "app_start"
+        const val SECTION_VOICE_TRIGGER = "voice_trigger"
         const val SECTION_SHERPA = "sherpa"
         const val SECTION_FEISHU = "feishu"
         const val PREFS_NAME = "module_config_prefs"
@@ -238,6 +245,32 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
             )
         )
     }
+    val voiceModelManager = remember { VoiceTriggerModelManager(context) }
+    val voiceCoroutineScope = rememberCoroutineScope()
+    var voiceModelsVersion by remember { mutableIntStateOf(0) }
+    var voiceTemplatesVersion by remember { mutableIntStateOf(0) }
+    var voiceBusy by remember { mutableStateOf(false) }
+    var voiceProgress by remember { mutableStateOf<VoiceTriggerModelProgress?>(null) }
+    var voiceStatusMessage by remember { mutableStateOf<String?>(null) }
+    val voiceModelInstalled = remember(voiceModelsVersion) { voiceModelManager.isModelInstalled() }
+    val voiceTemplateCount = remember(voiceTemplatesVersion) { VoiceTriggerConfig.recordedTemplateCount(prefs) }
+    val voiceTemplatesReady = voiceTemplateCount == 3
+    var voiceDownloadSource by remember {
+        mutableStateOf(
+            SherpaNcnnDownloadSource.fromPreferenceValue(
+                prefs.getString(VoiceTriggerConfig.DOWNLOAD_SOURCE_PREF_KEY, null)
+            )
+        )
+    }
+    var voiceAudioSource by remember {
+        mutableStateOf(VoiceTriggerConfig.readAudioSource(prefs))
+    }
+    var voiceSimilarityThresholdPercent by remember {
+        mutableFloatStateOf(VoiceTriggerConfig.readSimilarityThresholdPercent(prefs))
+    }
+    var voiceRetriggerCooldownMs by remember {
+        mutableFloatStateOf(VoiceTriggerConfig.readRetriggerCooldownMs(prefs).toFloat())
+    }
     val isAuthInProgress = authUiState.phase == FeishuOAuthManager.Phase.WaitingForAuthorization ||
             authUiState.phase == FeishuOAuthManager.Phase.ExchangingToken
 
@@ -274,6 +307,25 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
         }
     }
 
+    val voiceTemplateRecorderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val data = result.data ?: return@rememberLauncherForActivityResult
+        val template1 = data.getFloatArrayExtra(VoiceTriggerRecorderActivity.EXTRA_RESULT_TEMPLATE_1) ?: return@rememberLauncherForActivityResult
+        val template2 = data.getFloatArrayExtra(VoiceTriggerRecorderActivity.EXTRA_RESULT_TEMPLATE_2) ?: return@rememberLauncherForActivityResult
+        val template3 = data.getFloatArrayExtra(VoiceTriggerRecorderActivity.EXTRA_RESULT_TEMPLATE_3) ?: return@rememberLauncherForActivityResult
+        VoiceTriggerConfig.saveTemplates(
+            prefs = prefs,
+            template1 = template1,
+            template2 = template2,
+            template3 = template3,
+        )
+        voiceTemplatesVersion++
+        voiceStatusMessage = context.getString(R.string.module_config_voice_trigger_templates_saved)
+        TriggerServiceProxy.reloadTriggers(context)
+    }
+
     val sliderPosition = ((sensitivityValue - ModuleConfigActivity.MIN_SENSITIVITY_VALUE) /
             (ModuleConfigActivity.MAX_SENSITIVITY_VALUE - ModuleConfigActivity.MIN_SENSITIVITY_VALUE) * 10)
 
@@ -299,6 +351,10 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
         }
         clearFeishuAppTokenCache()
         clearFeishuUserAuthorization()
+    }
+
+    fun reloadVoiceTriggers() {
+        TriggerServiceProxy.reloadTriggers(context)
     }
 
     Scaffold(
@@ -632,6 +688,430 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
                                     sherpaDisplayName(context, SherpaNcnnModelManager.ENGLISH_MODEL)
                                 )
                             }
+                        )
+                    }
+                }
+            }
+
+            val renderVoiceTriggerSection: @Composable () -> Unit = {
+                ModuleConfigSection(title = stringResource(R.string.module_config_section_voice_trigger)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.module_config_voice_trigger_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = stringResource(
+                                R.string.module_config_sherpa_source_current,
+                                sherpaDownloadSourceLabel(context, voiceDownloadSource)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                        ) {
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_sherpa_source_direct),
+                                selected = voiceDownloadSource == SherpaNcnnDownloadSource.DIRECT,
+                                onSelected = {
+                                    voiceDownloadSource = SherpaNcnnDownloadSource.DIRECT
+                                    prefs.edit {
+                                        putString(
+                                            VoiceTriggerConfig.DOWNLOAD_SOURCE_PREF_KEY,
+                                            voiceDownloadSource.preferenceValue
+                                        )
+                                    }
+                                },
+                                enabled = !voiceBusy,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                            )
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_sherpa_source_ghproxy_net),
+                                selected = voiceDownloadSource == SherpaNcnnDownloadSource.GHPROXY_NET,
+                                onSelected = {
+                                    voiceDownloadSource = SherpaNcnnDownloadSource.GHPROXY_NET
+                                    prefs.edit {
+                                        putString(
+                                            VoiceTriggerConfig.DOWNLOAD_SOURCE_PREF_KEY,
+                                            voiceDownloadSource.preferenceValue
+                                        )
+                                    }
+                                },
+                                enabled = !voiceBusy,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                            )
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_sherpa_source_gh_proxy_com),
+                                selected = voiceDownloadSource == SherpaNcnnDownloadSource.GH_PROXY_COM,
+                                onSelected = {
+                                    voiceDownloadSource = SherpaNcnnDownloadSource.GH_PROXY_COM
+                                    prefs.edit {
+                                        putString(
+                                            VoiceTriggerConfig.DOWNLOAD_SOURCE_PREF_KEY,
+                                            voiceDownloadSource.preferenceValue
+                                        )
+                                    }
+                                },
+                                enabled = !voiceBusy,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = stringResource(
+                                if (voiceModelInstalled) {
+                                    R.string.module_config_voice_trigger_model_ready
+                                } else {
+                                    R.string.module_config_voice_trigger_model_missing
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    voiceBusy = true
+                                    voiceProgress = null
+                                    voiceStatusMessage = context.getString(R.string.module_config_voice_trigger_status_starting_download)
+                                    voiceCoroutineScope.launch {
+                                        try {
+                                            voiceModelManager.downloadModel(voiceDownloadSource) { progress ->
+                                                voiceCoroutineScope.launch {
+                                                    voiceProgress = progress
+                                                    voiceStatusMessage = formatVoiceTriggerModelProgress(context, progress)
+                                                }
+                                            }
+                                            voiceModelsVersion++
+                                            voiceStatusMessage = context.getString(R.string.module_config_voice_trigger_status_installed)
+                                            reloadVoiceTriggers()
+                                        } catch (e: Exception) {
+                                            voiceStatusMessage = context.getString(
+                                                R.string.module_config_voice_trigger_status_failed,
+                                                e.message ?: context.getString(R.string.error_unknown_error)
+                                            )
+                                        } finally {
+                                            voiceBusy = false
+                                            voiceProgress = null
+                                        }
+                                    }
+                                },
+                                enabled = !voiceBusy,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.module_config_voice_trigger_download_model))
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    voiceModelManager.uninstallModel()
+                                    voiceModelsVersion++
+                                    voiceStatusMessage = context.getString(R.string.module_config_voice_trigger_status_deleted)
+                                    reloadVoiceTriggers()
+                                },
+                                enabled = voiceModelInstalled && !voiceBusy,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.module_config_voice_trigger_delete_model))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        TextButton(
+                            onClick = {
+                                try {
+                                    context.startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            VoiceTriggerModelManager.MODELS_DOWNLOAD_PAGE_URL.toUri()
+                                        )
+                                    )
+                                } catch (e: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(
+                                            R.string.module_config_voice_trigger_status_failed,
+                                            e.message ?: context.getString(R.string.error_unknown_error)
+                                        ),
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            },
+                            enabled = !voiceBusy,
+                        ) {
+                            Text(stringResource(R.string.module_config_voice_trigger_open_page))
+                        }
+
+                        if (voiceBusy || voiceProgress != null || !voiceStatusMessage.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            voiceStatusMessage?.let { message ->
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (voiceBusy || voiceProgress != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val progress = voiceProgress
+                                if (progress?.totalBytes != null && progress.totalBytes > 0L) {
+                                    LinearProgressIndicator(
+                                        progress = {
+                                            (progress.downloadedBytes.toFloat() / progress.totalBytes.toFloat()).coerceIn(0f, 1f)
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else {
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_voice_trigger_templates_title),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.module_config_voice_trigger_templates_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(
+                                if (voiceTemplatesReady) {
+                                    R.string.module_config_voice_trigger_templates_ready
+                                } else {
+                                    R.string.module_config_voice_trigger_templates_missing
+                                },
+                                voiceTemplateCount,
+                                3
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (voiceTemplatesReady) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    if (!voiceModelInstalled) {
+                                        Toast.makeText(
+                                            context,
+                                            R.string.voice_trigger_model_missing_prompt,
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        voiceTemplateRecorderLauncher.launch(
+                                            VoiceTriggerRecorderActivity.createIntent(context)
+                                        )
+                                    }
+                                },
+                                enabled = !voiceBusy,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.module_config_voice_trigger_record_templates))
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    VoiceTriggerConfig.clearTemplates(prefs)
+                                    voiceTemplatesVersion++
+                                    voiceStatusMessage = context.getString(R.string.module_config_voice_trigger_templates_deleted)
+                                    reloadVoiceTriggers()
+                                },
+                                enabled = voiceTemplateCount > 0 && !voiceBusy,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.module_config_voice_trigger_delete_templates))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_voice_trigger_similarity_threshold),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.module_config_voice_trigger_similarity_threshold_value,
+                                voiceSimilarityThresholdPercent.toInt()
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                            value = voiceSimilarityThresholdPercent,
+                            onValueChange = { value ->
+                                voiceSimilarityThresholdPercent = value
+                                    .coerceIn(
+                                        VoiceTriggerConfig.MIN_SIMILARITY_THRESHOLD_PERCENT,
+                                        VoiceTriggerConfig.MAX_SIMILARITY_THRESHOLD_PERCENT
+                                    )
+                            },
+                            onValueChangeFinished = {
+                                prefs.edit {
+                                    putFloat(
+                                        VoiceTriggerConfig.KEY_SIMILARITY_THRESHOLD_PERCENT,
+                                        voiceSimilarityThresholdPercent
+                                    )
+                                }
+                                reloadVoiceTriggers()
+                            },
+                            valueRange = VoiceTriggerConfig.MIN_SIMILARITY_THRESHOLD_PERCENT..VoiceTriggerConfig.MAX_SIMILARITY_THRESHOLD_PERCENT,
+                            steps = (((VoiceTriggerConfig.MAX_SIMILARITY_THRESHOLD_PERCENT - VoiceTriggerConfig.MIN_SIMILARITY_THRESHOLD_PERCENT) / VoiceTriggerConfig.SIMILARITY_THRESHOLD_STEP_PERCENT) - 1).toInt(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_voice_trigger_audio_source),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                        ) {
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_voice_trigger_audio_source_voice_recognition),
+                                selected = voiceAudioSource == VoiceTriggerConfig.AudioSource.VOICE_RECOGNITION,
+                                onSelected = {
+                                    voiceAudioSource = VoiceTriggerConfig.AudioSource.VOICE_RECOGNITION
+                                    prefs.edit {
+                                        putString(VoiceTriggerConfig.KEY_AUDIO_SOURCE, voiceAudioSource.preferenceValue)
+                                    }
+                                    reloadVoiceTriggers()
+                                },
+                                enabled = !voiceBusy,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                            )
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_voice_trigger_audio_source_voice_communication),
+                                selected = voiceAudioSource == VoiceTriggerConfig.AudioSource.VOICE_COMMUNICATION,
+                                onSelected = {
+                                    voiceAudioSource = VoiceTriggerConfig.AudioSource.VOICE_COMMUNICATION
+                                    prefs.edit {
+                                        putString(VoiceTriggerConfig.KEY_AUDIO_SOURCE, voiceAudioSource.preferenceValue)
+                                    }
+                                    reloadVoiceTriggers()
+                                },
+                                enabled = !voiceBusy,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                            )
+                            SherpaSourceButton(
+                                text = stringResource(R.string.module_config_voice_trigger_audio_source_mic),
+                                selected = voiceAudioSource == VoiceTriggerConfig.AudioSource.MIC,
+                                onSelected = {
+                                    voiceAudioSource = VoiceTriggerConfig.AudioSource.MIC
+                                    prefs.edit {
+                                        putString(VoiceTriggerConfig.KEY_AUDIO_SOURCE, voiceAudioSource.preferenceValue)
+                                    }
+                                    reloadVoiceTriggers()
+                                },
+                                enabled = !voiceBusy,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_voice_trigger_audio_source_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Text(
+                            text = stringResource(R.string.module_config_voice_trigger_retrigger_cooldown),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.module_config_voice_trigger_retrigger_cooldown_value,
+                                voiceRetriggerCooldownMs.toInt()
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                            value = voiceRetriggerCooldownMs,
+                            onValueChange = { value ->
+                                voiceRetriggerCooldownMs = value
+                                    .toLong()
+                                    .coerceIn(
+                                        VoiceTriggerConfig.MIN_RETRIGGER_COOLDOWN_MS,
+                                        VoiceTriggerConfig.MAX_RETRIGGER_COOLDOWN_MS
+                                    )
+                                    .toFloat()
+                            },
+                            onValueChangeFinished = {
+                                prefs.edit {
+                                    putLong(
+                                        VoiceTriggerConfig.KEY_RETRIGGER_COOLDOWN_MS,
+                                        voiceRetriggerCooldownMs.toLong()
+                                    )
+                                }
+                                reloadVoiceTriggers()
+                            },
+                            valueRange = VoiceTriggerConfig.MIN_RETRIGGER_COOLDOWN_MS.toFloat()..VoiceTriggerConfig.MAX_RETRIGGER_COOLDOWN_MS.toFloat(),
+                            steps = (((VoiceTriggerConfig.MAX_RETRIGGER_COOLDOWN_MS - VoiceTriggerConfig.MIN_RETRIGGER_COOLDOWN_MS) / VoiceTriggerConfig.RETRIGGER_COOLDOWN_STEP_MS) - 1).toInt(),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -1010,6 +1490,7 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
 
             renderBacktapSection()
             renderAppStartSection()
+            renderVoiceTriggerSection()
             renderSherpaSection()
 
             val renderNetworkSection: @Composable () -> Unit = {
@@ -1059,7 +1540,8 @@ fun ModuleConfigScreen(initialSection: String? = null, onBack: () -> Unit) {
         if (scrollState.maxValue > 0) {
             when (initialSection) {
                 ModuleConfigActivity.SECTION_APP_START -> scrollState.animateScrollTo(scrollState.maxValue / 6)
-                ModuleConfigActivity.SECTION_SHERPA -> scrollState.animateScrollTo(scrollState.maxValue / 2)
+                ModuleConfigActivity.SECTION_VOICE_TRIGGER -> scrollState.animateScrollTo((scrollState.maxValue * 2) / 5)
+                ModuleConfigActivity.SECTION_SHERPA -> scrollState.animateScrollTo((scrollState.maxValue * 3) / 5)
                 ModuleConfigActivity.SECTION_FEISHU -> scrollState.animateScrollTo(scrollState.maxValue)
             }
         }
@@ -1295,6 +1777,26 @@ private fun formatSherpaTransferStatus(
     val percent = ((progress.downloadedBytes * 100L) / totalBytes).toInt().coerceIn(0, 100)
     return context.getString(
         determinateRes,
+        percent,
+        Formatter.formatShortFileSize(context, progress.downloadedBytes),
+        Formatter.formatShortFileSize(context, totalBytes),
+    )
+}
+
+private fun formatVoiceTriggerModelProgress(
+    context: Context,
+    progress: VoiceTriggerModelProgress,
+): String {
+    val totalBytes = progress.totalBytes
+    if (totalBytes == null || totalBytes <= 0L) {
+        return context.getString(
+            R.string.module_config_voice_trigger_status_downloading,
+            Formatter.formatShortFileSize(context, progress.downloadedBytes)
+        )
+    }
+    val percent = ((progress.downloadedBytes * 100L) / totalBytes).toInt().coerceIn(0, 100)
+    return context.getString(
+        R.string.module_config_voice_trigger_status_downloading_progress,
         percent,
         Formatter.formatShortFileSize(context, progress.downloadedBytes),
         Formatter.formatShortFileSize(context, totalBytes),

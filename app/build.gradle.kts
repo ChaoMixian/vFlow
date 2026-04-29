@@ -185,6 +185,7 @@ dependencies {
     // 网络库
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
 
     // Web 服务器
     implementation("org.nanohttpd:nanohttpd-webserver:2.3.1")

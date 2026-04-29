@@ -27,6 +27,7 @@ import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.PermissionGuardianService
 import com.chaomixian.vflow.services.ShellManager
 import com.chaomixian.vflow.services.TriggerService
+import com.chaomixian.vflow.services.VoiceTriggerService
 import com.chaomixian.vflow.ui.common.AppearanceManager
 import com.chaomixian.vflow.ui.common.BaseActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -164,6 +165,7 @@ class MainActivity : BaseActivity() {
      */
     override fun onStart() {
         super.onStart()
+        VoiceTriggerService.startIfEligible(this)
         if (startupCompleted) {
             checkAndApplyStartupSettings()
             lifecycleScope.launch(Dispatchers.IO) {

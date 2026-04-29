@@ -11,6 +11,7 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -98,6 +99,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.workflow_editor.VoiceTriggerRecorderActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".permissions.PermissionActivity"
             android:exported="false" />
 
@@ -170,6 +175,11 @@
             android:name=".services.TriggerService"
             android:exported="true" android:permission="android.permission.FOREGROUND_SERVICE"
             android:foregroundServiceType="specialUse" />
+
+        <service
+            android:name=".services.VoiceTriggerService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <service
             android:name=".services.AccessibilityService"
