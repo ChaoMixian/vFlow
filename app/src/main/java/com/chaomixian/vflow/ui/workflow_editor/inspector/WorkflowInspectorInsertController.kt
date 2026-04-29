@@ -18,6 +18,7 @@ class WorkflowInspectorInsertController(
     private val activity: Activity,
     private val actionSteps: MutableList<ActionStep>,
     private val recyclerView: RecyclerView,
+    private val onBeforeStepsChanged: () -> Unit,
     private val onStepsChanged: () -> Unit
 ) {
     private val receiver = object : BroadcastReceiver() {
@@ -113,6 +114,7 @@ class WorkflowInspectorInsertController(
         val stepsToAdd = module.createSteps()
         if (stepsToAdd.isEmpty()) return false
 
+        onBeforeStepsChanged()
         val firstStep = stepsToAdd.first()
         val updatedParameters = applyParameterUpdates(module, firstStep, parameters)
         actionSteps.add(firstStep.copy(parameters = updatedParameters))

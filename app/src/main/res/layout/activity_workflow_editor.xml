@@ -66,7 +66,7 @@
             android:clipToPadding="false"
             android:paddingTop="16dp"
             android:paddingHorizontal="16dp"
-            android:paddingBottom="140dp"
+            android:paddingBottom="112dp"
             tools:itemCount="3"
             tools:listitem="@layout/item_action_step" />
 
@@ -74,44 +74,74 @@
 
     <LinearLayout
         android:id="@+id/bottom_button_container"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="?attr/colorSurfaceContainer"
-        android:elevation="8dp"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_margin="16dp"
+        android:clipToPadding="false"
+        android:gravity="center"
+        android:orientation="horizontal">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <com.google.android.material.floatingtoolbar.FloatingToolbarLayout
+            android:id="@+id/bottom_floating_toolbar"
+            style="?attr/floatingToolbarVibrantStyle"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            app:marginBottomSystemWindowInsets="false"
+            app:marginLeftSystemWindowInsets="false"
+            app:marginRightSystemWindowInsets="false"
+            app:marginTopSystemWindowInsets="false">
 
-            <Button
-                android:id="@+id/button_add_action"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/workflow_editor_add_action"
-                app:icon="@drawable/ic_add" />
-
-            <Button
-                android:id="@+id/button_execute_workflow"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+            <com.google.android.material.overflow.OverflowLinearLayout
+                android:id="@+id/bottom_floating_toolbar_actions"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/workflow_editor_execute"
-                app:icon="@drawable/ic_play_arrow" />
-        </LinearLayout>
+                android:layout_gravity="center"
+                android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/button_save_workflow"
-            android:layout_width="match_parent"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_undo_edit"
+                    style="@style/Widget.Material3.FloatingToolbar.IconButton.Vibrant"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/workflow_editor_undo"
+                    android:enabled="false"
+                    app:icon="@drawable/rounded_undo_24"
+                    app:layout_overflowIcon="@drawable/rounded_undo_24"
+                    app:layout_overflowText="@string/workflow_editor_undo" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_save_workflow"
+                    style="@style/Widget.Material3.FloatingToolbar.IconButton.Vibrant"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/workflow_editor_save"
+                    app:icon="@drawable/rounded_save_24"
+                    app:layout_overflowIcon="@drawable/rounded_save_24"
+                    app:layout_overflowText="@string/workflow_editor_save" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_add_action"
+                    style="@style/Widget.Material3.FloatingToolbar.IconButton.Vibrant"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/workflow_editor_add_action"
+                    app:icon="@drawable/ic_add"
+                    app:layout_overflowIcon="@drawable/ic_add"
+                    app:layout_overflowText="@string/workflow_editor_add_action" />
+            </com.google.android.material.overflow.OverflowLinearLayout>
+
+        </com.google.android.material.floatingtoolbar.FloatingToolbarLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/button_execute_workflow"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/workflow_editor_save" />
+            android:layout_marginStart="16dp"
+            android:contentDescription="@string/workflow_editor_execute"
+            app:backgroundTint="?attr/colorTertiaryContainer"
+            app:srcCompat="@drawable/ic_play_arrow"
+            app:tint="?attr/colorOnTertiaryContainer" />
 
     </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

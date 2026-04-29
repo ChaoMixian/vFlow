@@ -313,6 +313,7 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_confirm">Confirm</string>
     <string name="save">Save</string>
+    <string name="workflow_editor_undo">Undo</string>
     <string name="workflow_editor_add_action">Add Action</string>
     <string name="workflow_editor_add_trigger">Add Trigger</string>
     <string name="workflow_editor_trigger_group_title">#0 Triggers</string>

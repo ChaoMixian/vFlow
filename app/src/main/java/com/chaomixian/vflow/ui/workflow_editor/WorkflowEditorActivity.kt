@@ -11,6 +11,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.DisplayMetrics
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -18,7 +20,6 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.Toast
 import com.chaomixian.vflow.core.locale.toast
@@ -59,11 +60,11 @@ import com.chaomixian.vflow.ui.common.BaseActivity
 import com.chaomixian.vflow.ui.workflow_editor.inspector.WorkflowInspectorInsertController
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -81,11 +82,16 @@ class WorkflowEditorActivity : BaseActivity() {
     private lateinit var nameEditText: EditText
     private lateinit var itemTouchHelper: ItemTouchHelper
     private var currentEditorSheet: ActionEditorSheet? = null
-    private lateinit var executeButton: MaterialButton
+    private lateinit var undoButton: Button
+    private lateinit var executeButton: FloatingActionButton
     private lateinit var editorMoreButton: ImageButton
     private lateinit var recyclerView: RecyclerView
     private val gson = Gson()
     private val delayedExecuteHandler = Handler(Looper.getMainLooper())
+    private val undoStack = java.util.ArrayDeque<EditorSnapshot>()
+    private var suppressUndoCapture = false
+    private var nameEditSnapshotCaptured = false
+    private var dragUndoSnapshot: EditorSnapshot? = null
 
     private var initialWorkflowJson: String? = null
 
@@ -172,7 +178,15 @@ class WorkflowEditorActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_WORKFLOW_ID = "WORKFLOW_ID"
+        private const val MAX_UNDO_STEPS = 50
     }
+
+    private data class EditorSnapshot(
+        val workflow: Workflow?,
+        val workflowName: String,
+        val triggerSteps: List<ActionStep>,
+        val actionSteps: List<ActionStep>
+    )
 
     /**
      * 保存 Activity 状态，防止数据丢失。
@@ -194,6 +208,7 @@ class WorkflowEditorActivity : BaseActivity() {
         workflowManager = WorkflowManager(this)
         nameEditText = findViewById(R.id.edit_text_workflow_name)
         editorMoreButton = findViewById(R.id.btn_editor_more)
+        undoButton = findViewById(R.id.button_undo_edit)
         executeButton = findViewById(R.id.button_execute_workflow)
         recyclerView = findViewById(R.id.recycler_view_action_steps)
 
@@ -211,6 +226,7 @@ class WorkflowEditorActivity : BaseActivity() {
             activity = this,
             actionSteps = actionSteps,
             recyclerView = recyclerView,
+            onBeforeStepsChanged = { pushUndoSnapshot() },
             onStepsChanged = { recalculateAndNotify() }
         )
         inspectorInsertController.register()
@@ -271,6 +287,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
         setupDragAndDrop()
+        setupUndoControls()
 
         // “添加动作”按钮现在只负责添加普通动作，不再处理触发器
         findViewById<Button>(R.id.button_add_action).setOnClickListener {
@@ -368,6 +385,104 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun getAllEditableSteps(): List<ActionStep> = triggerSteps + actionSteps
+
+    private fun setupUndoControls() {
+        undoButton.setOnClickListener { undoLastEdit() }
+        nameEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                if (!suppressUndoCapture && nameEditText.hasFocus() && !nameEditSnapshotCaptured) {
+                    pushUndoSnapshot()
+                    nameEditSnapshotCaptured = true
+                }
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+        nameEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                nameEditSnapshotCaptured = false
+            }
+        }
+        updateUndoButtonState()
+    }
+
+    private fun pushUndoSnapshot() {
+        if (suppressUndoCapture) return
+        pushUndoSnapshot(createEditorSnapshot())
+    }
+
+    private fun pushUndoSnapshot(snapshot: EditorSnapshot) {
+        undoStack.addLast(snapshot)
+        while (undoStack.size > MAX_UNDO_STEPS) {
+            undoStack.removeFirst()
+        }
+        updateUndoButtonState()
+    }
+
+    private fun undoLastEdit() {
+        val snapshot = undoStack.pollLast() ?: return
+        suppressUndoCapture = true
+        currentWorkflow = snapshot.workflow?.let(::copyWorkflow)
+        nameEditText.setText(snapshot.workflowName)
+        triggerSteps.clear()
+        triggerSteps.addAll(copySteps(snapshot.triggerSteps))
+        actionSteps.clear()
+        actionSteps.addAll(copySteps(snapshot.actionSteps))
+        suppressUndoCapture = false
+        nameEditSnapshotCaptured = false
+
+        recalculateAndNotify()
+        val workflowId = currentWorkflow?.id
+        updateExecuteButton(workflowId != null && WorkflowExecutor.isRunning(workflowId))
+        updateUndoButtonState()
+    }
+
+    private fun updateUndoButtonState() {
+        val canUndo = undoStack.isNotEmpty()
+        undoButton.isEnabled = canUndo
+        undoButton.alpha = if (canUndo) 1f else 0.38f
+    }
+
+    private fun createEditorSnapshot(): EditorSnapshot {
+        return EditorSnapshot(
+            workflow = currentWorkflow?.let(::copyWorkflow),
+            workflowName = nameEditText.text.toString(),
+            triggerSteps = copySteps(triggerSteps),
+            actionSteps = copySteps(actionSteps)
+        )
+    }
+
+    private fun copyWorkflow(workflow: Workflow): Workflow {
+        return workflow.copy(
+            triggers = copySteps(workflow.triggers),
+            steps = copySteps(workflow.steps),
+            tags = workflow.tags.toList()
+        )
+    }
+
+    private fun copySteps(steps: List<ActionStep>): List<ActionStep> {
+        return steps.map { step ->
+            step.copy(
+                parameters = deepCopyParameters(step.parameters),
+                indentationLevel = step.indentationLevel
+            )
+        }
+    }
+
+    private fun deepCopyParameters(parameters: Map<String, Any?>): Map<String, Any?> {
+        return parameters.mapValues { (_, value) -> deepCopyValue(value) }
+    }
+
+    private fun deepCopyValue(value: Any?): Any? {
+        return when (value) {
+            is Map<*, *> -> value.entries.associate { (key, mapValue) ->
+                key.toString() to deepCopyValue(mapValue)
+            }
+            is List<*> -> value.map { item -> deepCopyValue(item) }
+            else -> value
+        }
+    }
 
     private fun handleExitRequest() {
         if (hasUnsavedChanges()) {
@@ -668,6 +783,7 @@ class WorkflowEditorActivity : BaseActivity() {
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
+            pushUndoSnapshot()
             if (position != -1) {
                 if (focusedInputId != null) {
                     val updatedParams = actionSteps[position].parameters.toMutableMap()
@@ -711,6 +827,7 @@ class WorkflowEditorActivity : BaseActivity() {
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
+            pushUndoSnapshot()
             if (position != -1) {
                 if (focusedInputId != null) {
                     val updatedParams = triggerSteps[position].parameters.toMutableMap()
@@ -988,7 +1105,9 @@ class WorkflowEditorActivity : BaseActivity() {
             onDeleteTriggerClick = { position ->
                 val step = triggerSteps[position]
                 ModuleRegistry.getModule(step.moduleId)?.let { module ->
+                    val undoSnapshot = createEditorSnapshot()
                     if (module.onStepDeleted(triggerSteps, position)) {
+                        pushUndoSnapshot(undoSnapshot)
                         recalculateAndNotify()
                     }
                 }
@@ -1003,7 +1122,9 @@ class WorkflowEditorActivity : BaseActivity() {
             onDeleteClick = { position ->
                 val step = actionSteps[position]
                 ModuleRegistry.getModule(step.moduleId)?.let { module ->
+                    val undoSnapshot = createEditorSnapshot()
                     if (module.onStepDeleted(actionSteps, position)) {
+                        pushUndoSnapshot(undoSnapshot)
                         recalculateAndNotify()
                     }
                 }
@@ -1049,6 +1170,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
         // 插入到原块的后面
         val insertPosition = blockEnd + 1
+        pushUndoSnapshot()
         actionSteps.addAll(insertPosition, stepsToDuplicate)
 
         recalculateAndNotify()
@@ -1087,6 +1209,7 @@ class WorkflowEditorActivity : BaseActivity() {
                     viewHolder?.let {
                         dragStartPosition = actionStepAdapter.getActualPosition(it.adapterPosition) ?: -1
                         listBeforeDrag = actionSteps.toList()
+                        dragUndoSnapshot = createEditorSnapshot()
                         dragGlowAnimator = AnimatorInflater.loadAnimator(this@WorkflowEditorActivity, R.animator.drag_glow).apply {
                             setTarget(it.itemView)
                             start()
@@ -1115,13 +1238,18 @@ class WorkflowEditorActivity : BaseActivity() {
                     scaleY = 1.0f
                 }
 
-                val originalList = listBeforeDrag ?: return
+                val originalList = listBeforeDrag ?: run {
+                    dragUndoSnapshot = null
+                    return
+                }
                 val fromPos = dragStartPosition
                 val toPos = actionStepAdapter.getActualPosition(viewHolder.adapterPosition) ?: -1
 
                 // 重置状态
                 listBeforeDrag = null
                 dragStartPosition = -1
+                val undoSnapshot = dragUndoSnapshot
+                dragUndoSnapshot = null
 
                 // 无效移动检查
                 if (fromPos < 0 || toPos < 0 || fromPos == toPos) {
@@ -1135,6 +1263,9 @@ class WorkflowEditorActivity : BaseActivity() {
 
                 if (isBlockStructureValid(newList)) {
                     val updatedList = WorkflowJumpReferenceUpdater.remapAfterReorder(originalList, newList)
+                    if (updatedList != originalList && undoSnapshot != null) {
+                        pushUndoSnapshot(undoSnapshot)
+                    }
                     actionSteps.clear()
                     actionSteps.addAll(updatedList)
                 } else {
@@ -1333,7 +1464,7 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun applyWindowInsets() {
         val appBar = findViewById<AppBarLayout>(R.id.app_bar_layout_editor)
-        val bottomButtonContainer = findViewById<LinearLayout>(R.id.bottom_button_container)
+        val bottomButtonContainer = findViewById<View>(R.id.bottom_button_container)
 
         ViewCompat.setOnApplyWindowInsetsListener(appBar) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -1450,11 +1581,11 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun updateExecuteButton(isRunning: Boolean) {
         if (isRunning) {
-            executeButton.text = getString(R.string.editor_button_stop)
-            executeButton.setIconResource(R.drawable.rounded_pause_24)
+            executeButton.contentDescription = getString(R.string.editor_button_stop)
+            executeButton.setImageResource(R.drawable.rounded_pause_24)
         } else {
-            executeButton.text = getString(R.string.workflow_editor_execute)
-            executeButton.setIconResource(R.drawable.ic_play_arrow)
+            executeButton.contentDescription = getString(R.string.workflow_editor_execute)
+            executeButton.setImageResource(R.drawable.ic_play_arrow)
         }
     }
 
@@ -1482,6 +1613,7 @@ class WorkflowEditorActivity : BaseActivity() {
         picker.onActionSelected = { module ->
             if (module.metadata.getResolvedCategoryId() == ModuleCategories.TEMPLATE) {
                 val newSteps = module.createSteps()
+                pushUndoSnapshot()
                 actionSteps.addAll(newSteps)
                 recalculateAndNotify()
             } else if (isTriggerPicker) {
@@ -1526,6 +1658,7 @@ class WorkflowEditorActivity : BaseActivity() {
         picker.onActionSelected = { module ->
             if (module.metadata.getResolvedCategoryId() == ModuleCategories.TEMPLATE) {
                 val newSteps = module.createSteps()
+                pushUndoSnapshot()
                 actionSteps.addAll(insertPosition, newSteps)
                 recalculateAndNotify()
             } else {
@@ -1547,6 +1680,7 @@ class WorkflowEditorActivity : BaseActivity() {
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
+            pushUndoSnapshot()
             val stepsToAdd = module.createSteps()
             val configuredFirstStep = stepsToAdd.first().copy(parameters = newStepData.parameters)
             actionSteps.add(insertPosition, configuredFirstStep)
@@ -1576,6 +1710,7 @@ class WorkflowEditorActivity : BaseActivity() {
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
+            pushUndoSnapshot()
             val stepsToAdd = module.createSteps()
             val configuredFirstStep = stepsToAdd.first().copy(parameters = newStepData.parameters)
             triggerSteps.add(insertPosition, configuredFirstStep)
@@ -1618,6 +1753,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 )
             )
             .setPositiveButton(R.string.common_yes) { _, _ ->
+                pushUndoSnapshot()
                 triggerSteps.clear()
                 triggerSteps.addAll(preview.migratedWorkflow.triggers)
                 actionSteps.clear()
@@ -1744,9 +1880,21 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun applyGeneratedWorkflow(workflow: Workflow) {
+        val undoSnapshot = createEditorSnapshot()
+        var undoRecorded = false
+        fun recordGeneratedUndo() {
+            if (!undoRecorded) {
+                pushUndoSnapshot(undoSnapshot)
+                undoRecorded = true
+            }
+        }
+
         // 如果生成了名字且当前名字为空，则使用生成的名字
         if (nameEditText.text.isBlank() && workflow.name.isNotBlank()) {
+            recordGeneratedUndo()
+            suppressUndoCapture = true
             nameEditText.setText(workflow.name)
+            suppressUndoCapture = false
         }
 
         // 覆盖现有步骤（策略可以是追加，但通常用户希望重写）
@@ -1755,6 +1903,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 .setTitle(R.string.editor_dialog_overwrite_title)
                 .setMessage(R.string.editor_dialog_overwrite_message)
                 .setPositiveButton(R.string.editor_button_overwrite) { _, _ ->
+                    recordGeneratedUndo()
                     triggerSteps.clear()
                     actionSteps.clear()
                     triggerSteps.addAll(workflow.triggers)
@@ -1763,6 +1912,7 @@ class WorkflowEditorActivity : BaseActivity() {
                     toast(R.string.editor_toast_ai_workflow_applied)
                 }
                 .setNeutralButton(R.string.editor_button_append_to_end) { _, _ ->
+                    recordGeneratedUndo()
                     triggerSteps.addAll(workflow.triggers)
                     actionSteps.addAll(workflow.steps)
                     recalculateAndNotify()
@@ -1771,6 +1921,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 .setNegativeButton(R.string.common_cancel, null)
                 .show()
         } else {
+            recordGeneratedUndo()
             triggerSteps.addAll(workflow.triggers)
             actionSteps.addAll(workflow.steps)
             recalculateAndNotify()

@@ -321,6 +321,7 @@
     <string name="common_cancel">取消</string>
     <string name="common_confirm">确定</string>
     <string name="save">保存</string>
+    <string name="workflow_editor_undo">撤销</string>
     <string name="workflow_editor_add_action">添加动作</string>
     <string name="workflow_editor_add_trigger">添加触发器</string>
     <string name="workflow_editor_trigger_group_title">#0 触发器</string>
