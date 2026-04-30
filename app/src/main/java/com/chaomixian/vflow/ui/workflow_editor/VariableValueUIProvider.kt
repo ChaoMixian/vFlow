@@ -14,6 +14,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.pill.Pill
+import com.chaomixian.vflow.core.module.PreviewPillModel
+import com.chaomixian.vflow.core.module.PreviewPillType
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
@@ -32,9 +34,52 @@ class VariableValueUIProvider : ModuleUIProvider {
 
     override fun getHandledInputIds(): Set<String> = setOf("value")
 
-    /**
-     * 现在会先加载 CardView，再找到内部的 LinearLayout 来填充内容。
-     */
+    override fun createPreviewPills(
+        context: Context,
+        step: ActionStep,
+        allSteps: List<ActionStep>,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): List<PreviewPillModel> {
+        val type = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["type"]?.toString())
+            ?: CreateVariableModule.TYPE_STRING
+        val value = step.parameters["value"]
+
+        if (value is String && (value.isMagicVariable() || value.isNamedVariable())) {
+            return emptyList()
+        }
+        val items = mutableListOf<PreviewPillModel>()
+
+        when (type) {
+            CreateVariableModule.TYPE_DICTIONARY -> {
+                @Suppress("UNCHECKED_CAST")
+                val map = value as? Map<String, Any?> ?: emptyMap()
+                if (map.isEmpty()) return emptyList()
+
+                map.forEach { (key, mapValue) ->
+                    items += PreviewPillModel(
+                        type = PreviewPillType.SUMMARY,
+                        content = buildSummaryLine(context, "$key: ", mapValue)
+                    )
+                }
+            }
+            CreateVariableModule.TYPE_LIST -> {
+                @Suppress("UNCHECKED_CAST")
+                val list = value as? List<Any?> ?: emptyList()
+                if (list.isEmpty()) return emptyList()
+
+                list.forEachIndexed { index, item ->
+                    items += PreviewPillModel(
+                        type = PreviewPillType.SUMMARY,
+                        content = buildSummaryLine(context, "${index + 1}. ", item)
+                    )
+                }
+            }
+            else -> return emptyList()
+        }
+
+        return items
+    }
+
     override fun createPreview(
         context: Context,
         parent: ViewGroup,
@@ -51,11 +96,8 @@ class VariableValueUIProvider : ModuleUIProvider {
         }
 
         val inflater = LayoutInflater.from(context)
-        // 加载整个卡片视图
         val cardView = inflater.inflate(R.layout.partial_variable_preview, parent, false)
-        // 从卡片中找到用于填充内容的容器
         val previewContainer = cardView.findViewById<LinearLayout>(R.id.variable_preview_container)
-
 
         when (type) {
             CreateVariableModule.TYPE_DICTIONARY -> {
@@ -71,8 +113,7 @@ class VariableValueUIProvider : ModuleUIProvider {
                         allSteps = allSteps,
                         style = PillRenderer.DisplayStyle.SUMMARY
                     )
-                    val textView = createTextView(context, renderedLine ?: "")
-                    previewContainer.addView(textView)
+                    previewContainer.addView(createTextView(context, renderedLine ?: ""))
                 }
             }
             CreateVariableModule.TYPE_LIST -> {
@@ -88,14 +129,12 @@ class VariableValueUIProvider : ModuleUIProvider {
                         allSteps = allSteps,
                         style = PillRenderer.DisplayStyle.SUMMARY
                     )
-                    val textView = createTextView(context, renderedLine ?: "")
-                    previewContainer.addView(textView)
+                    previewContainer.addView(createTextView(context, renderedLine ?: ""))
                 }
             }
             else -> return null
         }
 
-        // 只有当容器内确实有内容时，才返回整个卡片视图
         return if (previewContainer.childCount > 0) cardView else null
     }
 

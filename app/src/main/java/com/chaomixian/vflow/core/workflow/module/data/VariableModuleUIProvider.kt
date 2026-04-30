@@ -15,12 +15,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
+import com.chaomixian.vflow.core.module.PreviewPillModel
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.chaomixian.vflow.ui.workflow_editor.ListItemAdapter
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
@@ -67,6 +67,24 @@ class VariableModuleUIProvider(
      * 实现 createPreview 方法。
      * 这个方法现在是预览逻辑的入口点，它会根据变量类型进行分发。
      */
+    override fun createPreviewPills(
+        context: Context,
+        step: ActionStep,
+        allSteps: List<ActionStep>,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): List<PreviewPillModel> {
+        val type = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["type"] as? String)
+            ?: CreateVariableModule.TYPE_STRING
+        return when (type) {
+            CreateVariableModule.TYPE_STRING ->
+                richTextUIProvider.createPreviewPills(context, step, allSteps, onStartActivityForResult)
+            CreateVariableModule.TYPE_DICTIONARY,
+            CreateVariableModule.TYPE_LIST ->
+                variableValueUIProvider.createPreviewPills(context, step, allSteps, onStartActivityForResult)
+            else -> emptyList()
+        }
+    }
+
     override fun createPreview(
         context: Context,
         parent: ViewGroup,
@@ -83,7 +101,6 @@ class VariableModuleUIProvider(
             else -> null // 其他类型（如数字、布尔）不需要自定义预览，返回null即可
         }
     }
-
 
     override fun createEditor(
         context: Context,

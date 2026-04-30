@@ -162,17 +162,33 @@ class ActionStepAdapter(
         )
         contentContainer.addView(headerView)
 
-        val customPreview = module.uiProvider?.createPreview(context, contentContainer, step, allSteps) { intent, callback ->
+        val previewPills = module.uiProvider?.createPreviewPills(context, step, allSteps) { intent, callback ->
             onStartActivityForResult(actualPosition, intent, callback)
-        }
-        if (customPreview != null) {
-            val layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            layoutParams.topMargin = (8 * context.resources.displayMetrics.density).toInt()
-            customPreview.layoutParams = layoutParams
-            contentContainer.addView(customPreview)
+        }.orEmpty()
+        if (previewPills.isNotEmpty()) {
+            previewPills.forEach { previewPill ->
+                contentContainer.addView(
+                    PillRenderer.renderPreviewPillView(
+                        context = context,
+                        parent = contentContainer,
+                        previewPill = previewPill,
+                        allSteps = allSteps
+                    )
+                )
+            }
+        } else {
+            val customPreview = module.uiProvider?.createPreview(context, contentContainer, step, allSteps) { intent, callback ->
+                onStartActivityForResult(actualPosition, intent, callback)
+            }
+            if (customPreview != null) {
+                val layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                layoutParams.topMargin = (8 * context.resources.displayMetrics.density).toInt()
+                customPreview.layoutParams = layoutParams
+                contentContainer.addView(customPreview)
+            }
         }
 
         deleteButton.visibility = if (isDeletable) View.VISIBLE else View.GONE

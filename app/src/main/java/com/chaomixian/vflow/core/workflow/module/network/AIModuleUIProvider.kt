@@ -17,9 +17,8 @@ import androidx.core.widget.doAfterTextChanged
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
+import com.chaomixian.vflow.core.module.PreviewPillModel
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.google.android.material.chip.Chip
@@ -59,6 +58,15 @@ class AIModuleUIProvider : ModuleUIProvider {
     override fun getHandledInputIds(): Set<String> = setOf(
         "provider", "api_key", "base_url", "model", "prompt", "system_prompt", "temperature", "show_advanced"
     )
+
+    override fun createPreviewPills(
+        context: Context,
+        step: ActionStep,
+        allSteps: List<ActionStep>,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): List<PreviewPillModel> {
+        return richTextUIProvider.createPreviewPills(context, step, allSteps, onStartActivityForResult)
+    }
 
     // 实现 createPreview，委托给 richTextUIProvider
     override fun createPreview(

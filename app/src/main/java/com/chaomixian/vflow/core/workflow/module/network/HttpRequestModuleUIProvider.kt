@@ -16,6 +16,8 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.module.ParameterType
+import com.chaomixian.vflow.core.module.PreviewPillModel
+import com.chaomixian.vflow.core.module.PreviewPillType
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
@@ -72,6 +74,24 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
     // URL 不在这里处理，让它使用标准控件
     override fun getHandledInputIds(): Set<String> = setOf("method", "headers", "query_params", "body_type", "body", "show_advanced")
+
+    override fun createPreviewPills(
+        context: Context,
+        step: ActionStep,
+        allSteps: List<ActionStep>,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): List<PreviewPillModel> {
+        val rawUrl = step.parameters["url"]?.toString() ?: ""
+        if (!VariableResolver.isComplex(rawUrl)) {
+            return emptyList()
+        }
+        return listOf(
+            PreviewPillModel(
+                type = PreviewPillType.RICH_TEXT,
+                content = rawUrl
+            )
+        )
+    }
 
     override fun createPreview(
         context: Context,

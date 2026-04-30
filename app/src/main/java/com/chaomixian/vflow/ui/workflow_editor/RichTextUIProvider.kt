@@ -11,6 +11,8 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.VariableResolver // 引入
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
+import com.chaomixian.vflow.core.module.PreviewPillModel
+import com.chaomixian.vflow.core.module.PreviewPillType
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 
 class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider {
@@ -29,6 +31,24 @@ class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider
         throw NotImplementedError("RichTextUIProvider does not read from a custom editor.")
     }
 
+    override fun createPreviewPills(
+        context: Context,
+        step: ActionStep,
+        allSteps: List<ActionStep>,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): List<PreviewPillModel> {
+        val rawText = step.parameters[richTextInputId]?.toString() ?: ""
+        if (!VariableResolver.isComplex(rawText)) {
+            return emptyList()
+        }
+        return listOf(
+            PreviewPillModel(
+                type = PreviewPillType.RICH_TEXT,
+                content = rawText
+            )
+        )
+    }
+
     /**
      * 创建预览视图。
      * 使用 VariableResolver.isComplex 统一判断标准。
@@ -39,7 +59,6 @@ class RichTextUIProvider(private val richTextInputId: String) : ModuleUIProvider
     ): View? {
         val rawText = step.parameters[richTextInputId]?.toString() ?: ""
 
-        // 如果内容不复杂，则不创建自定义预览，让 ActionStepAdapter 回退到 getSummary
         if (!VariableResolver.isComplex(rawText)) {
             return null
         }

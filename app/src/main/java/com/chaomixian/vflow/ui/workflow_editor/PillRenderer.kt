@@ -7,8 +7,14 @@ import android.graphics.*
 import android.text.Spanned
 import android.text.SpannableStringBuilder
 import android.text.style.ReplacementSpan
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.VariableResolver
+import com.chaomixian.vflow.core.module.PreviewPillModel
+import com.chaomixian.vflow.core.module.PreviewPillType
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -82,6 +88,40 @@ object PillRenderer {
             DisplayStyle.EDITOR -> renderToSpannable(content.toString(), RenderMode.EDIT, allSteps, context)
             DisplayStyle.AUTO -> content
         }
+    }
+
+    fun renderPreviewPillView(
+        context: Context,
+        parent: ViewGroup,
+        previewPill: PreviewPillModel,
+        allSteps: List<ActionStep>
+    ): View {
+        val inflater = LayoutInflater.from(context)
+        val displayStyle = when (previewPill.type) {
+            PreviewPillType.SUMMARY -> DisplayStyle.SUMMARY
+            PreviewPillType.RICH_TEXT -> DisplayStyle.RICH_TEXT
+        }
+        val view = when (previewPill.type) {
+            PreviewPillType.SUMMARY,
+            PreviewPillType.RICH_TEXT -> {
+                inflater.inflate(R.layout.partial_rich_text_preview, parent, false).apply {
+                    findViewById<TextView>(R.id.rich_text_preview_content).text = renderDisplayText(
+                        context = context,
+                        content = previewPill.content,
+                        allSteps = allSteps,
+                        style = displayStyle
+                    )
+                }
+            }
+        }
+
+        view.layoutParams = ViewGroup.MarginLayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            topMargin = (8 * context.resources.displayMetrics.density).toInt()
+        }
+        return view
     }
 
     private fun resolveDisplayStyle(

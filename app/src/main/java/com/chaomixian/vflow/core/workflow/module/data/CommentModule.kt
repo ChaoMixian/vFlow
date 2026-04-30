@@ -2,15 +2,12 @@ package com.chaomixian.vflow.core.workflow.module.data
 
 import android.content.Context
 import android.content.Intent
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 
 class CommentModule : BaseModule() {
     override val id = "vflow.data.comment"
@@ -78,23 +75,23 @@ class CommentUIProvider : ModuleUIProvider {
     /**
      * 始终创建预览视图，无论内容是否复杂
      */
+    override fun createPreviewPills(
+        context: Context,
+        step: ActionStep,
+        allSteps: List<ActionStep>,
+        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
+    ): List<PreviewPillModel> {
+        val rawText = step.parameters["content"]?.toString() ?: ""
+        return listOf(
+            PreviewPillModel(
+                type = PreviewPillType.RICH_TEXT,
+                content = rawText
+            )
+        )
+    }
+
     override fun createPreview(
         context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): View? {
-        val rawText = step.parameters["content"]?.toString() ?: ""
-
-        val inflater = LayoutInflater.from(context)
-        val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
-        val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
-
-        textView.text = PillRenderer.renderDisplayText(
-            context = context,
-            content = rawText,
-            allSteps = allSteps,
-            style = PillRenderer.DisplayStyle.RICH_TEXT
-        )
-
-        return previewView
-    }
+    ): View? = null
 }
