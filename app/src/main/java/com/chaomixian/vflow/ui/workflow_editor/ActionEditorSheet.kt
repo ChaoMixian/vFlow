@@ -12,6 +12,7 @@ import android.widget.*
 import androidx.core.view.isVisible
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.core.workflow.model.ActionStepExecutionSettings
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.common.ModuleDetailDialog
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -43,7 +44,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     var onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
     private val inputViews = mutableMapOf<String, View>()
     private var customEditorHolder: CustomEditorViewHolder? = null
-    private val currentParameters = mutableMapOf<String, Any?>()
+    private val currentParameters = ActionEditorSessionState()
 
     // 引用容器视图
     private var customUiCard: MaterialCardView? = null
@@ -63,15 +64,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     companion object {
         // 单次编辑会话的展开状态缓存
         private val expandedSections = mutableMapOf<String, Boolean>()
-
-        // 异常处理策略相关的常量 Key
-        const val KEY_ERROR_POLICY = "__error_policy"
-        const val KEY_RETRY_COUNT = "__retry_count"
-        const val KEY_RETRY_INTERVAL = "__retry_interval"
-
-        const val POLICY_STOP = "STOP"
-        const val POLICY_SKIP = "SKIP"
-        const val POLICY_RETRY = "RETRY"
 
         /** 创建 ActionEditorSheet 实例。 */
         fun newInstance(
@@ -98,15 +90,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         super.onCreate(savedInstanceState)
         val moduleId = arguments?.getString("moduleId")
         module = moduleId?.let { ModuleRegistry.getModule(it) } ?: return dismiss()
-        existingStep = arguments?.getParcelable("existingStep")
+        existingStep = arguments?.getParcelableCompat("existingStep")
         focusedInputId = arguments?.getString("focusedInputId")
-        allSteps = arguments?.getParcelableArrayList("allSteps")
+        allSteps = arguments?.getParcelableArrayListCompat("allSteps")
         availableNamedVariables = arguments?.getStringArrayList("namedVariables")
 
         // 初始化参数，首先使用模块定义的默认值
-        module.getInputs().forEach { def ->
-            def.defaultValue?.let { currentParameters[def.id] = it }
-        }
+        currentParameters.initializeDefaults(module.getInputs())
         // 然后用步骤已有的参数覆盖默认值
         existingStep?.parameters?.let { currentParameters.putAll(it) }
     }
@@ -155,15 +145,15 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
         saveButton.setOnClickListener {
             readParametersFromUi()
-            readErrorSettingsFromUi() // 读取错误处理配置
+            syncExecutionSettingsFromUi()
 
             val finalParams = existingStep?.parameters?.toMutableMap() ?: mutableMapOf()
-            finalParams.putAll(currentParameters)
+            finalParams.putAll(currentParameters.snapshot())
             val stepForValidation = ActionStep(moduleId = module.id, parameters = finalParams, id = existingStep?.id ?: "")
             // 调用 validate 方法进行验证
             val validationResult = module.validate(stepForValidation, allSteps ?: emptyList())
             if (validationResult.isValid) {
-                onSave?.invoke(ActionStep(module.id, currentParameters))
+                onSave?.invoke(currentParameters.toActionStep(module.id))
                 dismiss()
             } else {
                 Toast.makeText(context, validationResult.errorMessage, Toast.LENGTH_LONG).show()
@@ -181,9 +171,18 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         errorSettingsContent?.removeAllViews()
 
         val radioGroup = RadioGroup(context).apply { orientation = RadioGroup.VERTICAL }
-        val rbStop = RadioButton(context).apply { text = getString(R.string.editor_error_policy_stop); tag = POLICY_STOP }
-        val rbSkip = RadioButton(context).apply { text = getString(R.string.editor_error_policy_skip); tag = POLICY_SKIP }
-        val rbRetry = RadioButton(context).apply { text = getString(R.string.editor_error_policy_retry); tag = POLICY_RETRY }
+        val rbStop = RadioButton(context).apply {
+            text = getString(R.string.editor_error_policy_stop)
+            tag = ActionStepExecutionSettings.POLICY_STOP
+        }
+        val rbSkip = RadioButton(context).apply {
+            text = getString(R.string.editor_error_policy_skip)
+            tag = ActionStepExecutionSettings.POLICY_SKIP
+        }
+        val rbRetry = RadioButton(context).apply {
+            text = getString(R.string.editor_error_policy_retry)
+            tag = ActionStepExecutionSettings.POLICY_RETRY
+        }
 
         radioGroup.addView(rbStop)
         radioGroup.addView(rbSkip)
@@ -196,9 +195,10 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         // 恢复状态
-        val currentPolicy = currentParameters[KEY_ERROR_POLICY] as? String ?: POLICY_STOP
-        val currentRetryCount = (currentParameters[KEY_RETRY_COUNT] as? Number)?.toFloat() ?: 3f
-        val currentRetryInterval = (currentParameters[KEY_RETRY_INTERVAL] as? Number)?.toFloat() ?: 1000f
+        val executionSettings = currentParameters.getExecutionSettings()
+        val currentPolicy = executionSettings.policy
+        val currentRetryCount = executionSettings.retryCount.toFloat()
+        val currentRetryInterval = executionSettings.retryIntervalMillis.toFloat()
 
         // --- 重试次数 ---
         val sliderRetryCount = StandardControlFactory.createSliderWithLabel(
@@ -228,11 +228,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         retryContainer.addView(sliderRetryInterval)
 
         when (currentPolicy) {
-            POLICY_SKIP -> rbSkip.isChecked = true
-            POLICY_RETRY -> rbRetry.isChecked = true
+            ActionStepExecutionSettings.POLICY_SKIP -> rbSkip.isChecked = true
+            ActionStepExecutionSettings.POLICY_RETRY -> rbRetry.isChecked = true
             else -> rbStop.isChecked = true
         }
-        retryContainer.isVisible = (currentPolicy == POLICY_RETRY)
+        retryContainer.isVisible = (currentPolicy == ActionStepExecutionSettings.POLICY_RETRY)
 
         // 获取滑块引用
         val sliderRetryCountView = sliderRetryCount.getChildAt(1) as Slider
@@ -253,117 +253,120 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         errorSettingsContent?.addView(retryContainer)
     }
 
-    /**
-     * 读取异常处理配置到 currentParameters。
-     */
-    private fun readErrorSettingsFromUi() {
+    private fun syncExecutionSettingsFromUi() {
+        currentParameters.setExecutionSettings(readExecutionSettingsFromUi())
+    }
+
+    private fun readExecutionSettingsFromUi(): ActionStepExecutionSettings {
         val selectedId = errorPolicyGroup?.checkedRadioButtonId
         val view = errorPolicyGroup?.findViewById<View>(selectedId ?: -1)
-        val policy = view?.tag as? String ?: POLICY_STOP
+        val policy = view?.tag as? String ?: ActionStepExecutionSettings.POLICY_STOP
 
-        currentParameters[KEY_ERROR_POLICY] = policy
+        return ActionStepExecutionSettings(
+            policy = policy,
+            retryCount = retryCountSlider?.value?.toInt() ?: ActionStepExecutionSettings.DEFAULT_RETRY_COUNT,
+            retryIntervalMillis = retryIntervalSlider?.value?.toLong()
+                ?: ActionStepExecutionSettings.DEFAULT_RETRY_INTERVAL_MS
+        )
+    }
 
-        if (policy == POLICY_RETRY) {
-            currentParameters[KEY_RETRY_COUNT] = retryCountSlider?.value?.toInt() ?: 3
-            currentParameters[KEY_RETRY_INTERVAL] = retryIntervalSlider?.value?.toLong() ?: 1000L
-        } else {
-            // 清理无用参数
-            currentParameters.remove(KEY_RETRY_COUNT)
-            currentParameters.remove(KEY_RETRY_INTERVAL)
+    private fun requestMagicVariableSelection(inputId: String) {
+        readParametersFromUi()
+        onMagicVariableRequested?.invoke(inputId, currentParameters.asMap())
+    }
+
+    private fun mutateSession(
+        readUiFirst: Boolean = false,
+        rebuildMode: RebuildMode = RebuildMode.IMMEDIATE,
+        mutation: ActionEditorSessionState.() -> Unit
+    ) {
+        if (readUiFirst) {
+            readParametersFromUi()
         }
+        mutation(currentParameters)
+        when (rebuildMode) {
+            RebuildMode.NONE -> Unit
+            RebuildMode.IMMEDIATE -> buildUi()
+            RebuildMode.POST -> postBuildUi()
+        }
+    }
+
+    private fun replaceSessionAndRebuild(newParameters: Map<String, Any?>) {
+        currentParameters.replaceAll(newParameters)
+        buildUi()
+    }
+
+    private fun postBuildUi() {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            try {
+                buildUi()
+            } catch (_: Exception) {
+                // 忽略视图已销毁的情况
+            }
+        }
+    }
+
+    private enum class RebuildMode {
+        NONE,
+        IMMEDIATE,
+        POST
     }
 
     /**
      * 构建UI的逻辑。
      */
     private fun buildUi() {
-        // 清空所有容器
+        val uiModel = computeUiModel()
+        applyUiModelCorrections(uiModel)
+        renderUiModel(uiModel)
+    }
+
+    private fun computeUiModel(): EditorUiModel {
+        return ActionEditorUiModelBuilder.build(
+            module = module,
+            sessionState = currentParameters,
+            allSteps = allSteps
+        )
+    }
+
+    private fun applyUiModelCorrections(uiModel: EditorUiModel) {
+        val correctedParameters = uiModel.effectiveParameters
+        if (currentParameters.asMap() != correctedParameters) {
+            currentParameters.replaceAll(correctedParameters)
+        }
+    }
+
+    private fun renderUiModel(uiModel: EditorUiModel) {
         customUiContainer?.removeAllViews()
         genericInputsContainer?.removeAllViews()
         editorActionsContainer?.removeAllViews()
         inputViews.clear()
         customEditorHolder = null
 
-        val stepForUi = ActionStep(module.id, currentParameters)
-        val inputsToShow = module.getDynamicInputs(stepForUi, allSteps)
-
-        // 校正无效的枚举参数值，防止因模块更新导致崩溃
-        inputsToShow.forEach { inputDef ->
-            if (inputDef.staticType == ParameterType.ENUM) {
-                val currentValue = currentParameters[inputDef.id] as? String
-                if (currentValue != null && !inputDef.options.contains(currentValue)) {
-                    // 尝试使用向后兼容映射
-                    val mappedValue = inputDef.normalizeEnumValueOrNull(currentValue)
-                    if (mappedValue != null && inputDef.options.contains(mappedValue)) {
-                        currentParameters[inputDef.id] = mappedValue
-                    } else {
-                        // 映射失败，使用默认值
-                        currentParameters[inputDef.id] = inputDef.defaultValue
-                    }
-                }
-            }
-        }
-
-        val uiProvider = module.uiProvider
-        val editorActions = module.getEditorActions(stepForUi, allSteps)
-        val handledInputIds = uiProvider?.getHandledInputIds() ?: emptySet()
-
-        // 构建自定义 UI
-        if (uiProvider != null && uiProvider !is RichTextUIProvider) {
+        if (uiModel.showCustomUi) {
+            val uiProvider = uiModel.uiProvider ?: return
             customEditorHolder = uiProvider.createEditor(
                 context = requireContext(),
                 parent = customUiContainer!!,
-                currentParameters = currentParameters,
+                currentParameters = uiModel.effectiveParameters,
                 onParametersChanged = { readParametersFromUi() },
-                onMagicVariableRequested = { inputId ->
-                    readParametersFromUi()
-                    this.onMagicVariableRequested?.invoke(inputId, currentParameters)
-                },
+                onMagicVariableRequested = ::requestMagicVariableSelection,
                 allSteps = allSteps,
                 onStartActivityForResult = onStartActivityForResult
             )
             customUiContainer?.addView(customEditorHolder!!.view)
         }
-        customUiCard?.isVisible = uiProvider != null && uiProvider !is RichTextUIProvider
 
-        /**
-         * 检查输入参数是否应该显示。
-         * 优先使用新的 visibility 条件系统，同时保持对 isHidden 的向后兼容。
-         */
-        fun isInputVisible(inputDef: InputDefinition, params: Map<String, Any?>): Boolean {
-            // 如果设置了 visibility 条件，使用新系统
-            inputDef.visibility?.let { visibility ->
-                return visibility.isVisible(params)
-            }
-            // 否则使用传统的 isHidden 标志
-            return !inputDef.isHidden
-        }
+        customUiCard?.isVisible = uiModel.showCustomUi
 
-        // 构建通用参数列表 (分离普通参数和折叠参数)
-        val normalInputs = mutableListOf<InputDefinition>()
-        val foldedInputs = mutableListOf<InputDefinition>()
-
-        inputsToShow.forEach { inputDef ->
-            if (!handledInputIds.contains(inputDef.id) && isInputVisible(inputDef, currentParameters)) {
-                if (inputDef.isFolded) {
-                    foldedInputs.add(inputDef)
-                } else {
-                    normalInputs.add(inputDef)
-                }
-            }
-        }
-
-        // 添加普通参数
-        normalInputs.forEach { inputDef ->
-            val inputView = createViewForInputDefinition(inputDef, genericInputsContainer!!)
+        uiModel.genericInputsSection.fields.forEach { fieldModel ->
+            val inputView = createViewForFieldModel(fieldModel, genericInputsContainer!!)
             genericInputsContainer?.addView(inputView)
-            inputViews[inputDef.id] = inputView
+            inputViews[fieldModel.inputDefinition.id] = inputView
         }
 
-        // 如果有折叠参数，创建“更多设置”区域
-        if (foldedInputs.isNotEmpty()) {
-            // 创建分隔线
-            if (normalInputs.isNotEmpty()) {
+        if (uiModel.advancedInputsSection.isVisible) {
+            if (uiModel.shouldShowAdvancedDivider) {
                 val divider = View(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
@@ -377,20 +380,16 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 genericInputsContainer?.addView(divider)
             }
 
-            // 创建折叠容器结构
-            val advancedSection = createAdvancedSection(foldedInputs)
+            val advancedSection = createAdvancedSection(uiModel.advancedInputsSection.fields)
             genericInputsContainer?.addView(advancedSection)
         }
 
-        // 只有当有通用参数（普通或折叠）时才显示卡片
-        genericInputsCard?.isVisible = normalInputs.isNotEmpty() || foldedInputs.isNotEmpty()
+        genericInputsCard?.isVisible = uiModel.showsAnyGenericInputs
 
-        if (editorActions.isNotEmpty()) {
-            editorActionsContainer?.addView(createEditorActionsSection(editorActions))
-            editorActionsCard?.isVisible = true
-        } else {
-            editorActionsCard?.isVisible = false
+        if (uiModel.editorActionsSection.isVisible) {
+            editorActionsContainer?.addView(createEditorActionsSection(uiModel.editorActionsSection.actions))
         }
+        editorActionsCard?.isVisible = uiModel.editorActionsSection.isVisible
     }
 
     private fun createEditorActionsSection(actions: List<EditorAction>): View {
@@ -428,7 +427,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     /**
      * 动态创建"更多设置"折叠区域。
      */
-    private fun createAdvancedSection(inputs: List<InputDefinition>): View {
+    private fun createAdvancedSection(fields: List<EditorFieldModel>): View {
         val context = requireContext()
         val density = resources.displayMetrics.density
 
@@ -508,11 +507,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         // 填充参数到内容容器
-        inputs.forEach { inputDef ->
-            val inputView = createViewForInputDefinition(inputDef, contentLayout)
+        fields.forEach { fieldModel ->
+            val inputView = createViewForFieldModel(fieldModel, contentLayout)
             contentLayout.addView(inputView)
             // 注册到 inputViews，这样 readParametersFromUi 就能自动读取它们
-            inputViews[inputDef.id] = inputView
+            inputViews[fieldModel.inputDefinition.id] = inputView
         }
 
         // 设置点击事件
@@ -536,13 +535,20 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         return rootLayout
     }
 
+    private fun createViewForFieldModel(fieldModel: EditorFieldModel, parent: ViewGroup): View {
+        return createViewForInputDefinition(fieldModel, parent)
+    }
+
     /**
      * 为输入参数创建视图。
      * 对于 CHIP_GROUP 风格，使用简化的布局（不带标签和魔法变量按钮）。
      * 对于 PICKER 类型，使用带选择器图标的输入框。
      * 对于其他风格，使用完整的参数输入行布局。
      */
-    private fun createViewForInputDefinition(inputDef: InputDefinition, parent: ViewGroup): View {
+    private fun createViewForInputDefinition(fieldModel: EditorFieldModel, parent: ViewGroup): View {
+        val inputDef = fieldModel.inputDefinition
+        val currentValue = fieldModel.currentValue
+
         // CHIP_GROUP 风格不需要魔法变量按钮，使用简化布局
         if (inputDef.inputStyle == InputStyle.CHIP_GROUP) {
             val row = LayoutInflater.from(requireContext()).inflate(R.layout.row_editor_input, null, false)
@@ -555,17 +561,11 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             val chipGroupView = StandardControlFactory.createChipGroup(
                 context = requireContext(),
                 options = inputDef.options,
-                currentValue = currentParameters[inputDef.id] as? String,
+                currentValue = currentValue as? String,
                 onSelectionChanged = { selectedItem ->
                     if (currentParameters[inputDef.id] != selectedItem) {
-                        readParametersFromUi()
-                        currentParameters[inputDef.id] = selectedItem
-                        android.os.Handler(android.os.Looper.getMainLooper()).post {
-                            try {
-                                buildUi()
-                            } catch (e: Exception) {
-                                // 忽略视图已销毁的情况
-                            }
+                        mutateSession(readUiFirst = true, rebuildMode = RebuildMode.POST) {
+                            this[inputDef.id] = selectedItem
                         }
                     }
                 },
@@ -587,7 +587,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
             val pickerInputView = StandardControlFactory.createPickerInput(
                 context = requireContext(),
-                currentValue = currentParameters[inputDef.id],
+                currentValue = currentValue,
                 pickerType = inputDef.pickerType,
                 hint = inputDef.getLocalizedHint(requireContext()),
                 onPickerClicked = {
@@ -603,25 +603,14 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         return StandardControlFactory.createParameterInputRow(
             context = requireContext(),
             inputDef = inputDef,
-            currentValue = currentParameters[inputDef.id],
+            currentValue = currentValue,
             allSteps = allSteps,
-            onMagicVariableRequested = { inputId ->
-                readParametersFromUi()
-                this.onMagicVariableRequested?.invoke(inputId, currentParameters)
-            },
+            onMagicVariableRequested = ::requestMagicVariableSelection,
             onEnumItemSelected = { selectedItem ->
                 // 防止重复触发：只在值真正改变时才处理
                 if (currentParameters[inputDef.id] != selectedItem) {
-                    // 先读取当前UI中的所有参数值，防止切换条件时丢失其他输入框的值
-                    readParametersFromUi()
-                    currentParameters[inputDef.id] = selectedItem
-                    // 使用 Handler 延迟重建UI以避免在事件处理期间冻结
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        try {
-                            buildUi()
-                        } catch (e: Exception) {
-                            // 忽略视图已销毁的情况
-                        }
+                    mutateSession(readUiFirst = true, rebuildMode = RebuildMode.POST) {
+                        this[inputDef.id] = selectedItem
                     }
                 }
             }
@@ -654,8 +643,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
     }
 
     fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {
-        currentParameters.putAll(newParameters)
-        buildUi()
+        mutateSession {
+            putAll(newParameters)
+        }
     }
 
     private fun isVariableReference(value: Any?): Boolean {
@@ -669,7 +659,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
 
         inputViews.forEach { (id, view) ->
-            val stepForUi = ActionStep(module.id, currentParameters)
+            val stepForUi = currentParameters.toActionStep(module.id)
             val inputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == id }
 
             if (inputDef?.supportsRichText == false && isVariableReference(currentParameters[id])) {
@@ -706,8 +696,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
      * 更新输入框的变量。
      */
     fun updateInputWithVariable(inputId: String, variableReference: String) {
-        val stepForUi = ActionStep(module.id, currentParameters)
+        val stepForUi = currentParameters.toActionStep(module.id)
         val inputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == inputId }
+        val path = ParamPath.parse(inputId)
 
         var richTextView: RichTextView? = null
 
@@ -734,66 +725,20 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             return // 直接操作视图后返回，避免重建UI
         }
 
-        if (inputId.contains('.')) {
-            val parts = inputId.split('.', limit = 2)
-            val mainInputId = parts[0]
-            val subKey = parts[1]
-
-            // 获取当前参数值
-            val currentValue = currentParameters[mainInputId]
-
-            if (currentValue is List<*>) {
-                // 如果当前是列表，则按索引更新列表
-                val mutableList = currentValue.toMutableList()
-                val index = subKey.toIntOrNull()
-                // 确保索引有效
-                if (index != null && index >= 0 && index < mutableList.size) {
-                    mutableList[index] = variableReference // 更新指定位置
-                    currentParameters[mainInputId] = mutableList
-                }
-            } else {
-                // 如果是字典或默认情况，按 Map 更新
-                val dict = (currentValue as? Map<*, *>)?.toMutableMap() ?: mutableMapOf()
-                dict[subKey] = variableReference
-                currentParameters[mainInputId] = dict
-            }
-        } else {
-            currentParameters[inputId] = variableReference
+        mutateSession {
+            setPath(path, variableReference)
         }
-        buildUi()
     }
 
     /**
      * 清除输入框的变量。
      */
     fun clearInputVariable(inputId: String) {
-        if (inputId.contains('.')) {
-            val parts = inputId.split('.', limit = 2)
-            val mainInputId = parts[0]
-            val subKey = parts[1]
-
-            val currentValue = currentParameters[mainInputId]
-
-            if (currentValue is List<*>) {
-                // 列表：清除指定索引的内容（置为空字符串）
-                val mutableList = currentValue.toMutableList()
-                val index = subKey.toIntOrNull()
-                if (index != null && index >= 0 && index < mutableList.size) {
-                    mutableList[index] = ""
-                    currentParameters[mainInputId] = mutableList
-                }
-            } else {
-                // 字典：清除指定 Key 的内容
-                val dict = (currentValue as? Map<*, *>)?.toMutableMap() ?: return
-                dict[subKey] = ""
-                currentParameters[mainInputId] = dict
-            }
-        } else {
-            val inputDef = module.getInputs().find { it.id == inputId } ?: return
-            currentParameters[inputId] = inputDef.defaultValue
+        val path = ParamPath.parse(inputId)
+        val topLevelDefaultValue = module.getInputs().find { it.id == path.rootId }?.defaultValue
+        mutateSession {
+            clearPath(path, topLevelDefaultValue)
         }
-        // 清除后重建UI
-        buildUi()
     }
 
     /**
@@ -813,10 +758,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         val newParametersFromServer = module.onParameterUpdated(stepForUpdate, updatedId, updatedValue)
 
         // 使用模块返回的参数集，完全更新编辑器内部的当前参数状态
-        currentParameters.clear()
-        currentParameters.putAll(newParametersFromServer)
-        // 使用新的参数状态，重建整个UI
-        buildUi()
+        replaceSessionAndRebuild(newParametersFromServer)
     }
 
     private fun createBaseViewForInputType(inputDef: InputDefinition, currentValue: Any?): View {
