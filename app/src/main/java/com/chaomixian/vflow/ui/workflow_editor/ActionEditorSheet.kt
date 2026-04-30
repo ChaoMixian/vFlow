@@ -661,34 +661,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         inputViews.forEach { (id, view) ->
             val stepForUi = currentParameters.toActionStep(module.id)
             val inputDef = module.getDynamicInputs(stepForUi, allSteps).find { it.id == id }
-
-            if (inputDef?.supportsRichText == false && isVariableReference(currentParameters[id])) {
-                return@forEach
-            }
-
-            val valueContainer = view.findViewById<ViewGroup>(R.id.input_value_container) ?: return@forEach
-            if (valueContainer.childCount == 0) return@forEach
-
-            val staticView = valueContainer.getChildAt(0)
-
-            val value: Any? = if (inputDef != null) {
-                StandardControlFactory.readValueFromInputRow(view, inputDef)
-            } else {
-                null
-            }
-
-            if (value != null) {
-                val convertedValue: Any? = when (inputDef?.staticType) {
-                    ParameterType.NUMBER -> {
-                        if (inputDef.supportsRichText) value else {
-                            val strVal = value.toString()
-                            strVal.toLongOrNull() ?: strVal.toDoubleOrNull()
-                        }
-                    }
-                    else -> value
-                }
-                currentParameters[id] = convertedValue
-            }
+            val resolvedInputDef = inputDef ?: return@forEach
+            val convertedValue = ActionEditorViewStateReader.readParameterValue(
+                view = view,
+                inputDefinition = resolvedInputDef,
+                currentValue = currentParameters[id]
+            ) ?: return@forEach
+            currentParameters[id] = convertedValue
         }
     }
 
