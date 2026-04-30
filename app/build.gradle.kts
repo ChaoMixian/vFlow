@@ -213,6 +213,14 @@ afterEvaluate {
     }
 }
 
-ndk {
-    abiFilters 'arm64-v8a'
+android {
+    // ... 其他配置
+    defaultConfig {
+        // ... 其他配置
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a")) // 推荐写法
+            // 或者
+            // abiFilters("arm64-v8a", "armeabi-v7a")
+        }
+    }
 }
