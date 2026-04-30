@@ -22,6 +22,7 @@ import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.complex.VScreenElement
+import com.chaomixian.vflow.core.utils.getCompatStableId
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.services.AccessibilityService as VFlowAccessibilityService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
@@ -389,7 +390,7 @@ class UiSelectorModule : BaseModule() {
             "name", "class", "className" -> node.className?.toString()
 
             // 内部 ID
-            "_id" -> node.uniqueId?.toIntOrNull() ?: node.hashCode()
+            "_id" -> node.getCompatStableId()
 
             // 布尔属性
             "clickable" -> node.isClickable
