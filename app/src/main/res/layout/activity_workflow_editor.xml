@@ -126,8 +126,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:contentDescription="@string/workflow_editor_add_action"
-                    app:icon="@drawable/ic_add"
-                    app:layout_overflowIcon="@drawable/ic_add"
+                    app:icon="@drawable/rounded_add_24"
+                    app:layout_overflowIcon="@drawable/rounded_add_24"
                     app:layout_overflowText="@string/workflow_editor_add_action" />
             </com.google.android.material.overflow.OverflowLinearLayout>
 
@@ -139,8 +139,14 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:contentDescription="@string/workflow_editor_execute"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
             app:backgroundTint="?attr/colorTertiaryContainer"
-            app:srcCompat="@drawable/ic_play_arrow"
+            app:borderWidth="0dp"
+            app:elevation="0dp"
+            app:hoveredFocusedTranslationZ="0dp"
+            app:pressedTranslationZ="0dp"
+            app:srcCompat="@drawable/rounded_play_arrow_fill_24"
             app:tint="?attr/colorOnTertiaryContainer" />
 
     </LinearLayout>

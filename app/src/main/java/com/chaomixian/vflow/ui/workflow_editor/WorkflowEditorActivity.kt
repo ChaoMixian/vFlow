@@ -211,6 +211,7 @@ class WorkflowEditorActivity : BaseActivity() {
         undoButton = findViewById(R.id.button_undo_edit)
         executeButton = findViewById(R.id.button_execute_workflow)
         recyclerView = findViewById(R.id.recycler_view_action_steps)
+        configureExecuteButtonShadow()
 
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar_editor)
@@ -1585,8 +1586,19 @@ class WorkflowEditorActivity : BaseActivity() {
             executeButton.setImageResource(R.drawable.rounded_pause_24)
         } else {
             executeButton.contentDescription = getString(R.string.workflow_editor_execute)
-            executeButton.setImageResource(R.drawable.ic_play_arrow)
+            executeButton.setImageResource(R.drawable.rounded_play_arrow_fill_24)
         }
+    }
+
+    private fun configureExecuteButtonShadow() {
+        // FAB has both base elevation and state-driven translationZ/elevation behavior.
+        // Clear all of them so we keep the FAB interaction/shape without the shadow.
+        executeButton.stateListAnimator = null
+        executeButton.elevation = 0f
+        executeButton.translationZ = 0f
+        executeButton.compatElevation = 0f
+        executeButton.compatHoveredFocusedTranslationZ = 0f
+        executeButton.compatPressedTranslationZ = 0f
     }
 
     private fun isTriggerStep(step: ActionStep): Boolean {
