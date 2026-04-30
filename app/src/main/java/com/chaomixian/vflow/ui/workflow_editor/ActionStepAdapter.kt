@@ -242,7 +242,12 @@ class ActionStepAdapter(
             triggerSteps.forEachIndexed { index, step ->
                 val module = ModuleRegistry.getModule(step.moduleId) ?: return@forEachIndexed
                 val rawSummary = module.getSummary(itemView.context, step)
-                val summary = PillRenderer.renderPills(itemView.context, rawSummary, allSteps, step)
+                val summary = PillRenderer.renderDisplayText(
+                    context = itemView.context,
+                    content = rawSummary,
+                    allSteps = allSteps,
+                    style = PillRenderer.DisplayStyle.SUMMARY
+                )
                     ?: module.metadata.getLocalizedName(itemView.context)
                 val cardTitle = buildStepHeader(itemView.context, summary, null)
                 val embeddedCard = inflater.inflate(R.layout.item_action_step, triggerContainer, false)
@@ -275,7 +280,12 @@ class ActionStepAdapter(
         fun bind(step: ActionStep, actualPosition: Int, displayIndex: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
             val rawSummary = module.getSummary(context, step)
-            val summary = PillRenderer.renderPills(context, rawSummary, allSteps, step)
+            val summary = PillRenderer.renderDisplayText(
+                context = context,
+                content = rawSummary,
+                allSteps = allSteps,
+                style = PillRenderer.DisplayStyle.SUMMARY
+            )
                 ?: module.metadata.getLocalizedName(context)
             val title = buildStepHeader(context, summary, "#$displayIndex ")
 

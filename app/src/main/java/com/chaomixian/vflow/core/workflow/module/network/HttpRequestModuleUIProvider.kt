@@ -20,7 +20,6 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.google.android.material.textfield.TextInputLayout
@@ -88,8 +87,12 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
             val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
             val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
 
-            val spannable = PillRenderer.renderRichTextToSpannable(context, rawUrl, allSteps)
-            textView.text = spannable
+            textView.text = PillRenderer.renderDisplayText(
+                context = context,
+                content = rawUrl,
+                allSteps = allSteps,
+                style = PillRenderer.DisplayStyle.RICH_TEXT
+            )
 
             return previewView
         }

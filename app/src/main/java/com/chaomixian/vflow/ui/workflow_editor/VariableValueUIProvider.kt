@@ -13,16 +13,22 @@ import android.widget.TextView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
+import com.chaomixian.vflow.core.pill.Pill
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.workflow_editor.pill.AndroidPillBuilder
 
 /**
  * 一个可复用的 ModuleUIProvider，专门用于在步骤卡片中
  * 详细地以内联方式显示字典和列表的内容。
  */
 class VariableValueUIProvider : ModuleUIProvider {
+
+    private fun buildSummaryLine(context: Context, prefix: String, value: Any?): CharSequence {
+        return AndroidPillBuilder(context).build(prefix, Pill(value?.toString() ?: "", "value")) as CharSequence
+    }
 
     override fun getHandledInputIds(): Set<String> = setOf("value")
 
@@ -58,8 +64,13 @@ class VariableValueUIProvider : ModuleUIProvider {
                 if (map.isEmpty()) return null
 
                 map.forEach { (key, mapValue) ->
-                    val summaryLine = PillUtil.buildSpannable(context, "$key: ", PillUtil.Pill(mapValue.toString(), "value"))
-                    val renderedLine = PillRenderer.renderPills(context, summaryLine, allSteps, step)
+                    val summaryLine = buildSummaryLine(context, "$key: ", mapValue)
+                    val renderedLine = PillRenderer.renderDisplayText(
+                        context = context,
+                        content = summaryLine,
+                        allSteps = allSteps,
+                        style = PillRenderer.DisplayStyle.SUMMARY
+                    )
                     val textView = createTextView(context, renderedLine ?: "")
                     previewContainer.addView(textView)
                 }
@@ -70,8 +81,13 @@ class VariableValueUIProvider : ModuleUIProvider {
                 if (list.isEmpty()) return null
 
                 list.forEachIndexed { index, item ->
-                    val summaryLine = PillUtil.buildSpannable(context, "${index + 1}. ", PillUtil.Pill(item.toString(), "value"))
-                    val renderedLine = PillRenderer.renderPills(context, summaryLine, allSteps, step)
+                    val summaryLine = buildSummaryLine(context, "${index + 1}. ", item)
+                    val renderedLine = PillRenderer.renderDisplayText(
+                        context = context,
+                        content = summaryLine,
+                        allSteps = allSteps,
+                        style = PillRenderer.DisplayStyle.SUMMARY
+                    )
                     val textView = createTextView(context, renderedLine ?: "")
                     previewContainer.addView(textView)
                 }

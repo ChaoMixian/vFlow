@@ -88,8 +88,12 @@ class CommentUIProvider : ModuleUIProvider {
         val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
         val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
 
-        val spannable = PillRenderer.renderRichTextToSpannable(context, rawText, allSteps)
-        textView.text = spannable
+        textView.text = PillRenderer.renderDisplayText(
+            context = context,
+            content = rawText,
+            allSteps = allSteps,
+            style = PillRenderer.DisplayStyle.RICH_TEXT
+        )
 
         return previewView
     }

@@ -221,7 +221,7 @@ class ScreenOperationModuleUIProvider : ModuleUIProvider {
         if (valStr.isMagicVariable() || valStr.isNamedVariable()) {
             // 变量药丸（支持魔法变量和命名变量）
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, valueContainer, false)
-            val displayName = PillRenderer.getDisplayNameForVariableReference(valStr!!, allSteps ?: emptyList(), context)
+            val displayName = PillRenderer.resolveDisplayName(context, valStr!!, allSteps ?: emptyList())
             pill.findViewById<TextView>(R.id.pill_text).text = displayName
             pill.setOnClickListener { onMagicReq?.invoke(inputDef.id) }
             valueContainer.addView(pill)

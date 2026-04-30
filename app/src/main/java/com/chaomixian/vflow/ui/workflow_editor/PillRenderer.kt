@@ -4,12 +4,15 @@ package com.chaomixian.vflow.ui.workflow_editor
 
 import android.content.Context
 import android.graphics.*
+import android.text.Spanned
 import android.text.SpannableStringBuilder
 import android.text.style.ReplacementSpan
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.workflow_editor.pill.ParameterPillSpan
 import com.chaomixian.vflow.ui.workflow_editor.pill.PillTheme
 import com.chaomixian.vflow.ui.workflow_editor.pill.PillVariableResolver
 import kotlin.math.roundToInt
@@ -29,11 +32,78 @@ import kotlin.math.roundToInt
 object PillRenderer {
 
     /**
+     * 显示样式。
+     * AUTO 会根据内容自动判断当前更适合的 pill 渲染方式。
+     */
+    enum class DisplayStyle {
+        AUTO,
+        PLAIN,
+        SUMMARY,
+        RICH_TEXT,
+        EDITOR
+    }
+
+    /**
      * 渲染模式枚举
      * EDIT: 编辑模式，用于 EditText，保留原始变量引用
      * PREVIEW: 预览模式，用于 TextView，显示为友好名称
      */
     enum class RenderMode { EDIT, PREVIEW }
+
+    fun resolveDisplayName(
+        context: Context,
+        variableReference: String,
+        allSteps: List<ActionStep>
+    ): String {
+        return PillVariableResolver.resolveVariable(context, variableReference, allSteps)?.displayName
+            ?: fallbackDisplayName(variableReference)
+    }
+
+    /**
+     * 统一的显示入口。
+     *
+     * 它会根据内容类型和显式样式决定采用：
+     * - 结构化摘要 pill 渲染
+     * - 富文本变量 pill 渲染
+     * - 编辑器渲染
+     * - 原样文本
+     */
+    fun renderDisplayText(
+        context: Context,
+        content: CharSequence?,
+        allSteps: List<ActionStep>,
+        style: DisplayStyle = DisplayStyle.AUTO
+    ): CharSequence? {
+        content ?: return null
+        return when (resolveDisplayStyle(content, style)) {
+            DisplayStyle.PLAIN -> content
+            DisplayStyle.SUMMARY -> renderStructuredSummary(context, content, allSteps)
+            DisplayStyle.RICH_TEXT -> renderToSpannable(content.toString(), RenderMode.PREVIEW, allSteps, context)
+            DisplayStyle.EDITOR -> renderToSpannable(content.toString(), RenderMode.EDIT, allSteps, context)
+            DisplayStyle.AUTO -> content
+        }
+    }
+
+    private fun resolveDisplayStyle(
+        content: CharSequence,
+        requestedStyle: DisplayStyle
+    ): DisplayStyle {
+        if (requestedStyle != DisplayStyle.AUTO) {
+            return requestedStyle
+        }
+
+        if (content is Spanned &&
+            content.getSpans(0, content.length, ParameterPillSpan::class.java).isNotEmpty()
+        ) {
+            return DisplayStyle.SUMMARY
+        }
+
+        return if (VariableResolver.hasVariableReference(content.toString())) {
+            DisplayStyle.RICH_TEXT
+        } else {
+            DisplayStyle.PLAIN
+        }
+    }
 
     // ========== 兼容层（已废弃，保留向后兼容） ==========
 
@@ -44,34 +114,21 @@ object PillRenderer {
      */
     @Deprecated("Use PillVariableResolver.resolveVariable() for complete information")
     fun getDisplayNameForVariableReference(variableReference: String, allSteps: List<ActionStep>, context: Context): String {
-        val varInfo = com.chaomixian.vflow.core.execution.VariableInfo.fromReference(variableReference, allSteps)
-        if (varInfo != null) {
-            val propName = when {
-                variableReference.startsWith("[[") -> {
-                    val content = variableReference.removeSurrounding("[[", "]]")
-                    val parts = content.split('.')
-                    if (parts.size > 1) parts[1] else null
-                }
-                variableReference.startsWith("{{") -> {
-                    val content = variableReference.removeSurrounding("{{", "}}")
-                    val parts = content.split('.')
-                    if (parts.size > 2) parts[2] else null
-                }
-                else -> null
-            }
+        return resolveDisplayName(context, variableReference, allSteps)
+    }
 
-            return if (propName != null) {
-                val propDisplay = varInfo.getPropertyDisplayName(context, propName)
-                context.getString(
-                    R.string.magic_variable_property_name,
-                    varInfo.getLocalizedSourceName(context),
-                    propDisplay
-                )
-            } else {
-                varInfo.getLocalizedSourceName(context)
+    private fun fallbackDisplayName(variableReference: String): String {
+        return when {
+            variableReference.isMagicVariable() -> {
+                val content = variableReference.removeSurrounding("{{", "}}")
+                val parts = content.split('.')
+                if (parts.size >= 2) "${parts[0]}.${parts[1]}" else content
             }
+            variableReference.isNamedVariable() -> {
+                variableReference.removeSurrounding("[[", "]]")
+            }
+            else -> variableReference
         }
-        return variableReference
     }
 
     private fun truncate(text: String, maxLength: Int = 11): String {
@@ -90,10 +147,23 @@ object PillRenderer {
         allSteps: List<ActionStep>,
         currentStep: ActionStep
     ): CharSequence? {
+        return renderDisplayText(
+            context = context,
+            content = summary,
+            allSteps = allSteps,
+            style = DisplayStyle.SUMMARY
+        )
+    }
+
+    private fun renderStructuredSummary(
+        context: Context,
+        summary: CharSequence,
+        allSteps: List<ActionStep>
+    ): CharSequence {
         if (summary !is android.text.Spanned) return summary
         val spannable = SpannableStringBuilder(summary)
 
-        spannable.getSpans(0, spannable.length, com.chaomixian.vflow.ui.workflow_editor.pill.ParameterPillSpan::class.java)
+        spannable.getSpans(0, spannable.length, ParameterPillSpan::class.java)
             .reversed().forEach { span ->
                 val start = spannable.getSpanStart(span)
                 val end = spannable.getSpanEnd(span)
@@ -131,7 +201,7 @@ object PillRenderer {
                 val newEnd = start + pillText.length
 
                 spannable.setSpan(RoundedBackgroundSpan(context, color, null, allSteps), start, newEnd, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(com.chaomixian.vflow.ui.workflow_editor.pill.ParameterPillSpan(span.parameterId), start, newEnd, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(ParameterPillSpan(span.parameterId), start, newEnd, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         return spannable
     }
@@ -270,8 +340,12 @@ object PillRenderer {
      * @deprecated 使用 renderToSpannable() 替代
      */
     fun renderRichTextToSpannable(context: Context, rawText: String, allSteps: List<ActionStep>): SpannableStringBuilder {
-        // 直接委托给新的统一方法，使用 PREVIEW 模式
-        return renderToSpannable(rawText, RenderMode.PREVIEW, allSteps, context)
+        return renderDisplayText(
+            context = context,
+            content = rawText,
+            allSteps = allSteps,
+            style = DisplayStyle.RICH_TEXT
+        ) as SpannableStringBuilder
     }
 
     /**

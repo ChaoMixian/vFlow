@@ -95,24 +95,11 @@ class ListItemAdapter(
             val textView = pillView.findViewById<TextView>(R.id.pill_text)
 
             // 尝试使用 PillVariableResolver 解析变量以获取友好的显示名称
-            val displayName = if (allSteps != null) {
-                PillVariableResolver.resolveVariable(holder.itemView.context, itemValue, allSteps)?.displayName
-            } else {
-                null
-            } ?: run {
-                // Fallback: 提取变量名作为显示文本
-                when {
-                    itemValue.isMagicVariable() -> {
-                        val content = itemValue.removeSurrounding("{{", "}}")
-                        val parts = content.split('.')
-                        if (parts.size >= 2) "${parts[0]}.${parts[1]}" else content
-                    }
-                    itemValue.isNamedVariable() -> {
-                        itemValue.removeSurrounding("[[", "]]")
-                    }
-                    else -> itemValue
-                }
-            }
+            val displayName = PillRenderer.resolveDisplayName(
+                context = holder.itemView.context,
+                variableReference = itemValue,
+                allSteps = allSteps ?: emptyList()
+            )
 
             textView.text = displayName
             holder.valueContainer.addView(pillView)
