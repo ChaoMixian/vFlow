@@ -153,7 +153,7 @@ class DictionaryKVAdapter(
             if (position != RecyclerView.NO_POSITION) {
                 val currentKey = holder.keyEditText.text.toString()
                 if (currentKey.isNotBlank()) {
-                    onMagicClick?.invoke(currentKey)
+                    onMagicClick?.invoke(ParamPath.encodeSegment(currentKey))
                 } else {
                     Toast.makeText(holder.itemView.context, R.string.dictionary_key_required, Toast.LENGTH_SHORT).show()
                 }

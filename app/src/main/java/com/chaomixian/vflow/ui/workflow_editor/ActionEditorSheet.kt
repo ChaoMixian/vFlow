@@ -292,6 +292,22 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         }
     }
 
+    private fun applyParameterUpdate(
+        inputId: String,
+        updatedValue: Any?,
+        readUiFirst: Boolean,
+        rebuildMode: RebuildMode
+    ) {
+        mutateSession(readUiFirst = readUiFirst, rebuildMode = rebuildMode) {
+            val updatedStep = toActionStep(module.id, existingStep?.id ?: "").copy(
+                parameters = snapshot().apply {
+                    this[inputId] = updatedValue
+                }
+            )
+            replaceAll(module.onParameterUpdated(updatedStep, inputId, updatedValue))
+        }
+    }
+
     private fun postBuildUi() {
         android.os.Handler(android.os.Looper.getMainLooper()).post {
             try {
@@ -556,9 +572,12 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                 currentValue = currentValue as? String,
                 onSelectionChanged = { selectedItem ->
                     if (currentParameters[inputDef.id] != selectedItem) {
-                        mutateSession(readUiFirst = true, rebuildMode = RebuildMode.POST) {
-                            this[inputDef.id] = selectedItem
-                        }
+                        applyParameterUpdate(
+                            inputId = inputDef.id,
+                            updatedValue = selectedItem,
+                            readUiFirst = true,
+                            rebuildMode = RebuildMode.POST
+                        )
                     }
                 },
                 optionsStringRes = if (inputDef.optionsStringRes.isNotEmpty()) inputDef.optionsStringRes else null
@@ -601,9 +620,12 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             onEnumItemSelected = { selectedItem ->
                 // 防止重复触发：只在值真正改变时才处理
                 if (currentParameters[inputDef.id] != selectedItem) {
-                    mutateSession(readUiFirst = true, rebuildMode = RebuildMode.POST) {
-                        this[inputDef.id] = selectedItem
-                    }
+                    applyParameterUpdate(
+                        inputId = inputDef.id,
+                        updatedValue = selectedItem,
+                        readUiFirst = true,
+                        rebuildMode = RebuildMode.POST
+                    )
                 }
             }
         )
@@ -636,12 +658,13 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         inputViews.forEach { (id, view) ->
             val inputDef = findDynamicInputDefinition(id)
             val resolvedInputDef = inputDef ?: return@forEach
-            val convertedValue = ActionEditorViewStateReader.readParameterValue(
+            val readResult = ActionEditorViewStateReader.readParameterValue(
                 view = view,
                 inputDefinition = resolvedInputDef,
                 currentValue = currentParameters[id]
-            ) ?: return@forEach
-            currentParameters[id] = convertedValue
+            )
+            if (!readResult.shouldUpdate) return@forEach
+            currentParameters[id] = readResult.value
         }
     }
 

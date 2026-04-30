@@ -158,17 +158,7 @@ object PillRenderer {
     }
 
     private fun fallbackDisplayName(variableReference: String): String {
-        return when {
-            variableReference.isMagicVariable() -> {
-                val content = variableReference.removeSurrounding("{{", "}}")
-                val parts = content.split('.')
-                if (parts.size >= 2) "${parts[0]}.${parts[1]}" else content
-            }
-            variableReference.isNamedVariable() -> {
-                variableReference.removeSurrounding("[[", "]]")
-            }
-            else -> variableReference
-        }
+        return variableReference
     }
 
     private fun truncate(text: String, maxLength: Int = 11): String {
@@ -221,8 +211,11 @@ object PillRenderer {
                     // 纯变量引用：替换为显示名称
                     isPureVariable -> {
                         val resolvedInfo = PillVariableResolver.resolveVariable(context, reference, allSteps)
-                        val displayName = resolvedInfo?.displayName ?: "变量"
-                        pillText = truncate(displayName)
+                        pillText = if (resolvedInfo != null) {
+                            truncate(resolvedInfo.displayName)
+                        } else {
+                            reference
+                        }
                         color = resolvedInfo?.color ?: PillTheme.getColor(context, R.color.variable_pill_color)
                     }
                     // 包含变量引用的混合文本：保持原样，让 RoundedBackgroundSpan 渲染嵌套Pill

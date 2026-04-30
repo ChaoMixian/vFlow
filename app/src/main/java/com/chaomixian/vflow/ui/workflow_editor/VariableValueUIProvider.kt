@@ -13,14 +13,11 @@ import android.widget.TextView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
-import com.chaomixian.vflow.core.pill.Pill
 import com.chaomixian.vflow.core.module.PreviewPillModel
-import com.chaomixian.vflow.core.module.PreviewPillType
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.workflow_editor.pill.AndroidPillBuilder
 
 /**
  * 一个可复用的 ModuleUIProvider，专门用于在步骤卡片中
@@ -29,7 +26,11 @@ import com.chaomixian.vflow.ui.workflow_editor.pill.AndroidPillBuilder
 class VariableValueUIProvider : ModuleUIProvider {
 
     private fun buildSummaryLine(context: Context, prefix: String, value: Any?): CharSequence {
-        return AndroidPillBuilder(context).build(prefix, Pill(value?.toString() ?: "", "value")) as CharSequence
+        return PillUtil.buildSpannable(
+            context,
+            prefix,
+            PillUtil.Pill(value?.toString() ?: "", "value")
+        )
     }
 
     override fun getHandledInputIds(): Set<String> = setOf("value")
@@ -40,44 +41,7 @@ class VariableValueUIProvider : ModuleUIProvider {
         allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
     ): List<PreviewPillModel> {
-        val type = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["type"]?.toString())
-            ?: CreateVariableModule.TYPE_STRING
-        val value = step.parameters["value"]
-
-        if (value is String && (value.isMagicVariable() || value.isNamedVariable())) {
-            return emptyList()
-        }
-        val items = mutableListOf<PreviewPillModel>()
-
-        when (type) {
-            CreateVariableModule.TYPE_DICTIONARY -> {
-                @Suppress("UNCHECKED_CAST")
-                val map = value as? Map<String, Any?> ?: emptyMap()
-                if (map.isEmpty()) return emptyList()
-
-                map.forEach { (key, mapValue) ->
-                    items += PreviewPillModel(
-                        type = PreviewPillType.SUMMARY,
-                        content = buildSummaryLine(context, "$key: ", mapValue)
-                    )
-                }
-            }
-            CreateVariableModule.TYPE_LIST -> {
-                @Suppress("UNCHECKED_CAST")
-                val list = value as? List<Any?> ?: emptyList()
-                if (list.isEmpty()) return emptyList()
-
-                list.forEachIndexed { index, item ->
-                    items += PreviewPillModel(
-                        type = PreviewPillType.SUMMARY,
-                        content = buildSummaryLine(context, "${index + 1}. ", item)
-                    )
-                }
-            }
-            else -> return emptyList()
-        }
-
-        return items
+        return emptyList()
     }
 
     override fun createPreview(

@@ -40,12 +40,14 @@ internal class WorkflowEditorExecutionTracker(
         }
     }
 
-    fun syncExecutionUiForWorkflow(workflow: Workflow?) {
+    fun syncExecutionUiForWorkflow(workflow: Workflow?, preserveRunningInstance: Boolean = false) {
         val workflowId = workflow?.id
         val isRunning = workflowId?.let(isWorkflowRunning) == true
         updateExecuteButton(isRunning)
         if (isRunning) {
-            beginExecutionTracking(requireNotNull(workflowId))
+            if (!(preserveRunningInstance && currentlyExecutingWorkflowId == workflowId)) {
+                beginExecutionTracking(requireNotNull(workflowId))
+            }
         } else {
             clearExecutionTracking()
         }

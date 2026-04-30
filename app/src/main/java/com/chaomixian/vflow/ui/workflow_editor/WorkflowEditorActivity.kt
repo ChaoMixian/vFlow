@@ -1649,7 +1649,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 currentWorkflow = workflowToSave
             }
 
-            executionTracker.syncExecutionUiForWorkflow(workflowToSave)
+            executionTracker.syncExecutionUiForWorkflow(workflowToSave, preserveRunningInstance = true)
 
             toast(R.string.editor_toast_workflow_saved)
 

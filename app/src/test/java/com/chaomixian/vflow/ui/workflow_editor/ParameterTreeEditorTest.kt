@@ -29,6 +29,20 @@ class ParameterTreeEditorTest {
     }
 
     @Test
+    fun `parse encoded dictionary key keeps literal dots and digits`() {
+        val path = ParamPath.parse("value.${ParamPath.encodeSegment("user.name")}.${ParamPath.encodeSegment("0")}")
+
+        assertEquals("value", path.rootId)
+        assertEquals(
+            listOf(
+                ParamPath.Segment.Key("user.name"),
+                ParamPath.Segment.Key("0")
+            ),
+            path.segments
+        )
+    }
+
+    @Test
     fun `set top level value`() {
         val parameters = mutableMapOf<String, Any?>("content" to "old")
 
