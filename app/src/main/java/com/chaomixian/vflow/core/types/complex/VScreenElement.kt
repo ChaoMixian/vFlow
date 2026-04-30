@@ -8,6 +8,7 @@ import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
+import com.chaomixian.vflow.core.utils.getCompatStableId
 
 /**
  * 屏幕控件元素类型的 VObject 实现
@@ -197,7 +198,7 @@ data class VScreenElement(
                 isEditable = node.isEditable,
                 depth = depth,
                 childCount = node.childCount,
-                accessibilityId = node.uniqueId?.toIntOrNull()
+                accessibilityId = node.getCompatStableId()
             )
         }
 

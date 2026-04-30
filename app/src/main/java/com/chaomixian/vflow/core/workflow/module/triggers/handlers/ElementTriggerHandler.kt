@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.complex.VScreenElement
+import com.chaomixian.vflow.core.utils.getCompatStableId
 import com.chaomixian.vflow.core.workflow.model.TriggerSpec
 import com.chaomixian.vflow.core.workflow.module.triggers.*
 import com.chaomixian.vflow.services.ServiceStateBus
@@ -144,7 +145,7 @@ class ElementTriggerHandler : ListeningTriggerHandler() {
                     continue
                 }
 
-                val nodeId = matchedNode.uniqueId?.toIntOrNull() ?: matchedNode.hashCode()
+                val nodeId = matchedNode.getCompatStableId()
 
                 // 3. 同一次检查中去重（避免不同选择器匹配到同一节点重复触发）
                 if (nodeId in matchedThisTime) {
@@ -319,7 +320,7 @@ class ElementTriggerHandler : ListeningTriggerHandler() {
             }
             "viewId" -> node.viewIdResourceName
             "name", "class", "className" -> node.className?.toString()
-            "_id" -> node.uniqueId?.toIntOrNull() ?: node.hashCode()
+            "_id" -> node.getCompatStableId()
             "clickable" -> node.isClickable
             "enabled" -> node.isEnabled
             "checkable" -> node.isCheckable
