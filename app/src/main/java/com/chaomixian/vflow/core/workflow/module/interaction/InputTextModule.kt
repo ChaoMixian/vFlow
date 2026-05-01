@@ -159,11 +159,23 @@ class InputTextModule : BaseModule() {
         // 如果内容复杂（包含变量或长文本），只返回简单文本标题
         if (VariableResolver.isComplex(rawText)) {
             return if (mode == MODE_AUTO) {
-                context.getString(R.string.summary_vflow_interaction_input_text)
+                PillUtil.buildSpannable(
+                    context,
+                    context.getString(R.string.summary_vflow_interaction_input_text),
+                    PillUtil.richTextPreview(rawText)
+                )
             } else {
-                context.getString(R.string.summary_vflow_interaction_input_text_with_mode_prefix) +
-                    modeInput.getLocalizedOptions(context)[modeInput.options.indexOf(mode).coerceAtLeast(0)] +
-                    context.getString(R.string.summary_vflow_interaction_input_text_with_mode_middle)
+                val modePill = PillUtil.createPillFromParam(rawMode, modeInput)
+                val prefix = context.getString(R.string.summary_vflow_interaction_input_text_with_mode_prefix)
+                val middle = context.getString(R.string.summary_vflow_interaction_input_text_with_mode_middle)
+                PillUtil.buildSpannable(
+                    context,
+                    prefix,
+                    modePill,
+                    " ",
+                    middle,
+                    PillUtil.richTextPreview(rawText)
+                )
             }
         }
 

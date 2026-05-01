@@ -169,7 +169,11 @@ class AgentModule : BaseModule() {
 
         // 如果指令复杂，只显示标题
         if (VariableResolver.isComplex(rawInstruction)) {
-            return prefix + metadata.getLocalizedName(context)
+            return PillUtil.buildSpannable(
+                context,
+                prefix + metadata.getLocalizedName(context),
+                PillUtil.richTextPreview(rawInstruction)
+            )
         }
 
         val instructionPill = PillUtil.createPillFromParam(step.parameters["instruction"], getInputs().find { it.id == "instruction" })

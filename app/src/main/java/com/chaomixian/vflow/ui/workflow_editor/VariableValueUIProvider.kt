@@ -11,19 +11,16 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.module.CustomEditorViewHolder
-import com.chaomixian.vflow.core.module.ModuleUIProvider
-import com.chaomixian.vflow.core.module.PreviewPillModel
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 
 /**
- * 一个可复用的 ModuleUIProvider，专门用于在步骤卡片中
+ * 一个可复用的预览 helper，专门用于在步骤卡片中
  * 详细地以内联方式显示字典和列表的内容。
  */
-class VariableValueUIProvider : ModuleUIProvider {
+object VariableValueUIProvider {
 
     private fun buildSummaryLine(context: Context, prefix: String, value: Any?): CharSequence {
         return PillUtil.buildSpannable(
@@ -33,18 +30,7 @@ class VariableValueUIProvider : ModuleUIProvider {
         )
     }
 
-    override fun getHandledInputIds(): Set<String> = setOf("value")
-
-    override fun createPreviewPills(
-        context: Context,
-        step: ActionStep,
-        allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): List<PreviewPillModel> {
-        return emptyList()
-    }
-
-    override fun createPreview(
+    fun createPreview(
         context: Context,
         parent: ViewGroup,
         step: ActionStep,
@@ -111,15 +97,4 @@ class VariableValueUIProvider : ModuleUIProvider {
         }
     }
 
-    override fun createEditor(
-        context: Context, parent: ViewGroup, currentParameters: Map<String, Any?>,
-        onParametersChanged: () -> Unit, onMagicVariableRequested: ((String) -> Unit)?,
-        allSteps: List<ActionStep>?, onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
-    ): CustomEditorViewHolder {
-        throw NotImplementedError("VariableValueUIProvider does not create a custom editor.")
-    }
-
-    override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
-        throw NotImplementedError("VariableValueUIProvider does not read from a custom editor.")
-    }
 }

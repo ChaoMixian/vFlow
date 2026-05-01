@@ -90,12 +90,11 @@ class AIModule : BaseModule() {
         val providerDisplay = getProviderDisplayName(context, provider)
 
         // 如果内容是"复杂"的（多变量或长文本），VariableResolver.isComplex 会返回 true
-        // 此时我们由 createPreview 显示大预览框，摘要只显示简单标题
         if (VariableResolver.isComplex(promptText)) {
             val providerPill = PillUtil.createPillFromParam(step.parameters["provider"], PROVIDER_INPUT_DEFINITION, isModuleOption = true)
             val prefix = context.getString(R.string.summary_vflow_network_ai_prefix)
             val suffix = context.getString(R.string.summary_vflow_network_ai_middle)
-            return PillUtil.buildSpannable(context, prefix, providerPill, suffix)
+            return PillUtil.buildSpannable(context, prefix, providerPill, suffix, PillUtil.richTextPreview(promptText))
         } else {
             // 如果内容简单（单变量或短文本），显示完整的摘要（包含 Prompt 药丸）
             val promptPill = PillUtil.createPillFromParam(step.parameters["prompt"], getInputs().find { it.id == "prompt" })

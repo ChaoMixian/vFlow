@@ -12,7 +12,6 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.*
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -50,8 +49,6 @@ class OperitModule : BaseModule() {
     )
 
     private val modes = listOf(MODE_CHAT, MODE_WORKFLOW)
-
-    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("message")
 
     override fun getInputs(): List<InputDefinition> = listOf(
         // 通用参数
@@ -195,15 +192,19 @@ class OperitModule : BaseModule() {
         OutputDefinition("ai_response", "AI回复", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_operit_ai_response_name),
         OutputDefinition("chat_id", "对话ID", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_operit_chat_id_name),
         OutputDefinition("error", "错误信息", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_operit_error_name)
-    )
+        )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val mode = step.parameters["mode"] as? String ?: MODE_CHAT
 
-        // 使用 RichTextUIProvider 时，getSummary 只返回简单标题
+        // 复杂消息由预览层单独展示，这里只返回简单标题
         // 富文本预览会自动显示在下方
         return when (mode) {
-            MODE_CHAT -> context.getString(R.string.summary_vflow_interaction_operit_send)
+            MODE_CHAT -> PillUtil.buildSpannable(
+                context,
+                context.getString(R.string.summary_vflow_interaction_operit_send),
+                PillUtil.richTextPreview(step.parameters["message"]?.toString())
+            )
             MODE_WORKFLOW -> {
                 val action = step.parameters["workflow_action"] as? String ?: ACTION_TRIGGER_WORKFLOW
                 val actionPill = PillUtil.createPillFromParam(action, getInputs().find { it.id == "workflow_action" })

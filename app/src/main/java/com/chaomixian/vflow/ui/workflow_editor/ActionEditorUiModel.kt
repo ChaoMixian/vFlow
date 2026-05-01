@@ -67,7 +67,7 @@ internal object ActionEditorUiModelBuilder {
         return EditorUiModel(
             uiProvider = uiProvider,
             effectiveParameters = effectiveParameters,
-            showCustomUi = uiProvider != null && uiProvider !is RichTextUIProvider,
+            showCustomUi = uiProvider?.hasCustomEditor() == true,
             genericInputsSection = EditorSectionModel(
                 fields = genericFields,
                 isVisible = genericFields.isNotEmpty()

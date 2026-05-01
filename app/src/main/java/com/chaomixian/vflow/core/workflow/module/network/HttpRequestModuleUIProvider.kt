@@ -16,12 +16,9 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.module.ParameterType
-import com.chaomixian.vflow.core.module.PreviewPillModel
-import com.chaomixian.vflow.core.module.PreviewPillType
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
-import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.google.android.material.textfield.TextInputLayout
@@ -74,50 +71,6 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
     // URL 不在这里处理，让它使用标准控件
     override fun getHandledInputIds(): Set<String> = setOf("method", "headers", "query_params", "body_type", "body", "show_advanced")
-
-    override fun createPreviewPills(
-        context: Context,
-        step: ActionStep,
-        allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): List<PreviewPillModel> {
-        val rawUrl = step.parameters["url"]?.toString() ?: ""
-        if (!VariableResolver.isComplex(rawUrl)) {
-            return emptyList()
-        }
-        return listOf(
-            PreviewPillModel(
-                type = PreviewPillType.RICH_TEXT,
-                content = rawUrl
-            )
-        )
-    }
-
-    override fun createPreview(
-        context: Context,
-        parent: ViewGroup,
-        step: ActionStep,
-        allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): View? {
-        // 为复杂的 URL 创建富文本预览框
-        val rawUrl = step.parameters["url"]?.toString() ?: ""
-        if (VariableResolver.isComplex(rawUrl)) {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
-            val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
-
-            textView.text = PillRenderer.renderDisplayText(
-                context = context,
-                content = rawUrl,
-                allSteps = allSteps,
-                style = PillRenderer.DisplayStyle.RICH_TEXT
-            )
-
-            return previewView
-        }
-        return null
-    }
 
     override fun createEditor(
         context: Context,

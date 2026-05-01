@@ -13,8 +13,6 @@ import android.view.ViewGroup
 import android.widget.TextView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.VariableResolver
-import com.chaomixian.vflow.core.module.PreviewPillModel
-import com.chaomixian.vflow.core.module.PreviewPillType
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -90,29 +88,21 @@ object PillRenderer {
         }
     }
 
-    fun renderPreviewPillView(
+    fun createPreviewTextView(
         context: Context,
         parent: ViewGroup,
-        previewPill: PreviewPillModel,
-        allSteps: List<ActionStep>
+        content: CharSequence,
+        allSteps: List<ActionStep>,
+        style: DisplayStyle
     ): View {
         val inflater = LayoutInflater.from(context)
-        val displayStyle = when (previewPill.type) {
-            PreviewPillType.SUMMARY -> DisplayStyle.SUMMARY
-            PreviewPillType.RICH_TEXT -> DisplayStyle.RICH_TEXT
-        }
-        val view = when (previewPill.type) {
-            PreviewPillType.SUMMARY,
-            PreviewPillType.RICH_TEXT -> {
-                inflater.inflate(R.layout.partial_rich_text_preview, parent, false).apply {
-                    findViewById<TextView>(R.id.rich_text_preview_content).text = renderDisplayText(
-                        context = context,
-                        content = previewPill.content,
-                        allSteps = allSteps,
-                        style = displayStyle
-                    )
-                }
-            }
+        val view = inflater.inflate(R.layout.partial_rich_text_preview, parent, false).apply {
+            findViewById<TextView>(R.id.rich_text_preview_content).text = renderDisplayText(
+                context = context,
+                content = content,
+                allSteps = allSteps,
+                style = style
+            )
         }
 
         view.layoutParams = ViewGroup.MarginLayoutParams(
@@ -163,26 +153,6 @@ object PillRenderer {
 
     private fun truncate(text: String, maxLength: Int = 11): String {
         return if (text.length > maxLength) text.take(maxLength) + "..." else text
-    }
-
-    /**
-     * 渲染 Pills（兼容层，用于 ActionStepAdapter）
-     *
-     * @deprecated 此方法仅供旧代码使用，新代码应使用 renderToSpannable()
-     */
-    @Deprecated("Use renderToSpannable() for new code")
-    fun renderPills(
-        context: Context,
-        summary: CharSequence?,
-        allSteps: List<ActionStep>,
-        currentStep: ActionStep
-    ): CharSequence? {
-        return renderDisplayText(
-            context = context,
-            content = summary,
-            allSteps = allSteps,
-            style = DisplayStyle.SUMMARY
-        )
     }
 
     private fun renderStructuredSummary(
@@ -366,19 +336,6 @@ object PillRenderer {
         }
 
         return spannable
-    }
-
-    /**
-     * 在渲染富文本时，为每个药丸渲染 pill
-     * @deprecated 使用 renderToSpannable() 替代
-     */
-    fun renderRichTextToSpannable(context: Context, rawText: String, allSteps: List<ActionStep>): SpannableStringBuilder {
-        return renderDisplayText(
-            context = context,
-            content = rawText,
-            allSteps = allSteps,
-            style = DisplayStyle.RICH_TEXT
-        ) as SpannableStringBuilder
     }
 
     /**

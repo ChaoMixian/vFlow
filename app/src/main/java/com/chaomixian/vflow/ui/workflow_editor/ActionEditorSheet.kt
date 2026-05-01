@@ -18,6 +18,7 @@ import com.chaomixian.vflow.ui.common.ModuleDetailDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 
 /**
@@ -628,7 +629,43 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                     )
                 }
             }
-        )
+        ).also { row ->
+            bindImmediateDynamicInputUpdates(row, inputDef)
+        }
+    }
+
+    private fun bindImmediateDynamicInputUpdates(row: View, inputDef: InputDefinition) {
+        if (inputDef.staticType != ParameterType.BOOLEAN && inputDef.inputStyle != InputStyle.SWITCH) {
+            return
+        }
+        val toggle = findDescendantMaterialSwitch(row) ?: return
+        toggle.setOnCheckedChangeListener { _, isChecked ->
+            if (currentParameters[inputDef.id] == isChecked) {
+                return@setOnCheckedChangeListener
+            }
+            applyParameterUpdate(
+                inputId = inputDef.id,
+                updatedValue = isChecked,
+                readUiFirst = true,
+                rebuildMode = RebuildMode.POST
+            )
+        }
+    }
+
+    private fun findDescendantMaterialSwitch(root: View): MaterialSwitch? {
+        if (root is MaterialSwitch) {
+            return root
+        }
+        if (root !is ViewGroup) {
+            return null
+        }
+        for (index in 0 until root.childCount) {
+            val match = findDescendantMaterialSwitch(root.getChildAt(index))
+            if (match != null) {
+                return match
+            }
+        }
+        return null
     }
 
     fun updateParametersAndRebuildUi(newParameters: Map<String, Any?>) {
@@ -647,7 +684,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
     private fun mergeCustomEditorParametersFromUi() {
         val uiProvider = module.uiProvider
-        if (uiProvider != null && customEditorHolder != null && uiProvider !is RichTextUIProvider) {
+        if (uiProvider != null && customEditorHolder != null && uiProvider.hasCustomEditor()) {
             currentParameters.putAll(uiProvider.readFromEditor(customEditorHolder!!))
         }
     }

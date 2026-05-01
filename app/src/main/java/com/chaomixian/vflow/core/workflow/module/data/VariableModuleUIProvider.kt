@@ -15,15 +15,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
-import com.chaomixian.vflow.core.module.PreviewPillModel
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.chaomixian.vflow.ui.workflow_editor.ListItemAdapter
+import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.chaomixian.vflow.ui.workflow_editor.VariableValueUIProvider
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -52,8 +51,7 @@ class VariableModuleUIProvider(
 ) : ModuleUIProvider {
 
     // 实例化内部需要用到的 UI 提供者
-    private val richTextUIProvider = RichTextUIProvider("value")
-    private val variableValueUIProvider = VariableValueUIProvider()
+    private val variableValueUIProvider = VariableValueUIProvider
 
     private fun getTypeLabels(context: Context): List<String> {
         return typeOptions.map { CreateVariableModule.getTypeLabel(context, it) }
@@ -67,24 +65,6 @@ class VariableModuleUIProvider(
      * 实现 createPreview 方法。
      * 这个方法现在是预览逻辑的入口点，它会根据变量类型进行分发。
      */
-    override fun createPreviewPills(
-        context: Context,
-        step: ActionStep,
-        allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): List<PreviewPillModel> {
-        val type = CreateVariableModule.TYPE_INPUT_DEFINITION.normalizeEnumValueOrNull(step.parameters["type"] as? String)
-            ?: CreateVariableModule.TYPE_STRING
-        return when (type) {
-            CreateVariableModule.TYPE_STRING ->
-                richTextUIProvider.createPreviewPills(context, step, allSteps, onStartActivityForResult)
-            CreateVariableModule.TYPE_DICTIONARY,
-            CreateVariableModule.TYPE_LIST ->
-                variableValueUIProvider.createPreviewPills(context, step, allSteps, onStartActivityForResult)
-            else -> emptyList()
-        }
-    }
-
     override fun createPreview(
         context: Context,
         parent: ViewGroup,
@@ -96,7 +76,7 @@ class VariableModuleUIProvider(
             ?: CreateVariableModule.TYPE_STRING
         // 根据变量类型，委托给相应的 UIProvider 来创建预览
         return when (type) {
-            CreateVariableModule.TYPE_STRING -> richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
+            CreateVariableModule.TYPE_STRING -> null
             CreateVariableModule.TYPE_DICTIONARY, CreateVariableModule.TYPE_LIST -> variableValueUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
             else -> null // 其他类型（如数字、布尔）不需要自定义预览，返回null即可
         }

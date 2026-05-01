@@ -12,7 +12,6 @@ import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -66,8 +65,6 @@ class ParseJsonModule : BaseModule() {
         )
     )
 
-    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("json")
-
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition(
             id = "first_value",
@@ -99,7 +96,8 @@ class ParseJsonModule : BaseModule() {
                 context,
                 "使用",
                 pathPill,
-                "解析 JSON"
+                "解析 JSON",
+                PillUtil.richTextPreview(rawJson)
             )
         }
 

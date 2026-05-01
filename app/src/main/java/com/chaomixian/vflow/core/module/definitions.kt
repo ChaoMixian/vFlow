@@ -72,32 +72,11 @@ data class EditorAction(
  */
 abstract class CustomEditorViewHolder(val view: View)
 
-enum class PreviewPillType {
-    SUMMARY,
-    RICH_TEXT
-}
-
-data class PreviewPillModel(
-    val type: PreviewPillType,
-    val content: CharSequence
-)
-
 /**
  * 模块用户界面提供者接口。
  * 将模块的 Android View 相关逻辑从核心模块逻辑中分离出来，实现解耦。
  */
 interface ModuleUIProvider {
-    /**
-     * 创建一个或多个预览 pill 模型。
-     * 这是新的多预览协议，允许一个模块提供多个 preview item。
-     * 默认返回空列表，调用方应回退到 createPreview() 兼容旧实现。
-     */
-    fun createPreviewPills(
-        context: Context,
-        step: ActionStep,
-        allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
-    ): List<PreviewPillModel> = emptyList()
 
     /**
      * 创建在工作流步骤卡片中显示的自定义预览视图。
@@ -115,7 +94,7 @@ interface ModuleUIProvider {
         step: ActionStep,
         allSteps: List<ActionStep>,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
-    ): View?
+    ): View? = null
 
     /**
      * 创建用于编辑模块参数的自定义用户界面。
@@ -136,21 +115,27 @@ interface ModuleUIProvider {
         onMagicVariableRequested: ((inputId: String) -> Unit)? = null,
         allSteps: List<ActionStep>? = null,
         onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)? = null
-    ): CustomEditorViewHolder
+    ): CustomEditorViewHolder = object : CustomEditorViewHolder(View(context)) {}
 
     /**
      * 从自定义编辑器界面中读取用户输入的参数值。
      * @param holder 包含编辑器视图的 CustomEditorViewHolder 实例。
      * @return 一个包含参数ID和对应值的 Map。
      */
-    fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?>
+    fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> = emptyMap()
 
     /**
      * 声明此 UI 提供者具体处理了哪些输入参数的界面渲染。
      * 对于在此返回的输入ID，通用的参数编辑界面将不会为它们创建默认的UI控件。
      * @return 一个包含已处理的输入参数ID的集合。
      */
-    fun getHandledInputIds(): Set<String>
+    fun getHandledInputIds(): Set<String> = emptySet()
+
+    /**
+     * 是否提供独立的自定义编辑器。
+     * 预览专用 provider 默认不再需要返回空 ViewHolder。
+     */
+    fun hasCustomEditor(): Boolean = getHandledInputIds().isNotEmpty()
 }
 
 /**

@@ -156,18 +156,27 @@ class CreateVariableModule : BaseModule() {
 
         // 优先检查是否为"复杂内容"。
         // 如果是复杂的（包含多个变量或混合文本），则只返回简单标题。
-        // RichTextUIProvider 会负责渲染预览视图。
+        // 复杂字符串值会由预览层补充展示。
         if (type == TYPE_STRING && VariableResolver.isComplex(rawText)) {
             return if (name.isNullOrBlank()) {
-                context.getString(R.string.summary_vflow_data_create_anon, typeLabel, "")
+                PillUtil.buildSpannable(
+                    context,
+                    context.getString(R.string.summary_vflow_data_create_anon, typeLabel, ""),
+                    PillUtil.richTextPreview(rawText)
+                )
             } else {
                 val namePill = PillUtil.Pill("[[$name]]", "variableName")
-                PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_data_create_variable, "", typeLabel), namePill)
+                PillUtil.buildSpannable(
+                    context,
+                    context.getString(R.string.summary_vflow_data_create_variable, "", typeLabel),
+                    namePill,
+                    PillUtil.richTextPreview(rawText)
+                )
             }
         }
 
         // 如果是字典、列表或坐标，且不是单纯的变量引用
-        // 此时 VariableValueUIProvider 会显示详细预览列表，摘要中隐藏 value pill 以防重复
+        // 此时内部的列表/字典预览会显示详细内容，摘要中隐藏 value pill 以防重复
         if ((type == TYPE_DICTIONARY || type == TYPE_LIST || type == TYPE_COORDINATE) && !rawText.isMagicVariable() && !rawText.isNamedVariable()) {
             return buildSimpleSummary(context, name, type)
         }

@@ -10,7 +10,6 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElement
 import com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 
 /**
  * 文本展示组件
@@ -36,8 +35,6 @@ class UiTextModule : BaseUiComponentModule() {
         category = "UI 组件",
         categoryId = "ui"
     )
-    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("content")
-
     override fun getInputs() = listOf(
         InputDefinition("content", "内容", ParameterType.STRING, acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_ui_component_text_content_name),
         InputDefinition("key", "ID (可选)", ParameterType.STRING, "", isHidden = true, nameStringRes = R.string.param_vflow_ui_component_text_key_name)
@@ -46,9 +43,13 @@ class UiTextModule : BaseUiComponentModule() {
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
         val rawText = step.parameters["content"]?.toString() ?: ""
 
-        // 如果内容复杂（包含变量），只显示模块名称，让 RichTextUIProvider 显示富文本预览卡片
+        // 如果内容复杂（包含变量），只显示模块名称，让预览层显示富文本卡片
         if (VariableResolver.isComplex(rawText)) {
-            return metadata.getLocalizedName(context)
+            return PillUtil.buildSpannable(
+                context,
+                metadata.getLocalizedName(context),
+                PillUtil.richTextPreview(rawText)
+            )
         }
 
         // 内容简单，显示完整的摘要
