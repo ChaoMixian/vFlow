@@ -180,7 +180,12 @@
 # release 混淆改名后会在 GetObjectField 时出现 fid == null
 -keep class com.k2fsa.sherpa.ncnn.** { *; }
 
-# 27. Netty / Reactor / Lettuce 可选依赖 (Android 不需要)
+# 27. ONNX Runtime JNI 会按固定签名反射/构造 Java 类型
+# release 混淆 ai.onnxruntime 包后会在 NodeInfo/ValueInfo 等桥接类型上触发 NoSuchMethodError
+-keep class ai.onnxruntime.** { *; }
+-keep interface ai.onnxruntime.** { *; }
+
+# 28. Netty / Reactor / Lettuce 可选依赖 (Android 不需要)
 -dontwarn io.netty.util.internal.logging.Log4J**
 -dontwarn io.netty.util.internal.logging.Log4J2**
 -dontwarn io.netty.util.internal.Hidden$NettyBlockHoundIntegration
