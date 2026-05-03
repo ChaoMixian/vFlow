@@ -143,6 +143,18 @@ class ActionEditorUiModelBuilderTest {
         assertFalse(uiModel.editorActionsSection.isVisible)
     }
 
+    @Test
+    fun `build still shows custom ui when provider handles no inputs`() {
+        val module = FakeActionModule(
+            inputs = listOf(InputDefinition("title", "Title", ParameterType.STRING, "")),
+            uiProvider = FakeModuleUiProvider(emptySet())
+        )
+
+        val uiModel = ActionEditorUiModelBuilder.build(module, ActionEditorSessionState(), allSteps = null)
+
+        assertTrue(uiModel.showCustomUi)
+    }
+
     private open class FakeActionModule(
         private val inputs: List<InputDefinition>,
         override val uiProvider: ModuleUIProvider? = null,

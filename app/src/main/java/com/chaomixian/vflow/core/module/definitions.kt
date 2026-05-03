@@ -133,9 +133,9 @@ interface ModuleUIProvider {
 
     /**
      * 是否提供独立的自定义编辑器。
-     * 预览专用 provider 默认不再需要返回空 ViewHolder。
+     * 默认视为存在自定义编辑器；getHandledInputIds 只负责声明哪些输入由自定义 UI 接管。
      */
-    fun hasCustomEditor(): Boolean = getHandledInputIds().isNotEmpty()
+    fun hasCustomEditor(): Boolean = true
 }
 
 /**
