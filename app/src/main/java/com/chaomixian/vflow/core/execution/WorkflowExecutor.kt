@@ -22,6 +22,7 @@ import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.utils.StorageManager
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.core.workflow.model.ActionStepExecutionSettings
 import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.core.workflow.model.WorkflowReentryBehavior
 import com.chaomixian.vflow.core.workflow.module.logic.*
@@ -29,7 +30,6 @@ import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ExecutionNotificationState
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ServiceStateBus
-import com.chaomixian.vflow.ui.workflow_editor.ActionEditorSheet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.TimeoutCancellationException
 import java.io.File
@@ -538,14 +538,15 @@ object WorkflowExecutor {
             DebugLogger.d("WorkflowExecutor", "[${workflow.name}][#${pc + 1}] -> 执行: ${module.metadata.name}")
 
             // --- 错误处理与重试逻辑 ---
-            val errorPolicy = step.parameters[ActionEditorSheet.KEY_ERROR_POLICY] as? String ?: ActionEditorSheet.POLICY_STOP
-            val retryCount = (step.parameters[ActionEditorSheet.KEY_RETRY_COUNT] as? Number)?.toInt() ?: 3
-            val retryInterval = (step.parameters[ActionEditorSheet.KEY_RETRY_INTERVAL] as? Number)?.toLong() ?: 1000L
+            val executionSettings = ActionStepExecutionSettings.fromParameters(step.parameters)
+            val errorPolicy = executionSettings.policy
+            val retryCount = executionSettings.retryCount
+            val retryInterval = executionSettings.retryIntervalMillis
 
             var attempt = 0
             var finalResult: ExecutionResult? = null
 
-            while (attempt <= retryCount || errorPolicy != ActionEditorSheet.POLICY_RETRY) {
+            while (attempt <= retryCount || errorPolicy != ActionStepExecutionSettings.POLICY_RETRY) {
                 if (attempt > 0) {
                     DebugLogger.w("WorkflowExecutor", "步骤执行失败，正在进行第 $attempt 次重试 (等待 ${retryInterval}ms)...")
                     // 在模块内部进度更新时，也刷新通知
@@ -563,7 +564,7 @@ object WorkflowExecutor {
                 }
 
                 // 只有策略是 RETRY 且是 Failure 时才继续循环
-                if (errorPolicy == ActionEditorSheet.POLICY_RETRY && finalResult is ExecutionResult.Failure) {
+                if (errorPolicy == ActionStepExecutionSettings.POLICY_RETRY && finalResult is ExecutionResult.Failure) {
                     attempt++
                     if (attempt > retryCount) break
                 } else {
@@ -582,7 +583,7 @@ object WorkflowExecutor {
                 is ExecutionResult.Failure -> {
                     DebugLogger.e("WorkflowExecutor", "模块执行失败: ${result.errorTitle} - ${result.errorMessage}")
 
-                    if (errorPolicy == ActionEditorSheet.POLICY_SKIP) {
+                    if (errorPolicy == ActionStepExecutionSettings.POLICY_SKIP) {
                         DebugLogger.w("WorkflowExecutor", "根据策略，跳过错误继续执行。")
 
                         // 1. 如果模块提供了 partialOutputs，使用它们作为基础

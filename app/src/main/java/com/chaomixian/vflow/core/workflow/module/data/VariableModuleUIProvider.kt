@@ -23,7 +23,6 @@ import com.chaomixian.vflow.ui.workflow_editor.ListItemAdapter
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.chaomixian.vflow.ui.workflow_editor.VariableValueUIProvider
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -52,8 +51,7 @@ class VariableModuleUIProvider(
 ) : ModuleUIProvider {
 
     // 实例化内部需要用到的 UI 提供者
-    private val richTextUIProvider = RichTextUIProvider("value")
-    private val variableValueUIProvider = VariableValueUIProvider()
+    private val variableValueUIProvider = VariableValueUIProvider
 
     private fun getTypeLabels(context: Context): List<String> {
         return typeOptions.map { CreateVariableModule.getTypeLabel(context, it) }
@@ -78,12 +76,11 @@ class VariableModuleUIProvider(
             ?: CreateVariableModule.TYPE_STRING
         // 根据变量类型，委托给相应的 UIProvider 来创建预览
         return when (type) {
-            CreateVariableModule.TYPE_STRING -> richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
+            CreateVariableModule.TYPE_STRING -> null
             CreateVariableModule.TYPE_DICTIONARY, CreateVariableModule.TYPE_LIST -> variableValueUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
             else -> null // 其他类型（如数字、布尔）不需要自定义预览，返回null即可
         }
     }
-
 
     override fun createEditor(
         context: Context,
@@ -248,7 +245,7 @@ class VariableModuleUIProvider(
         if (type != CreateVariableModule.TYPE_STRING && currentValue is String && (currentValue.isMagicVariable() || currentValue.isNamedVariable())) {
             val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, holder.valueContainer, false)
             val pillText = pill.findViewById<TextView>(R.id.pill_text)
-            pillText.text = PillRenderer.getDisplayNameForVariableReference(currentValue, holder.allSteps ?: emptyList(), context)
+            pillText.text = PillRenderer.resolveDisplayName(context, currentValue, holder.allSteps ?: emptyList())
 
             // 允许点击药丸重新选择（包括“清除”以恢复列表编辑）
             pill.setOnClickListener {
@@ -381,7 +378,7 @@ class VariableModuleUIProvider(
                     // 显示变量药丸
                     val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, xValueContainer, false)
                     val pillText = pill.findViewById<TextView>(R.id.pill_text)
-                    pillText.text = PillRenderer.getDisplayNameForVariableReference(currentX, holder.allSteps ?: emptyList(), context)
+                    pillText.text = PillRenderer.resolveDisplayName(context, currentX, holder.allSteps ?: emptyList())
                     pill.setOnClickListener {
                         holder.onMagicVariableRequested?.invoke("value.x")
                     }
@@ -422,7 +419,7 @@ class VariableModuleUIProvider(
                     // 显示变量药丸
                     val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, yValueContainer, false)
                     val pillText = pill.findViewById<TextView>(R.id.pill_text)
-                    pillText.text = PillRenderer.getDisplayNameForVariableReference(currentY, holder.allSteps ?: emptyList(), context)
+                    pillText.text = PillRenderer.resolveDisplayName(context, currentY, holder.allSteps ?: emptyList())
                     pill.setOnClickListener {
                         holder.onMagicVariableRequested?.invoke("value.y")
                     }

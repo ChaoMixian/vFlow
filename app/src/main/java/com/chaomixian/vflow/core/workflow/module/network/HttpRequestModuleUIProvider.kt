@@ -16,11 +16,8 @@ import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.module.ParameterType
-import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
-import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.google.android.material.textfield.TextInputLayout
@@ -73,28 +70,6 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
 
     // URL 不在这里处理，让它使用标准控件
     override fun getHandledInputIds(): Set<String> = setOf("method", "headers", "query_params", "body_type", "body", "show_advanced")
-
-    override fun createPreview(
-        context: Context,
-        parent: ViewGroup,
-        step: ActionStep,
-        allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): View? {
-        // 为复杂的 URL 创建富文本预览框
-        val rawUrl = step.parameters["url"]?.toString() ?: ""
-        if (VariableResolver.isComplex(rawUrl)) {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.partial_rich_text_preview, parent, false)
-            val textView = previewView.findViewById<TextView>(R.id.rich_text_preview_content)
-
-            val spannable = PillRenderer.renderRichTextToSpannable(context, rawUrl, allSteps)
-            textView.text = spannable
-
-            return previewView
-        }
-        return null
-    }
 
     override fun createEditor(
         context: Context,
@@ -251,11 +226,6 @@ class HttpRequestModuleUIProvider : ModuleUIProvider {
                 val richTextView = richEditorLayout.findViewById<RichTextView>(R.id.rich_text_view)
 
                 richTextView.setRichText(currentValue?.toString() ?: "", holder.allSteps ?: emptyList())
-
-                // 为"文件"类型添加类型过滤，只允许图片类型变量
-                if (bodyType == BODY_TYPE_FILE) {
-                    richTextView.setVariableTypeFilter(setOf(VTypeRegistry.IMAGE.id))
-                }
 
                 richTextView.tag = "body"
 

@@ -126,7 +126,8 @@ class ActionStepAdapter(
         cardView: View,
         step: ActionStep,
         actualPosition: Int,
-        title: CharSequence,
+        rawSummary: CharSequence?,
+        prefixText: String?,
         allSteps: List<ActionStep>,
         indentLevel: Int,
         isDeletable: Boolean,
@@ -153,14 +154,50 @@ class ActionStepAdapter(
         categoryColorBar.background = drawable
 
         contentContainer.removeAllViews()
-        val headerView = createHeaderRow(
+        val summarySegments = buildSummarySegments(
             context = context,
-            summary = title,
-            clickTarget = cardView,
-            onParameterPillClick = onParameterPillClick,
-            onFallbackClick = onClick
-        )
-        contentContainer.addView(headerView)
+            rawSummary = rawSummary,
+            allSteps = allSteps
+        ).ifEmpty {
+            listOf(module.metadata.getLocalizedName(context) as Any)
+        }
+
+        var prefixApplied = false
+        summarySegments.forEach { segment ->
+            when (segment) {
+                is CharSequence -> {
+                    val summary = if (!prefixApplied) {
+                        prefixApplied = true
+                        buildStepHeader(context, segment, prefixText)
+                    } else {
+                        segment
+                    }
+                    val headerView = createHeaderRow(
+                        context = context,
+                        summary = summary,
+                        clickTarget = cardView,
+                        onParameterPillClick = onParameterPillClick,
+                        onFallbackClick = onClick
+                    )
+                    contentContainer.addView(headerView)
+                }
+                is PillUtil.RichTextPill -> {
+                    if (segment.onlyWhenComplex &&
+                        !com.chaomixian.vflow.core.execution.VariableResolver.isComplex(segment.rawText)
+                    ) {
+                        return@forEach
+                    }
+                    val previewView = PillRenderer.createPreviewTextView(
+                        context = context,
+                        parent = contentContainer,
+                        content = segment.rawText,
+                        allSteps = allSteps,
+                        style = PillRenderer.DisplayStyle.RICH_TEXT
+                    )
+                    contentContainer.addView(previewView)
+                }
+            }
+        }
 
         val customPreview = module.uiProvider?.createPreview(context, contentContainer, step, allSteps) { intent, callback ->
             onStartActivityForResult(actualPosition, intent, callback)
@@ -182,6 +219,25 @@ class ActionStepAdapter(
         categoryColorBarContainer.setOnLongClickListener {
             onLongPress?.invoke()
             onLongPress != null
+        }
+    }
+
+    private fun buildSummarySegments(
+        context: Context,
+        rawSummary: CharSequence?,
+        allSteps: List<ActionStep>
+    ): List<Any> {
+        return PillUtil.splitSummaryContent(rawSummary).mapNotNull { part ->
+            when (part) {
+                is CharSequence -> PillRenderer.renderDisplayText(
+                    context = context,
+                    content = part,
+                    allSteps = allSteps,
+                    style = PillRenderer.DisplayStyle.SUMMARY
+                )
+                is PillUtil.RichTextPill -> part
+                else -> null
+            }
         }
     }
 
@@ -242,15 +298,13 @@ class ActionStepAdapter(
             triggerSteps.forEachIndexed { index, step ->
                 val module = ModuleRegistry.getModule(step.moduleId) ?: return@forEachIndexed
                 val rawSummary = module.getSummary(itemView.context, step)
-                val summary = PillRenderer.renderPills(itemView.context, rawSummary, allSteps, step)
-                    ?: module.metadata.getLocalizedName(itemView.context)
-                val cardTitle = buildStepHeader(itemView.context, summary, null)
                 val embeddedCard = inflater.inflate(R.layout.item_action_step, triggerContainer, false)
                 bindEmbeddedStepCard(
                     cardView = embeddedCard,
                     step = step,
                     actualPosition = index,
-                    title = cardTitle,
+                    rawSummary = rawSummary,
+                    prefixText = null,
                     allSteps = allSteps,
                     indentLevel = 0,
                     isDeletable = triggerSteps.size > 1,
@@ -275,15 +329,13 @@ class ActionStepAdapter(
         fun bind(step: ActionStep, actualPosition: Int, displayIndex: Int, allSteps: List<ActionStep>) {
             val module = ModuleRegistry.getModule(step.moduleId) ?: return
             val rawSummary = module.getSummary(context, step)
-            val summary = PillRenderer.renderPills(context, rawSummary, allSteps, step)
-                ?: module.metadata.getLocalizedName(context)
-            val title = buildStepHeader(context, summary, "#$displayIndex ")
 
             bindEmbeddedStepCard(
                 cardView = itemView,
                 step = step,
                 actualPosition = actualPosition,
-                title = title,
+                rawSummary = rawSummary,
+                prefixText = "#$displayIndex ",
                 allSteps = allSteps,
                 indentLevel = step.indentationLevel,
                 isDeletable = module.blockBehavior.isIndividuallyDeletable ||

@@ -18,9 +18,6 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -29,9 +26,6 @@ import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 
 class AIModuleUIProvider : ModuleUIProvider {
-    // 实例化 RichTextUIProvider，指定要预览的字段为 "prompt"
-    private val richTextUIProvider = RichTextUIProvider("prompt")
-
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val providerGroup: ChipGroup = view.findViewById(R.id.cg_provider)
         val chipOpenAI: Chip = view.findViewById(R.id.chip_openai)
@@ -59,14 +53,6 @@ class AIModuleUIProvider : ModuleUIProvider {
     override fun getHandledInputIds(): Set<String> = setOf(
         "provider", "api_key", "base_url", "model", "prompt", "system_prompt", "temperature", "show_advanced"
     )
-
-    // 实现 createPreview，委托给 richTextUIProvider
-    override fun createPreview(
-        context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): View? {
-        return richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
-    }
 
     override fun createEditor(
         context: Context,

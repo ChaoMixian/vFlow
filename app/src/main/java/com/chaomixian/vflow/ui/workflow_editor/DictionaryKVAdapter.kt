@@ -93,24 +93,11 @@ class DictionaryKVAdapter(
             val textView = pillView.findViewById<TextView>(R.id.pill_text)
 
             // 尝试使用 PillVariableResolver 解析变量以获取友好的显示名称
-            val displayName = if (allSteps != null) {
-                PillVariableResolver.resolveVariable(holder.itemView.context, item.second, allSteps)?.displayName
-            } else {
-                null
-            } ?: run {
-                // Fallback: 提取变量名作为显示文本
-                when {
-                    item.second.isMagicVariable() -> {
-                        val content = item.second.removeSurrounding("{{", "}}")
-                        val parts = content.split('.')
-                        if (parts.size >= 2) "${parts[0]}.${parts[1]}" else content
-                    }
-                    item.second.isNamedVariable() -> {
-                        item.second.removeSurrounding("[[", "]]")
-                    }
-                    else -> item.second
-                }
-            }
+            val displayName = PillRenderer.resolveDisplayName(
+                context = holder.itemView.context,
+                variableReference = item.second,
+                allSteps = allSteps ?: emptyList()
+            )
 
             textView.text = displayName
             holder.valueContainer.addView(pillView)
@@ -166,7 +153,7 @@ class DictionaryKVAdapter(
             if (position != RecyclerView.NO_POSITION) {
                 val currentKey = holder.keyEditText.text.toString()
                 if (currentKey.isNotBlank()) {
-                    onMagicClick?.invoke(currentKey)
+                    onMagicClick?.invoke(ParamPath.encodeSegment(currentKey))
                 } else {
                     Toast.makeText(holder.itemView.context, R.string.dictionary_key_required, Toast.LENGTH_SHORT).show()
                 }

@@ -19,7 +19,6 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VList
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import org.w3c.dom.Node
 import org.w3c.dom.NodeList
 import org.xml.sax.InputSource
@@ -52,8 +51,6 @@ class ParseXmlModule : BaseModule() {
         ),
         requiredInputIds = setOf("xml", "xpath")
     )
-
-    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("xml")
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -101,7 +98,7 @@ class ParseXmlModule : BaseModule() {
         )
 
         if (VariableResolver.isComplex(rawXml)) {
-            return PillUtil.buildSpannable(context, "使用", xpathPill, "解析 XML")
+            return PillUtil.buildSpannable(context, "使用", xpathPill, "解析 XML", PillUtil.richTextPreview(rawXml))
         }
 
         val xmlPill = PillUtil.createPillFromParam(

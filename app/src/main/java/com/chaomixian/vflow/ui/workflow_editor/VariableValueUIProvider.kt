@@ -11,25 +11,26 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.module.CustomEditorViewHolder
-import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.workflow.module.data.CreateVariableModule
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 
 /**
- * 一个可复用的 ModuleUIProvider，专门用于在步骤卡片中
+ * 一个可复用的预览 helper，专门用于在步骤卡片中
  * 详细地以内联方式显示字典和列表的内容。
  */
-class VariableValueUIProvider : ModuleUIProvider {
+object VariableValueUIProvider {
 
-    override fun getHandledInputIds(): Set<String> = setOf("value")
+    private fun buildSummaryLine(context: Context, prefix: String, value: Any?): CharSequence {
+        return PillUtil.buildSpannable(
+            context,
+            prefix,
+            PillUtil.Pill(value?.toString() ?: "", "value")
+        )
+    }
 
-    /**
-     * 现在会先加载 CardView，再找到内部的 LinearLayout 来填充内容。
-     */
-    override fun createPreview(
+    fun createPreview(
         context: Context,
         parent: ViewGroup,
         step: ActionStep,
@@ -45,11 +46,8 @@ class VariableValueUIProvider : ModuleUIProvider {
         }
 
         val inflater = LayoutInflater.from(context)
-        // 加载整个卡片视图
         val cardView = inflater.inflate(R.layout.partial_variable_preview, parent, false)
-        // 从卡片中找到用于填充内容的容器
         val previewContainer = cardView.findViewById<LinearLayout>(R.id.variable_preview_container)
-
 
         when (type) {
             CreateVariableModule.TYPE_DICTIONARY -> {
@@ -58,10 +56,14 @@ class VariableValueUIProvider : ModuleUIProvider {
                 if (map.isEmpty()) return null
 
                 map.forEach { (key, mapValue) ->
-                    val summaryLine = PillUtil.buildSpannable(context, "$key: ", PillUtil.Pill(mapValue.toString(), "value"))
-                    val renderedLine = PillRenderer.renderPills(context, summaryLine, allSteps, step)
-                    val textView = createTextView(context, renderedLine ?: "")
-                    previewContainer.addView(textView)
+                    val summaryLine = buildSummaryLine(context, "$key: ", mapValue)
+                    val renderedLine = PillRenderer.renderDisplayText(
+                        context = context,
+                        content = summaryLine,
+                        allSteps = allSteps,
+                        style = PillRenderer.DisplayStyle.SUMMARY
+                    )
+                    previewContainer.addView(createTextView(context, renderedLine ?: ""))
                 }
             }
             CreateVariableModule.TYPE_LIST -> {
@@ -70,16 +72,19 @@ class VariableValueUIProvider : ModuleUIProvider {
                 if (list.isEmpty()) return null
 
                 list.forEachIndexed { index, item ->
-                    val summaryLine = PillUtil.buildSpannable(context, "${index + 1}. ", PillUtil.Pill(item.toString(), "value"))
-                    val renderedLine = PillRenderer.renderPills(context, summaryLine, allSteps, step)
-                    val textView = createTextView(context, renderedLine ?: "")
-                    previewContainer.addView(textView)
+                    val summaryLine = buildSummaryLine(context, "${index + 1}. ", item)
+                    val renderedLine = PillRenderer.renderDisplayText(
+                        context = context,
+                        content = summaryLine,
+                        allSteps = allSteps,
+                        style = PillRenderer.DisplayStyle.SUMMARY
+                    )
+                    previewContainer.addView(createTextView(context, renderedLine ?: ""))
                 }
             }
             else -> return null
         }
 
-        // 只有当容器内确实有内容时，才返回整个卡片视图
         return if (previewContainer.childCount > 0) cardView else null
     }
 
@@ -92,15 +97,4 @@ class VariableValueUIProvider : ModuleUIProvider {
         }
     }
 
-    override fun createEditor(
-        context: Context, parent: ViewGroup, currentParameters: Map<String, Any?>,
-        onParametersChanged: () -> Unit, onMagicVariableRequested: ((String) -> Unit)?,
-        allSteps: List<ActionStep>?, onStartActivityForResult: ((Intent, (Int, Intent?) -> Unit) -> Unit)?
-    ): CustomEditorViewHolder {
-        throw NotImplementedError("VariableValueUIProvider does not create a custom editor.")
-    }
-
-    override fun readFromEditor(holder: CustomEditorViewHolder): Map<String, Any?> {
-        throw NotImplementedError("VariableValueUIProvider does not read from a custom editor.")
-    }
 }

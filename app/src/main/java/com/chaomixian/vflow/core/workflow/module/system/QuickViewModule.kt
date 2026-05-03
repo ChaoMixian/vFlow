@@ -21,7 +21,6 @@ import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 
 /**
  * “快速查看”模块。
@@ -52,9 +51,6 @@ class QuickViewModule : BaseModule() {
 
     // 此模块需要悬浮窗权限才能显示UI
     override val requiredPermissions = listOf(PermissionManager.OVERLAY)
-
-    // 使用 RichTextUIProvider 提供富文本预览
-    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("content")
 
     /**
      * 定义模块的输入参数。
@@ -91,8 +87,11 @@ class QuickViewModule : BaseModule() {
 
         // 检查内容是否为复杂内容（包含变量或其他文本的组合）
         if (VariableResolver.isComplex(rawContent)) {
-            // 复杂内容：只显示模块名称，详细内容由 UIProvider 在预览中显示
-            return metadata.getLocalizedName(context)
+            return PillUtil.buildSpannable(
+                context,
+                metadata.getLocalizedName(context),
+                PillUtil.richTextPreview(rawContent)
+            )
         }
 
         // 简单内容：显示完整的摘要（带药丸）

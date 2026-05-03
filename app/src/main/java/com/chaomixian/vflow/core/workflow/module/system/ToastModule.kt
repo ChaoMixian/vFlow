@@ -13,7 +13,6 @@ import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -42,7 +41,6 @@ class ToastModule : BaseModule() {
         requiredInputIds = setOf("message")
     )
 
-    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("message")
     override val requiredPermissions = listOf(PermissionManager.NOTIFICATIONS)
 
     override fun getInputs(): List<InputDefinition> = listOf(
@@ -73,7 +71,11 @@ class ToastModule : BaseModule() {
 
         // [修改] 直接使用 VariableResolver 的通用判断逻辑，删除本地冗余代码
         if (VariableResolver.isComplex(rawText)) {
-            return metadata.getLocalizedName(context)
+            return PillUtil.buildSpannable(
+                context,
+                metadata.getLocalizedName(context),
+                PillUtil.richTextPreview(rawText)
+            )
         } else {
             // 内容简单，显示完整的摘要
             val messagePill = PillUtil.createPillFromParam(

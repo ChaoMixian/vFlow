@@ -10,7 +10,6 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 
 class ModifyVariableModule : BaseModule() {
     override val id = "vflow.variable.modify"
@@ -34,8 +33,6 @@ class ModifyVariableModule : BaseModule() {
         ),
         requiredInputIds = setOf("variable", "newValue")
     )
-
-    override val uiProvider: ModuleUIProvider? = RichTextUIProvider("newValue")
 
     override fun getInputs(): List<InputDefinition> = listOf(
         InputDefinition(
@@ -67,12 +64,12 @@ class ModifyVariableModule : BaseModule() {
             getInputs().find { it.id == "variable" }
         )
 
-        // 如果新值是复杂内容，RichTextUIProvider 会显示预览，这里只显示变量名
+        // 如果新值是复杂内容，预览层会显示富文本内容，这里只显示变量名
         val rawValue = step.parameters["newValue"]?.toString() ?: ""
         if (VariableResolver.isComplex(rawValue)) {
             val prefix = context.getString(R.string.summary_vflow_variable_modify_prefix)
             val middle = context.getString(R.string.summary_vflow_variable_modify_middle)
-            return PillUtil.buildSpannable(context, prefix, namePill, middle)
+            return PillUtil.buildSpannable(context, prefix, namePill, middle, PillUtil.richTextPreview(rawValue))
         }
 
         val valuePill = PillUtil.createPillFromParam(

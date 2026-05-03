@@ -16,9 +16,6 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.workflow_editor.PillRenderer
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -31,8 +28,6 @@ class AgentModuleUIProvider : ModuleUIProvider {
         private const val PROVIDER_BIGMODEL = "bigmodel"
         private const val PROVIDER_CUSTOM = "custom"
     }
-
-    private val richTextUIProvider = RichTextUIProvider("instruction")
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val providerGroup: ChipGroup = view.findViewById(R.id.cg_provider)
@@ -56,13 +51,6 @@ class AgentModuleUIProvider : ModuleUIProvider {
     override fun getHandledInputIds(): Set<String> = setOf(
         "provider", "base_url", "model", "api_key", "instruction", "max_steps"
     )
-
-    override fun createPreview(
-        context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): View? {
-        return richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
-    }
 
     override fun createEditor(
         context: Context,

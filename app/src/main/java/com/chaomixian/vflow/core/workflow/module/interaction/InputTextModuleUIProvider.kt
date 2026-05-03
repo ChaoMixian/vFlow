@@ -15,14 +15,11 @@ import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.workflow_editor.RichTextUIProvider
 import com.chaomixian.vflow.ui.workflow_editor.RichTextView
 import com.chaomixian.vflow.ui.workflow_editor.StandardControlFactory
 import com.google.android.material.textfield.TextInputLayout
 
 class InputTextModuleUIProvider : ModuleUIProvider {
-
-    private val richTextUIProvider = RichTextUIProvider("text")
 
     class ViewHolder(view: View) : CustomEditorViewHolder(view) {
         val textContainer: ViewGroup = view.findViewById(R.id.container_text_input)
@@ -37,13 +34,6 @@ class InputTextModuleUIProvider : ModuleUIProvider {
     }
 
     override fun getHandledInputIds(): Set<String> = setOf("text", "mode", "action_after", "show_advanced")
-
-    override fun createPreview(
-        context: Context, parent: ViewGroup, step: ActionStep, allSteps: List<ActionStep>,
-        onStartActivityForResult: ((Intent, (resultCode: Int, data: Intent?) -> Unit) -> Unit)?
-    ): View? {
-        return richTextUIProvider.createPreview(context, parent, step, allSteps, onStartActivityForResult)
-    }
 
     override fun createEditor(
         context: Context,

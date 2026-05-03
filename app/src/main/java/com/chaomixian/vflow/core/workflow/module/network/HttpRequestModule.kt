@@ -136,8 +136,13 @@ class HttpRequestModule : BaseModule() {
 
         // 检查 URL 是否为复杂内容（包含变量或其他文本的组合）
         if (VariableResolver.isComplex(rawUrl)) {
-            // 复杂内容：只显示方法和模块名称，详细内容由 UIProvider 在预览中显示
-            return PillUtil.buildSpannable(context, method, " ", metadata.name)
+            return PillUtil.buildSpannable(
+                context,
+                method,
+                " ",
+                metadata.name,
+                PillUtil.richTextPreview(rawUrl)
+            )
         }
 
         // 简单内容：显示完整的摘要（带药丸）

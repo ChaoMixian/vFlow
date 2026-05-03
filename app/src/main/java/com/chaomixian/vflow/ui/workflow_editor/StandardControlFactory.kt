@@ -488,10 +488,10 @@ object StandardControlFactory {
     ): View {
         val pill = LayoutInflater.from(context).inflate(R.layout.magic_variable_pill, parent, false)
         val pillText = pill.findViewById<TextView>(R.id.pill_text)
-        pillText.text = PillRenderer.getDisplayNameForVariableReference(
-            variableReference,
-            allSteps ?: emptyList(),
-            context
+        pillText.text = PillRenderer.resolveDisplayName(
+            context = context,
+            variableReference = variableReference,
+            allSteps = allSteps ?: emptyList()
         )
         onClick?.let { pill.setOnClickListener { it() } }
         return pill

@@ -34,7 +34,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
-import com.chaomixian.vflow.core.execution.ExecutionState
 import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.module.*
@@ -66,8 +65,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import java.util.*
 
 /**
@@ -96,10 +93,8 @@ class WorkflowEditorActivity : BaseActivity() {
     private var initialWorkflowJson: String? = null
 
     private var pendingExecutionWorkflow: Workflow? = null
-
-    // 跟踪当前正在执行的工作流 ID（包括未保存的工作流）
-    private var currentlyExecutingWorkflowId: String? = null
-    private var currentlyExecutingExecutionInstanceId: String? = null
+    private lateinit var executionTracker: WorkflowEditorExecutionTracker
+    private lateinit var magicVariableCatalogBuilder: WorkflowEditorMagicVariableCatalogBuilder
 
     private var listBeforeDrag: List<ActionStep>? = null
     private var dragStartPosition: Int = -1
@@ -129,20 +124,14 @@ class WorkflowEditorActivity : BaseActivity() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             pendingExecutionWorkflow?.let {
-                // 记录正在执行的工作流 ID，以便正确跟踪状态
-                currentlyExecutingWorkflowId = it.id
-                currentlyExecutingExecutionInstanceId = null
+                executionTracker.beginExecutionTracking(it.id)
                 toast(getString(R.string.editor_toast_execution_start, it.name))
                 val executionInstanceId = WorkflowExecutor.execute(
                     workflow = it,
                     context = this,
                     triggerStepId = it.manualTrigger()?.id
                 )
-                if (executionInstanceId.isBlank()) {
-                    currentlyExecutingWorkflowId = null
-                } else {
-                    currentlyExecutingExecutionInstanceId = executionInstanceId
-                }
+                executionTracker.finishExecutionLaunch(executionInstanceId)
             }
         }
         pendingExecutionWorkflow = null
@@ -206,14 +195,42 @@ class WorkflowEditorActivity : BaseActivity() {
         applyWindowInsets()
 
         workflowManager = WorkflowManager(this)
+        magicVariableCatalogBuilder = WorkflowEditorMagicVariableCatalogBuilder(this, workflowManager)
+        bindViews()
+        setupExecutionTracker()
+        setupNavigation()
+        setupRecyclerView()
+        setupInspectorInsertController()
+        setupRecyclerFocusDismiss()
+        setupPickerHandler()
+        restoreOrLoadEditorState(savedInstanceState)
+        setupDragAndDrop()
+        setupUndoControls()
+        setupPrimaryActions()
+        observeExecutionState()
+    }
+
+    private fun bindViews() {
         nameEditText = findViewById(R.id.edit_text_workflow_name)
         editorMoreButton = findViewById(R.id.btn_editor_more)
         undoButton = findViewById(R.id.button_undo_edit)
         executeButton = findViewById(R.id.button_execute_workflow)
         recyclerView = findViewById(R.id.recycler_view_action_steps)
         configureExecuteButtonShadow()
+    }
 
+    private fun setupExecutionTracker() {
+        executionTracker = WorkflowEditorExecutionTracker(
+            isWorkflowRunning = WorkflowExecutor::isRunning,
+            stopWorkflowExecution = WorkflowExecutor::stopExecution,
+            updateExecuteButton = ::updateExecuteButton,
+            highlightStep = ::highlightStep,
+            highlightStepAsFailed = ::highlightStepAsFailed,
+            clearHighlight = ::clearHighlight
+        )
+    }
 
+    private fun setupNavigation() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar_editor)
         toolbar.setNavigationOnClickListener { handleExitRequest() }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -221,8 +238,9 @@ class WorkflowEditorActivity : BaseActivity() {
                 handleExitRequest()
             }
         })
+    }
 
-        setupRecyclerView()
+    private fun setupInspectorInsertController() {
         inspectorInsertController = WorkflowInspectorInsertController(
             activity = this,
             actionSteps = actionSteps,
@@ -231,16 +249,18 @@ class WorkflowEditorActivity : BaseActivity() {
             onStepsChanged = { recalculateAndNotify() }
         )
         inspectorInsertController.register()
+    }
 
-        // 点击内容区域时清除标题输入框焦点并关闭键盘
+    private fun setupRecyclerFocusDismiss() {
         recyclerView.setOnTouchListener { _, _ ->
             val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
             imm.hideSoftInputFromWindow(nameEditText.windowToken, 0)
             nameEditText.clearFocus()
             false
         }
+    }
 
-        // 初始化 PickerHandler
+    private fun setupPickerHandler() {
         pickerHandler = PickerHandler(
             activity = this,
             appPickerLauncher = generalIntentLauncher,
@@ -252,108 +272,70 @@ class WorkflowEditorActivity : BaseActivity() {
                 currentEditorSheet?.updateParametersAndRebuildUi(params)
             }
         )
+    }
 
-        // 检查是否有已保存的状态，如果有则恢复，否则才从数据库加载
+    private fun restoreOrLoadEditorState(savedInstanceState: Bundle?) {
         if (savedInstanceState != null) {
-            val savedTriggerSteps = savedInstanceState.getParcelableArrayList<ActionStep>(STATE_TRIGGER_STEPS)
-            val savedSteps = savedInstanceState.getParcelableArrayList<ActionStep>(STATE_ACTION_STEPS)
-            if (savedTriggerSteps != null) {
-                triggerSteps.clear()
-                triggerSteps.addAll(savedTriggerSteps)
-            }
-            if (savedSteps != null) {
-                actionSteps.clear()
-                actionSteps.addAll(savedSteps)
-            }
-            nameEditText.setText(savedInstanceState.getString(STATE_WORKFLOW_NAME))
-
-            // 恢复 currentWorkflow 对象以正确显示执行按钮状态
-            val workflowId = intent.getStringExtra(EXTRA_WORKFLOW_ID)
-            if (workflowId != null) {
-                currentWorkflow = workflowManager.getWorkflow(workflowId)
-                currentWorkflow?.let {
-                    val isRunning = WorkflowExecutor.isRunning(it.id)
-                    updateExecuteButton(isRunning)
-                    if (isRunning) {
-                        currentlyExecutingWorkflowId = it.id
-                        currentlyExecutingExecutionInstanceId = null
-                    }
-                    initialWorkflowJson = gson.toJson(getCurrentWorkflowState())
-                }
-            }
-            recalculateAndNotify() // 通知适配器数据已恢复
-        } else {
-            // 首次创建时，从数据库加载数据
-            loadWorkflowData()
+            restoreEditorState(savedInstanceState)
+            return
         }
+        loadWorkflowData()
+    }
 
-        setupDragAndDrop()
-        setupUndoControls()
+    private fun restoreEditorState(savedInstanceState: Bundle) {
+        restoreSavedSteps(savedInstanceState)
+        nameEditText.setText(savedInstanceState.getString(STATE_WORKFLOW_NAME))
+        restoreCurrentWorkflow()
+        currentWorkflow?.let { initialWorkflowJson = gson.toJson(getCurrentWorkflowState()) }
+        recalculateAndNotify()
+    }
 
-        // “添加动作”按钮现在只负责添加普通动作，不再处理触发器
+    private fun restoreSavedSteps(savedInstanceState: Bundle) {
+        savedInstanceState.getParcelableArrayListCompat<ActionStep>(STATE_TRIGGER_STEPS)?.let {
+            triggerSteps.clear()
+            triggerSteps.addAll(it)
+        }
+        savedInstanceState.getParcelableArrayListCompat<ActionStep>(STATE_ACTION_STEPS)?.let {
+            actionSteps.clear()
+            actionSteps.addAll(it)
+        }
+    }
+
+    private fun restoreCurrentWorkflow() {
+        currentWorkflow = editingWorkflowId()?.let(workflowManager::getWorkflow)
+        executionTracker.syncExecutionUiForWorkflow(currentWorkflow)
+    }
+
+    private fun setupPrimaryActions() {
         findViewById<Button>(R.id.button_add_action).setOnClickListener {
             showActionPicker(isTriggerPicker = false)
         }
         findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow(false) }
+        executeButton.setOnClickListener { handleExecuteButtonClick() }
+        executeButton.setOnLongClickListener { handleExecuteButtonLongClick() }
+        editorMoreButton.setOnClickListener { showEditorMoreOptionsSheet() }
+    }
 
-        executeButton.setOnClickListener {
-            // 如果当前有正在执行的工作流，则停止它
-            if (currentlyExecutingWorkflowId != null &&
-                WorkflowExecutor.isRunning(currentlyExecutingWorkflowId!!)) {
-                WorkflowExecutor.stopExecution(currentlyExecutingWorkflowId!!)
-                return@setOnClickListener
-            }
-
-            val workflowToExecute = buildWorkflowForExecution() ?: return@setOnClickListener
-            executeWorkflow(workflowToExecute)
-        }
-        executeButton.setOnLongClickListener {
-            if (currentlyExecutingWorkflowId != null &&
-                WorkflowExecutor.isRunning(currentlyExecutingWorkflowId!!)) {
-                return@setOnLongClickListener true
-            }
-            showExecuteDelayedMenu()
-            true
+    private fun handleExecuteButtonClick() {
+        if (executionTracker.isCurrentWorkflowExecuting()) {
+            executionTracker.stopTrackedWorkflowExecution()
+            return
         }
 
-        // 更多选项按钮点击事件
-        editorMoreButton.setOnClickListener {
-            showEditorMoreOptionsSheet()
-        }
+        val workflowToExecute = buildWorkflowForExecution() ?: return
+        executeWorkflow(workflowToExecute)
+    }
 
-        lifecycleScope.launch {
-            ExecutionStateBus.stateFlow.collectLatest { state ->
-                // 只处理当前正在执行的工作流的状态
-                val executingId = currentlyExecutingWorkflowId ?: return@collectLatest
-                if (state.workflowId != executingId) return@collectLatest
-                val executingInstanceId = currentlyExecutingExecutionInstanceId
-                if (executingInstanceId != null && state.executionInstanceId != executingInstanceId) {
-                    return@collectLatest
-                }
-
-                when (state) {
-                    is ExecutionState.Running -> {
-                        if (currentlyExecutingExecutionInstanceId == null) {
-                            currentlyExecutingExecutionInstanceId = state.executionInstanceId
-                        }
-                        updateExecuteButton(true)
-                        highlightStep(state.stepIndex)
-                    }
-                    is ExecutionState.Finished, is ExecutionState.Cancelled -> {
-                        currentlyExecutingWorkflowId = null
-                        currentlyExecutingExecutionInstanceId = null
-                        updateExecuteButton(false)
-                        clearHighlight()
-                    }
-                    is ExecutionState.Failure -> {
-                        currentlyExecutingWorkflowId = null
-                        currentlyExecutingExecutionInstanceId = null
-                        updateExecuteButton(false)
-                        highlightStepAsFailed(state.stepIndex)
-                    }
-                }
-            }
+    private fun handleExecuteButtonLongClick(): Boolean {
+        if (executionTracker.isCurrentWorkflowExecuting()) {
+            return true
         }
+        showExecuteDelayedMenu()
+        return true
+    }
+
+    private fun observeExecutionState() {
+        executionTracker.observe(lifecycleScope, ExecutionStateBus.stateFlow)
     }
 
     private fun hasUnsavedChanges(): Boolean {
@@ -667,19 +649,14 @@ class WorkflowEditorActivity : BaseActivity() {
     private fun executeWorkflow(workflow: Workflow) {
         val missingPermissions = PermissionManager.getMissingPermissions(this, workflow)
         if (missingPermissions.isEmpty()) {
-            currentlyExecutingWorkflowId = workflow.id
-            currentlyExecutingExecutionInstanceId = null
+            executionTracker.beginExecutionTracking(workflow.id)
             toast(getString(R.string.editor_toast_execution_start, workflow.name))
             val executionInstanceId = WorkflowExecutor.execute(
                 workflow = workflow,
                 context = this,
                 triggerStepId = workflow.manualTrigger()?.id
             )
-            if (executionInstanceId.isBlank()) {
-                currentlyExecutingWorkflowId = null
-            } else {
-                currentlyExecutingExecutionInstanceId = executionInstanceId
-            }
+            executionTracker.finishExecutionLaunch(executionInstanceId)
         } else {
             pendingExecutionWorkflow = workflow
             val intent = Intent(this, PermissionActivity::class.java).apply {
@@ -691,87 +668,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     /** 提取一个辅助函数以分组形式获取所有可用的命名变量 */
-    private fun getAvailableNamedVariables(upToPosition: Int): Map<String, List<MagicVariableItem>> {
-        // 使用 LinkedHashMap 确保变量按定义顺序排列
-        val availableNamedVariables = linkedMapOf<String, MagicVariableItem>()
-
-        // 收集 CreateVariableModule 创建的变量
-        actionSteps.subList(0, upToPosition)
-            .filter { it.moduleId == CreateVariableModule().id }
-            .forEach { step ->
-                val varName = step.parameters["variableName"] as? String
-                val varType = step.parameters["type"] as? String ?: getString(R.string.variable_type_text)
-                if (!varName.isNullOrBlank()) {
-                    // 使用统一的 VariableType 枚举获取 typeId，消除硬编码映射
-                    val typeEnum = com.chaomixian.vflow.core.execution.VariableType.fromStoredValue(varType)
-                    val typeId = typeEnum?.typeId ?: com.chaomixian.vflow.core.types.VTypeRegistry.ANY.id
-
-                    availableNamedVariables[varName] = MagicVariableItem(
-                        variableReference = "[[$varName]]",
-                        variableName = varName,
-                        originDescription = getString(R.string.error_named_variable, varType),
-                        typeId = typeId
-                    )
-                }
-            }
-
-        // 收集 LoadVariablesModule 声明的变量
-        val workflowManager = WorkflowManager(this)
-        actionSteps.subList(0, upToPosition)
-            .filter { it.moduleId == "vflow.variable.load" }
-            .forEach { step ->
-                val workflowId = step.parameters["workflow_id"] as? String
-                val variableNamesStr = step.parameters["variable_names"] as? String ?: ""
-                val variableNames = variableNamesStr.split(",").map { it.trim() }.filter { it.isNotBlank() }
-
-                if (!workflowId.isNullOrBlank() && variableNames.isNotEmpty()) {
-                    // 获取源工作流
-                    val sourceWorkflow = workflowManager.getWorkflow(workflowId)
-                    if (sourceWorkflow != null) {
-                        // 从源工作流的 CreateVariableModule 获取变量类型
-                        val sourceVariables = sourceWorkflow.steps
-                            .filter { it.moduleId == CreateVariableModule().id }
-                            .associate { step ->
-                                val name = step.parameters["variableName"] as? String ?: ""
-                                val type = step.parameters["type"] as? String ?: getString(R.string.variable_type_text)
-                                name to type
-                            }
-
-                        // 添加 LoadVariablesModule 声明的变量
-                        variableNames.forEach { varName ->
-                            // 避免重复添加（如果已经存在则跳过）
-                            if (!availableNamedVariables.containsKey(varName)) {
-                                val varType = sourceVariables[varName] ?: getString(R.string.variable_type_text)
-                                val typeEnum = com.chaomixian.vflow.core.execution.VariableType.fromStoredValue(varType)
-                                val typeId = typeEnum?.typeId ?: com.chaomixian.vflow.core.types.VTypeRegistry.ANY.id
-
-                                availableNamedVariables[varName] = MagicVariableItem(
-                                    variableReference = "[[$varName]]",
-                                    variableName = varName,
-                                    originDescription = getString(R.string.error_named_variable, varType),
-                                    typeId = typeId
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-        // 将所有命名变量归入一个固定的组
-        return if (availableNamedVariables.isNotEmpty()) {
-            mapOf(getString(R.string.editor_group_named_variables) to availableNamedVariables.values.toList())
-        } else {
-            emptyMap()
-        }
-    }
-
-
     private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
-        val contextPosition = if (position != -1) position else actionSteps.size
-        val namedVariableNames = getAvailableNamedVariables(contextPosition)
-            .values.flatten().map { it.variableName }
-
-
         // 在打开编辑器前，保存旧的变量名
         if (existingStep != null && module.id == CreateVariableModule().id) {
             oldVariableName = existingStep.parameters["variableName"] as? String
@@ -780,7 +677,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
 
-        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps(), namedVariableNames)
+        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -824,7 +721,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun showTriggerEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
-        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps(), emptyList())
+        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -944,118 +841,37 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun showMagicVariablePicker(editingStepPosition: Int, targetInputId: String, editingModule: ActionModule, currentParams: Map<String, Any?>?) {
         val allSteps = getAllEditableSteps()
-        val editingActionIndex = (editingStepPosition - triggerSteps.size).coerceAtLeast(0)
+        val prefs = getSharedPreferences("vFlowPrefs", MODE_PRIVATE)
+        val enableTypeFilter = prefs.getBoolean("enableTypeFilter", false)
+        val pickerModel = magicVariableCatalogBuilder.buildPickerModel(
+            editingStepPosition = editingStepPosition,
+            targetInputId = targetInputId,
+            editingModule = editingModule,
+            currentParams = currentParams,
+            allSteps = allSteps,
+            triggerStepCount = triggerSteps.size,
+            actionSteps = actionSteps,
+            enableTypeFilter = enableTypeFilter,
+            findEnclosingLoopStartStep = ::findEnclosingLoopStartStep,
+            loopPairingId = LOOP_PAIRING_ID,
+            forEachPairingId = FOREACH_PAIRING_ID,
+            loopStartId = LOOP_START_ID,
+            forEachStartId = FOREACH_START_ID
+        )
 
-        // 处理嵌套 ID (例如 "extras.myKey")
-        // 如果 targetInputId 包含点号，则只取第一部分 (extras) 作为 InputDefinition 的 ID 来查找定义
-        val realInputId = if (targetInputId.contains('.')) {
-            targetInputId.split('.', limit = 2)[0]
-        } else {
-            targetInputId
-        }
-
-        // 使用当前参数来查找输入定义，确保能正确处理动态输入（如If/While模块的value1/value2）
-        val stepForPicker = ActionStep(editingModule.id, currentParams ?: emptyMap())
-        val targetInputDef = editingModule.getDynamicInputs(stepForPicker, allSteps).find { it.id == realInputId }
-
-        if (targetInputDef == null) {
+        if (pickerModel == null) {
             toast(getString(R.string.editor_toast_input_definition_not_found, targetInputId))
             return
         }
 
-        // --- 按步骤分组收集魔法变量 ---
-        val prefs = getSharedPreferences("vFlowPrefs", MODE_PRIVATE)
-        val enableTypeFilter = prefs.getBoolean("enableTypeFilter", false)
-        // 使用 LinkedHashMap 确保步骤按倒序排列（序号大的在上面）
-        val groupedStepOutputs = linkedMapOf<String, MutableList<MagicVariableItem>>()
-
-        // 倒序遍历：先添加后面的步骤
-        for (i in (editingStepPosition - 1) downTo 0) {
-            val step = allSteps[i]
-            val module = ModuleRegistry.getModule(step.moduleId) ?: continue
-            // 跳过循环头本身，避免引用自己
-            if (module.id == LOOP_START_ID || module.id == FOREACH_START_ID) continue
-
-            val outputs = module.getDynamicOutputs(step, allSteps).filter { outputDef ->
-                // 当未启用类型限制时（默认），不过滤变量（快捷指令风格）
-                if (!enableTypeFilter) {
-                    true
-                } else {
-                    VTypeRegistry.isTypeOrAnyPropertyAccepted(
-                        outputDef.typeName,
-                        targetInputDef.acceptedMagicVariableTypes
-                    )
-                }
-            }
-
-            if (outputs.isNotEmpty()) {
-                val groupName = buildMagicVariableGroupTitle(i, module.metadata.getLocalizedName(this))
-                val items = outputs.map { outputDef ->
-                    MagicVariableItem(
-                        variableReference = "{{${step.id}.${outputDef.id}}}",
-                        variableName = outputDef.getLocalizedName(this),
-                        originDescription = "(${outputDef.typeName.split('.').last()})",
-                        typeId = outputDef.typeName
-                    )
-                }
-                groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
-            }
-        }
-
-        // --- 获取命名变量 ---
-        val namedVariables = getAvailableNamedVariables(editingActionIndex)
-
-        // --- 动态添加循环变量（先添加，这样倒序时显示在最上面）---
-        val enclosingLoopStep = findEnclosingLoopStartStep(editingActionIndex, LOOP_PAIRING_ID)
-        if (enclosingLoopStep != null) {
-            val loopModule = ModuleRegistry.getModule(enclosingLoopStep.moduleId) as? LoopModule
-            if (loopModule != null) {
-                val loopIndex = actionSteps.indexOf(enclosingLoopStep)
-                val groupName = buildMagicVariableGroupTitle(triggerSteps.size + loopIndex, loopModule.metadata.getLocalizedName(this))
-                val items = loopModule.getDynamicOutputs(enclosingLoopStep, allSteps).map { outputDef ->
-                    MagicVariableItem(
-                        variableReference = "{{${enclosingLoopStep.id}.${outputDef.id}}}",
-                        variableName = outputDef.getLocalizedName(this),
-                        originDescription = "(${outputDef.typeName.split('.').last()})",
-                        typeId = outputDef.typeName
-                    )
-                }
-                groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
-            }
-        }
-
-        val enclosingForEachStep = findEnclosingLoopStartStep(editingActionIndex, FOREACH_PAIRING_ID)
-        if (enclosingForEachStep != null) {
-            val forEachModule = ModuleRegistry.getModule(enclosingForEachStep.moduleId) as? ForEachModule
-            if (forEachModule != null) {
-                val forEachIndex = actionSteps.indexOf(enclosingForEachStep)
-                val groupName = buildMagicVariableGroupTitle(triggerSteps.size + forEachIndex, forEachModule.metadata.getLocalizedName(this))
-                val items = forEachModule.getDynamicOutputs(enclosingForEachStep, allSteps).map { outputDef ->
-                    // 使用 listElementType 作为类型描述（如果有的话）
-                    val typeDescription = when {
-                        outputDef.listElementType != null -> "(${outputDef.listElementType.split('.').last()})"
-                        outputDef.typeName == com.chaomixian.vflow.core.types.VTypeRegistry.ANY.id -> ""
-                        else -> "(${outputDef.typeName.split('.').last()})"
-                    }
-                    MagicVariableItem(
-                        variableReference = "{{${enclosingForEachStep.id}.${outputDef.id}}}",
-                        variableName = outputDef.getLocalizedName(this),
-                        originDescription = typeDescription,
-                        typeId = outputDef.listElementType ?: outputDef.typeName
-                    )
-                }
-                groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
-            }
-        }
-
         // --- 启动选择器 ---
         val picker = MagicVariablePickerSheet.newInstance(
-            groupedStepOutputs,
-            namedVariables,
-            acceptsMagicVariable = targetInputDef.acceptsMagicVariable,
-            acceptsNamedVariable = targetInputDef.acceptsNamedVariable,
-            acceptedMagicVariableTypes = targetInputDef.acceptedMagicVariableTypes,
-            enableTypeFilter = enableTypeFilter
+            pickerModel.stepVariables,
+            pickerModel.namedVariables,
+            acceptsMagicVariable = pickerModel.acceptsMagicVariable,
+            acceptsNamedVariable = pickerModel.acceptsNamedVariable,
+            acceptedMagicVariableTypes = pickerModel.acceptedMagicVariableTypes,
+            enableTypeFilter = pickerModel.enableTypeFilter
         )
 
         picker.onSelection = { selectedItem ->
@@ -1066,15 +882,6 @@ class WorkflowEditorActivity : BaseActivity() {
             }
         }
         picker.show(supportFragmentManager, "MagicVariablePicker")
-    }
-
-    private fun buildMagicVariableGroupTitle(stepPositionInAllSteps: Int, moduleName: String): String {
-        val displayIndex = if (stepPositionInAllSteps < triggerSteps.size) {
-            0
-        } else {
-            stepPositionInAllSteps - triggerSteps.size + 1
-        }
-        return "#$displayIndex $moduleName"
     }
 
 
@@ -1481,7 +1288,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun loadWorkflowData() {
-        val workflowId = intent.getStringExtra(EXTRA_WORKFLOW_ID)
+        val workflowId = editingWorkflowId()
         if (workflowId != null) {
             currentWorkflow = workflowManager.getWorkflow(workflowId)
             currentWorkflow?.let {
@@ -1490,13 +1297,9 @@ class WorkflowEditorActivity : BaseActivity() {
                 actionSteps.clear()
                 triggerSteps.addAll(it.triggers)
                 actionSteps.addAll(it.steps)
-                val isRunning = WorkflowExecutor.isRunning(it.id)
-                updateExecuteButton(isRunning)
-                if (isRunning) {
-                    currentlyExecutingWorkflowId = it.id
-                }
             }
         }
+        executionTracker.syncExecutionUiForWorkflow(currentWorkflow)
 
         val originalSize = triggerSteps.size + actionSteps.size
         val cleanedTriggerSteps = triggerSteps.filter { ModuleRegistry.getModule(it.moduleId) != null }
@@ -1601,6 +1404,8 @@ class WorkflowEditorActivity : BaseActivity() {
         executeButton.compatPressedTranslationZ = 0f
     }
 
+    private fun editingWorkflowId(): String? = intent.getStringExtra(EXTRA_WORKFLOW_ID)
+
     private fun isTriggerStep(step: ActionStep): Boolean {
         return ModuleRegistry.getModule(step.moduleId)?.metadata?.getResolvedCategoryId() == ModuleCategories.TRIGGER
     }
@@ -1685,10 +1490,7 @@ class WorkflowEditorActivity : BaseActivity() {
      * 在指定位置显示参数编辑器，插入新模块
      */
     private fun showActionEditorAtPosition(module: ActionModule, insertPosition: Int) {
-        val namedVariableNames = getAvailableNamedVariables(insertPosition)
-            .values.flatten().map { it.variableName }
-
-        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps(), namedVariableNames)
+        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -1718,7 +1520,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun showTriggerEditorAtPosition(module: ActionModule, insertPosition: Int) {
-        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps(), emptyList())
+        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -1839,8 +1641,7 @@ class WorkflowEditorActivity : BaseActivity() {
                 currentWorkflow = workflowToSave
             }
 
-            // 更新执行按钮状态
-            updateExecuteButton(WorkflowExecutor.isRunning(workflowToSave.id))
+            executionTracker.syncExecutionUiForWorkflow(workflowToSave, preserveRunningInstance = true)
 
             toast(R.string.editor_toast_workflow_saved)
 
