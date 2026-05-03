@@ -669,11 +669,6 @@ class WorkflowEditorActivity : BaseActivity() {
 
     /** 提取一个辅助函数以分组形式获取所有可用的命名变量 */
     private fun showActionEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
-        val contextPosition = if (position != -1) position else actionSteps.size
-        val namedVariableNames = magicVariableCatalogBuilder.buildNamedVariables(actionSteps, contextPosition)
-            .values.flatten().map { it.variableName }
-
-
         // 在打开编辑器前，保存旧的变量名
         if (existingStep != null && module.id == CreateVariableModule().id) {
             oldVariableName = existingStep.parameters["variableName"] as? String
@@ -682,7 +677,7 @@ class WorkflowEditorActivity : BaseActivity() {
         }
 
 
-        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps(), namedVariableNames)
+        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -726,7 +721,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun showTriggerEditor(module: ActionModule, existingStep: ActionStep?, position: Int, focusedInputId: String?) {
-        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps(), emptyList())
+        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -1495,10 +1490,7 @@ class WorkflowEditorActivity : BaseActivity() {
      * 在指定位置显示参数编辑器，插入新模块
      */
     private fun showActionEditorAtPosition(module: ActionModule, insertPosition: Int) {
-        val namedVariableNames = magicVariableCatalogBuilder.buildNamedVariables(actionSteps, insertPosition)
-            .values.flatten().map { it.variableName }
-
-        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps(), namedVariableNames)
+        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -1528,7 +1520,7 @@ class WorkflowEditorActivity : BaseActivity() {
     }
 
     private fun showTriggerEditorAtPosition(module: ActionModule, insertPosition: Int) {
-        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps(), emptyList())
+        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->

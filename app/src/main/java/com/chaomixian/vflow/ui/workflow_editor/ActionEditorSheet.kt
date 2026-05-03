@@ -62,8 +62,7 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
             module: ActionModule,
             existingStep: ActionStep?,
             focusedInputId: String?,
-            allSteps: List<ActionStep>? = null,
-            availableNamedVariables: List<String>? = null
+            allSteps: List<ActionStep>? = null
         ): ActionEditorSheet {
             return ActionEditorSheet().apply {
                 arguments = Bundle().apply {
@@ -71,7 +70,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
                     putParcelable("existingStep", existingStep)
                     putString("focusedInputId", focusedInputId)
                     allSteps?.let { putParcelableArrayList("allSteps", ArrayList(it)) }
-                    availableNamedVariables?.let { putStringArrayList("namedVariables", ArrayList(it)) }
                 }
             }
         }
@@ -91,10 +89,6 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
         // 然后用步骤已有的参数覆盖默认值
         existingStep?.parameters?.let { currentParameters.putAll(it) }
     }
-
-    fun getModule(): ActionModule? = if (::module.isInitialized) module else null
-
-    fun getCurrentParameter(inputDef: InputDefinition): Any? = currentParameters[inputDef.id]
 
     fun setOnPickerRequestedListener(listener: (InputDefinition) -> Unit) {
         onPickerRequested = listener

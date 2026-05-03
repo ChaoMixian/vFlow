@@ -24,7 +24,6 @@ internal object ActionEditorRichTextLocator {
         }
 
         val customRootView = customEditorHolder?.view ?: return null
-        return customRootView.findViewWithTag<RichTextView>(inputId)
-            ?: customRootView.findViewWithTag("rich_text_view_value")
+        return customRootView.findViewWithTag(inputId)
     }
 }

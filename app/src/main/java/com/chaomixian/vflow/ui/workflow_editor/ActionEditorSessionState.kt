@@ -48,8 +48,6 @@ internal class ActionEditorSessionState {
 
     fun snapshot(): MutableMap<String, Any?> = parameters.toMutableMap()
 
-    fun toMutableMap(): MutableMap<String, Any?> = parameters.toMutableMap()
-
     fun toActionStep(moduleId: String, stepId: String = ""): ActionStep {
         return ActionStep(moduleId = moduleId, parameters = snapshot(), id = stepId)
     }
