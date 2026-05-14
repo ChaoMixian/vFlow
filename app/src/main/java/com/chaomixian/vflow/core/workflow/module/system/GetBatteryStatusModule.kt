@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import androidx.collection.emptyLongSet
 import com.chaomixian.vflow.core.module.ActionMetadata
 import com.chaomixian.vflow.core.module.BaseModule
 import com.chaomixian.vflow.R
@@ -20,15 +19,14 @@ import com.chaomixian.vflow.core.module.ProgressUpdate
 import com.chaomixian.vflow.core.module.ValidationResult
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
-import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class GetBatteryStatusModule : BaseModule() {
     companion object {
         private const val BATTERY_LEVEL = "level"
-
         private const val IS_CHARGING = "is_charging"
+        private const val TEMPERATURE = "temperature"
     }
 
     // 模块的唯一标识符
@@ -47,7 +45,7 @@ class GetBatteryStatusModule : BaseModule() {
     override val aiMetadata = AiModuleMetadata(
         usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
         riskLevel = AiModuleRiskLevel.READ_ONLY,
-        workflowStepDescription = "Read information about the battery and any charger connected to the device such as battery level or charging status.",
+        workflowStepDescription = "Read information about the battery and any charger connected to the device such as battery level, charging status, or temperature.",
         requiredInputIds = setOf("statusType"),
     )
 
@@ -60,10 +58,15 @@ class GetBatteryStatusModule : BaseModule() {
             name = "状态类型",
             nameStringRes = R.string.param_vflow_system_systeminfo_type_name,
             staticType = ParameterType.ENUM,
-            options = listOf(BATTERY_LEVEL,IS_CHARGING),
+            options = listOf(
+                BATTERY_LEVEL,
+                IS_CHARGING,
+                TEMPERATURE
+            ),
             optionsStringRes = listOf(
                 R.string.option_vflow_system_get_battery_status_level,
-                R.string.option_vflow_system_get_battery_status_is_charging
+                R.string.option_vflow_system_get_battery_status_is_charging,
+                R.string.option_vflow_system_get_battery_status_temperature
             ),
             defaultValue = BATTERY_LEVEL,
             acceptsMagicVariable = false
@@ -99,7 +102,7 @@ class GetBatteryStatusModule : BaseModule() {
         if (batteryIntent == null) {
             return ExecutionResult.Failure("获取失败", "无法获取电池信息")
         }
-        val resultValue : Int  = when (statusType) {
+        val resultValue : Number = when (statusType) {
             "level" -> {
                 val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                 val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
@@ -108,6 +111,10 @@ class GetBatteryStatusModule : BaseModule() {
             "is_charging" -> {
                 val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
                 if (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL) 1 else 0
+            }
+            "temperature" -> {
+                val temperature = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
+                temperature / 10.0f
             }
             else -> return ExecutionResult.Failure("获取失败", "无效的输入")
         }
