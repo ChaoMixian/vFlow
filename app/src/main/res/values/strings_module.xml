@@ -2938,11 +2938,10 @@
     <!-- vflow.system.get_battery_status -->
     <string name="module_vflow_system_get_battery_status_name">获取电池状态</string>
     <string name="module_vflow_system_get_battery_status_desc">获取电池和充电器状态</string>
-    <string name="summary_vflow_system_get_battery_status_prefix">获取</string>
-    <string name="output_vflow_system_battery_status_value_name">电池状态</string>
-    <string name="option_vflow_system_get_battery_status_level">电池电量</string>
-    <string name="option_vflow_system_get_battery_status_is_charging">是否正在充电</string>
-    <string name="option_vflow_system_get_battery_status_temperature">温度</string>
+    <string name="summary_vflow_system_get_battery_status_prefix">获取电池状态</string>
+    <string name="output_vflow_system_battery_level_name">电池电量</string>
+    <string name="output_vflow_system_battery_is_charging_name">是否正在充电</string>
+    <string name="output_vflow_system_battery_temperature_name">电池温度</string>
 
     <!-- Shared Summaries -->
     <string name="summary_unknown_workflow">未知工作流</string>

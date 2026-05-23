@@ -14,19 +14,18 @@ import com.chaomixian.vflow.core.module.AiModuleUsageScope
 import com.chaomixian.vflow.core.module.ExecutionResult
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.OutputDefinition
-import com.chaomixian.vflow.core.module.ParameterType
 import com.chaomixian.vflow.core.module.ProgressUpdate
 import com.chaomixian.vflow.core.module.ValidationResult
 import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.workflow.model.ActionStep
-import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 
 class GetBatteryStatusModule : BaseModule() {
     companion object {
-        private const val BATTERY_LEVEL = "level"
-        private const val IS_CHARGING = "is_charging"
-        private const val TEMPERATURE = "temperature"
+        private const val OUTPUT_BATTERY_LEVEL = "battery_level"
+        private const val OUTPUT_IS_CHARGING = "is_charging"
+        private const val OUTPUT_TEMPERATURE = "temperature_celsius"
     }
 
     // 模块的唯一标识符
@@ -45,43 +44,35 @@ class GetBatteryStatusModule : BaseModule() {
     override val aiMetadata = AiModuleMetadata(
         usageScopes = setOf(AiModuleUsageScope.TEMPORARY_WORKFLOW),
         riskLevel = AiModuleRiskLevel.READ_ONLY,
-        workflowStepDescription = "Read information about the battery and any charger connected to the device such as battery level, charging status, or temperature.",
-        requiredInputIds = setOf("statusType"),
+        workflowStepDescription = "Read battery information such as battery level, charging status, and temperature.",
     )
 
     /**
      * 定义模块的输入参数。
      */
-    override fun getInputs(): List<InputDefinition> = listOf(
-        InputDefinition(
-            id = "statusType",
-            name = "状态类型",
-            nameStringRes = R.string.param_vflow_system_systeminfo_type_name,
-            staticType = ParameterType.ENUM,
-            options = listOf(
-                BATTERY_LEVEL,
-                IS_CHARGING,
-                TEMPERATURE
-            ),
-            optionsStringRes = listOf(
-                R.string.option_vflow_system_get_battery_status_level,
-                R.string.option_vflow_system_get_battery_status_is_charging,
-                R.string.option_vflow_system_get_battery_status_temperature
-            ),
-            defaultValue = BATTERY_LEVEL,
-            acceptsMagicVariable = false
-        )
-    )
+    override fun getInputs() = emptyList<InputDefinition>()
 
     /**
      * 定义模块的输出参数。
      */
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
         OutputDefinition(
-            id = "battery_status",
-            name = "电池状态",
+            id = OUTPUT_BATTERY_LEVEL,
+            name = "电池电量",
             typeName = VTypeRegistry.NUMBER.id,
-            nameStringRes = R.string.output_vflow_system_battery_status_value_name
+            nameStringRes = R.string.output_vflow_system_battery_level_name
+        ),
+        OutputDefinition(
+            id = OUTPUT_IS_CHARGING,
+            name = "是否正在充电",
+            typeName = VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_system_battery_is_charging_name
+        ),
+        OutputDefinition(
+            id = OUTPUT_TEMPERATURE,
+            name = "电池温度",
+            typeName = VTypeRegistry.NUMBER.id,
+            nameStringRes = R.string.output_vflow_system_battery_temperature_name
         )
     )
 
@@ -92,9 +83,6 @@ class GetBatteryStatusModule : BaseModule() {
         context: ExecutionContext,
         onProgress: suspend (ProgressUpdate) -> Unit
     ): ExecutionResult {
-        val statusTypeInput = getInputs().first { it.id == "statusType" }
-        val rawstatusType = context.getVariableAsString("statusType", BATTERY_LEVEL)
-        val statusType = statusTypeInput.normalizeEnumValue(rawstatusType) ?: rawstatusType
         val batteryIntent = context.applicationContext.registerReceiver(
             null,
             IntentFilter(Intent.ACTION_BATTERY_CHANGED)
@@ -102,23 +90,18 @@ class GetBatteryStatusModule : BaseModule() {
         if (batteryIntent == null) {
             return ExecutionResult.Failure("获取失败", "无法获取电池信息")
         }
-        val resultValue : Number = when (statusType) {
-            "level" -> {
-                val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                level * 100 / scale
-            }
-            "is_charging" -> {
-                val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                if (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL) 1 else 0
-            }
-            "temperature" -> {
-                val temperature = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
-                temperature / 10.0f
-            }
-            else -> return ExecutionResult.Failure("获取失败", "无效的输入")
-        }
-        return ExecutionResult.Success(mapOf("battery_status" to VNumber(resultValue)))
+        val batteryLevel = readBatteryLevelPercent(batteryIntent)
+            ?: return ExecutionResult.Failure("获取失败", "无法获取有效的电池电量")
+        val charging = readChargingState(batteryIntent)
+        val temperatureCelsius = readTemperatureCelsius(batteryIntent)
+            ?: return ExecutionResult.Failure("获取失败", "无法获取有效的电池温度")
+        return ExecutionResult.Success(
+            mapOf(
+                OUTPUT_BATTERY_LEVEL to VNumber(batteryLevel),
+                OUTPUT_IS_CHARGING to VBoolean(charging),
+                OUTPUT_TEMPERATURE to VNumber(temperatureCelsius)
+            )
+        )
     }
 
     /**
@@ -137,14 +120,36 @@ class GetBatteryStatusModule : BaseModule() {
      * 生成在工作流编辑器中显示模块摘要的文本。
      */
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
-        val inputs = getInputs()
+        return context.getString(R.string.summary_vflow_system_get_battery_status_prefix)
+    }
 
-        val pillstatusType = PillUtil.createPillFromParam(
-            step.parameters["statusType"],
-            inputs.find { it.id == "statusType" },
-            isModuleOption = true
-        )
+    internal fun readBatteryLevelPercent(batteryIntent: Intent): Int? {
+        val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        return readBatteryLevelPercent(level, scale)
+    }
 
-        return PillUtil.buildSpannable(context, context.getString(R.string.summary_vflow_system_get_battery_status_prefix), pillstatusType)
+    internal fun readBatteryLevelPercent(level: Int, scale: Int): Int? {
+        if (level < 0 || scale <= 0) return null
+        return (level * 100) / scale
+    }
+
+    internal fun readChargingState(batteryIntent: Intent): Boolean {
+        val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+        return readChargingState(status)
+    }
+
+    internal fun readChargingState(status: Int): Boolean {
+        return status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+    }
+
+    internal fun readTemperatureCelsius(batteryIntent: Intent): Float? {
+        val temperatureTenths = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+        return readTemperatureCelsius(temperatureTenths)
+    }
+
+    internal fun readTemperatureCelsius(temperatureTenths: Int): Float? {
+        if (temperatureTenths == Int.MIN_VALUE || temperatureTenths < 0) return null
+        return temperatureTenths / 10.0f
     }
 }

@@ -2938,11 +2938,10 @@
     <!-- vflow.system.get_battery_status -->
     <string name="module_vflow_system_get_battery_status_name">Get Battery Status</string>
     <string name="module_vflow_system_get_battery_status_desc">Get battery and charger status.</string>
-    <string name="summary_vflow_system_get_battery_status_prefix">Get</string>
-    <string name="output_vflow_system_battery_status_value_name">Battery Status</string>
-    <string name="option_vflow_system_get_battery_status_level">Battery Level</string>
-    <string name="option_vflow_system_get_battery_status_is_charging">Is Charging</string>
-    <string name="option_vflow_system_get_battery_status_temperature">Temperature</string>
+    <string name="summary_vflow_system_get_battery_status_prefix">Get Battery Status</string>
+    <string name="output_vflow_system_battery_level_name">Battery Level</string>
+    <string name="output_vflow_system_battery_is_charging_name">Is Charging</string>
+    <string name="output_vflow_system_battery_temperature_name">Battery Temperature</string>
 
 
     <!-- Shared Summaries -->
