@@ -76,6 +76,20 @@ data class VariableInfo(
     val sourceStepId: String? = null,
     val sourceNameResId: Int? = null
 ) {
+    fun getPropertyDisplayPath(context: Context, propertyPath: List<String>): List<String> {
+        var currentTypeId = typeId
+        return propertyPath.map { propertyName ->
+            val type = VTypeRegistry.getType(currentTypeId)
+            val propDef = type.properties.find { it.matches(propertyName) }
+            if (propDef != null) {
+                currentTypeId = propDef.type.id
+                propDef.getLocalizedName(context)
+            } else {
+                propertyName
+            }
+        }
+    }
+
     fun getLocalizedSourceName(context: Context): String {
         return sourceNameResId?.let(context::getString) ?: sourceName
     }
@@ -88,7 +102,7 @@ data class VariableInfo(
      */
     fun getPropertyDisplayName(context: Context, propertyName: String): String {
         val type = VTypeRegistry.getType(typeId)
-        val propDef = type.properties.find { it.name == propertyName }
+        val propDef = type.properties.find { it.matches(propertyName) }
         return propDef?.getLocalizedName(context) ?: propertyName
     }
 
@@ -99,7 +113,7 @@ data class VariableInfo(
     @Deprecated("Use getPropertyDisplayName(context, propertyName) instead", ReplaceWith("getPropertyDisplayName(context, propertyName)"))
     fun getPropertyDisplayName(propertyName: String): String {
         val type = VTypeRegistry.getType(typeId)
-        val propDef = type.properties.find { it.name == propertyName }
+        val propDef = type.properties.find { it.matches(propertyName) }
         return propDef?.displayName ?: propertyName
     }
 
@@ -108,7 +122,7 @@ data class VariableInfo(
      */
     fun hasProperty(propertyName: String): Boolean {
         val type = VTypeRegistry.getType(typeId)
-        return type.properties.any { it.name == propertyName }
+        return type.properties.any { it.matches(propertyName) }
     }
 
     /**
@@ -169,26 +183,23 @@ data class VariableInfo(
          * 从魔法变量引用创建 VariableInfo，支持属性访问时的类型修正
          * @return 如果找到对应的步骤和输出则返回 VariableInfo，否则返回 null
          */
-        fun fromMagicVariableWithProperty(stepId: String, outputId: String, propertyName: String?, allSteps: List<ActionStep>): VariableInfo? {
+        fun fromMagicVariableWithProperty(stepId: String, outputId: String, propertyPath: List<String>, allSteps: List<ActionStep>): VariableInfo? {
             val sourceStep = allSteps.find { it.id == stepId } ?: return null
             val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return null
             // 使用 getDynamicOutputs 而不是 getOutputs，以获取动态类型信息
             val outputDefs = sourceModule.getDynamicOutputs(sourceStep, allSteps)
             val outputDef = outputDefs.find { it.id == outputId } ?: return null
 
-            // 检查是否是列表类型且正在访问列表属性
-            val isListProperty = propertyName != null && outputDef.listElementType != null && isListProperty(propertyName)
-            
-            // 如果是列表属性访问，使用列表类型；否则使用原来的逻辑
-            val actualTypeId = if (isListProperty) {
-                outputDef.typeName // 使用列表类型而不是元素类型
+            val firstProperty = propertyPath.firstOrNull()
+            val currentTypeId = if (firstProperty != null && outputDef.listElementType != null && isListProperty(firstProperty)) {
+                outputDef.typeName
             } else {
-                outputDef.listElementType ?: outputDef.typeName // 原来的逻辑
+                outputDef.listElementType ?: outputDef.typeName
             }
 
             return VariableInfo(
                 sourceName = outputDef.name,
-                typeId = actualTypeId,
+                typeId = currentTypeId,
                 sourceModuleId = sourceStep.moduleId,
                 sourceStepId = stepId,
                 sourceNameResId = outputDef.nameStringRes

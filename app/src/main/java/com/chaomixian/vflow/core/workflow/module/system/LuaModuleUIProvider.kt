@@ -3,23 +3,21 @@ package com.chaomixian.vflow.core.workflow.module.system
 
 import android.content.Context
 import android.content.Intent
-import android.text.InputType
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import android.widget.LinearLayout
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.module.CustomEditorViewHolder
 import com.chaomixian.vflow.core.module.ModuleUIProvider
 import com.chaomixian.vflow.core.workflow.model.ActionStep
+import com.chaomixian.vflow.ui.workflow_editor.CodeEditText
 import com.chaomixian.vflow.ui.workflow_editor.DictionaryKVAdapter
 import com.google.android.material.textfield.TextInputLayout
 
 class LuaEditorViewHolder(
     view: View,
-    val scriptInput: EditText,
+    val scriptInput: CodeEditText,
     val inputsAdapter: DictionaryKVAdapter
 ) : CustomEditorViewHolder(view)
 
@@ -61,12 +59,9 @@ class LuaModuleUIProvider : ModuleUIProvider {
         val scriptInputLayout = TextInputLayout(context).apply {
             hint = context.getString(R.string.param_vflow_system_lua_script_name)
         }
-        val scriptInput = EditText(context).apply {
+        val scriptInput = CodeEditText(context).apply {
             minLines = 8
-            gravity = Gravity.TOP
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             setText(currentParameters["script"] as? String ?: "")
-            typeface = android.graphics.Typeface.MONOSPACE
         }
         scriptInputLayout.addView(scriptInput)
         view.addView(scriptInputLayout)

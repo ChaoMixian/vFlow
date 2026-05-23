@@ -242,6 +242,9 @@ fun SettingsRoute(
             onSetAllowPopupKeepScreenOn = { enabled ->
                 settingsViewModel.setAllowPopupKeepScreenOn(context, enabled)
             },
+            onSetKeepDeviceAwakeDuringWorkflow = { enabled ->
+                settingsViewModel.setKeepDeviceAwakeDuringWorkflow(context, enabled)
+            },
             onSetHideFromRecents = { enabled ->
                 settingsViewModel.setHideFromRecents(context, enabled)
                 context.toast(
@@ -250,6 +253,14 @@ fun SettingsRoute(
                     } else {
                         R.string.settings_toast_hide_from_recents_disabled
                     }
+                )
+            },
+            onSetDefaultErrorHandlingStrategy = { policy, retryCount, retryIntervalMillis ->
+                settingsViewModel.setDefaultErrorHandlingStrategy(
+                    context,
+                    policy,
+                    retryCount,
+                    retryIntervalMillis
                 )
             },
             onSetDefaultShellMode = { mode ->
@@ -326,30 +337,44 @@ fun SettingsRoute(
             onSetAccessibilityDisguiseEnabled = { enabled ->
                 // 先清理旧的无障碍服务状态，确保权限检查器立即反映正确状态
                 com.chaomixian.vflow.services.ServiceStateBus.onAccessibilityServiceDisconnected(context)
-                val pm = context.packageManager
-                val originalComponent = android.content.ComponentName(
-                    context,
-                    com.chaomixian.vflow.services.AccessibilityService::class.java
-                )
-                val disguisedComponent = android.content.ComponentName(
-                    context,
-                    com.google.android.accessibility.selecttospeak.SelectToSpeakService::class.java
-                )
-                val newState = if (enabled)
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                else
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                val oppositeState = if (enabled)
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                else
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                pm.setComponentEnabledSetting(originalComponent, newState, PackageManager.DONT_KILL_APP)
-                pm.setComponentEnabledSetting(disguisedComponent, oppositeState, PackageManager.DONT_KILL_APP)
                 settingsViewModel.setAccessibilityDisguiseEnabled(context, enabled)
-                context.toast(R.string.settings_toast_accessibility_disguise_changed)
+                applyAccessibilityDisguiseComponentState(context, enabled)
+                activity.lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        ShellManager.migrateAccessibilityServiceSetting(context, enabled)
+                    }
+                    context.toast(R.string.settings_toast_accessibility_disguise_changed)
+                }
             }
         )
     )
+}
+
+private fun applyAccessibilityDisguiseComponentState(
+    context: android.content.Context,
+    enabled: Boolean
+) {
+    val pm = context.packageManager
+    val originalComponent = android.content.ComponentName(
+        context,
+        com.chaomixian.vflow.services.AccessibilityService::class.java
+    )
+    val disguisedComponent = android.content.ComponentName(
+        context,
+        com.google.android.accessibility.selecttospeak.SelectToSpeakService::class.java
+    )
+    val originalState = if (enabled) {
+        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    } else {
+        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    }
+    val disguisedState = if (enabled) {
+        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    } else {
+        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    }
+    pm.setComponentEnabledSetting(originalComponent, originalState, PackageManager.DONT_KILL_APP)
+    pm.setComponentEnabledSetting(disguisedComponent, disguisedState, PackageManager.DONT_KILL_APP)
 }
 
 private fun runDiagnostic(

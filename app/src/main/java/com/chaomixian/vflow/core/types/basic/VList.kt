@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.types.basic
 
 import android.os.Parcelable
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
@@ -79,29 +80,31 @@ data class VList(override val raw: @RawValue List<VObject>) : EnhancedBaseVObjec
  */
 object VListCompanion {
     // 属性注册表：所有 VList 实例共享
-    val registry = PropertyRegistry().apply {
-        register("count", "size", "数量", "长度", "length", getter = { host ->
+    val registry: PropertyRegistry = PropertyRegistry().apply {
+        register("count", "size", "数量", "长度", "length", returnType = VTypeRegistry.NUMBER, displayName = "数量", nameStringRes = R.string.vtype_list_count, getter = { host ->
             VNumber((host as VList).raw.size.toDouble())
         })
-        register("first", "第一个", "head", getter = { host ->
+        register("first", "第一个", "head", returnType = VTypeRegistry.ANY, displayName = "第一项", nameStringRes = R.string.vtype_list_first, getter = { host ->
             val list = (host as VList).raw
             if (list.isNotEmpty()) list.first() else VNull
         })
-        register("last", "最后一个", "tail", getter = { host ->
+        register("last", "最后一个", "tail", returnType = VTypeRegistry.ANY, displayName = "最后一项", nameStringRes = R.string.vtype_list_last, getter = { host ->
             val list = (host as VList).raw
             if (list.isNotEmpty()) list.last() else VNull
         })
-        register("isempty", "为空", "empty", getter = { host ->
+        register("isempty", "为空", "empty", returnType = VTypeRegistry.BOOLEAN, displayName = "是否为空", nameStringRes = R.string.vtype_list_isempty, getter = { host ->
             VBoolean((host as VList).raw.isEmpty())
         })
-        register("random", "随机", "rand", getter = { host ->
+        register("random", "随机", "rand", returnType = VTypeRegistry.ANY, displayName = "随机一项", nameStringRes = R.string.vtype_list_random, getter = { host ->
             val list = (host as VList).raw
             if (list.isNotEmpty()) list.random() else VNull
         })
         // 添加一个特殊的属性，用于UI获取索引列表
-        register("availableIndices", "可用索引", getter = { host ->
+        register("availableIndices", "可用索引", returnType = VTypeRegistry.LIST, displayName = "可用索引", getter = { host ->
             val list = host as VList
             VList(list.getAvailableIndices().map { VNumber(it.toDouble()) })
         })
     }
+
+    fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
 }

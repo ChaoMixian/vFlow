@@ -117,6 +117,7 @@ class GKDTriggerModule : BaseModule() {
                     bounds = Rect(0, 0, 0, 0),
                     text = null,
                     contentDescription = null,
+                    allTexts = emptyList(),
                     viewId = null,
                     className = null,
                     isClickable = false,

@@ -63,10 +63,9 @@ class WorkflowFloatPanelAdapter(
                 if (missingPermissions.isEmpty()) {
                     onExecute(workflow)
                 } else {
-                    // 缺少权限，不执行
                     android.widget.Toast.makeText(
                         holder.itemView.context,
-                        "缺少必要权限，请在主界面授予权限后再执行",
+                        holder.itemView.context.getString(R.string.workflow_float_permission_toast),
                         android.widget.Toast.LENGTH_LONG
                     ).show()
                 }
@@ -90,24 +89,24 @@ class WorkflowFloatPanelAdapter(
 
         when {
             isRunning -> {
-                // 正在运行
-                holder.workflowStatus.text = "运行中..."
+                holder.workflowStatus.text =
+                    holder.itemView.context.getString(R.string.status_running)
                 holder.workflowStatus.setTextColor(
                     ContextCompat.getColor(holder.itemView.context, R.color.category_system)
                 )
                 holder.btnExecute.setImageResource(R.drawable.rounded_stop_circle_24)
             }
             missingPermissions.isNotEmpty() -> {
-                // 缺少权限
-                holder.workflowStatus.text = "需要权限"
+                holder.workflowStatus.text =
+                    holder.itemView.context.getString(R.string.workflow_float_status_permission_required)
                 holder.workflowStatus.setTextColor(
                     ContextCompat.getColor(holder.itemView.context, android.R.color.holo_red_dark)
                 )
                 holder.btnExecute.setImageResource(R.drawable.rounded_play_arrow_24)
             }
             else -> {
-                // 准备就绪
-                holder.workflowStatus.text = "准备就绪"
+                holder.workflowStatus.text =
+                    holder.itemView.context.getString(R.string.text_ready)
                 holder.workflowStatus.setTextColor(
                     ContextCompat.getColor(holder.itemView.context, R.color.category_trigger)
                 )

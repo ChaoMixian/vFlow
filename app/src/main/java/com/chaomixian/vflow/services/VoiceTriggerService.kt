@@ -56,22 +56,36 @@ class VoiceTriggerService : Service() {
         }
 
         fun notifyWorkflowChanged(context: Context, newWorkflow: Workflow, oldWorkflow: Workflow?) {
+            val delta = WorkflowTriggerDelta(
+                workflowId = newWorkflow.id,
+                oldTriggerRefs = oldWorkflow
+                    ?.toAutoTriggerSpecs()
+                    ?.filter { it.type == VOICE_TRIGGER_MODULE_ID }
+                    ?.map { WorkflowTriggerRef(triggerId = it.triggerId, type = it.type) }
+                    .orEmpty()
+            )
             dispatchIfAllowed(
                 context,
                 Intent(context, VoiceTriggerService::class.java).apply {
                     action = TriggerService.ACTION_WORKFLOW_CHANGED
-                    putExtra(TriggerService.EXTRA_WORKFLOW, newWorkflow)
-                    putExtra(TriggerService.EXTRA_OLD_WORKFLOW, oldWorkflow)
+                    putExtra(TriggerService.EXTRA_TRIGGER_DELTA, delta)
                 }
             )
         }
 
         fun notifyWorkflowRemoved(context: Context, removedWorkflow: Workflow) {
+            val delta = WorkflowTriggerDelta(
+                workflowId = removedWorkflow.id,
+                oldTriggerRefs = removedWorkflow
+                    .toAutoTriggerSpecs()
+                    .filter { it.type == VOICE_TRIGGER_MODULE_ID }
+                    .map { WorkflowTriggerRef(triggerId = it.triggerId, type = it.type) }
+            )
             dispatchIfAllowed(
                 context,
                 Intent(context, VoiceTriggerService::class.java).apply {
                     action = TriggerService.ACTION_WORKFLOW_REMOVED
-                    putExtra(TriggerService.EXTRA_WORKFLOW, removedWorkflow)
+                    putExtra(TriggerService.EXTRA_TRIGGER_DELTA, delta)
                 }
             )
         }
@@ -142,8 +156,22 @@ class VoiceTriggerService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            TriggerService.ACTION_WORKFLOW_CHANGED,
-            TriggerService.ACTION_WORKFLOW_REMOVED,
+            TriggerService.ACTION_WORKFLOW_CHANGED -> {
+                val delta = intent.getParcelableExtra<WorkflowTriggerDelta>(TriggerService.EXTRA_TRIGGER_DELTA)
+                if (delta != null) {
+                    handleWorkflowChanged(delta)
+                } else {
+                    reloadVoiceTriggers()
+                }
+            }
+            TriggerService.ACTION_WORKFLOW_REMOVED -> {
+                val delta = intent.getParcelableExtra<WorkflowTriggerDelta>(TriggerService.EXTRA_TRIGGER_DELTA)
+                if (delta != null) {
+                    handleWorkflowRemoved(delta)
+                } else {
+                    reloadVoiceTriggers()
+                }
+            }
             TriggerService.ACTION_RELOAD_TRIGGERS,
             null -> reloadVoiceTriggers()
         }
@@ -202,6 +230,48 @@ class VoiceTriggerService : Service() {
     private fun ensureFreshHandler() {
         voiceTriggerHandler?.stop(this)
         voiceTriggerHandler = VoiceTriggerHandler().also { it.start(this) }
+    }
+
+    private fun handleWorkflowChanged(delta: WorkflowTriggerDelta) {
+        val latestWorkflow = workflowManager.getWorkflow(delta.workflowId)
+        delta.oldTriggerRefs.forEach { triggerRef ->
+            voiceTriggerHandler?.removeTrigger(this, triggerRef.triggerId)
+        }
+        if (latestWorkflow == null || !latestWorkflow.isEnabled) {
+            reloadVoiceTriggers()
+            return
+        }
+
+        if (!latestWorkflow.hasTriggerType(VOICE_TRIGGER_MODULE_ID)) {
+            reloadVoiceTriggers()
+            return
+        }
+
+        val missingPermissions = PermissionManager.getMissingPermissions(this, latestWorkflow)
+        if (missingPermissions.isNotEmpty()) {
+            reloadVoiceTriggers()
+            return
+        }
+
+        ensureFreshHandlerIfNeeded()
+        latestWorkflow.toAutoTriggerSpecs()
+            .filter { it.type == VOICE_TRIGGER_MODULE_ID }
+            .forEach { trigger ->
+                voiceTriggerHandler?.addTrigger(this, trigger)
+            }
+    }
+
+    private fun handleWorkflowRemoved(delta: WorkflowTriggerDelta) {
+        delta.oldTriggerRefs.forEach { triggerRef ->
+            voiceTriggerHandler?.removeTrigger(this, triggerRef.triggerId)
+        }
+        reloadVoiceTriggers()
+    }
+
+    private fun ensureFreshHandlerIfNeeded() {
+        if (voiceTriggerHandler == null) {
+            ensureFreshHandler()
+        }
     }
 
     private fun hasPrerequisites(): Boolean {

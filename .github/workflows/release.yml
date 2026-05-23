@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "**"
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.workflow }}-${{ github.ref }}
@@ -65,9 +66,17 @@ jobs:
         shell: bash
         env:
           ENCODED_DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE }}
+          DEBUG_KEYSTORE_PASSWORD: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
+          DEBUG_KEYSTORE_ALIAS: ${{ secrets.DEBUG_KEYSTORE_ALIAS }}
+          DEBUG_KEY_PASSWORD: ${{ secrets.DEBUG_KEY_PASSWORD }}
         run: |
           if [[ -n "${ENCODED_DEBUG_KEYSTORE}" ]]; then
             echo "${ENCODED_DEBUG_KEYSTORE}" | base64 --decode > debug.keystore
+            {
+              echo "KEYSTORE_PASSWORD=${DEBUG_KEYSTORE_PASSWORD:-android}"
+              echo "KEYSTORE_ALIAS=${DEBUG_KEYSTORE_ALIAS:-androiddebugkey}"
+              echo "KEY_PASSWORD=${DEBUG_KEY_PASSWORD:-android}"
+            } > debug-signing.properties
           elif [[ -f debug.keystore ]]; then
             echo "Using repository debug.keystore"
           else
@@ -77,15 +86,84 @@ jobs:
       - name: Build APKs
         run: ./gradlew --stacktrace :app:assembleDebug :app:assembleRelease
 
+      - name: Rotate-sign APKs for legacy debug users
+        id: rotate_apks
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          RELEASE_KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [[ ! -f vFlow.jks || ! -f signing.properties ]]; then
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "Release signing inputs are incomplete; skipping rotated APK generation."
+            exit 0
+          fi
+
+          old_keystore=""
+          if [[ -f debug.keystore ]]; then
+            old_keystore="debug.keystore"
+          elif [[ -f "${HOME}/.android/debug.keystore" ]]; then
+            old_keystore="${HOME}/.android/debug.keystore"
+          else
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+            echo "No debug keystore found for migration; skipping rotated APK generation."
+            exit 0
+          fi
+
+          old_store_pass="${DEBUG_KEYSTORE_PASSWORD:-android}"
+          old_alias="${DEBUG_KEYSTORE_ALIAS:-androiddebugkey}"
+          old_key_pass="${DEBUG_KEY_PASSWORD:-android}"
+
+          chmod +x ./scripts/signing/rotate_sign_apks.sh
+          ./scripts/signing/rotate_sign_apks.sh \
+            --apk-dir app/build/outputs/apk/debug \
+            --out-dir app/build/outputs/apk/legacy-compatible-debug \
+            --lineage signing/debug-to-release-lineage.bin \
+            --skip-lineage-create \
+            --old-keystore "${old_keystore}" \
+            --old-alias "${old_alias}" \
+            --old-store-pass "${old_store_pass}" \
+            --old-key-pass "${old_key_pass}" \
+            --new-keystore vFlow.jks \
+            --new-alias "${RELEASE_KEYSTORE_ALIAS}" \
+            --new-store-pass "${RELEASE_KEYSTORE_PASSWORD}" \
+            --new-key-pass "${RELEASE_KEY_PASSWORD}" \
+            --rotation-min-sdk 29 \
+            --verify-min-sdk 29 \
+            --in-place
+
+          ./scripts/signing/rotate_sign_apks.sh \
+            --apk-dir app/build/outputs/apk/release \
+            --out-dir app/build/outputs/apk/legacy-compatible-release \
+            --lineage signing/debug-to-release-lineage.bin \
+            --skip-lineage-create \
+            --old-keystore "${old_keystore}" \
+            --old-alias "${old_alias}" \
+            --old-store-pass "${old_store_pass}" \
+            --old-key-pass "${old_key_pass}" \
+            --new-keystore vFlow.jks \
+            --new-alias "${RELEASE_KEYSTORE_ALIAS}" \
+            --new-store-pass "${RELEASE_KEYSTORE_PASSWORD}" \
+            --new-key-pass "${RELEASE_KEY_PASSWORD}" \
+            --rotation-min-sdk 29 \
+            --verify-min-sdk 29 \
+            --in-place
+
+          echo "enabled=true" >> "${GITHUB_OUTPUT}"
+
       - name: Collect release assets
         id: collect_apks
         shell: bash
         run: |
           mkdir -p release-assets
-          find app/build/outputs/apk -type f -name "*.apk" \
-            ! -name "*-androidTest.apk" \
-            \( -path "*/debug/*" -o -path "*/release/*" \) \
-            -exec cp "{}" release-assets/ \;
+          if [[ "${{ steps.rotate_apks.outputs.enabled }}" == "true" ]]; then
+            find app/build/outputs/apk/legacy-compatible-debug -type f -name "*.apk" -exec cp "{}" release-assets/ \;
+            find app/build/outputs/apk/legacy-compatible-release -type f -name "*.apk" -exec cp "{}" release-assets/ \;
+          else
+            find app/build/outputs/apk/debug -type f -name "*.apk" ! -name "*-androidTest.apk" -exec cp "{}" release-assets/ \;
+            find app/build/outputs/apk/release -type f -name "*.apk" -exec cp "{}" release-assets/ \;
+          fi
 
           mapping_path="app/build/outputs/mapping/release/mapping.txt"
           mapping_asset="release-assets/${{ steps.meta.outputs.release_name }}_release_mapping.txt"

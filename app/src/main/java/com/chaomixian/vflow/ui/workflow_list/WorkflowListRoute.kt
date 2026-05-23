@@ -50,6 +50,7 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.ShortcutHelper
 import com.chaomixian.vflow.ui.float.WorkflowsFloatPanelService
 import com.chaomixian.vflow.ui.main.MainActivity
+import com.chaomixian.vflow.ui.main.WorkflowLayoutMode
 import com.chaomixian.vflow.ui.main.WorkflowSortMode
 import com.chaomixian.vflow.ui.main.WorkflowTopBarAction
 import com.chaomixian.vflow.ui.viewmodel.WorkflowListViewModel
@@ -65,6 +66,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.io.OutputStream
 import java.text.Collator
 import java.text.SimpleDateFormat
 import java.util.ArrayList
@@ -84,6 +86,7 @@ fun WorkflowListRoute(
     activity: MainActivity,
     isActive: Boolean,
     workflowSortMode: WorkflowSortMode,
+    workflowLayoutMode: WorkflowLayoutMode,
     workflowAction: WorkflowTopBarAction?,
     workflowActionVersion: Int,
     extraBottomPadding: androidx.compose.ui.unit.Dp,
@@ -282,9 +285,7 @@ fun WorkflowListRoute(
                 try {
                     val exportData = createWorkflowExportData(gson, workflow)
                     val jsonString = gson.toJson(exportData)
-                    context.contentResolver.openOutputStream(fileUri)?.use {
-                        it.write(jsonString.toByteArray())
-                    }
+                    writeTextToDocumentUri(context, fileUri, jsonString)
                     Toast.makeText(
                         context,
                         context.getString(R.string.toast_export_success),
@@ -314,9 +315,7 @@ fun WorkflowListRoute(
                         val workflowsWithMeta = workflows.map { createWorkflowExportData(gson, it) }
                         val exportData = mapOf("folder" to folder, "workflows" to workflowsWithMeta)
                         val jsonString = gson.toJson(exportData)
-                        context.contentResolver.openOutputStream(fileUri)?.use {
-                            it.write(jsonString.toByteArray())
-                        }
+                        writeTextToDocumentUri(context, fileUri, jsonString)
                         Toast.makeText(
                             context,
                             context.getString(R.string.toast_folder_export_success),
@@ -472,12 +471,14 @@ fun WorkflowListRoute(
             WorkflowTopBarAction.SortByName,
             WorkflowTopBarAction.SortByRecentModified,
             WorkflowTopBarAction.SortFavoritesFirst,
+            WorkflowTopBarAction.ToggleLayoutMode,
             null -> Unit
         }
     }
 
     WorkflowListScreen(
         uiState = uiState,
+        layoutMode = workflowLayoutMode,
         extraBottomPadding = extraBottomPadding,
         modifier = modifier,
         actions = WorkflowListScreenActions(
@@ -728,21 +729,7 @@ fun WorkflowListRoute(
 private enum class ConflictChoice { ASK, REPLACE_ALL, KEEP_ALL }
 
 private fun createWorkflowExportData(gson: Gson, workflow: Workflow): Map<String, Any?> {
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    val updatedAt = dateFormat.format(Date(workflow.modifiedAt))
-    val meta = mapOf(
-        "id" to workflow.id,
-        "name" to workflow.name,
-        "version" to workflow.version,
-        "vFlowLevel" to workflow.vFlowLevel,
-        "description" to workflow.description,
-        "author" to workflow.author,
-        "homepage" to workflow.homepage,
-        "tags" to workflow.tags,
-        "updated_at" to updatedAt,
-        "modified_at" to workflow.modifiedAt
-    )
-    val workflowMap = mapOf(
+    return mapOf(
         "id" to workflow.id,
         "name" to workflow.name,
         "triggers" to workflow.triggers,
@@ -764,7 +751,6 @@ private fun createWorkflowExportData(gson: Gson, workflow: Workflow): Map<String
         "homepage" to workflow.homepage,
         "tags" to workflow.tags
     )
-    return mapOf("_meta" to meta) + workflowMap
 }
 
 private fun backupAllWorkflowsToUri(
@@ -779,9 +765,31 @@ private fun backupAllWorkflowsToUri(
     val workflowsWithMeta = allWorkflows.map { createWorkflowExportData(gson, it) }
     val backupData = mapOf("workflows" to workflowsWithMeta, "folders" to allFolders)
     val jsonString = gson.toJson(backupData)
-    context.contentResolver.openOutputStream(fileUri)?.use {
-        it.write(jsonString.toByteArray())
+    writeTextToDocumentUri(context, fileUri, jsonString)
+}
+
+private fun writeTextToDocumentUri(context: Context, fileUri: Uri, text: String) {
+    val outputStream = openDocumentOutputStream(context, fileUri)
+    outputStream.use { stream ->
+        stream.write(text.toByteArray(Charsets.UTF_8))
+        stream.flush()
     }
+}
+
+private fun openDocumentOutputStream(context: Context, fileUri: Uri): OutputStream {
+    return resolveDocumentOutputStream(
+        openWithMode = { mode -> context.contentResolver.openOutputStream(fileUri, mode) },
+        openDefault = { context.contentResolver.openOutputStream(fileUri) }
+    )
+}
+
+internal fun resolveDocumentOutputStream(
+    openWithMode: (String) -> OutputStream?,
+    openDefault: () -> OutputStream?
+): OutputStream {
+    return openWithMode("wt")
+        ?: openDefault()
+        ?: throw IllegalStateException("Failed to open output stream")
 }
 
 private fun maybePromptWorkflowEnumMigration(

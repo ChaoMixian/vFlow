@@ -72,6 +72,18 @@ object ServiceStateBus {
         sendBroadcast(context, false)
     }
 
+    fun onAccessibilityServiceDisconnected(context: Context, service: AccessibilityService) {
+        val currentService = accessibilityServiceRef?.get()
+        if (currentService !== service) {
+            DebugLogger.w(
+                "ServiceStateBus",
+                "忽略过期无障碍服务断开: stale=${service.javaClass?.simpleName}@${Integer.toHexString(System.identityHashCode(service))} current=${currentService?.javaClass?.simpleName}@${currentService?.let { Integer.toHexString(System.identityHashCode(it)) } ?: "null"}"
+            )
+            return
+        }
+        onAccessibilityServiceDisconnected(context)
+    }
+
     /**
      * 由 AccessibilityService 调用，用于发出窗口变化事件。
      */

@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">vFlow</string>
     <string name="accessibility_service_description">vFlow service can perform various tasks through automated workflows.</string>
+    <string name="accessibility_service_description_disguise">vFlow service can perform various tasks through automated workflows. (Accessibility disguise enabled)</string>
 
     <string name="title_home">Home</string>
     <string name="title_workflows">Workflows</string>
@@ -238,6 +239,7 @@
     <string name="common_confirm">Confirm</string>
     <string name="save">Save</string>
     <string name="workflow_editor_undo">Undo</string>
+    <string name="workflow_editor_redo">Redo</string>
     <string name="workflow_editor_add_action">Add Action</string>
     <string name="workflow_editor_add_trigger">Add Trigger</string>
     <string name="workflow_editor_trigger_group_title">#0 Triggers</string>
@@ -251,6 +253,11 @@
 
     <string name="workflow_editor_execute">Execute</string>
     <string name="workflow_editor_save">Save</string>
+    <string name="editor_tools_menu">More Tools</string>
+    <string name="editor_exit_selection_mode">Exit selection</string>
+    <string name="editor_selection_mode">Select Modules</string>
+    <string name="editor_copy_selected_modules">Copy selected modules</string>
+    <string name="editor_paste_workflow">Paste workflow</string>
     <string name="share_to_vflow">Share to vFlow</string>
     <string name="shortcut_executing">Launching via shortcut: %s</string>
 
@@ -352,6 +359,8 @@
     <string name="workflow_list_sort_name">Name order</string>
     <string name="workflow_list_sort_recent_modified">Recently modified</string>
     <string name="workflow_list_sort_favorites_first">Favorites first</string>
+    <string name="workflow_list_menu_grid_view">Grid view</string>
+    <string name="workflow_list_menu_list_view">List view</string>
     <string name="workflow_list_menu_backup_all">Back Up All Workflows</string>
     <string name="workflow_list_menu_import_restore">Import/Restore Workflows</string>
     <string name="toast_workflow_moved_to_folder">Moved \"%1$s\" to \"%2$s\"</string>
@@ -391,8 +400,13 @@
     <string name="settings_switch_allow_popup_keep_screen_on">Allow Popups to Keep Screen On</string>
     <string name="settings_switch_allow_popup_keep_screen_on_summary">Keep the screen awake while a popup is visible</string>
     <string name="settings_switch_allow_popup_keep_screen_on_desc">When enabled, vFlow popups such as input prompts and error dialogs prevent the system from turning the screen off automatically while they are visible. Disabled by default to reduce battery drain from unattended popups.</string>
+    <string name="settings_switch_keep_device_awake_during_workflow">Keep Device Awake During Workflow</string>
+    <string name="settings_switch_keep_device_awake_during_workflow_summary">Keep the CPU awake while a workflow is running</string>
+    <string name="settings_switch_keep_device_awake_during_workflow_desc">When enabled, vFlow automatically acquires a PARTIAL_WAKE_LOCK while a workflow is running, and releases it as soon as the execution finishes, is cancelled, or fails. Disabled by default to reduce background battery drain.</string>
     <string name="settings_switch_hide_from_recents">Hide from Recents</string>
     <string name="settings_switch_hide_from_recents_desc">When enabled, it will not appear in the recent tasks list.</string>
+    <string name="settings_default_error_policy_title">Default Error Handling Strategy</string>
+    <string name="settings_default_error_policy_desc">The default error handling strategy used for newly created modules.</string>
     <string name="settings_toast_hide_from_recents_enabled">Hidden from recents enabled</string>
     <string name="settings_toast_hide_from_recents_disabled">Hidden from recents disabled</string>
     <string name="settings_section_permissions_shell">Permissions &amp; Shell</string>
@@ -447,8 +461,12 @@
     <string name="variable_named_variable">Named Variable</string>
     <string name="editor_toast_variable_reference_updated">Automatically updated references to variable \'%s\'</string>
     <string name="editor_toast_input_definition_not_found">Cannot find input definition: %s</string>
+    <string name="editor_toast_selection_mode_started">Selection mode enabled</string>
     <string name="editor_toast_trigger_cannot_duplicate">Trigger cannot be duplicated</string>
     <string name="editor_toast_steps_duplicated">Duplicated %d steps</string>
+    <string name="editor_toast_selected_modules_copied">Copied %d modules</string>
+    <string name="editor_toast_workflow_pasted">Pasted %d steps</string>
+    <string name="editor_toast_workflow_clipboard_empty">No workflow is available on the clipboard</string>
     <string name="editor_toast_step_enabled">Step enabled</string>
     <string name="editor_toast_step_disabled">Step disabled</string>
     <string name="editor_toast_enable_parent_block_first">Enable the parent block first</string>
@@ -746,6 +764,7 @@
     <string name="default_workflow_version">1.0.0</string>
     <string name="magic_variable_use_self">Use %1$s itself</string>
     <string name="magic_variable_property_name">%1$s\'s %2$s</string>
+    <string name="magic_variable_property_separator">&gt;</string>
     <string name="magic_variable_select_dictionary_value">Select a value for a specific key...</string>
     <string name="magic_variable_dictionary_title">Dictionary: %1$s</string>
     <string name="magic_variable_dictionary_key_hint">Enter key name (case-sensitive)</string>
@@ -760,6 +779,29 @@
     <string name="magic_variable_string_index_title">Enter index or slice</string>
     <string name="magic_variable_select_property_title">Select a property of %1$s</string>
     <string name="magic_variable_clear_action">Clear / Use static value</string>
+    <string name="magic_variable_breadcrumb_root">All Variables</string>
+    <string name="magic_variable_select_property_sheet_title">Select Property</string>
+    <string name="magic_variable_navigation_hint">Tap to select directly. Items with arrows can drill deeper.</string>
+    <string name="magic_variable_section_properties">Available Properties</string>
+    <string name="magic_variable_section_dynamic">Dynamic Access</string>
+    <string name="magic_variable_no_more_properties">No more properties at this level</string>
+    <string name="magic_variable_type_any">Any</string>
+    <string name="magic_variable_type_number">Number</string>
+    <string name="magic_variable_type_boolean">Boolean</string>
+    <string name="magic_variable_type_null">Null</string>
+    <string name="magic_variable_type_list">List</string>
+    <string name="magic_variable_type_dictionary">Dictionary</string>
+    <string name="magic_variable_type_image">Image</string>
+    <string name="magic_variable_type_file">File</string>
+    <string name="magic_variable_type_date">Date</string>
+    <string name="magic_variable_type_time">Time</string>
+    <string name="magic_variable_type_screen_element">Screen Element</string>
+    <string name="magic_variable_type_ui_component">UI Component</string>
+    <string name="magic_variable_type_coordinate">Coordinate</string>
+    <string name="magic_variable_type_coordinate_region">Coordinate Region</string>
+    <string name="magic_variable_type_notification">Notification</string>
+    <string name="magic_variable_type_event">Event</string>
+    <string name="magic_variable_type_app">App</string>
     <string name="ai_generation_requirement_required">Please enter your requirement</string>
     <string name="ai_generation_api_key_required">Please enter an API key in settings</string>
     <string name="ai_generation_generating">AI is thinking and generating the workflow...</string>
@@ -848,7 +890,9 @@
     <string name="text_open_uri">Open URI</string>
     <string name="label_target_app">Target App/Activity</string>
     <string name="label_target_apps">Target Apps</string>
+    <string name="label_excluded_apps">Excluded Apps</string>
     <string name="button_add_app">Add App</string>
+    <string name="button_add_excluded_app">Add Excluded App</string>
     <string name="text_not_recorded">Not recorded\nClick button below to record touch operations</string>
     <string name="text_time_09_00">09:00</string>
     <string name="text_scale_1_0">1.0x</string>
@@ -996,9 +1040,9 @@
     <string name="insert_below">Insert Below</string>
     <string name="desc_select_device">Select Device</string>
     <string name="label_trigger_condition">Trigger Condition</string>
-    <string name="hint_package_name">App Package Contains (Optional)</string>
-    <string name="hint_notification_title">Notification Title Contains (Optional)</string>
-    <string name="hint_notification_content">Notification Content Contains (Optional)</string>
+    <string name="hint_package_name">App Package (Optional)</string>
+    <string name="hint_notification_title">Notification Title Keyword (Optional)</string>
+    <string name="hint_notification_content">Notification Content Keyword (Optional)</string>
     <string name="text_when_connected">When Connected</string>
     <string name="text_when_disconnected">When Disconnected</string>
     <string name="hint_model_name">Model Name</string>
@@ -1102,6 +1146,9 @@
     <string name="content_desc_close">Close</string>
     <string name="content_desc_expand_panel">Expand panel</string>
     <string name="content_desc_minimize">Minimize</string>
+    <string name="workflow_float_status_permission_required">Permission required</string>
+    <string name="workflow_float_hold_to_close">Hold to close</string>
+    <string name="workflow_float_permission_toast">Required permissions are missing. Grant them from the main screen before running this workflow.</string>
 
     <!-- Permissions -->
     <string name="permission_name_core">vFlow Core Service</string>
@@ -1299,7 +1346,9 @@
 
     <!-- Workflow Item Chips -->
     <string name="workflow_chip_missing_permissions">Missing Permissions</string>
+    <string name="workflow_chip_missing_permissions_count">%d missing permissions</string>
     <string name="workflow_chip_steps">%d steps</string>
+    <string name="workflow_chip_permissions_count">%d permissions</string>
     <string name="workflow_id_copied">Workflow ID copied</string>
 
     <!-- Key Tester -->

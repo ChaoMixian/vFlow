@@ -99,4 +99,85 @@ class WorkflowJsonImportParserTest {
 
         assertNull(parsed.workflows.single().folderId)
     }
+
+    @Test
+    fun `parses repository workflow metadata from meta block and legacy trigger config`() {
+        val json = """
+            {
+              "_meta": {
+                "id": "repo-workflow",
+                "name": "仓库工作流",
+                "version": "2.3.4",
+                "vFlowLevel": 3,
+                "description": "来自仓库",
+                "author": "Repo Author",
+                "homepage": "https://example.com/workflow",
+                "tags": ["仓库", "测试"]
+              },
+              "id": "workflow-1",
+              "name": "",
+              "steps": [
+                {
+                  "moduleId": "vflow.action.log",
+                  "parameters": {},
+                  "id": "step-1"
+                }
+              ],
+              "triggerConfig": {
+                "type": "vflow.trigger.time",
+                "time": "09:30"
+              }
+            }
+        """.trimIndent()
+
+        val parsed = parser.parse(json)
+        val workflow = parsed.workflows.single()
+
+        assertEquals("workflow-1", workflow.id)
+        assertEquals("仓库工作流", workflow.name)
+        assertEquals("2.3.4", workflow.version)
+        assertEquals(3, workflow.vFlowLevel)
+        assertEquals("来自仓库", workflow.description)
+        assertEquals("Repo Author", workflow.author)
+        assertEquals("https://example.com/workflow", workflow.homepage)
+        assertEquals(listOf("仓库", "测试"), workflow.tags)
+        assertEquals(1, workflow.triggers.size)
+        assertEquals("vflow.trigger.time", workflow.triggers.single().moduleId)
+        assertEquals("09:30", workflow.triggers.single().parameters["time"])
+        assertEquals(1, workflow.steps.size)
+        assertEquals("vflow.action.log", workflow.steps.single().moduleId)
+    }
+
+    @Test
+    fun `ignores null string fields in repository workflow object`() {
+        val json = """
+            {
+              "_meta": {
+                "name": "仓库工作流"
+              },
+              "id": "workflow-1",
+              "description": null,
+              "author": null,
+              "homepage": null,
+              "folderId": null,
+              "steps": [
+                {
+                  "moduleId": "vflow.action.log",
+                  "parameters": null,
+                  "id": "step-1"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = parser.parse(json)
+        val workflow = parsed.workflows.single()
+
+        assertEquals("仓库工作流", workflow.name)
+        assertEquals("", workflow.description)
+        assertEquals("", workflow.author)
+        assertEquals("", workflow.homepage)
+        assertNull(workflow.folderId)
+        assertEquals(emptyMap<String, Any?>(), workflow.steps.single().parameters)
+    }
 }

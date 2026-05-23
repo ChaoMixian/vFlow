@@ -1,8 +1,6 @@
-// 文件：WorkflowsFloatPanelService.kt
-// 描述：工作流快速控制悬浮面板服务
-
 package com.chaomixian.vflow.ui.float
 
+import android.animation.ValueAnimator
 import android.app.Service
 import android.content.Intent
 import android.graphics.PixelFormat
@@ -10,7 +8,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.SystemClock
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
@@ -18,54 +15,49 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.view.animation.LinearInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
+import com.chaomixian.vflow.core.execution.ExecutionStateBus
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
+import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.workflow.WorkflowManager
 import com.chaomixian.vflow.core.workflow.model.Workflow
+import com.chaomixian.vflow.ui.common.AppearanceManager
+import com.chaomixian.vflow.ui.common.ThemeUtils
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import android.view.ContextThemeWrapper
-import com.chaomixian.vflow.ui.common.ThemeUtils
 
-/**
- * 工作流快速控制悬浮面板服务
- *
- * 功能：
- * - 显示所有收藏的工作流
- * - 支持拖拽移动位置
- * - 快速执行工作流
- * - 显示执行状态
- */
 class WorkflowsFloatPanelService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var windowManager: WindowManager
-    private var floatView: View? = null
-    private var collapsedView: View? = null
     private lateinit var workflowManager: WorkflowManager
     private lateinit var adapter: WorkflowFloatPanelAdapter
-    private var favoriteWorkflows = mutableListOf<Workflow>()
+    private val favoriteWorkflows = mutableListOf<Workflow>()
 
-    // 拖拽相关
+    private var floatView: View? = null
+    private var collapsedView: View? = null
+
     private var initialX = 0
     private var initialY = 0
     private var initialTouchX = 0f
     private var initialTouchY = 0f
 
-    // 自动收缩相关
     private var isCollapsed = false
-    private var isAutoCollapsing = true // 是否启用自动收缩
-    private val autoCollapseDelay = 3000L // 3秒
+    private var isAutoCollapsing = true
+    private val autoCollapseDelay = 3000L
     private val idleTimer = Handler(Looper.getMainLooper())
     private var isUserInteracting = false
     private var screenWidth = 0
@@ -74,10 +66,21 @@ class WorkflowsFloatPanelService : Service() {
     private var collapsedParams: WindowManager.LayoutParams? = null
     private var isFirstPositionUpdate = true
 
+    private var closeHoldAnimator: ValueAnimator? = null
+    private var isCloseHoldActive = false
+
     companion object {
         const val ACTION_SHOW = "com.chaomixian.vflow.ACTION_SHOW_FLOAT_PANEL"
         const val ACTION_HIDE = "com.chaomixian.vflow.ACTION_HIDE_FLOAT_PANEL"
-        private const val COLLAPSED_SIZE = 36 // dp (圆形图标)
+        private const val COLLAPSED_SIZE = 36
+        private const val CLOSE_HOLD_DURATION_MS = 2000L
+    }
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val languageCode = LocaleManager.getLanguage(newBase)
+        val localizedContext = LocaleManager.applyLanguage(newBase, languageCode)
+        val context = AppearanceManager.applyDisplayScale(localizedContext)
+        super.attachBaseContext(context)
     }
 
     override fun onCreate() {
@@ -96,24 +99,16 @@ class WorkflowsFloatPanelService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    /**
-     * 显示悬浮窗
-     */
     private fun showFloatWindow() {
-        if (floatView != null) return // 已经显示
+        if (floatView != null) return
 
-        // 获取屏幕宽度
         val displayMetrics = resources.displayMetrics
         screenWidth = displayMetrics.widthPixels
         screenHeight = displayMetrics.heightPixels
 
-        // 创建带主题的 Context（根据用户设置选择动态取色或默认主题）
         val themedContext = ThemeUtils.createThemedContext(this)
-
-        // 创建悬浮窗视图
         floatView = LayoutInflater.from(themedContext).inflate(R.layout.workflows_float_panel, null)
 
-        // 设置窗口参数
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -131,24 +126,16 @@ class WorkflowsFloatPanelService : Service() {
             y = (200 * displayMetrics.density).toInt()
         }
 
-        // 设置拖拽
         setupDragBehavior(floatView!!, params!!)
 
-        // 设置最小化按钮
         floatView?.findViewById<MaterialButton>(R.id.btn_minimize)?.setOnClickListener {
             collapseToSidebar()
         }
 
-        // 设置关闭按钮
-        floatView?.findViewById<MaterialButton>(R.id.btn_close)?.setOnClickListener {
-            hideFloatWindow()
-        }
+        setupCloseHoldBehavior()
 
-        // 设置 RecyclerView
         val recyclerView = floatView?.findViewById<RecyclerView>(R.id.recycler_view_workflows)
         recyclerView?.layoutManager = LinearLayoutManager(this)
-
-        // 创建并设置适配器
         adapter = WorkflowFloatPanelAdapter(
             workflows = favoriteWorkflows,
             onExecute = { workflow -> executeWorkflow(workflow) },
@@ -156,159 +143,144 @@ class WorkflowsFloatPanelService : Service() {
         )
         recyclerView?.adapter = adapter
 
-        // 加载收藏的工作流
         serviceScope.launch {
             loadFavoriteWorkflows()
             adapter.notifyDataSetChanged()
             updateEmptyState()
         }
 
-        // 添加到窗口
         windowManager.addView(floatView, params)
-
-        // 订阅执行状态更新
         observeExecutionState()
-
-        // 启动自动收缩计时器
         startAutoCollapseTimer()
-
-        // 监听位置变化（用于边缘吸附和自动收缩）
         observeViewPosition()
     }
 
-    /**
-     * 创建收缩后的侧边栏视图
-     */
-    private fun createCollapsedView(): View {
-        val themedContext = ThemeUtils.createThemedContext(this)
-        val collapsedView = LayoutInflater.from(themedContext).inflate(R.layout.workflows_float_panel_collapsed, null)
+    private fun setupCloseHoldBehavior() {
+        val closeButton = floatView?.findViewById<MaterialButton>(R.id.btn_close) ?: return
+        val closeOverlay = floatView?.findViewById<View>(R.id.close_hold_overlay) ?: return
+        val closeProgress = floatView?.findViewById<CircularProgressIndicator>(R.id.close_hold_progress) ?: return
 
-        // 设置点击展开
-        collapsedView.setOnClickListener {
-            expandFromCollapsed()
-        }
-
-        // 设置悬停展开
-        collapsedView.setOnHoverListener { view, event ->
+        closeButton.setOnTouchListener { v, event ->
             when (event.actionMasked) {
-                MotionEvent.ACTION_HOVER_ENTER -> {
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                    expandFromCollapsed()
+                MotionEvent.ACTION_DOWN -> {
+                    v.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    startCloseHold(closeOverlay, closeProgress)
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val inside = event.x >= 0f &&
+                        event.y >= 0f &&
+                        event.x <= v.width &&
+                        event.y <= v.height
+                    if (!inside && isCloseHoldActive) {
+                        cancelCloseHold(closeOverlay, closeProgress)
+                    } else if (inside && !isCloseHoldActive) {
+                        startCloseHold(closeOverlay, closeProgress)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    cancelCloseHold(closeOverlay, closeProgress)
                     true
                 }
                 else -> false
             }
         }
-
-        // 设置拖动行为
-        setupCollapsedDragBehavior(collapsedView)
-
-        return collapsedView
     }
 
-    /**
-     * 设置收缩视图的拖动行为
-     */
+    private fun startCloseHold(overlay: View, progressIndicator: CircularProgressIndicator) {
+        if (isCloseHoldActive) return
+        isCloseHoldActive = true
+        overlay.isVisible = true
+        progressIndicator.progress = 0
+        closeHoldAnimator?.cancel()
+        closeHoldAnimator = ValueAnimator.ofInt(0, 100).apply {
+            duration = CLOSE_HOLD_DURATION_MS
+            interpolator = LinearInterpolator()
+            addUpdateListener { animator ->
+                progressIndicator.progress = animator.animatedValue as Int
+            }
+            doOnEnd {
+                if (isCloseHoldActive) {
+                    hideFloatWindow()
+                }
+            }
+            start()
+        }
+    }
+
+    private fun cancelCloseHold(overlay: View, progressIndicator: CircularProgressIndicator) {
+        isCloseHoldActive = false
+        closeHoldAnimator?.cancel()
+        closeHoldAnimator = null
+        overlay.isVisible = false
+        progressIndicator.progress = 0
+    }
+
+    private fun createCollapsedView(): View {
+        val themedContext = ThemeUtils.createThemedContext(this)
+        val collapsed = LayoutInflater.from(themedContext).inflate(R.layout.workflows_float_panel_collapsed, null)
+        collapsed.setOnClickListener { expandFromCollapsed() }
+        setupCollapsedDragBehavior(collapsed)
+        return collapsed
+    }
+
     private fun setupCollapsedDragBehavior(view: View) {
-        val collapsedParams = collapsedParams ?: return
+        val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
         var isDragging = false
+        val collapsedLayoutParams = collapsedParams ?: return
         val displayMetrics = resources.displayMetrics
         val viewSize = (COLLAPSED_SIZE * displayMetrics.density).toInt()
-        val margin = (0 * displayMetrics.density).toInt() // 允许超出屏幕 0dp
 
-        view.setOnTouchListener { v, event ->
-            when (event.action) {
+        view.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    initialX = collapsedParams.x
-                    initialY = collapsedParams.y
+                    initialX = collapsedLayoutParams.x
+                    initialY = collapsedLayoutParams.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
                     isUserInteracting = true
                     idleTimer.removeCallbacksAndMessages(null)
-                    false // 不消耗事件，让 click 事件也能触发
+                    true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val deltaX = Math.abs(event.rawX - initialTouchX)
-                    val deltaY = Math.abs(event.rawY - initialTouchY)
-                    // 移动超过阈值才视为拖动
-                    if (deltaX > 10 || deltaY > 10) {
+                    val deltaX = event.rawX - initialTouchX
+                    val deltaY = event.rawY - initialTouchY
+                    if (!isDragging && (kotlin.math.abs(deltaX) > touchSlop || kotlin.math.abs(deltaY) > touchSlop)) {
                         isDragging = true
-                        var newX = initialX + (event.rawX - initialTouchX).toInt()
-                        var newY = initialY + (event.rawY - initialTouchY).toInt()
-
-                        // 限制在屏幕范围内，允许超出 10dp
-                        newX = newX.coerceIn(-margin, screenWidth - viewSize + margin)
-                        newY = newY.coerceIn(0, screenHeight - viewSize) // Y 轴不超出屏幕
-
-                        collapsedParams.x = newX
-                        collapsedParams.y = newY
-                        windowManager.updateViewLayout(view, collapsedParams)
+                    }
+                    if (isDragging) {
+                        collapsedLayoutParams.x = (initialX + deltaX.toInt()).coerceIn(0, screenWidth - viewSize)
+                        collapsedLayoutParams.y = (initialY + deltaY.toInt()).coerceIn(0, screenHeight - viewSize)
+                        windowManager.updateViewLayout(view, collapsedLayoutParams)
                     }
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     isUserInteracting = false
                     if (isDragging) {
-                        // 拖动释放后吸附边缘
-                        snapCollapsedToEdge(collapsedParams, margin)
+                        snapCollapsedToEdge(collapsedLayoutParams)
                     } else {
-                        // 点击展开面板
                         expandFromCollapsed()
                     }
-                    // 重新启动计时器
                     startAutoCollapseTimer()
                     true
                 }
                 else -> false
             }
         }
-
-        // 移除原来的点击监听器
-        view.setOnClickListener(null)
-        view.setOnHoverListener(null)
     }
 
-    /**
-     * 收缩视图边缘吸附
-     */
-    private fun snapCollapsedToEdge(params: WindowManager.LayoutParams, margin: Int = 0) {
-        val displayMetrics = resources.displayMetrics
-        val halfScreen = screenWidth / 2
-        val viewSize = (COLLAPSED_SIZE * displayMetrics.density).toInt()
-
-        val targetX = if (params.x < halfScreen) {
-            0
-        } else {
-            screenWidth - viewSize
-        }
-
-        if (Math.abs(params.x - targetX) < 50 * displayMetrics.density) {
-            params.x = targetX
-            windowManager.updateViewLayout(collapsedView, params)
-        }
-    }
-
-    /**
-     * 收缩为侧边栏
-     */
     private fun collapseToSidebar() {
         val currentParams = params ?: return
         if (isCollapsed) return
 
-        // 获取当前视图的测量宽度和Y位置
-        floatView?.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-        val panelWidth = floatView?.measuredWidth ?: (200 * resources.displayMetrics.density).toInt()
         val currentY = currentParams.y
-
-        // 计算贴边位置（左边贴边或右边贴边）
         val displayMetrics = resources.displayMetrics
         val collapsedSizePx = (COLLAPSED_SIZE * displayMetrics.density).toInt()
-
-        // 判断应该贴哪边
         val attachToRight = currentParams.x > screenWidth / 2
 
-        // 创建侧边栏窗口参数
         collapsedParams = WindowManager.LayoutParams(
             collapsedSizePx,
             collapsedSizePx,
@@ -322,57 +294,39 @@ class WorkflowsFloatPanelService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            // 右侧停靠时，x = screenWidth - viewSize
             x = if (attachToRight) screenWidth - collapsedSizePx else 0
             y = currentY
         }
 
-        // 创建侧边栏视图
         collapsedView = createCollapsedView()
-
-        // 先添加侧边栏
         windowManager.addView(collapsedView, collapsedParams)
-
-        // 移除展开的视图
-        windowManager.removeView(floatView)
+        floatView?.let { windowManager.removeView(it) }
 
         isCollapsed = true
         idleTimer.removeCallbacksAndMessages(null)
     }
 
-    /**
-     * 从侧边栏展开
-     */
     private fun expandFromCollapsed() {
         if (!isCollapsed) return
         isCollapsed = false
 
-        // 移除侧边栏
         collapsedView?.let {
             windowManager.removeView(it)
             collapsedView = null
         }
 
-        // 恢复展开视图的位置
         val displayMetrics = resources.displayMetrics
         params?.apply {
             x = (100 * displayMetrics.density).toInt()
             y = (200 * displayMetrics.density).toInt()
         }
 
-        // 重新添加展开视图
-        windowManager.addView(floatView, params)
-
-        // 重新启动自动收缩计时器
+        floatView?.let { windowManager.addView(it, params) }
         startAutoCollapseTimer()
     }
 
-    /**
-     * 启动自动收缩计时器
-     */
     private fun startAutoCollapseTimer() {
         if (!isAutoCollapsing) return
-        // 只有贴边时才启动自动收缩计时器
         if (!isDocked()) return
         idleTimer.removeCallbacksAndMessages(null)
         idleTimer.postDelayed({
@@ -382,51 +336,41 @@ class WorkflowsFloatPanelService : Service() {
         }, autoCollapseDelay)
     }
 
-    /**
-     * 检查是否贴边（左侧贴左边缘或右侧贴右边缘）
-     */
     private fun isDocked(): Boolean {
         val currentParams = params ?: return false
         floatView?.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val panelWidth = floatView?.measuredWidth ?: (200 * resources.displayMetrics.density).toInt()
-        val edgeThreshold = (16 * resources.displayMetrics.density).toInt() // 16dp容差
-
+        val edgeThreshold = (16 * resources.displayMetrics.density).toInt()
         val dockedToLeft = currentParams.x <= edgeThreshold
         val dockedToRight = currentParams.x >= screenWidth - panelWidth - edgeThreshold
         return dockedToLeft || dockedToRight
     }
 
-    /**
-     * 监听视图位置变化
-     */
     private fun observeViewPosition() {
         val view = floatView ?: return
-
         view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
                 if (isFirstPositionUpdate && !isCollapsed) {
                     isFirstPositionUpdate = false
-                    // 初始位置检查，贴边时启动5秒后自动收缩
                     startAutoCollapseTimer()
                 }
             }
         })
     }
 
-    /**
-     * 隐藏悬浮窗
-     */
     private fun hideFloatWindow() {
-        // 清除计时器
         idleTimer.removeCallbacksAndMessages(null)
 
-        // 移除展开视图
+        floatView?.findViewById<View>(R.id.close_hold_overlay)?.let { overlay ->
+            floatView?.findViewById<CircularProgressIndicator>(R.id.close_hold_progress)?.let { progress ->
+                cancelCloseHold(overlay, progress)
+            }
+        }
+
         floatView?.let {
             windowManager.removeView(it)
             floatView = null
         }
-
-        // 移除侧边栏视图
         collapsedView?.let {
             windowManager.removeView(it)
             collapsedView = null
@@ -436,25 +380,16 @@ class WorkflowsFloatPanelService : Service() {
         stopSelf()
     }
 
-    /**
-     * 加载收藏的工作流
-     */
     private suspend fun loadFavoriteWorkflows() {
         withContext(Dispatchers.IO) {
             favoriteWorkflows.clear()
-            favoriteWorkflows.addAll(
-                workflowManager.getAllWorkflows().filter { it.isFavorite }
-            )
+            favoriteWorkflows.addAll(workflowManager.getAllWorkflows().filter { it.isFavorite })
         }
     }
 
-    /**
-     * 更新空状态显示
-     */
     private fun updateEmptyState() {
         val emptyState = floatView?.findViewById<LinearLayout>(R.id.empty_state)
         val recyclerView = floatView?.findViewById<RecyclerView>(R.id.recycler_view_workflows)
-
         if (favoriteWorkflows.isEmpty()) {
             emptyState?.visibility = View.VISIBLE
             recyclerView?.visibility = View.GONE
@@ -464,41 +399,46 @@ class WorkflowsFloatPanelService : Service() {
         }
     }
 
-    /**
-     * 设置拖拽行为
-     */
-    private fun setupDragBehavior(view: View, params: WindowManager.LayoutParams) {
+    private fun setupDragBehavior(view: View, layoutParams: WindowManager.LayoutParams) {
         val dragHandle = view.findViewById<LinearLayout>(R.id.drag_handle)
         val dragIndicator = view.findViewById<ImageView>(R.id.drag_indicator)
+        val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
+        var isDragging = false
 
-        val touchListener = object : View.OnTouchListener {
-            override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-                when (event?.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        initialX = params.x
-                        initialY = params.y
-                        initialTouchX = event.rawX
-                        initialTouchY = event.rawY
-                        isUserInteracting = true
-                        idleTimer.removeCallbacksAndMessages(null)
-                        return true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        params.x = initialX + (event.rawX - initialTouchX).toInt()
-                        params.y = initialY + (event.rawY - initialTouchY).toInt()
-                        windowManager.updateViewLayout(view, params)
-                        return true
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        isUserInteracting = false
-                        // 边缘吸附
-                        snapToEdge(params, view)
-                        // 重新启动计时器
-                        startAutoCollapseTimer()
-                        return true
-                    }
-                    else -> return false
+        val touchListener = View.OnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialX = layoutParams.x
+                    initialY = layoutParams.y
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    isDragging = false
+                    isUserInteracting = true
+                    idleTimer.removeCallbacksAndMessages(null)
+                    true
                 }
+                MotionEvent.ACTION_MOVE -> {
+                    val deltaX = event.rawX - initialTouchX
+                    val deltaY = event.rawY - initialTouchY
+                    if (!isDragging && (kotlin.math.abs(deltaX) > touchSlop || kotlin.math.abs(deltaY) > touchSlop)) {
+                        isDragging = true
+                    }
+                    if (isDragging) {
+                        layoutParams.x = initialX + deltaX.toInt()
+                        layoutParams.y = initialY + deltaY.toInt()
+                        windowManager.updateViewLayout(view, layoutParams)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    isUserInteracting = false
+                    if (isDragging) {
+                        snapToEdge(layoutParams, view)
+                    }
+                    startAutoCollapseTimer()
+                    true
+                }
+                else -> false
             }
         }
 
@@ -506,39 +446,35 @@ class WorkflowsFloatPanelService : Service() {
         dragHandle.setOnTouchListener(touchListener)
     }
 
-    /**
-     * 边缘吸附
-     */
-    private fun snapToEdge(params: WindowManager.LayoutParams, view: View) {
+    private fun snapToEdge(layoutParams: WindowManager.LayoutParams, view: View) {
         val displayMetrics = resources.displayMetrics
         val halfScreen = screenWidth / 2
         val panelWidth = view.measuredWidth
-
-        // 判断贴左边还是右边
-        val targetX = if (params.x < halfScreen) {
-            0 // 贴左边
-        } else {
-            screenWidth - panelWidth // 贴右边
-        }
-
-        // 如果已经接近边缘，不需要移动
-        if (Math.abs(params.x - targetX) < 50 * displayMetrics.density) {
-            params.x = targetX
-            windowManager.updateViewLayout(view, params)
+        val targetX = if (layoutParams.x < halfScreen) 0 else screenWidth - panelWidth
+        if (kotlin.math.abs(layoutParams.x - targetX) < 50 * displayMetrics.density) {
+            layoutParams.x = targetX
+            windowManager.updateViewLayout(view, layoutParams)
         }
     }
 
-    /**
-     * 执行工作流
-     */
+    private fun snapCollapsedToEdge(layoutParams: WindowManager.LayoutParams) {
+        val displayMetrics = resources.displayMetrics
+        val halfScreen = screenWidth / 2
+        val viewSize = (COLLAPSED_SIZE * displayMetrics.density).toInt()
+        val targetX = if (layoutParams.x < halfScreen) 0 else screenWidth - viewSize
+        if (kotlin.math.abs(layoutParams.x - targetX) < 50 * displayMetrics.density) {
+            layoutParams.x = targetX
+            collapsedView?.let { windowManager.updateViewLayout(it, layoutParams) }
+        }
+    }
+
     private fun executeWorkflow(workflow: Workflow) {
-        // 重新加载工作流最新版本，避免使用旧缓存
         val latestWorkflow = workflowManager.getWorkflow(workflow.id)
         if (latestWorkflow == null) {
-            Toast.makeText(this, "工作流不存在", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.workflow_not_exists), Toast.LENGTH_SHORT).show()
             return
         }
-        Toast.makeText(this, "执行: ${latestWorkflow.name}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.toast_starting_workflow, latestWorkflow.name), Toast.LENGTH_SHORT).show()
         WorkflowExecutor.execute(
             workflow = latestWorkflow,
             context = this,
@@ -547,28 +483,32 @@ class WorkflowsFloatPanelService : Service() {
         adapter.notifyDataSetChanged()
     }
 
-    /**
-     * 停止工作流
-     */
     private fun stopWorkflow(workflow: Workflow) {
-        Toast.makeText(this, "停止: ${workflow.name}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.home_stopped_execution, workflow.name), Toast.LENGTH_SHORT).show()
         WorkflowExecutor.stopExecution(workflow.id)
         adapter.notifyDataSetChanged()
     }
 
-    /**
-     * 订阅执行状态更新
-     */
     private fun observeExecutionState() {
         serviceScope.launch {
-            com.chaomixian.vflow.core.execution.ExecutionStateBus.stateFlow.collectLatest { state ->
+            ExecutionStateBus.stateFlow.collectLatest {
                 adapter.notifyDataSetChanged()
             }
         }
     }
 
     override fun onDestroy() {
+        idleTimer.removeCallbacksAndMessages(null)
+        closeHoldAnimator?.cancel()
         super.onDestroy()
-        hideFloatWindow()
+    }
+
+    private fun ValueAnimator.doOnEnd(block: () -> Unit) {
+        addListener(object : android.animation.Animator.AnimatorListener {
+            override fun onAnimationStart(animation: android.animation.Animator) = Unit
+            override fun onAnimationEnd(animation: android.animation.Animator) = block()
+            override fun onAnimationCancel(animation: android.animation.Animator) = Unit
+            override fun onAnimationRepeat(animation: android.animation.Animator) = Unit
+        })
     }
 }

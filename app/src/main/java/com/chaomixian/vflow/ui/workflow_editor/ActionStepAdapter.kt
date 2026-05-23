@@ -42,6 +42,9 @@ class ActionStepAdapter(
     private val displayIndexProvider: (adapterPosition: Int, actualPosition: Int) -> Int = { _, actualPosition -> actualPosition },
     private val getAllSteps: () -> List<ActionStep> = { actionSteps },
     private val getTriggerSteps: () -> List<ActionStep> = { emptyList() },
+    private val isSelectionModeEnabled: () -> Boolean = { false },
+    private val isStepSelected: (String) -> Boolean = { false },
+    private val onStepSelectionClick: (Int) -> Unit = {},
     private val onAddTriggerClick: () -> Unit = {},
     private val onEditTriggerClick: (position: Int, inputId: String?) -> Unit = { _, _ -> },
     private val onDeleteTriggerClick: (position: Int) -> Unit = {},
@@ -100,7 +103,12 @@ class ActionStepAdapter(
                 val actualPosition = getActualPosition(position) ?: return
                 val step = actionSteps[actualPosition]
                 val displayIndex = displayIndexProvider(position, actualPosition)
-                holder.bind(step, actualPosition, displayIndex, getAllSteps())
+                holder.bind(
+                    step = step,
+                    actualPosition = actualPosition,
+                    displayIndex = displayIndex,
+                    allSteps = getAllSteps()
+                )
             }
         }
     }
@@ -131,6 +139,8 @@ class ActionStepAdapter(
         actualPosition: Int,
         rawSummary: CharSequence?,
         prefixText: String?,
+        selectionModeEnabled: Boolean,
+        isSelected: Boolean,
         allSteps: List<ActionStep>,
         indentLevel: Int,
         isDeletable: Boolean,
@@ -161,10 +171,27 @@ class ActionStepAdapter(
 
         val isActionStep = prefixText != null
         val isDisabled = if (isActionStep) BlockStructureHelper.isStepEffectivelyDisabled(actionSteps, actualPosition) else step.isDisabled
-        val cardAlpha = if (isDisabled) 0.52f else 1f
-        stepCardView.alpha = cardAlpha
-        categoryColorBar.alpha = if (isDisabled) 0.45f else 1f
-        contentContainer.alpha = if (isDisabled) 0.78f else 1f
+        if (selectionModeEnabled) {
+            val selectionAlpha = if (isSelected) 1f else 0.42f
+            stepCardView.alpha = selectionAlpha
+            contentContainer.alpha = selectionAlpha
+            categoryColorBar.alpha = selectionAlpha
+        } else {
+            stepCardView.alpha = if (isDisabled) 0.52f else 1f
+            categoryColorBar.alpha = if (isDisabled) 0.45f else 1f
+            contentContainer.alpha = if (isDisabled) 0.78f else 1f
+        }
+        if (selectionModeEnabled && isSelected) {
+            stepCardView.strokeWidth = (2 * context.resources.displayMetrics.density).toInt()
+            stepCardView.strokeColor = MaterialColors.getColor(
+                context,
+                android.R.attr.colorPrimary,
+                Color.WHITE
+            )
+        } else {
+            stepCardView.strokeWidth = 0
+            stepCardView.strokeColor = Color.TRANSPARENT
+        }
 
         contentContainer.removeAllViews()
         val summarySegments = buildSummarySegments(
@@ -225,22 +252,26 @@ class ActionStepAdapter(
             contentContainer.addView(customPreview)
         }
 
-        deleteButton.visibility = if (isActionStep && isDeletable) View.GONE else if (isDeletable) View.VISIBLE else View.GONE
+        deleteButton.visibility = if (selectionModeEnabled) View.GONE else if (isActionStep && isDeletable) View.GONE else if (isDeletable) View.VISIBLE else View.GONE
         deleteButton.setOnClickListener { onDelete?.invoke() }
 
         if (isActionStep) {
-            actionContainer.visibility = View.VISIBLE
+            actionContainer.visibility = if (selectionModeEnabled) View.GONE else View.VISIBLE
             moreButton.visibility = View.VISIBLE
             deleteButton.visibility = View.GONE
         } else {
-            actionContainer.visibility = if (isDeletable) View.VISIBLE else View.GONE
+            actionContainer.visibility = if (selectionModeEnabled) View.GONE else if (isDeletable) View.VISIBLE else View.GONE
             moreButton.visibility = View.GONE
         }
 
         cardView.setOnClickListener { onClick() }
         categoryColorBarContainer.setOnLongClickListener {
-            onLongPress?.invoke()
-            onLongPress != null
+            if (selectionModeEnabled) {
+                false
+            } else {
+                onLongPress?.invoke()
+                onLongPress != null
+            }
         }
     }
 
@@ -282,7 +313,10 @@ class ActionStepAdapter(
         textView.setOnTouchListener { v, event ->
             val widget = v as TextView
             val text = widget.text
-            if (text is Spanned && event.action == MotionEvent.ACTION_UP) {
+            if (event.action == MotionEvent.ACTION_UP && isSelectionModeEnabled()) {
+                onFallbackClick()
+                true
+            } else if (text is Spanned && event.action == MotionEvent.ACTION_UP) {
                 val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
                 val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
                 val layout = widget.layout ?: return@setOnTouchListener false
@@ -327,6 +361,8 @@ class ActionStepAdapter(
                     actualPosition = index,
                     rawSummary = rawSummary,
                     prefixText = null,
+                    selectionModeEnabled = false,
+                    isSelected = false,
                     allSteps = allSteps,
                     indentLevel = 0,
                     isDeletable = triggerSteps.size > 1,
@@ -366,6 +402,8 @@ class ActionStepAdapter(
                 actualPosition = actualPosition,
                 rawSummary = rawSummary,
                 prefixText = "#$displayIndex ",
+                selectionModeEnabled = isSelectionModeEnabled(),
+                isSelected = isStepSelected(step.id),
                 allSteps = allSteps,
                 indentLevel = step.indentationLevel,
                 isDeletable = canDelete,
@@ -373,18 +411,22 @@ class ActionStepAdapter(
                     onParameterPillClick(actualPosition, parameterId)
                 },
                 onClick = {
-                    clickCount++
-                    if (clickCount == 1) {
-                        handler.postDelayed({
-                            if (clickCount == 1 && adapterPosition != RecyclerView.NO_POSITION) {
-                                onEditClick(actualPosition, null)
-                            }
+                    if (isSelectionModeEnabled()) {
+                        onStepSelectionClick(actualPosition)
+                    } else {
+                        clickCount++
+                        if (clickCount == 1) {
+                            handler.postDelayed({
+                                if (clickCount == 1 && adapterPosition != RecyclerView.NO_POSITION) {
+                                    onEditClick(actualPosition, null)
+                                }
+                                clickCount = 0
+                            }, 250)
+                        } else if (clickCount == 2) {
                             clickCount = 0
-                        }, 250)
-                    } else if (clickCount == 2) {
-                        clickCount = 0
-                        if (canDuplicate && adapterPosition != RecyclerView.NO_POSITION) {
-                            onDuplicateClick(actualPosition)
+                            if (canDuplicate && adapterPosition != RecyclerView.NO_POSITION) {
+                                onDuplicateClick(actualPosition)
+                            }
                         }
                     }
                 },

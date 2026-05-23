@@ -1,5 +1,6 @@
 package com.chaomixian.vflow.ui.main
 
+import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -121,6 +122,7 @@ enum class WorkflowTopBarAction {
     CreateFolder,
     BackupWorkflows,
     ImportWorkflows,
+    ToggleLayoutMode,
 }
 
 enum class WorkflowSortMode {
@@ -128,6 +130,11 @@ enum class WorkflowSortMode {
     Name,
     RecentModified,
     FavoritesFirst,
+}
+
+enum class WorkflowLayoutMode {
+    List,
+    Grid,
 }
 
 enum class ChatTopBarAction {
@@ -143,6 +150,7 @@ internal fun MainActivityContent(
     activity: MainActivity,
     initialTab: MainTopLevelTab,
     initialWorkflowSortMode: WorkflowSortMode,
+    initialWorkflowLayoutMode: WorkflowLayoutMode,
     onBackPressedAtRoot: () -> Unit,
     onPrimaryTabChanged: (MainTopLevelTab) -> Unit,
 ) {
@@ -160,6 +168,7 @@ internal fun MainActivityContent(
                         liquidGlassEnabled = liquidGlassNavBarEnabled,
                         initialTab = initialTab,
                         initialWorkflowSortMode = initialWorkflowSortMode,
+                        initialWorkflowLayoutMode = initialWorkflowLayoutMode,
                         onPrimaryTabChanged = onPrimaryTabChanged,
                     )
                 }
@@ -176,6 +185,7 @@ private fun MainScreen(
     liquidGlassEnabled: Boolean,
     initialTab: MainTopLevelTab,
     initialWorkflowSortMode: WorkflowSortMode,
+    initialWorkflowLayoutMode: WorkflowLayoutMode,
     onPrimaryTabChanged: (MainTopLevelTab) -> Unit,
 ) {
     val pagerState = rememberPagerState(initialPage = initialTab.ordinal, pageCount = { MainTopLevelTab.entries.size })
@@ -186,6 +196,7 @@ private fun MainScreen(
     val chatUiState by chatViewModel.uiState.collectAsState()
     val surfaceColor = MaterialTheme.colorScheme.surface
     var workflowSortMode by rememberSaveable { mutableStateOf(initialWorkflowSortMode) }
+    var workflowLayoutMode by rememberSaveable { mutableStateOf(initialWorkflowLayoutMode) }
     var latestWorkflowAction by remember { mutableStateOf<WorkflowTopBarAction?>(null) }
     var workflowActionVersion by remember { mutableIntStateOf(0) }
     var chatSideSheetVisible by rememberSaveable { mutableStateOf(false) }
@@ -193,6 +204,14 @@ private fun MainScreen(
     val backdrop = rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
+    }
+
+    val context = LocalContext.current
+    LaunchedEffect(workflowLayoutMode) {
+        context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString("workflow_layout_mode", workflowLayoutMode.name)
+            .apply()
     }
 
     LaunchedEffect(pagerState.currentPage) {
@@ -236,6 +255,7 @@ private fun MainScreen(
                         if (selectedTab == MainTopLevelTab.WORKFLOWS) {
                             WorkflowTopBarActions(
                                 sortMode = workflowSortMode,
+                                layoutMode = workflowLayoutMode,
                                 onAction = { action ->
                                     workflowSortMode = when (action) {
                                         WorkflowTopBarAction.SortDefault -> WorkflowSortMode.Default
@@ -243,6 +263,12 @@ private fun MainScreen(
                                         WorkflowTopBarAction.SortByRecentModified -> WorkflowSortMode.RecentModified
                                         WorkflowTopBarAction.SortFavoritesFirst -> WorkflowSortMode.FavoritesFirst
                                         else -> workflowSortMode
+                                    }
+                                    if (action == WorkflowTopBarAction.ToggleLayoutMode) {
+                                        workflowLayoutMode = when (workflowLayoutMode) {
+                                            WorkflowLayoutMode.List -> WorkflowLayoutMode.Grid
+                                            WorkflowLayoutMode.Grid -> WorkflowLayoutMode.List
+                                        }
                                     }
                                     latestWorkflowAction = action
                                     workflowActionVersion += 1
@@ -293,6 +319,7 @@ private fun MainScreen(
                 loadedPages = loadedPages,
                 activity = activity,
                 workflowSortMode = workflowSortMode,
+                workflowLayoutMode = workflowLayoutMode,
                 workflowAction = latestWorkflowAction,
                 workflowActionVersion = workflowActionVersion,
                 chatDraftResetVersion = chatDraftResetVersion,
@@ -335,6 +362,7 @@ private fun MainScreen(
 @Composable
 private fun WorkflowTopBarActions(
     sortMode: WorkflowSortMode,
+    layoutMode: WorkflowLayoutMode,
     onAction: (WorkflowTopBarAction) -> Unit,
 ) {
     var overflowExpanded by remember { mutableStateOf(false) }
@@ -433,9 +461,21 @@ private fun WorkflowTopBarActions(
                 containerColor = MenuDefaults.groupStandardContainerColor,
             ) {
                 WorkflowActionMenuItem(
-                    text = stringResource(R.string.folder_create),
+                    text = stringResource(
+                        if (layoutMode == WorkflowLayoutMode.List) R.string.workflow_list_menu_grid_view
+                        else R.string.workflow_list_menu_list_view
+                    ),
                     index = 0,
-                    count = 3,
+                    count = 4,
+                    onClick = {
+                        overflowExpanded = false
+                        onAction(WorkflowTopBarAction.ToggleLayoutMode)
+                    }
+                )
+                WorkflowActionMenuItem(
+                    text = stringResource(R.string.folder_create),
+                    index = 1,
+                    count = 4,
                     onClick = {
                         overflowExpanded = false
                         onAction(WorkflowTopBarAction.CreateFolder)
@@ -443,8 +483,8 @@ private fun WorkflowTopBarActions(
                 )
                 WorkflowActionMenuItem(
                     text = stringResource(R.string.workflow_list_menu_backup_all),
-                    index = 1,
-                    count = 3,
+                    index = 2,
+                    count = 4,
                     onClick = {
                         overflowExpanded = false
                         onAction(WorkflowTopBarAction.BackupWorkflows)
@@ -452,8 +492,8 @@ private fun WorkflowTopBarActions(
                 )
                 WorkflowActionMenuItem(
                     text = stringResource(R.string.workflow_list_menu_import_restore),
-                    index = 2,
-                    count = 3,
+                    index = 3,
+                    count = 4,
                     onClick = {
                         overflowExpanded = false
                         onAction(WorkflowTopBarAction.ImportWorkflows)
@@ -863,6 +903,7 @@ private fun MainContentPager(
     backdrop: LayerBackdrop,
     loadedPages: List<Int>,
     workflowSortMode: WorkflowSortMode,
+    workflowLayoutMode: WorkflowLayoutMode,
     workflowAction: WorkflowTopBarAction?,
     workflowActionVersion: Int,
     chatDraftResetVersion: Int,
@@ -901,6 +942,7 @@ private fun MainContentPager(
                 activity = activity,
                 isActive = selectedPage == page,
                 workflowSortMode = workflowSortMode,
+                workflowLayoutMode = workflowLayoutMode,
                 workflowAction = workflowAction,
                 workflowActionVersion = workflowActionVersion,
                 extraBottomPadding = innerPadding.calculateBottomPadding(),

@@ -79,14 +79,35 @@ class InvokeModule : BaseModule() {
                 "Activity" to MODE_ACTIVITY,
                 "Broadcast" to MODE_BROADCAST,
                 "Service" to MODE_SERVICE
-            )
+            ),
+            acceptsMagicVariable = false
         ),
-        InputDefinition("uri", "链接/Data", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, nameStringRes = R.string.param_vflow_system_invoke_uri_name),
-        InputDefinition("action", "Action", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_action_name),
-        InputDefinition("package", "Package", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_package_name),
-        InputDefinition("class", "Class", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_class_name),
-        InputDefinition("type", "MIME Type", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_type_name),
-        InputDefinition("flags", "Flags (Int)", ParameterType.STRING, "", acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_flags_name),
+        InputDefinition(
+            "uri",
+            "链接/Data",
+            ParameterType.STRING,
+            "",
+            acceptsMagicVariable = true,
+            supportsRichText = true,
+            visibility = InputVisibility.whenEquals("mode", MODE_URI),
+            nameStringRes = R.string.param_vflow_system_invoke_uri_name,
+            hintStringRes = R.string.hint_link_data_uri
+        ),
+        InputDefinition(
+            "action",
+            "Action",
+            ParameterType.STRING,
+            "",
+            acceptsMagicVariable = true,
+            supportsRichText = true,
+            visibility = InputVisibility.whenIn("mode", listOf(MODE_ACTIVITY, MODE_BROADCAST, MODE_SERVICE)),
+            nameStringRes = R.string.param_vflow_system_invoke_action_name,
+            hintStringRes = R.string.hint_action_example
+        ),
+        InputDefinition("package", "Package", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, isFolded = true, nameStringRes = R.string.param_vflow_system_invoke_package_name, hintStringRes = R.string.hint_package_name_with_type),
+        InputDefinition("class", "Class", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, isFolded = true, nameStringRes = R.string.param_vflow_system_invoke_class_name, hintStringRes = R.string.hint_class_name_with_type),
+        InputDefinition("type", "MIME Type", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, isFolded = true, nameStringRes = R.string.param_vflow_system_invoke_type_name, hintStringRes = R.string.hint_mime_type),
+        InputDefinition("flags", "Flags (Int)", ParameterType.STRING, "", acceptsMagicVariable = true, supportsRichText = true, isFolded = true, nameStringRes = R.string.param_vflow_system_invoke_flags_name, hintStringRes = R.string.hint_flags_example),
         InputDefinition("extras", "扩展参数", ParameterType.ANY, defaultValue = emptyMap<String, String>(), acceptsMagicVariable = true, nameStringRes = R.string.param_vflow_system_invoke_extras_name),
         InputDefinition("show_advanced", "显示高级", ParameterType.BOOLEAN, false, isHidden = true, nameStringRes = R.string.param_vflow_system_invoke_show_advanced_name)
     )

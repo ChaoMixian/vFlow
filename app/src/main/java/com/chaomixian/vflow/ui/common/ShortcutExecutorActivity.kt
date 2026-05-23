@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.chaomixian.vflow.core.execution.WorkflowExecutor
 import com.chaomixian.vflow.core.workflow.WorkflowManager
+import com.chaomixian.vflow.services.ExecutionNotificationManager
 
 class ShortcutExecutorActivity : AppCompatActivity() {
 
@@ -17,6 +18,7 @@ class ShortcutExecutorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         if (intent?.action == ACTION_EXECUTE_WORKFLOW) {
+            ExecutionNotificationManager.initialize(applicationContext)
             val workflowId = intent.getStringExtra(EXTRA_WORKFLOW_ID)
 
             if (workflowId != null) {

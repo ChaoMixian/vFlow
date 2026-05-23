@@ -2,6 +2,8 @@
 package com.chaomixian.vflow.core.types.properties
 
 import com.chaomixian.vflow.core.types.VObject
+import com.chaomixian.vflow.core.types.VPropertyDef
+import com.chaomixian.vflow.core.types.VType
 
 /**
  * 属性注册表：管理单个 VObject 类型的所有属性
@@ -19,18 +21,27 @@ class PropertyRegistry {
      *
      * @param name 属性主名称
      * @param aliases 属性别名（可选）
+     * @param returnType 属性返回类型
+     * @param displayName 属性显示名（fallback）
+     * @param nameStringRes 属性显示名资源 ID
      * @param accessor 属性访问器
      * @param description 属性描述（可选）
      */
     fun register(
         name: String,
         vararg aliases: String,
+        returnType: VType,
+        displayName: String = name,
+        nameStringRes: Int? = null,
         accessor: PropertyAccessor,
         description: String = ""
     ) {
         val def = PropertyDefinition(
             primaryName = name,
             aliases = aliases.toSet(),
+            returnType = returnType,
+            displayName = displayName,
+            nameStringRes = nameStringRes,
             accessor = accessor,
             description = description
         )
@@ -42,16 +53,30 @@ class PropertyRegistry {
      *
      * @param name 属性主名称
      * @param aliases 属性别名（可选）
+     * @param returnType 属性返回类型
+     * @param displayName 属性显示名（fallback）
+     * @param nameStringRes 属性显示名资源 ID
      * @param description 属性描述（可选）
      * @param getter 属性获取器 lambda
      */
     fun register(
         name: String,
         vararg aliases: String,
+        returnType: VType,
+        displayName: String = name,
+        nameStringRes: Int? = null,
         description: String = "",
         getter: (VObject) -> VObject?
     ) {
-        register(name, aliases = aliases, accessor = SimplePropertyAccessor(getter), description = description)
+        register(
+            name = name,
+            aliases = aliases,
+            returnType = returnType,
+            displayName = displayName,
+            nameStringRes = nameStringRes,
+            accessor = SimplePropertyAccessor(getter),
+            description = description
+        )
     }
 
     /**
@@ -89,5 +114,17 @@ class PropertyRegistry {
      */
     fun hasProperty(propertyName: String): Boolean {
         return find(propertyName) != null
+    }
+
+    fun toPropertyDefs(): List<VPropertyDef> {
+        return properties.map { definition ->
+            VPropertyDef(
+                name = definition.primaryName,
+                displayName = definition.displayName,
+                type = definition.returnType,
+                nameStringRes = definition.nameStringRes,
+                aliases = definition.aliases
+            )
+        }
     }
 }

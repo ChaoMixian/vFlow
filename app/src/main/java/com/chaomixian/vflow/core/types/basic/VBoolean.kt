@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.types.basic
 
 import android.os.Parcelable
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
@@ -31,9 +32,11 @@ data class VBoolean(override val raw: Boolean) : EnhancedBaseVObject(), Parcelab
  */
 object VBooleanCompanion {
     // 属性注册表：所有 VBoolean 实例共享
-    val registry = PropertyRegistry().apply {
-        register("not", "非", "反转", "invert", getter = { host ->
+    val registry: PropertyRegistry = PropertyRegistry().apply {
+        register("not", "非", "反转", "invert", returnType = VTypeRegistry.BOOLEAN, displayName = "反转", nameStringRes = R.string.vtype_boolean_not, getter = { host ->
             VBoolean(!(host as VBoolean).raw)
         })
     }
+
+    fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
 }

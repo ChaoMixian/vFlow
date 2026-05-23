@@ -1,6 +1,11 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/parser/VariablePathParser.kt
 package com.chaomixian.vflow.core.types.parser
 
+import com.chaomixian.vflow.core.execution.VariableInfo
+import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.types.VTypeRegistry
+import com.chaomixian.vflow.core.workflow.model.ActionStep
+
 /**
  * 变量路径解析器
  *
@@ -94,6 +99,38 @@ object VariablePathParser {
         if (path.isEmpty()) return variableRef
 
         return buildNamedVariableReference(path.first(), path.drop(1))
+    }
+
+    fun canonicalizeVariableReference(variableRef: String, allSteps: List<ActionStep>): String {
+        val parsed = parseSingleVariableReference(variableRef) ?: return variableRef
+        if (parsed.isNamedVariable) {
+            return canonicalizeNamedVariableReference(variableRef)
+        }
+
+        val path = parsed.path
+        if (path.size < 3) return variableRef
+        if (path.firstOrNull() == GLOBAL_VARIABLE_NAMESPACE) return variableRef
+
+        val stepId = path[0]
+        val outputId = path[1]
+        val sourceStep = allSteps.find { it.id == stepId } ?: return variableRef
+        val sourceModule = ModuleRegistry.getModule(sourceStep.moduleId) ?: return variableRef
+        val outputDef = sourceModule.getDynamicOutputs(sourceStep, allSteps).find { it.id == outputId } ?: return variableRef
+
+        var currentTypeId = outputDef.listElementType ?: outputDef.typeName
+        val canonicalSegments = mutableListOf(stepId, outputId)
+
+        path.drop(2).forEach { segment ->
+            val canonical = VTypeRegistry.getType(currentTypeId)
+                .properties
+                .firstOrNull { it.matches(segment) }
+                ?.name
+                ?: segment
+            canonicalSegments += canonical
+            currentTypeId = VTypeRegistry.getPropertyType(currentTypeId, canonical)?.id ?: return@forEach
+        }
+
+        return "{{${canonicalSegments.joinToString(".")}}}"
     }
 
     fun buildNamedVariableReference(name: String, pathSegments: List<String> = emptyList()): String {

@@ -57,6 +57,12 @@
 # 7. 保留 Lua 相关
 -keep class org.luaj.vm2.** { *; }
 
+# 7.1 保留 Rhino JavaScript 引擎
+-keep class org.mozilla.javascript.** { *; }
+-keep class org.mozilla.javascript.regexp.** { *; }
+-keepattributes *Annotation*
+-dontwarn org.mozilla.javascript.**
+
 # 8. 忽略 XR/javax 警告
 -dontwarn javax.script.**
 -dontwarn org.luaj.vm2.script.**

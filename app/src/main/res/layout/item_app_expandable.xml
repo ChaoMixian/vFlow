@@ -72,7 +72,7 @@
         android:id="@+id/expand_icon"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:src="@drawable/ic_expand_more"
+        android:src="@drawable/rounded_keyboard_arrow_down_24"
         android:visibility="gone"
         tools:visibility="visible"/>
 

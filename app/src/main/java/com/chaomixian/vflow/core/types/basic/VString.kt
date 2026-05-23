@@ -6,6 +6,7 @@ import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
+import com.chaomixian.vflow.R
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
@@ -135,24 +136,26 @@ data class VString(override val raw: String) : EnhancedBaseVObject(), Parcelable
  */
 object VStringCompanion {
     // 属性注册表：所有 VString 实例共享
-    val registry = PropertyRegistry().apply {
-        register("length", "len", "长度", "count", getter = { host ->
+    val registry: PropertyRegistry = PropertyRegistry().apply {
+        register("length", "len", "长度", "count", returnType = VTypeRegistry.NUMBER, displayName = "长度", nameStringRes = R.string.vtype_string_length, getter = { host ->
             VNumber((host as VString).raw.length.toDouble())
         })
-        register("uppercase", "大写", "upper", getter = { host ->
+        register("uppercase", "大写", "upper", returnType = VTypeRegistry.STRING, displayName = "大写", nameStringRes = R.string.vtype_string_uppercase, getter = { host ->
             VString((host as VString).raw.uppercase())
         })
-        register("lowercase", "小写", "lower", getter = { host ->
+        register("lowercase", "小写", "lower", returnType = VTypeRegistry.STRING, displayName = "小写", nameStringRes = R.string.vtype_string_lowercase, getter = { host ->
             VString((host as VString).raw.lowercase())
         })
-        register("trim", "trimmed", "去除首尾空格", getter = { host ->
+        register("trim", "trimmed", "去除首尾空格", returnType = VTypeRegistry.STRING, displayName = "去除首尾空格", nameStringRes = R.string.vtype_string_trim, getter = { host ->
             VString((host as VString).raw.trim())
         })
-        register("removeSpaces", "remove_space", "去除空格", getter = { host ->
+        register("removeSpaces", "remove_space", "去除空格", returnType = VTypeRegistry.STRING, displayName = "去除所有空格", nameStringRes = R.string.vtype_string_remove_spaces, getter = { host ->
             VString((host as VString).raw.replace(" ", ""))
         })
-        register("isempty", "为空", "empty", getter = { host ->
+        register("isempty", "为空", "empty", returnType = VTypeRegistry.BOOLEAN, displayName = "是否为空", nameStringRes = R.string.vtype_string_isempty, getter = { host ->
             VBoolean((host as VString).raw.isEmpty())
         })
     }
+
+    fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
 }

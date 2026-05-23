@@ -493,6 +493,46 @@ object ShellManager {
         return enableAccessibilityService(context)
     }
 
+    suspend fun migrateAccessibilityServiceSetting(context: Context, disguisedEnabled: Boolean): Boolean {
+        if (!isShizukuActive(context) && !isRootAvailable()) {
+            DebugLogger.w(TAG, "跳过无障碍服务设置迁移：Shizuku/Root 不可用")
+            return false
+        }
+
+        val currentServices = execShellCommand(context, "settings get secure enabled_accessibility_services")
+        if (currentServices.startsWith("Error:")) {
+            DebugLogger.e(TAG, "读取无障碍服务列表失败: $currentServices")
+            return false
+        }
+
+        val originalServiceId = AccessibilityServiceStatus.getOriginalServiceId(context)
+        val disguisedServiceId = AccessibilityServiceStatus.getDisguisedServiceId(context)
+        val targetServiceId = if (disguisedEnabled) disguisedServiceId else originalServiceId
+        val sourceServiceId = if (disguisedEnabled) originalServiceId else disguisedServiceId
+        val migratedServices = AccessibilityServiceStatus.replaceServiceId(
+            enabledServicesSetting = currentServices.takeUnless { it == "null" },
+            fromServiceId = sourceServiceId,
+            toServiceId = targetServiceId
+        )
+
+        if (migratedServices == currentServices) {
+            return true
+        }
+
+        val result = execShellCommand(
+            context,
+            "settings put secure enabled_accessibility_services '$migratedServices'"
+        )
+        if (result.startsWith("Error:")) {
+            DebugLogger.e(TAG, "迁移无障碍服务列表失败: $result")
+            return false
+        }
+
+        execShellCommand(context, "settings put secure accessibility_enabled 1")
+        DebugLogger.d(TAG, "已通过 Shell 迁移无障碍服务设置。")
+        return true
+    }
+
     /**
      * 获取服务实例，使用 Mutex 解决并发问题 (仅用于 Shizuku)。
      */

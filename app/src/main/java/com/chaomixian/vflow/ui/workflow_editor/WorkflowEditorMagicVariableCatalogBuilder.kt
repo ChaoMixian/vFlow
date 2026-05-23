@@ -6,6 +6,7 @@ import com.chaomixian.vflow.core.execution.VariableType
 import com.chaomixian.vflow.core.module.ActionModule
 import com.chaomixian.vflow.core.module.InputDefinition
 import com.chaomixian.vflow.core.module.ModuleRegistry
+import com.chaomixian.vflow.core.module.OutputDefinition
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.parser.VariablePathParser
 import com.chaomixian.vflow.core.workflow.GlobalVariableStore
@@ -138,8 +139,8 @@ internal class WorkflowEditorMagicVariableCatalogBuilder(
                 MagicVariableItem(
                     variableReference = "{{${step.id}.${outputDef.id}}}",
                     variableName = outputDef.getLocalizedName(context),
-                    originDescription = typeDescription(outputDef.typeName),
-                    typeId = outputDef.typeName
+                    originDescription = outputTypeDescription(outputDef),
+                    typeId = pickerTypeId(outputDef)
                 )
             }
             groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
@@ -206,8 +207,8 @@ internal class WorkflowEditorMagicVariableCatalogBuilder(
             MagicVariableItem(
                 variableReference = "{{${loopStep.id}.${outputDef.id}}}",
                 variableName = outputDef.getLocalizedName(context),
-                originDescription = typeDescription(outputDef.typeName),
-                typeId = outputDef.typeName
+                originDescription = outputTypeDescription(outputDef),
+                typeId = pickerTypeId(outputDef)
             )
         }
         groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
@@ -231,12 +232,8 @@ internal class WorkflowEditorMagicVariableCatalogBuilder(
             MagicVariableItem(
                 variableReference = "{{${forEachStep.id}.${outputDef.id}}}",
                 variableName = outputDef.getLocalizedName(context),
-                originDescription = when {
-                    outputDef.listElementType != null -> typeDescription(outputDef.listElementType)
-                    outputDef.typeName == VTypeRegistry.ANY.id -> ""
-                    else -> typeDescription(outputDef.typeName)
-                },
-                typeId = outputDef.listElementType ?: outputDef.typeName
+                originDescription = outputTypeDescription(outputDef),
+                typeId = pickerTypeId(outputDef)
             )
         }
         groupedStepOutputs.getOrPut(groupName) { mutableListOf() }.addAll(items)
@@ -263,7 +260,31 @@ internal class WorkflowEditorMagicVariableCatalogBuilder(
     }
 
     private fun typeDescription(typeId: String): String {
-        return "(${typeId.split('.').last()})"
+        return "(${VTypeRegistry.getType(typeId).getLocalizedName(context)})"
+    }
+
+    private fun outputTypeDescription(outputDef: OutputDefinition): String {
+        if (outputDef.typeName == VTypeRegistry.ANY.id) return ""
+        if (outputDef.typeName != VTypeRegistry.LIST.id) {
+            return typeDescription(outputDef.typeName)
+        }
+
+        val listLabel = VTypeRegistry.getType(VTypeRegistry.LIST.id).getLocalizedName(context)
+        val elementLabel = outputDef.listElementType
+            ?.let { VTypeRegistry.getType(it).getLocalizedName(context) }
+        return if (elementLabel != null) {
+            "($listLabel<$elementLabel>)"
+        } else {
+            "($listLabel)"
+        }
+    }
+
+    private fun pickerTypeId(outputDef: OutputDefinition): String {
+        return if (outputDef.typeName == VTypeRegistry.LIST.id) {
+            VTypeRegistry.LIST.id
+        } else {
+            outputDef.typeName
+        }
     }
 
     private companion object {

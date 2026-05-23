@@ -8,15 +8,18 @@ import com.google.android.accessibility.selecttospeak.SelectToSpeakService
 
 object AccessibilityServiceStatus {
 
+    fun getOriginalServiceId(context: Context): String {
+        return ComponentName(context, AccessibilityService::class.java).flattenToString()
+    }
+
+    fun getDisguisedServiceId(context: Context): String {
+        return ComponentName(context, SelectToSpeakService::class.java).flattenToString()
+    }
+
     fun getServiceId(context: Context): String {
         val prefs = context.getSharedPreferences(SettingsViewModel.PREFS_NAME, Context.MODE_PRIVATE)
         val disguised = prefs.getBoolean(SettingsViewModel.KEY_ACCESSIBILITY_DISGUISE, false)
-        val serviceClass = if (disguised) {
-            SelectToSpeakService::class.java
-        } else {
-            AccessibilityService::class.java
-        }
-        return ComponentName(context, serviceClass).flattenToString()
+        return if (disguised) getDisguisedServiceId(context) else getOriginalServiceId(context)
     }
 
     fun isEnabledInSettings(context: Context): Boolean {
@@ -39,5 +42,25 @@ object AccessibilityServiceStatus {
         return enabledServicesSetting
             .split(':')
             .any { it.equals(expectedServiceId, ignoreCase = true) }
+    }
+
+    internal fun replaceServiceId(
+        enabledServicesSetting: String?,
+        fromServiceId: String,
+        toServiceId: String
+    ): String {
+        val entries = enabledServicesSetting
+            .orEmpty()
+            .split(':')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .filterNot {
+                it.equals(fromServiceId, ignoreCase = true) ||
+                    it.equals(toServiceId, ignoreCase = true)
+            }
+            .toMutableList()
+
+        entries += toServiceId
+        return entries.joinToString(":")
     }
 }

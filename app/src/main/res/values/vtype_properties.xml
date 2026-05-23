@@ -55,6 +55,7 @@
     <!-- 屏幕控件属性 -->
     <string name="vtype_screen_element_text">文本内容</string>
     <string name="vtype_screen_element_content_description">内容描述</string>
+    <string name="vtype_screen_element_all_texts">所有文本</string>
     <string name="vtype_screen_element_id">控件ID</string>
     <string name="vtype_screen_element_class">类名</string>
     <string name="vtype_screen_element_center">中心点</string>

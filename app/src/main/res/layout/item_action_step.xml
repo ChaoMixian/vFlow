@@ -9,7 +9,9 @@
     android:orientation="horizontal"
 
     android:paddingTop="6dp"
-    android:paddingBottom="6dp">
+    android:paddingBottom="6dp"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
     <Space
         android:id="@+id/indent_space"

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +23,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -51,6 +57,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -67,9 +74,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -85,6 +94,7 @@ import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.ui.common.SearchBarCard
 import com.chaomixian.vflow.ui.common.SearchEmptyStateCard
 import com.chaomixian.vflow.ui.common.ThemeUtils
+import com.chaomixian.vflow.ui.main.WorkflowLayoutMode
 import com.chaomixian.vflow.ui.common.matchesSearch
 import com.chaomixian.vflow.ui.common.normalizeSearchQuery
 import com.chaomixian.vflow.ui.viewmodel.WorkflowListUiState
@@ -92,6 +102,7 @@ import com.chaomixian.vflow.ui.workflow_list.WorkflowListItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyGridState
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 data class WorkflowListScreenActions(
@@ -128,6 +139,7 @@ data class WorkflowMenuItemAction(
 @Composable
 fun WorkflowListScreen(
     uiState: WorkflowListUiState,
+    layoutMode: WorkflowLayoutMode,
     actions: WorkflowListScreenActions,
     extraBottomPadding: Dp = 0.dp,
     modifier: Modifier = Modifier
@@ -137,6 +149,7 @@ fun WorkflowListScreen(
     val focusManager = LocalFocusManager.current
     val displayItems = remember { mutableStateListOf<WorkflowListItem>() }
     val lazyListState = rememberLazyListState()
+    val lazyGridState = rememberLazyGridState()
     val folderSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val isSearching = normalizedQuery.isNotBlank()
@@ -211,6 +224,26 @@ fun WorkflowListScreen(
         }
     }
 
+    val reorderableGridState = rememberReorderableLazyGridState(
+        lazyGridState = lazyGridState,
+        scrollThresholdPadding = PaddingValues(
+            bottom = extraBottomPadding + 88.dp
+        )
+    ) { from, to ->
+        val fromDataIndex = from.index - reorderableContentStartIndex
+        val toDataIndex = to.index - reorderableContentStartIndex
+        if (fromDataIndex !in displayItems.indices || toDataIndex !in displayItems.indices) {
+            return@rememberReorderableLazyGridState
+        }
+
+        val fromItem = displayItems[fromDataIndex]
+        val toItem = displayItems[toDataIndex]
+        if (fromItem is WorkflowListItem.WorkflowItem && toItem is WorkflowListItem.WorkflowItem) {
+            displayItems.removeAt(fromDataIndex)
+            displayItems.add(toDataIndex, fromItem)
+        }
+    }
+
     fun persistOrder() {
         actions.onPersistWorkflowOrder(
             displayItems
@@ -220,7 +253,23 @@ fun WorkflowListScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        LazyColumn(
+        if (layoutMode == WorkflowLayoutMode.Grid) {
+            WorkflowGridContent(
+                filteredItems = filteredItems,
+                uiState = uiState,
+                actions = actions,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                isSearching = isSearching,
+                showLoadingCard = showLoadingCard,
+                extraBottomPadding = extraBottomPadding,
+                focusManager = focusManager,
+                lazyGridState = lazyGridState,
+                reorderableGridState = reorderableGridState,
+                onPersistOrder = ::persistOrder,
+            )
+        } else {
+            LazyColumn(
             state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
@@ -388,6 +437,7 @@ fun WorkflowListScreen(
                         )
                     }
                 }
+            }
             }
         }
 
@@ -690,7 +740,11 @@ fun WorkflowCard(
                 if (hasAutoTriggers) {
                     Switch(
                         checked = workflow.isEnabled,
-                        onCheckedChange = onToggleEnabled
+                        onCheckedChange = onToggleEnabled,
+                        colors = workflowSwitchColors(
+                            colorfulCardsEnabled = colorfulCardsEnabled,
+                            visualColors = visualColors
+                        )
                     )
                 }
 
@@ -775,11 +829,17 @@ private fun FolderCard(
     folder: WorkflowFolder,
     workflowCount: Int,
     modifier: Modifier = Modifier,
+    horizontalPadding: Dp = 12.dp,
     actions: WorkflowListScreenActions
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Card(
-        modifier = modifier.padding(start = 12.dp, top = 6.dp, end = 12.dp, bottom = 6.dp),
+        modifier = modifier.padding(
+            start = horizontalPadding,
+            top = 6.dp,
+            end = horizontalPadding,
+            bottom = 6.dp
+        ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -991,6 +1051,566 @@ private fun WorkflowChip(
             )
         }
     }
+}
+
+@Composable
+private fun WorkflowGridContent(
+    filteredItems: List<WorkflowListItem>,
+    uiState: WorkflowListUiState,
+    actions: WorkflowListScreenActions,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    isSearching: Boolean,
+    showLoadingCard: Boolean,
+    extraBottomPadding: Dp,
+    focusManager: FocusManager,
+    lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    reorderableGridState: sh.calvin.reorderable.ReorderableLazyGridState,
+    onPersistOrder: () -> Unit,
+) {
+    LazyVerticalGrid(
+        state = lazyGridState,
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures { focusManager.clearFocus() }
+            },
+        contentPadding = PaddingValues(
+            start = 8.dp,
+            top = 12.dp,
+            end = 8.dp,
+            bottom = extraBottomPadding + 88.dp
+        ),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
+    ) {
+        item(span = { GridItemSpan(2) }) {
+            SearchBarCard(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholderRes = R.string.workflow_search_placeholder,
+                clearContentDescriptionRes = R.string.workflow_search_clear,
+                onClearFocus = { focusManager.clearFocus() },
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+        }
+
+        if (showLoadingCard) {
+            item(span = { GridItemSpan(2) }) {
+                WorkflowLoadingState(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
+                )
+            }
+        } else if (filteredItems.isEmpty()) {
+            item(span = { GridItemSpan(2) }) {
+                if (isSearching) {
+                    SearchEmptyStateCard(
+                        titleRes = R.string.workflow_search_no_results,
+                        hintRes = R.string.workflow_search_no_results_hint,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
+                    )
+                } else {
+                    EmptyWorkflowState(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
+                    )
+                }
+            }
+        } else {
+            items(
+                items = filteredItems,
+                key = { item -> item.id },
+                span = { item ->
+                    when (item) {
+                        is WorkflowListItem.FolderItem -> GridItemSpan(2)
+                        is WorkflowListItem.WorkflowItem -> GridItemSpan(1)
+                    }
+                }
+            ) { item ->
+                when (item) {
+                    is WorkflowListItem.WorkflowItem -> {
+                        val workflow = item.workflow
+                        var suppressOpenUntil by remember(item.id) { mutableLongStateOf(0L) }
+                        val topMenuActions = listOf(
+                            WorkflowMenuItemAction(
+                                textRes = R.string.dialog_move_to_folder_title,
+                                icon = Icons.AutoMirrored.Outlined.DriveFileMove,
+                                onClick = { actions.onMoveWorkflowToFolder(workflow) }
+                            ),
+                            WorkflowMenuItemAction(
+                                textRes = R.string.workflow_item_menu_duplicate,
+                                icon = Icons.Outlined.ContentCopy,
+                                onClick = { actions.onDuplicateWorkflow(workflow) }
+                            ),
+                            WorkflowMenuItemAction(
+                                textRes = R.string.workflow_item_menu_delete,
+                                icon = Icons.Outlined.DeleteOutline,
+                                onClick = { actions.onDeleteWorkflow(workflow) }
+                            ),
+                        )
+                        val regularMenuActions = buildList {
+                            if (workflow.hasManualTrigger()) {
+                                add(
+                                    WorkflowMenuItemAction(
+                                        textRes = R.string.workflow_item_menu_add_shortcut,
+                                        icon = Icons.AutoMirrored.Outlined.AddToHomeScreen,
+                                        onClick = { actions.onAddShortcut(workflow) }
+                                    )
+                                )
+                            }
+                            add(
+                                WorkflowMenuItemAction(
+                                    textRes = R.string.workflow_item_menu_export_single,
+                                    icon = Icons.Outlined.Download,
+                                    onClick = { actions.onExportWorkflow(workflow) }
+                                )
+                            )
+                            add(
+                                WorkflowMenuItemAction(
+                                    textRes = R.string.workflow_item_menu_copy_id,
+                                    icon = Icons.Outlined.Badge,
+                                    onClick = { actions.onCopyWorkflowId(workflow) }
+                                )
+                            )
+                            if (workflow.hasManualTrigger()) {
+                                add(
+                                    WorkflowMenuItemAction(
+                                        textRes = R.string.workflow_item_menu_add_to_tile,
+                                        icon = Icons.Outlined.DashboardCustomize,
+                                        onClick = { actions.onAddToTile(workflow) }
+                                    )
+                                )
+                            }
+                        }
+                        if (isSearching) {
+                            WorkflowCardCompact(
+                                workflow = workflow,
+                                executionStateVersion = uiState.executionStateVersion,
+                                isDragging = false,
+                                topMenuActions = topMenuActions,
+                                regularMenuActions = regularMenuActions,
+                                onOpenWorkflow = { actions.onOpenWorkflow(workflow) },
+                                onToggleFavorite = { actions.onToggleFavorite(workflow) },
+                                onToggleEnabled = { enabled -> actions.onToggleEnabled(workflow, enabled) },
+                                onExecuteWorkflow = { actions.onExecuteWorkflow(workflow) },
+                                onExecuteWorkflowDelayed = { delayMs ->
+                                    actions.onExecuteWorkflowDelayed(workflow, delayMs)
+                                },
+                            )
+                        } else {
+                            ReorderableItem(
+                                state = reorderableGridState,
+                                key = item.id
+                            ) { isDragging ->
+                                WorkflowCardCompact(
+                                    workflow = workflow,
+                                    executionStateVersion = uiState.executionStateVersion,
+                                    isDragging = isDragging,
+                                    topMenuActions = topMenuActions,
+                                    regularMenuActions = regularMenuActions,
+                                    dragHandleModifier = with(this) {
+                                        Modifier.longPressDraggableHandle(
+                                            onDragStarted = {
+                                                suppressOpenUntil = SystemClock.uptimeMillis() + 250L
+                                            },
+                                            onDragStopped = {
+                                                suppressOpenUntil = SystemClock.uptimeMillis() + 250L
+                                                onPersistOrder()
+                                            }
+                                        )
+                                    },
+                                    onOpenWorkflow = {
+                                        if (SystemClock.uptimeMillis() < suppressOpenUntil) return@WorkflowCardCompact
+                                        actions.onOpenWorkflow(workflow)
+                                    },
+                                    onToggleFavorite = { actions.onToggleFavorite(workflow) },
+                                    onToggleEnabled = { enabled -> actions.onToggleEnabled(workflow, enabled) },
+                                    onExecuteWorkflow = { actions.onExecuteWorkflow(workflow) },
+                                    onExecuteWorkflowDelayed = { delayMs ->
+                                        actions.onExecuteWorkflowDelayed(workflow, delayMs)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    is WorkflowListItem.FolderItem -> FolderCard(
+                        folder = item.folder,
+                        workflowCount = item.workflowCount,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalPadding = 4.dp,
+                        actions = actions
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun WorkflowCardCompact(
+    workflow: Workflow,
+    executionStateVersion: Int,
+    isDragging: Boolean,
+    topMenuActions: List<WorkflowMenuItemAction>,
+    regularMenuActions: List<WorkflowMenuItemAction>,
+    dragHandleModifier: Modifier = Modifier,
+    onOpenWorkflow: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onToggleEnabled: (Boolean) -> Unit,
+    onExecuteWorkflow: () -> Unit,
+    onExecuteWorkflowDelayed: (Long) -> Unit,
+) {
+    val context = LocalContext.current
+    val colorfulCardsEnabled = remember { ThemeUtils.isColorfulWorkflowCardsEnabled(context) }
+    val visualColors = remember(workflow.cardThemeColor) {
+        WorkflowVisuals.resolveCardColors(context, workflow.cardThemeColor)
+    }
+    val missingPermissions = PermissionManager.getMissingPermissions(context, workflow)
+    val permissionCount = workflow.allSteps
+        .mapNotNull { step -> ModuleRegistry.getModule(step.moduleId)?.getRequiredPermissions(step) }
+        .flatten()
+        .distinct()
+        .size
+    val isManualTrigger = workflow.hasManualTrigger()
+    val hasAutoTriggers = workflow.hasAutoTriggers()
+    val isRunning = remember(workflow.id, executionStateVersion) {
+        WorkflowExecutor.isRunning(workflow.id)
+    }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var delayedMenuExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .padding(4.dp)
+            .graphicsLayer {
+                if (isDragging) {
+                    scaleX = 1.02f
+                    scaleY = 1.02f
+                }
+            }
+            .aspectRatio(1f),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 0.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (colorfulCardsEnabled) {
+                Color(visualColors.cardBackground)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            }
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .combinedClickable(onClick = onOpenWorkflow)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.then(dragHandleModifier)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (colorfulCardsEnabled) {
+                        Box {
+                            Surface(
+                                modifier = Modifier.size(40.dp),
+                                onClick = { menuExpanded = true },
+                                color = Color(visualColors.iconBackground),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(
+                                        WorkflowVisuals.resolveIconDrawableRes(workflow.cardIconRes)
+                                    ),
+                                    contentDescription = stringResource(R.string.workflow_item_more_options),
+                                    tint = Color(visualColors.iconTint),
+                                    modifier = Modifier.padding(9.dp)
+                                )
+                            }
+                            DropdownMenuPopup(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                DropdownMenuGroup(
+                                    shapes = MenuDefaults.groupShape(index = 0, count = 1),
+                                    modifier = Modifier
+                                        .width(IntrinsicSize.Max)
+                                        .widthIn(min = 156.dp, max = 236.dp),
+                                    containerColor = MenuDefaults.groupStandardContainerColor,
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(vertical = 10.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            topMenuActions.forEach { item ->
+                                                WorkflowQuickActionButton(
+                                                    icon = item.icon,
+                                                    contentDescription = stringResource(item.textRes),
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        item.onClick()
+                                                    }
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        regularMenuActions.forEach { item ->
+                                            WorkflowFlatMenuItem(
+                                                text = stringResource(item.textRes),
+                                                icon = item.icon,
+                                                onClick = {
+                                                    menuExpanded = false
+                                                    item.onClick()
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        SpacerWidth(12.dp)
+                    }
+                    Text(
+                        text = workflow.name,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (!colorfulCardsEnabled) {
+                        Box {
+                            IconButton(
+                                onClick = { menuExpanded = true },
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_more_vert),
+                                    contentDescription = stringResource(R.string.workflow_item_more_options),
+                                )
+                            }
+                            DropdownMenuPopup(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                DropdownMenuGroup(
+                                    shapes = MenuDefaults.groupShape(index = 0, count = 1),
+                                    modifier = Modifier
+                                        .width(IntrinsicSize.Max)
+                                        .widthIn(min = 156.dp, max = 236.dp),
+                                    containerColor = MenuDefaults.groupStandardContainerColor,
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(vertical = 10.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            topMenuActions.forEach { item ->
+                                                WorkflowQuickActionButton(
+                                                    icon = item.icon,
+                                                    contentDescription = stringResource(item.textRes),
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        item.onClick()
+                                                    }
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        regularMenuActions.forEach { item ->
+                                            WorkflowFlatMenuItem(
+                                                text = stringResource(item.textRes),
+                                                icon = item.icon,
+                                                onClick = {
+                                                    menuExpanded = false
+                                                    item.onClick()
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    WorkflowChip(
+                        label = stringResource(R.string.workflow_chip_steps, workflow.steps.size),
+                        iconRes = R.drawable.rounded_dashboard_fill_24,
+                        containerColor = if (colorfulCardsEnabled) {
+                            Color(visualColors.chipBackground)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHighest
+                        },
+                        contentColor = if (colorfulCardsEnabled) {
+                            Color(visualColors.iconTint)
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                    if (permissionCount > 0) {
+                        WorkflowChip(
+                            label = if (missingPermissions.isNotEmpty()) {
+                                stringResource(
+                                    R.string.workflow_chip_missing_permissions_count,
+                                    missingPermissions.size
+                                )
+                            } else {
+                                stringResource(R.string.workflow_chip_permissions_count, permissionCount)
+                            },
+                            iconRes = R.drawable.rounded_security_24,
+                            containerColor = if (missingPermissions.isNotEmpty()) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else if (colorfulCardsEnabled) {
+                                Color(visualColors.chipBackground)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            },
+                            contentColor = if (missingPermissions.isNotEmpty()) {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            } else if (colorfulCardsEnabled) {
+                                Color(visualColors.iconTint)
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onToggleFavorite,
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            if (workflow.isFavorite) R.drawable.ic_star else R.drawable.ic_star_border
+                        ),
+                        contentDescription = stringResource(R.string.workflow_item_favorite),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                if (hasAutoTriggers) {
+                    Switch(
+                        checked = workflow.isEnabled,
+                        onCheckedChange = onToggleEnabled,
+                        colors = workflowSwitchColors(
+                            colorfulCardsEnabled = colorfulCardsEnabled,
+                            visualColors = visualColors
+                        )
+                    )
+                }
+                if (isManualTrigger && !hasAutoTriggers) {
+                    Box {
+                        Surface(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .combinedClickable(
+                                    onClick = onExecuteWorkflow,
+                                    onLongClick = { delayedMenuExpanded = true }
+                                ),
+                            color = if (colorfulCardsEnabled) {
+                                Color(visualColors.accentBackground)
+                            } else {
+                                MaterialTheme.colorScheme.primaryContainer
+                            },
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    if (isRunning) R.drawable.rounded_pause_fill_24
+                                    else R.drawable.rounded_play_arrow_fill_24
+                                ),
+                                contentDescription = stringResource(R.string.workflow_item_execute),
+                                tint = if (colorfulCardsEnabled) {
+                                    Color(visualColors.iconTint)
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                },
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                        DropdownMenuPopup(
+                            expanded = delayedMenuExpanded,
+                            onDismissRequest = { delayedMenuExpanded = false }
+                        ) {
+                            DropdownMenuGroup(
+                                shapes = MenuDefaults.groupShape(index = 0, count = 1),
+                                modifier = Modifier
+                                    .width(IntrinsicSize.Max)
+                                    .widthIn(min = 132.dp, max = 180.dp),
+                                containerColor = MenuDefaults.groupStandardContainerColor,
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 10.dp)
+                                ) {
+                                    WorkflowPlainMenuItem(
+                                        text = stringResource(R.string.workflow_execute_delay_5s),
+                                        onClick = {
+                                            delayedMenuExpanded = false
+                                            onExecuteWorkflowDelayed(5_000L)
+                                        }
+                                    )
+                                    WorkflowPlainMenuItem(
+                                        text = stringResource(R.string.workflow_execute_delay_15s),
+                                        onClick = {
+                                            delayedMenuExpanded = false
+                                            onExecuteWorkflowDelayed(15_000L)
+                                        }
+                                    )
+                                    WorkflowPlainMenuItem(
+                                        text = stringResource(R.string.workflow_execute_delay_1min),
+                                        onClick = {
+                                            delayedMenuExpanded = false
+                                            onExecuteWorkflowDelayed(60_000L)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun workflowSwitchColors(
+    colorfulCardsEnabled: Boolean,
+    visualColors: WorkflowVisuals.CardColors,
+) = if (colorfulCardsEnabled) {
+    SwitchDefaults.colors(
+        checkedThumbColor = Color(visualColors.iconTint),
+        checkedTrackColor = Color(visualColors.accentBackground),
+        checkedBorderColor = Color(visualColors.accentBackground),
+        checkedIconColor = Color(visualColors.accentBackground),
+        uncheckedThumbColor = MaterialTheme.colorScheme.surface,
+        uncheckedTrackColor = Color(visualColors.chipBackground),
+        uncheckedBorderColor = Color(visualColors.iconBackground),
+        uncheckedIconColor = Color(visualColors.iconBackground),
+    )
+} else {
+    SwitchDefaults.colors()
 }
 
 @Composable

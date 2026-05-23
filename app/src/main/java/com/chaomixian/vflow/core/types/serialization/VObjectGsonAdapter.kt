@@ -82,6 +82,9 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
                 out.endObject()
                 out.name("text").value(value.text ?: "")
                 out.name("content_description").value(value.contentDescription ?: "")
+                out.name("all_texts").beginArray()
+                value.allTexts.forEach { out.value(it) }
+                out.endArray()
                 out.name("view_id").value(value.viewId ?: "")
                 out.name("class_name").value(value.className ?: "")
                 out.name("is_clickable").value(value.isClickable)
@@ -270,6 +273,7 @@ class VObjectGsonAdapter : TypeAdapter<VObject>() {
                         bounds = Rect(left, top, right, bottom),
                         text = rawValue["text"] as? String,
                         contentDescription = rawValue["content_description"] as? String,
+                        allTexts = (rawValue["all_texts"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList(),
                         viewId = rawValue["view_id"] as? String,
                         className = rawValue["class_name"] as? String,
                         isClickable = rawValue["is_clickable"] as? Boolean ?: false,

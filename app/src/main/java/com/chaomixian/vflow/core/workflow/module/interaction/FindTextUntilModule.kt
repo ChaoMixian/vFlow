@@ -238,6 +238,7 @@ class FindTextUntilModule : BaseModule() {
                                     bounds = rect,
                                     text = lineText,
                                     contentDescription = null,
+                                    allTexts = listOf(lineText),
                                     viewId = null,
                                     className = null,
                                     isClickable = false,

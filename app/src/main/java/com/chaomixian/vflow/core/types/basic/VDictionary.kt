@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.types.basic
 
 import android.os.Parcelable
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
@@ -86,20 +87,22 @@ data class VDictionary(override val raw: @RawValue Map<String, VObject>) : Enhan
  */
 object VDictionaryCompanion {
     // 属性注册表：所有 VDictionary 实例共享
-    val registry = PropertyRegistry().apply {
-        register("count", "size", "数量", getter = { host ->
+    val registry: PropertyRegistry = PropertyRegistry().apply {
+        register("count", "size", "数量", returnType = VTypeRegistry.NUMBER, displayName = "数量", nameStringRes = R.string.vtype_dict_count, getter = { host ->
             VNumber((host as VDictionary).raw.size.toDouble())
         })
-        register("keys", "键", getter = { host ->
+        register("keys", "键", returnType = VTypeRegistry.LIST, displayName = "所有键", nameStringRes = R.string.vtype_dict_keys, getter = { host ->
             VList((host as VDictionary).raw.keys.map { VString(it) })
         })
-        register("values", "值", getter = { host ->
+        register("values", "值", returnType = VTypeRegistry.LIST, displayName = "所有值", nameStringRes = R.string.vtype_dict_values, getter = { host ->
             VList((host as VDictionary).raw.values.toList())
         })
         // 添加一个特殊的属性，用于UI获取键列表
-        register("availableKeys", "可用键", getter = { host ->
+        register("availableKeys", "可用键", returnType = VTypeRegistry.LIST, displayName = "可用键", getter = { host ->
             val dict = host as VDictionary
             VList(dict.getAvailableKeys().map { VString(it) })
         })
     }
+
+    fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
 }

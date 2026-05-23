@@ -15,6 +15,7 @@ import java.lang.reflect.Method
 class IClipboardWrapper : ServiceWrapper("clipboard", "android.content.IClipboard\$Stub"), StreamingWrapper {
     companion object {
         private const val EVENT_DEBOUNCE_MS = 80L
+        private const val DUPLICATE_SUPPRESSION_WINDOW_MS = 2_000L
     }
 
     private var setPrimaryClipMethod: Method? = null
@@ -37,6 +38,7 @@ class IClipboardWrapper : ServiceWrapper("clipboard", "android.content.IClipboar
     private var pendingEmitRunnable: Runnable? = null
     private var latestEventPayloadJson: String? = null
     private var lastDispatchedSignature: String? = null
+    private var lastDispatchedAtMs: Long = 0L
 
     override fun onServiceConnected(service: Any) {
         val methods = service.javaClass.methods
@@ -159,6 +161,7 @@ class IClipboardWrapper : ServiceWrapper("clipboard", "android.content.IClipboar
                 pendingEmitRunnable = null
                 latestEventPayloadJson = null
                 lastDispatchedSignature = null
+                lastDispatchedAtMs = 0L
                 false
             }
         }
@@ -177,14 +180,19 @@ class IClipboardWrapper : ServiceWrapper("clipboard", "android.content.IClipboar
     private fun emitStableClipboardEvent() {
         val payload = buildClipboardEventPayload() ?: run {
             lastDispatchedSignature = null
+            lastDispatchedAtMs = 0L
             return
         }
         val signature = payload.optString("signature")
+        val now = System.currentTimeMillis()
         synchronized(clipboardEventLock) {
-            if (signature == lastDispatchedSignature) {
+            val withinSuppressionWindow =
+                signature == lastDispatchedSignature && (now - lastDispatchedAtMs) < DUPLICATE_SUPPRESSION_WINDOW_MS
+            if (withinSuppressionWindow) {
                 return
             }
             lastDispatchedSignature = signature
+            lastDispatchedAtMs = now
             latestEventPayloadJson = payload.toString()
             clipboardChangeSequence += 1
             clipboardEventLock.notifyAll()

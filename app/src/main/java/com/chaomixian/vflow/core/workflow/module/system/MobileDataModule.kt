@@ -27,6 +27,8 @@ class MobileDataModule : BaseModule() {
 
     override val id = "vflow.system.mobile_data"
     override val metadata = ActionMetadata(
+        nameStringRes = R.string.module_vflow_system_mobile_data_name,
+        descriptionStringRes = R.string.module_vflow_system_mobile_data_desc,
         name = "移动数据",
         description = "开启或关闭移动数据",
         iconRes = R.drawable.rounded_signal_cellular_24,
@@ -64,7 +66,12 @@ class MobileDataModule : BaseModule() {
     )
 
     override fun getOutputs(step: ActionStep?): List<OutputDefinition> = listOf(
-        OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id)
+        OutputDefinition(
+            "success",
+            "是否成功",
+            VTypeRegistry.BOOLEAN.id,
+            nameStringRes = R.string.output_vflow_system_mobile_data_success_name
+        )
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -90,15 +97,18 @@ class MobileDataModule : BaseModule() {
 
         val success = when (action) {
             ACTION_ENABLE -> {
-                onProgress(ProgressUpdate("正在开启移动数据..."))
+                onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_mobile_data_enabling)))
                 execMobileDataCommand(context, true)
             }
             ACTION_DISABLE -> {
-                onProgress(ProgressUpdate("正在关闭移动数据..."))
+                onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_mobile_data_disabling)))
                 execMobileDataCommand(context, false)
             }
             else -> {
-                return ExecutionResult.Failure("参数错误", "未知的操作类型: $action")
+                return ExecutionResult.Failure(
+                    appContext.getString(R.string.error_vflow_system_mobile_data_param_error),
+                    appContext.getString(R.string.error_vflow_system_mobile_data_unknown_action, action)
+                )
             }
         }
 
@@ -107,10 +117,13 @@ class MobileDataModule : BaseModule() {
                 ACTION_DISABLE -> appContext.getString(R.string.option_vflow_system_mobile_data_disable)
                 else -> appContext.getString(R.string.option_vflow_system_mobile_data_enable)
             }
-            onProgress(ProgressUpdate("移动数据${actionLabel}完成"))
+            onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_mobile_data_done, actionLabel)))
             ExecutionResult.Success(mapOf("success" to VBoolean(true)))
         } else {
-            ExecutionResult.Failure("执行失败", "移动数据操作失败")
+            ExecutionResult.Failure(
+                appContext.getString(R.string.error_vflow_system_mobile_data_execution_failed),
+                appContext.getString(R.string.error_vflow_system_mobile_data_failed)
+            )
         }
     }
 

@@ -55,6 +55,7 @@
     <!-- Screen Element Properties -->
     <string name="vtype_screen_element_text">Text content</string>
     <string name="vtype_screen_element_content_description">Content description</string>
+    <string name="vtype_screen_element_all_texts">All texts</string>
     <string name="vtype_screen_element_id">View ID</string>
     <string name="vtype_screen_element_class">Class name</string>
     <string name="vtype_screen_element_center">Center point</string>

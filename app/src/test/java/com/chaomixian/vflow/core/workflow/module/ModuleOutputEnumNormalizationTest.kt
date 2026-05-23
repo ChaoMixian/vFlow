@@ -59,6 +59,21 @@ class ModuleOutputEnumNormalizationTest {
     }
 
     @Test
+    fun `ocr recognize outputs include structured json`() {
+        val outputs = OCRModule().getOutputs(
+            step("vflow.interaction.ocr", "mode", "识别全文")
+        )
+
+        assertTrue(outputs.any { it.id == "full_text" && it.typeName == VTypeRegistry.STRING.id })
+        assertTrue(outputs.any {
+            it.id == "text_list" &&
+                it.typeName == VTypeRegistry.LIST.id &&
+                it.listElementType == VTypeRegistry.STRING.id
+        })
+        assertTrue(outputs.any { it.id == "structured_json" && it.typeName == VTypeRegistry.STRING.id })
+    }
+
+    @Test
     fun `usage stats list output declares dictionary element type`() {
         val outputs = GetAppUsageStatsModule().getOutputs(null)
 

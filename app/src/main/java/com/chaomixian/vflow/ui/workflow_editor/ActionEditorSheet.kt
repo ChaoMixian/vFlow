@@ -86,6 +86,9 @@ class ActionEditorSheet : BottomSheetDialogFragment() {
 
         // 初始化参数，首先使用模块定义的默认值
         currentParameters.initializeDefaults(module.getInputs())
+        if (existingStep == null) {
+            currentParameters.applyDefaultExecutionSettings(requireContext())
+        }
         // 然后用步骤已有的参数覆盖默认值
         existingStep?.parameters?.let { currentParameters.putAll(it) }
     }

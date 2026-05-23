@@ -2,6 +2,7 @@
 package com.chaomixian.vflow.core.types.complex
 
 import android.graphics.Rect
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
@@ -37,56 +38,58 @@ data class VCoordinateRegion(
 
     companion object {
         // 属性注册表：所有 VCoordinateRegion 实例共享
-        private val registry = PropertyRegistry().apply {
+        private val registry: PropertyRegistry = PropertyRegistry().apply {
             // 边界坐标
-            register("left", getter = { host ->
+            register("left", returnType = VTypeRegistry.NUMBER, displayName = "左边界", nameStringRes = R.string.vtype_coord_region_left, getter = { host ->
                 VNumber((host as VCoordinateRegion).left.toDouble())
             })
-            register("top", getter = { host ->
+            register("top", returnType = VTypeRegistry.NUMBER, displayName = "上边界", nameStringRes = R.string.vtype_coord_region_top, getter = { host ->
                 VNumber((host as VCoordinateRegion).top.toDouble())
             })
-            register("right", getter = { host ->
+            register("right", returnType = VTypeRegistry.NUMBER, displayName = "右边界", nameStringRes = R.string.vtype_coord_region_right, getter = { host ->
                 VNumber((host as VCoordinateRegion).right.toDouble())
             })
-            register("bottom", getter = { host ->
+            register("bottom", returnType = VTypeRegistry.NUMBER, displayName = "下边界", nameStringRes = R.string.vtype_coord_region_bottom, getter = { host ->
                 VNumber((host as VCoordinateRegion).bottom.toDouble())
             })
 
             // 尺寸
-            register("width", "w", getter = { host ->
+            register("width", "w", returnType = VTypeRegistry.NUMBER, displayName = "宽度", nameStringRes = R.string.vtype_coord_region_width, getter = { host ->
                 VNumber((host as VCoordinateRegion).width.toDouble())
             })
-            register("height", "h", getter = { host ->
+            register("height", "h", returnType = VTypeRegistry.NUMBER, displayName = "高度", nameStringRes = R.string.vtype_coord_region_height, getter = { host ->
                 VNumber((host as VCoordinateRegion).height.toDouble())
             })
 
             // 中心点
-            register("center", "center_point", getter = { host ->
+            register("center", "center_point", returnType = VTypeRegistry.COORDINATE, displayName = "中心点", nameStringRes = R.string.vtype_coord_region_center, getter = { host ->
                 val region = host as VCoordinateRegion
                 VCoordinate(region.centerX, region.centerY)
             })
-            register("center_x", "x", getter = { host ->
+            register("center_x", "x", returnType = VTypeRegistry.NUMBER, displayName = "中心 X", nameStringRes = R.string.vtype_coord_region_center_x, getter = { host ->
                 VNumber((host as VCoordinateRegion).centerX.toDouble())
             })
-            register("center_y", "y", getter = { host ->
+            register("center_y", "y", returnType = VTypeRegistry.NUMBER, displayName = "中心 Y", nameStringRes = R.string.vtype_coord_region_center_y, getter = { host ->
                 VNumber((host as VCoordinateRegion).centerY.toDouble())
             })
 
             // 字符串表示
-            register("as_string", "string", getter = { host ->
+            register("as_string", "string", returnType = VTypeRegistry.STRING, displayName = "字符串", getter = { host ->
                 VString(host.asString())
             })
 
             // 布尔检查
-            register("is_empty", "isEmpty", getter = { host ->
+            register("is_empty", "isEmpty", returnType = VTypeRegistry.BOOLEAN, displayName = "是否为空", getter = { host ->
                 val region = host as VCoordinateRegion
                 VBoolean(region.width <= 0 || region.height <= 0)
             })
-            register("is_valid", "isValid", getter = { host ->
+            register("is_valid", "isValid", returnType = VTypeRegistry.BOOLEAN, displayName = "是否有效", getter = { host ->
                 val region = host as VCoordinateRegion
                 VBoolean(region.left < region.right && region.top < region.bottom)
             })
         }
+
+        fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
 
         /**
          * 从 Rect 创建 VCoordinateRegion

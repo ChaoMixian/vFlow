@@ -38,6 +38,17 @@
                     android:textStyle="bold" />
 
                 <ImageButton
+                    android:id="@+id/btn_editor_copy_selected"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/editor_exit_selection_mode"
+                    android:src="@drawable/rounded_disabled_by_default_24"
+                    android:visibility="gone"
+                    app:tint="?attr/colorPrimary" />
+
+                <ImageButton
                     android:id="@+id/btn_editor_more"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
@@ -63,6 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:clipChildren="false"
             android:clipToPadding="false"
             android:paddingTop="16dp"
             android:paddingHorizontal="16dp"
@@ -119,6 +131,16 @@
                     app:icon="@drawable/rounded_save_24"
                     app:layout_overflowIcon="@drawable/rounded_save_24"
                     app:layout_overflowText="@string/workflow_editor_save" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_open_selection_mode"
+                    style="@style/Widget.Material3.FloatingToolbar.IconButton.Vibrant"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/editor_tools_menu"
+                    app:icon="@drawable/rounded_note_stack_24"
+                    app:layout_overflowIcon="@drawable/rounded_note_stack_24"
+                    app:layout_overflowText="@string/editor_tools_menu" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_add_action"

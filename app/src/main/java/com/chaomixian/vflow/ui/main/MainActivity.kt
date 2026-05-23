@@ -70,6 +70,7 @@ class MainActivity : BaseActivity() {
     private var currentMainTabTag: String? = null
     private var initialMainTab: MainTopLevelTab = MainTopLevelTab.HOME
     private var initialWorkflowSortMode: WorkflowSortMode = WorkflowSortMode.Default
+    private var initialWorkflowLayoutMode: WorkflowLayoutMode = WorkflowLayoutMode.List
     private val exportCrashReportLauncher =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
             try {
@@ -102,6 +103,7 @@ class MainActivity : BaseActivity() {
         liquidGlassNavBarEnabled = AppearanceManager.isLiquidGlassNavBarEnabled(this)
         initialMainTab = resolveInitialMainTab(savedInstanceState)
         initialWorkflowSortMode = resolveInitialWorkflowSortMode()
+        initialWorkflowLayoutMode = resolveInitialWorkflowLayoutMode()
         currentMainTabTag = null
 
         val isFirstRun = prefs.getBoolean(KEY_IS_FIRST_RUN, true)
@@ -166,6 +168,7 @@ class MainActivity : BaseActivity() {
                 activity = this,
                 initialTab = initialMainTab,
                 initialWorkflowSortMode = initialWorkflowSortMode,
+                initialWorkflowLayoutMode = initialWorkflowLayoutMode,
                 onBackPressedAtRoot = { finish() },
                 onPrimaryTabChanged = ::setPrimaryMainTab,
             )
@@ -321,6 +324,12 @@ class MainActivity : BaseActivity() {
         val storedValue = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString("workflow_sort_mode", WorkflowSortMode.Default.name)
         return WorkflowSortMode.entries.firstOrNull { it.name == storedValue } ?: WorkflowSortMode.Default
+    }
+
+    private fun resolveInitialWorkflowLayoutMode(): WorkflowLayoutMode {
+        val storedValue = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString("workflow_layout_mode", WorkflowLayoutMode.List.name)
+        return WorkflowLayoutMode.entries.firstOrNull { it.name == storedValue } ?: WorkflowLayoutMode.List
     }
 
     /**

@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/complex/VDate.kt
 package com.chaomixian.vflow.core.types.complex
 
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
@@ -37,22 +38,24 @@ class VDate(val dateString: String) : EnhancedBaseVObject() {
 
     companion object {
         // 属性注册表：所有 VDate 实例共享
-        private val registry = PropertyRegistry().apply {
-            register("year", "年", getter = { host ->
+        private val registry: PropertyRegistry = PropertyRegistry().apply {
+            register("year", "年", returnType = VTypeRegistry.NUMBER, displayName = "年", nameStringRes = R.string.vtype_date_year, getter = { host ->
                 VNumber((host as VDate).calendar.get(Calendar.YEAR).toDouble())
             })
-            register("month", "月", getter = { host ->
+            register("month", "月", returnType = VTypeRegistry.NUMBER, displayName = "月", nameStringRes = R.string.vtype_date_month, getter = { host ->
                 VNumber(((host as VDate).calendar.get(Calendar.MONTH) + 1).toDouble())
             })
-            register("day", "日", getter = { host ->
+            register("day", "日", returnType = VTypeRegistry.NUMBER, displayName = "日", nameStringRes = R.string.vtype_date_day, getter = { host ->
                 VNumber((host as VDate).calendar.get(Calendar.DAY_OF_MONTH).toDouble())
             })
-            register("weekday", "星期", getter = { host ->
+            register("weekday", "星期", returnType = VTypeRegistry.NUMBER, displayName = "星期 (1-7)", nameStringRes = R.string.vtype_date_weekday, getter = { host ->
                 VNumber((host as VDate).calendar.get(Calendar.DAY_OF_WEEK).toDouble())
             })
-            register("timestamp", "时间戳", getter = { host ->
+            register("timestamp", "时间戳", returnType = VTypeRegistry.NUMBER, displayName = "时间戳", nameStringRes = R.string.vtype_date_timestamp, getter = { host ->
                 VNumber((host as VDate).calendar.timeInMillis.toDouble())
             })
         }
+
+        fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
     }
 }

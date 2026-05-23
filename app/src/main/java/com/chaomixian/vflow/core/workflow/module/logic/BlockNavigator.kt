@@ -110,7 +110,7 @@ object BlockNavigator {
         for (i in position downTo 0) {
             val module = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
             val behavior = module.blockBehavior
-            val isLoopBlock = behavior.pairingId == LOOP_PAIRING_ID || behavior.pairingId == WHILE_PAIRING_ID || behavior.pairingId == FOREACH_PAIRING_ID
+            val isLoopBlock = behavior.pairingId == LOOP_PAIRING_ID || behavior.pairingId == WHILE_PAIRING_ID || behavior.pairingId == FOREACH_PAIRING_ID || behavior.pairingId == DO_WHILE_PAIRING_ID
 
             if (isLoopBlock) {
                 if (behavior.type == BlockType.BLOCK_END) {
@@ -137,7 +137,7 @@ object BlockNavigator {
         for (i in position downTo 0) {
             val module = ModuleRegistry.getModule(steps[i].moduleId) ?: continue
             val behavior = module.blockBehavior
-            val isLoopBlock = behavior.pairingId == LOOP_PAIRING_ID || behavior.pairingId == WHILE_PAIRING_ID || behavior.pairingId == FOREACH_PAIRING_ID
+            val isLoopBlock = behavior.pairingId == LOOP_PAIRING_ID || behavior.pairingId == WHILE_PAIRING_ID || behavior.pairingId == FOREACH_PAIRING_ID || behavior.pairingId == DO_WHILE_PAIRING_ID
 
             if (isLoopBlock) {
                 if (behavior.type == BlockType.BLOCK_END) {

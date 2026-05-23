@@ -31,6 +31,7 @@ import com.chaomixian.vflow.services.ExecutionNotificationManager
 import com.chaomixian.vflow.services.ExecutionNotificationState
 import com.chaomixian.vflow.services.ExecutionUIService
 import com.chaomixian.vflow.services.ServiceStateBus
+import com.chaomixian.vflow.services.WorkflowExecutionWakeLockManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.TimeoutCancellationException
 import java.io.File
@@ -186,6 +187,7 @@ object WorkflowExecutor {
                 )
                 DebugLogger.d("WorkflowExecutor", "开始执行主工作流: ${workflow.name} (ID: ${workflow.id})")
                 ExecutionNotificationManager.updateState(workflow, ExecutionNotificationState.Running(0, "正在开始..."))
+                WorkflowExecutionWakeLockManager.acquireIfEnabled(context.applicationContext, executionInstanceId)
 
                 // 创建本次执行的独立工作目录
                 val workDir = File(StorageManager.tempDir, "exec_$executionInstanceId")
@@ -265,6 +267,8 @@ object WorkflowExecutor {
 
                     // 使用 NonCancellable 上下文，确保即使协程被取消（如手动停止），清理和广播逻辑也能完整执行
                     withContext(NonCancellable) {
+                        WorkflowExecutionWakeLockManager.release(executionInstanceId)
+
                         // 执行结束后清理工作目录
                         try {
                             if (workDir.exists()) {

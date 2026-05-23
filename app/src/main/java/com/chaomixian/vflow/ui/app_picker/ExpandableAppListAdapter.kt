@@ -198,7 +198,11 @@ class ExpandableAppListAdapter(
             // 根据模式显示展开图标
             expandIcon.isVisible = mode == AppPickerMode.SELECT_ACTIVITY
             expandIcon.setImageResource(
-                if (isExpanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more
+                if (isExpanded) {
+                    R.drawable.rounded_keyboard_arrow_up_24
+                } else {
+                    R.drawable.rounded_keyboard_arrow_down_24
+                }
             )
 
             itemView.setOnClickListener { onAppClick(appInfo) }

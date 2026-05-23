@@ -1,6 +1,7 @@
 // 文件: java/com/chaomixian/vflow/core/types/complex/VUiComponent.kt
 package com.chaomixian.vflow.core.types.complex
 
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
@@ -58,20 +59,20 @@ class VUiComponent(
 
     companion object {
         // 属性注册表：所有 VUiComponent 实例共享
-        private val registry = PropertyRegistry().apply {
+        private val registry: PropertyRegistry = PropertyRegistry().apply {
             // 基本属性
-            register("id", getter = { host ->
+            register("id", returnType = VTypeRegistry.STRING, displayName = "组件ID", nameStringRes = R.string.vtype_uicomponent_id, getter = { host ->
                 VString((host as VUiComponent).element.id)
             })
-            register("type", "类型", getter = { host ->
+            register("type", "类型", returnType = VTypeRegistry.STRING, displayName = "类型", nameStringRes = R.string.vtype_uicomponent_type, getter = { host ->
                 VString((host as VUiComponent).element.type.name.lowercase())
             })
-            register("label", "标签", getter = { host ->
+            register("label", "标签", returnType = VTypeRegistry.STRING, displayName = "标签", nameStringRes = R.string.vtype_uicomponent_label, getter = { host ->
                 VString((host as VUiComponent).element.label)
             })
 
             // 值相关（需要特殊处理currentValue）
-            register("value", "text", "值", "内容", getter = { host ->
+            register("value", "text", "值", "内容", returnType = VTypeRegistry.ANY, displayName = "值", nameStringRes = R.string.vtype_uicomponent_value, getter = { host ->
                 val component = host as VUiComponent
                 when (val value = component.currentValue) {
                     null -> VString(component.element.defaultValue)
@@ -79,35 +80,37 @@ class VUiComponent(
                     else -> VString(value.toString())
                 }
             })
-            register("defaultvalue", "default", "默认值", getter = { host ->
+            register("defaultvalue", "default", "默认值", returnType = VTypeRegistry.ANY, displayName = "默认值", nameStringRes = R.string.vtype_uicomponent_defaultvalue, getter = { host ->
                 VString((host as VUiComponent).element.defaultValue)
             })
-            register("placeholder", "占位符", getter = { host ->
+            register("placeholder", "占位符", returnType = VTypeRegistry.STRING, displayName = "占位符", nameStringRes = R.string.vtype_uicomponent_placeholder, getter = { host ->
                 VString((host as VUiComponent).element.placeholder)
             })
 
             // 布尔属性
-            register("required", getter = { host ->
+            register("required", returnType = VTypeRegistry.BOOLEAN, displayName = "必填", nameStringRes = R.string.vtype_uicomponent_required, getter = { host ->
                 VBoolean((host as VUiComponent).element.isRequired)
             })
-            register("trigger_event", "triggerevent", getter = { host ->
+            register("trigger_event", "triggerevent", "triggerEvent", returnType = VTypeRegistry.BOOLEAN, displayName = "触发事件", nameStringRes = R.string.vtype_uicomponent_triggerEvent, getter = { host ->
                 VBoolean((host as VUiComponent).element.triggerEvent)
             })
 
             // 类型判断
-            register("istext", getter = { host ->
+            register("istext", returnType = VTypeRegistry.BOOLEAN, displayName = "是否文本", nameStringRes = R.string.vtype_uicomponent_istext, getter = { host ->
                 VBoolean((host as VUiComponent).element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.TEXT)
             })
-            register("isbutton", getter = { host ->
+            register("isbutton", returnType = VTypeRegistry.BOOLEAN, displayName = "是否按钮", nameStringRes = R.string.vtype_uicomponent_isbutton, getter = { host ->
                 VBoolean((host as VUiComponent).element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.BUTTON)
             })
-            register("isinput", getter = { host ->
+            register("isinput", returnType = VTypeRegistry.BOOLEAN, displayName = "是否输入框", nameStringRes = R.string.vtype_uicomponent_isinput, getter = { host ->
                 VBoolean((host as VUiComponent).element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.INPUT)
             })
-            register("isswitch", getter = { host ->
+            register("isswitch", returnType = VTypeRegistry.BOOLEAN, displayName = "是否开关", nameStringRes = R.string.vtype_uicomponent_isswitch, getter = { host ->
                 VBoolean((host as VUiComponent).element.type == com.chaomixian.vflow.core.workflow.module.ui.model.UiElementType.SWITCH)
             })
         }
+
+        fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
     }
 
     /**

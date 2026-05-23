@@ -21,6 +21,7 @@ import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNull
 import com.chaomixian.vflow.core.types.basic.VNumber
+import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VScreenElement
 import com.chaomixian.vflow.core.utils.getCompatStableId
 import com.chaomixian.vflow.core.workflow.model.ActionStep
@@ -60,7 +61,7 @@ class UiSelectorModule : BaseModule() {
             ParameterType.STRING,
             "",
             acceptsMagicVariable = true,
-            supportsRichText = false,
+            supportsRichText = true,
             hint = "如: @TextView[text='设置']",
             nameStringRes = R.string.param_vflow_interaction_ui_selector_selector_name,
             hintStringRes = R.string.hint_vflow_interaction_ui_selector_selector
@@ -109,7 +110,8 @@ class UiSelectorModule : BaseModule() {
         OutputDefinition("found", "是否找到", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_found_name),
         OutputDefinition("count", "找到数量", VTypeRegistry.NUMBER.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_count_name),
         OutputDefinition("element", "选中的控件", VTypeRegistry.SCREEN_ELEMENT.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_element_name),
-        OutputDefinition("all_elements", "所有控件", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.SCREEN_ELEMENT.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_all_elements_name)
+        OutputDefinition("all_elements", "所有控件", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.SCREEN_ELEMENT.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_all_elements_name),
+        OutputDefinition("all_text", "所有文本", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_ui_selector_all_text_name)
     )
 
     override fun getSummary(context: Context, step: ActionStep): CharSequence {
@@ -227,12 +229,16 @@ class UiSelectorModule : BaseModule() {
                         "found" to VBoolean(false),
                         "count" to VNumber(0.0),
                         "element" to VNull,
-                        "all_elements" to emptyList<VScreenElement>()
+                        "all_elements" to emptyList<VScreenElement>(),
+                        "all_text" to emptyList<VString>()
                     )
                 )
             }
 
             val selectedElement = selectElement(allElements, resultSelection, rootNode)
+            val allText = allElements.mapNotNull { element ->
+                element.text ?: element.contentDescription
+            }
 
             onProgress(ProgressUpdate("找到 ${allElements.size} 个控件"))
 
@@ -241,7 +247,8 @@ class UiSelectorModule : BaseModule() {
                 "found" to VBoolean(true),
                 "count" to VNumber(allElements.size.toDouble()),
                 "element" to selectedElement,
-                "all_elements" to allElements
+                "all_elements" to allElements,
+                "all_text" to allText.map { VString(it) }
             ))
 
         } catch (e: Exception) {

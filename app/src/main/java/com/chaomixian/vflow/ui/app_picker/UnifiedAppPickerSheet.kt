@@ -13,14 +13,15 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.databinding.SheetUnifiedAppPickerBinding
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.chip.Chip
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -51,6 +52,9 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
     // 是否显示系统应用
     private var showSystemApps = false
     private var showAllUsers = false
+
+    private var loadAppsJob: Job? = null
+    private var searchActivitiesJob: Job? = null
 
     // 回调
     private var onResultCallback: ((Intent) -> Unit)? = null
@@ -187,11 +191,16 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
     }
 
     private fun loadApps() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val pm = requireContext().packageManager
+        val context = context ?: return
+        val pm = context.packageManager
+        val currentUserId = AppUserSupport.getCurrentUserId()
+        val currentUserLabel = AppUserSupport.getUserLabel(context, currentUserId)
+
+        loadAppsJob?.cancel()
+        loadAppsJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
 
             val appList = if (showAllUsers) {
-                loadAppsForAllUsers(pm)
+                loadAppsForAllUsers(context, pm)
             } else if (showSystemApps) {
                 val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
                 installedApps.mapNotNull { appInfo ->
@@ -201,8 +210,8 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
                             appName = label,
                             packageName = appInfo.packageName,
                             icon = appInfo.loadIcon(pm),
-                            userId = AppUserSupport.getCurrentUserId(),
-                            userLabel = AppUserSupport.getUserLabel(requireContext(), AppUserSupport.getCurrentUserId())
+                            userId = currentUserId,
+                            userLabel = currentUserLabel
                         )
                     } else null
                 }
@@ -227,13 +236,14 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
                         appName = appInfo.loadLabel(pm).toString(),
                         packageName = appInfo.packageName,
                         icon = appInfo.loadIcon(pm),
-                        userId = AppUserSupport.getCurrentUserId(),
-                        userLabel = AppUserSupport.getUserLabel(requireContext(), AppUserSupport.getCurrentUserId())
+                        userId = currentUserId,
+                        userLabel = currentUserLabel
                     )
                 }
             }.sortedBy { it.appName.lowercase(Locale.getDefault()) }
 
             withContext(Dispatchers.Main) {
+                if (_binding == null) return@withContext
                 allApps = appList
                 appAdapter.setShowUserChip(showAllUsers)
                 appAdapter.updateData(allApps)
@@ -241,8 +251,10 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private suspend fun loadAppsForAllUsers(pm: PackageManager): List<AppInfo> {
-        val context = requireContext()
+    private suspend fun loadAppsForAllUsers(
+        context: android.content.Context,
+        pm: PackageManager
+    ): List<AppInfo> {
         val launcherApps = context.getSystemService(LauncherApps::class.java)
         val appsByUser = linkedMapOf<String, AppInfo>()
         val currentUserId = AppUserSupport.getCurrentUserId()
@@ -362,10 +374,13 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
     }
 
     private fun loadActivitiesForApp(appInfo: AppInfo, onLoaded: (List<ActivityItem>) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val activities = loadActivitiesForAppInternal(appInfo)
+        val context = context ?: return
+        val launchLabel = getString(R.string.text_launch_app)
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val activities = loadActivitiesForAppInternal(context, appInfo, launchLabel)
 
             withContext(Dispatchers.Main) {
+                if (_binding == null) return@withContext
                 onLoaded(activities)
             }
         }
@@ -389,6 +404,8 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
 
             // 如果是 SELECT_ACTIVITY 模式，异步加载 Activity 并展开
             if (mode == AppPickerMode.SELECT_ACTIVITY) {
+                val context = context ?: return
+                val launchLabel = getString(R.string.text_launch_app)
                 loadActivitiesForAllApps(filteredApps) { activitiesMap ->
                     appAdapter.expandAll(filteredApps, activitiesMap)
                 }
@@ -403,27 +420,35 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
         apps: List<AppInfo>,
         onLoaded: (Map<String, List<ActivityItem>>) -> Unit
     ) {
-        CoroutineScope(Dispatchers.IO).launch {
+        val context = context ?: return
+        val launchLabel = getString(R.string.text_launch_app)
+
+        searchActivitiesJob?.cancel()
+        searchActivitiesJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val activitiesMap = mutableMapOf<String, List<ActivityItem>>()
 
             for (app in apps) {
-                activitiesMap[app.stableId] = loadActivitiesForAppInternal(app)
+                activitiesMap[app.stableId] = loadActivitiesForAppInternal(context, app, launchLabel)
             }
 
             withContext(Dispatchers.Main) {
+                if (_binding == null) return@withContext
                 onLoaded(activitiesMap)
             }
         }
     }
 
-    private fun loadActivitiesForAppInternal(appInfo: AppInfo): List<ActivityItem> {
-        val context = requireContext()
+    private fun loadActivitiesForAppInternal(
+        context: android.content.Context,
+        appInfo: AppInfo,
+        launchLabel: String
+    ): List<ActivityItem> {
         val pm = context.packageManager
         val activities = mutableListOf<ActivityItem>()
         activities.add(
             ActivityItem(
                 name = "LAUNCH",
-                label = getString(R.string.text_launch_app),
+                label = launchLabel,
                 isExported = true
             )
         )
@@ -477,6 +502,10 @@ class UnifiedAppPickerSheet : BottomSheetDialogFragment() {
     }
 
     override fun onDestroyView() {
+        loadAppsJob?.cancel()
+        loadAppsJob = null
+        searchActivitiesJob?.cancel()
+        searchActivitiesJob = null
         super.onDestroyView()
         _binding = null
     }

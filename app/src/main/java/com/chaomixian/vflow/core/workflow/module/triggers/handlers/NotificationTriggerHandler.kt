@@ -9,6 +9,7 @@ import android.service.notification.StatusBarNotification
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.types.basic.VDictionary
 import com.chaomixian.vflow.core.types.basic.VString
+import com.chaomixian.vflow.core.workflow.module.triggers.NotificationTriggerModule
 import com.chaomixian.vflow.services.VFlowNotificationListenerService
 import kotlinx.coroutines.launch
 
@@ -87,13 +88,23 @@ class NotificationTriggerHandler : ListeningTriggerHandler() {
         triggerScope.launch {
             listeningTriggers.forEach { trigger ->
                 val config = trigger.parameters
+                val appFilterType = config["app_filter_type"] as? String ?: NotificationTriggerModule.APP_FILTER_INCLUDE
+                @Suppress("UNCHECKED_CAST")
+                val packageNames = config["packageNames"] as? List<String>
                 val appFilter = config["app_filter"] as? String
+                val effectivePackages = if (!packageNames.isNullOrEmpty()) packageNames else listOfNotNull(appFilter?.takeIf { it.isNotBlank() })
+                val titleFilterType = config["title_filter_type"] as? String ?: NotificationTriggerModule.TEXT_FILTER_INCLUDE
                 val titleFilter = config["title_filter"] as? String
+                val contentFilterType = config["content_filter_type"] as? String ?: NotificationTriggerModule.TEXT_FILTER_INCLUDE
                 val contentFilter = config["content_filter"] as? String
 
-                val appMatches = appFilter.isNullOrBlank() || appFilter == packageName
-                val titleMatches = titleFilter.isNullOrBlank() || title.contains(titleFilter, ignoreCase = true)
-                val contentMatches = contentFilter.isNullOrBlank() || content.contains(contentFilter, ignoreCase = true)
+                val appMatches = when {
+                    effectivePackages.isEmpty() -> true
+                    appFilterType == NotificationTriggerModule.APP_FILTER_EXCLUDE -> packageName !in effectivePackages
+                    else -> packageName in effectivePackages
+                }
+                val titleMatches = matchesTextFilter(title, titleFilter, titleFilterType)
+                val contentMatches = matchesTextFilter(content, contentFilter, contentFilterType)
 
                 if (appMatches && titleMatches && contentMatches) {
                     DebugLogger.i(TAG, "通知满足条件，触发工作流 '${trigger.workflowName}'")
@@ -107,5 +118,11 @@ class NotificationTriggerHandler : ListeningTriggerHandler() {
                 }
             }
         }
+    }
+
+    private fun matchesTextFilter(source: String, filter: String?, filterType: String): Boolean {
+        if (filter.isNullOrBlank()) return true
+        val contains = source.contains(filter, ignoreCase = true)
+        return if (filterType == NotificationTriggerModule.TEXT_FILTER_EXCLUDE) !contains else contains
     }
 }

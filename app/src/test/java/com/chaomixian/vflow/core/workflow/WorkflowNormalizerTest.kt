@@ -139,8 +139,9 @@ class WorkflowNormalizerTest {
         )
 
         assertEquals("legacy-workflow", parsedWorkflow.id)
-        assertTrue(parsedWorkflow.triggers.isEmpty())
-        assertEquals(2, parsedWorkflow.steps.size)
+        assertEquals(1, parsedWorkflow.triggers.size)
+        assertEquals("vflow.trigger.share", parsedWorkflow.triggers.first().moduleId)
+        assertEquals(1, parsedWorkflow.steps.size)
 
         assertEquals(1, normalized.triggers.size)
         assertEquals("vflow.trigger.share", normalized.triggers.first().moduleId)
@@ -148,5 +149,34 @@ class WorkflowNormalizerTest {
         assertEquals(1, normalized.steps.size)
         assertEquals("vflow.data.comment", normalized.steps.first().moduleId)
         assertFalse(normalized.steps.any { it.moduleId.startsWith("vflow.trigger.") })
+    }
+
+    @Test
+    fun `canonicalizes legacy magic variable property aliases on normalize`() {
+        val sourceStep = ActionStep(
+            id = "source-step",
+            moduleId = "vflow.data.comment",
+            parameters = emptyMap()
+        )
+        val consumerStep = ActionStep(
+            id = "consumer-step",
+            moduleId = "vflow.data.comment",
+            parameters = mapOf(
+                "text" to "{{source-step.output.isChecked}}",
+                "nested" to mapOf(
+                    "value" to "{{source-step.output.isChecked}}"
+                )
+            )
+        )
+
+        val normalized = WorkflowNormalizer.normalize(
+            triggers = emptyList(),
+            steps = listOf(sourceStep, consumerStep)
+        )
+
+        val normalizedStep = normalized.steps.first { it.id == "consumer-step" }
+        assertEquals("{{source-step.output.isChecked}}", normalizedStep.parameters["text"])
+        val nested = normalizedStep.parameters["nested"] as Map<*, *>
+        assertEquals("{{source-step.output.isChecked}}", nested["value"])
     }
 }

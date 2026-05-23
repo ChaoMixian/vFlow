@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/complex/VCoordinate.kt
 package com.chaomixian.vflow.core.types.complex
 
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
@@ -26,13 +27,15 @@ data class VCoordinate(
 
     companion object {
         // 属性注册表：所有 VCoordinate 实例共享
-        private val registry = PropertyRegistry().apply {
-            register("x", getter = { host ->
+        private val registry: PropertyRegistry = PropertyRegistry().apply {
+            register("x", returnType = VTypeRegistry.NUMBER, displayName = "X 坐标", nameStringRes = R.string.vtype_coordinate_x, getter = { host ->
                 VNumber((host as VCoordinate).x.toDouble())
             })
-            register("y", getter = { host ->
+            register("y", returnType = VTypeRegistry.NUMBER, displayName = "Y 坐标", nameStringRes = R.string.vtype_coordinate_y, getter = { host ->
                 VNumber((host as VCoordinate).y.toDouble())
             })
         }
+
+        fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
     }
 }

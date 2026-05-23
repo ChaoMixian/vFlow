@@ -22,8 +22,8 @@ class WhileModule : BaseBlockModule() {
     override val metadata = ActionMetadata(
         nameStringRes = R.string.module_vflow_logic_while_start_name,
         descriptionStringRes = R.string.module_vflow_logic_while_start_desc,
-        name = "循环直到",
-        description = "当条件为真时重复执行直到条件不满足",
+        name = "条件循环",
+        description = "满足条件时重复执行循环体",
         iconRes = R.drawable.rounded_repeat_24,
         category = "逻辑控制",
         categoryId = "logic"
@@ -273,7 +273,7 @@ class EndWhileModule : BaseModule() {
             ExecutionResult.Signal(ExecutionSignal.Jump(whilePc))
         } else {
             // 理论上不应发生，但作为保护
-            ExecutionResult.Failure("执行错误", "找不到配对的 '循环直到' 模块")
+            ExecutionResult.Failure("执行错误", "找不到配对的 '条件循环' 模块")
         }
     }
 }

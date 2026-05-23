@@ -10,6 +10,7 @@ import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.isNamedVariable
 import com.chaomixian.vflow.core.module.ModuleRegistry
 import com.chaomixian.vflow.core.types.parser.VariablePathParser
+import com.chaomixian.vflow.core.workflow.GlobalVariableStore
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 
 /**
@@ -31,7 +32,7 @@ object PillVariableResolver {
     data class ResolvedInfo(
         val displayName: String,
         val color: Int,
-        val propertyName: String? = null
+        val propertyPath: List<String> = emptyList()
     )
 
     /**
@@ -55,27 +56,38 @@ object PillVariableResolver {
     ): ResolvedInfo? {
         VariablePathParser.parseGlobalVariablePath(variableReference)?.let { globalPath ->
             val globalName = globalPath.firstOrNull() ?: return@let null
-            val propertyName = globalPath.getOrNull(1)
-            val displayName = if (propertyName != null) {
-                "${context.getString(R.string.module_config_section_global_variables)} $globalName.$propertyName"
+            val propertyPath = globalPath.drop(1)
+            val variableInfo = VariableInfo(
+                sourceName = globalName,
+                typeId = GlobalVariableStore.get(context, globalName).type.id,
+                sourceModuleId = VariablePathParser.GLOBAL_VARIABLE_NAMESPACE
+            )
+            val displayName = if (propertyPath.isNotEmpty()) {
+                val localizedPropertyChain = variableInfo.getPropertyDisplayPath(context, propertyPath)
+                    .joinToString(separator = " ${context.getString(R.string.magic_variable_property_separator)} ")
+                context.getString(
+                    R.string.magic_variable_property_name,
+                    "${context.getString(R.string.module_config_section_global_variables)} $globalName",
+                    localizedPropertyChain
+                )
             } else {
                 "${context.getString(R.string.module_config_section_global_variables)} $globalName"
             }
             return ResolvedInfo(
                 displayName = displayName,
                 color = PillTheme.getColor(context, R.color.variable_pill_color),
-                propertyName = propertyName
+                propertyPath = propertyPath
             )
         }
 
-        // 解析属性名
-        val propertyName = resolvePropertyName(variableReference)
+        // 解析属性路径
+        val propertyPath = resolvePropertyPath(variableReference)
         
         // 如果是魔法变量且有属性，使用新的方法获取VariableInfo
-        val varInfo = if (propertyName != null && variableReference.isMagicVariable()) {
+        val varInfo = if (propertyPath.isNotEmpty() && variableReference.isMagicVariable()) {
             val parts = VariablePathParser.parseVariableReference(variableReference)
             if (parts.size >= 2) {
-                VariableInfo.fromMagicVariableWithProperty(parts[0], parts[1], propertyName, allSteps)
+                VariableInfo.fromMagicVariableWithProperty(parts[0], parts[1], propertyPath, allSteps)
             } else null
         } else {
             VariableInfo.fromReference(variableReference, allSteps)
@@ -102,18 +114,19 @@ object PillVariableResolver {
         // 构建显示名称（使用本地化属性名）
         val stepPrefix = if (stepIndex >= 0) "#$stepIndex " else ""
         val localizedSourceName = varInfo.getLocalizedSourceName(context)
-        val displayName = if (propertyName != null) {
-            val localizedPropName = varInfo.getPropertyDisplayName(context, propertyName)
+        val displayName = if (propertyPath.isNotEmpty()) {
+            val localizedPropertyChain = varInfo.getPropertyDisplayPath(context, propertyPath)
+                .joinToString(separator = " ${context.getString(R.string.magic_variable_property_separator)} ")
             context.getString(
                 R.string.magic_variable_property_name,
                 "$stepPrefix$localizedSourceName",
-                localizedPropName
+                localizedPropertyChain
             )
         } else {
             "$stepPrefix$localizedSourceName"
         }
 
-        return ResolvedInfo(displayName, color, propertyName)
+        return ResolvedInfo(displayName, color, propertyPath)
     }
 
     private fun resolveDisplayStepIndex(stepId: String, allSteps: List<ActionStep>): Int {
@@ -140,19 +153,17 @@ object PillVariableResolver {
      * @param variableReference 变量引用字符串
      * @return 属性名，如果没有属性则返回null
      */
-    private fun resolvePropertyName(variableReference: String): String? {
-        val parsed = VariablePathParser.parseSingleVariableReference(variableReference) ?: return null
-        val propName = when {
+    private fun resolvePropertyPath(variableReference: String): List<String> {
+        val parsed = VariablePathParser.parseSingleVariableReference(variableReference) ?: return emptyList()
+        return when {
             parsed.isNamedVariable -> {
                 val namedPath = VariablePathParser.parseNamedVariablePath(variableReference) ?: emptyList()
-                namedPath.getOrNull(1)
+                namedPath.drop(1)
             }
             // 魔法变量：{{stepId.outputName.property}}
-            !parsed.isNamedVariable && parsed.path.size > 2 -> parsed.path[2]
-            else -> null
+            !parsed.isNamedVariable && parsed.path.size > 2 -> parsed.path.drop(2)
+            else -> emptyList()
         }
-
-        return propName
     }
 
     /**
@@ -162,10 +173,10 @@ object PillVariableResolver {
      * @param varInfo 变量信息对象
      * @return 属性名，如果没有属性则返回null
      */
-    private fun resolvePropertyName(
+    private fun resolvePropertyPath(
         variableReference: String,
         varInfo: VariableInfo
-    ): String? {
-        return resolvePropertyName(variableReference)
+    ): List<String> {
+        return resolvePropertyPath(variableReference)
     }
 }

@@ -48,7 +48,7 @@ class LuaModule : BaseModule() {
             id = "script",
             name = "Lua 脚本",
             staticType = ParameterType.STRING,
-            defaultValue = "-- vflow.device.toast({ message = 'Hello from Lua!' })\n\n-- 从输入变量获取值\n-- local my_var = inputs.my_variable\n\n-- 返回一个table作为输出\nreturn { result = 'some value' }",
+            defaultValue = "vflow.device.toast({ message = 'Hello from Lua!' })\n\n-- Read values from script inputs.\n-- local myVar = inputs.my_variable\n\n-- Return a table as outputs.\nreturn { result = 'some value' }",
             acceptsMagicVariable = false
         ),
         InputDefinition(

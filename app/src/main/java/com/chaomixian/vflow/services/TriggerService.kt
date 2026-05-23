@@ -60,8 +60,7 @@ class TriggerService : Service() {
         const val ACTION_WORKFLOW_CHANGED = "com.chaomixian.vflow.ACTION_WORKFLOW_CHANGED"
         const val ACTION_WORKFLOW_REMOVED = "com.chaomixian.vflow.ACTION_WORKFLOW_REMOVED"
         const val ACTION_RELOAD_TRIGGERS = "com.chaomixian.vflow.ACTION_RELOAD_TRIGGERS"
-        const val EXTRA_WORKFLOW = "extra_workflow"
-        const val EXTRA_OLD_WORKFLOW = "extra_old_workflow"
+        const val EXTRA_TRIGGER_DELTA = "extra_trigger_delta"
         // 新增的通知更新 Action
         const val ACTION_UPDATE_NOTIFICATION = "com.chaomixian.vflow.ACTION_UPDATE_NOTIFICATION"
     }
@@ -160,16 +159,20 @@ class TriggerService : Service() {
                 reloadAllHandlers()
             }
             ACTION_WORKFLOW_CHANGED -> {
-                val newWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_WORKFLOW)
-                val oldWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_OLD_WORKFLOW)
-                if (newWorkflow != null) {
-                    handleWorkflowChanged(newWorkflow, oldWorkflow)
+                val delta = intent.getParcelableExtra<WorkflowTriggerDelta>(EXTRA_TRIGGER_DELTA)
+                if (delta != null) {
+                    val latestWorkflow = workflowManager.getWorkflow(delta.workflowId)
+                    if (latestWorkflow != null) {
+                        handleWorkflowChanged(latestWorkflow, delta.oldTriggerRefs)
+                    } else {
+                        handleWorkflowRemoved(delta.oldTriggerRefs)
+                    }
                 }
             }
             ACTION_WORKFLOW_REMOVED -> {
-                val removedWorkflow = intent.getParcelableExtra<Workflow>(EXTRA_WORKFLOW)
-                if (removedWorkflow != null) {
-                    handleWorkflowRemoved(removedWorkflow)
+                val delta = intent.getParcelableExtra<WorkflowTriggerDelta>(EXTRA_TRIGGER_DELTA)
+                if (delta != null) {
+                    handleWorkflowRemoved(delta.oldTriggerRefs)
                 }
             }
             // 按键事件直接分发
@@ -230,7 +233,6 @@ class TriggerService : Service() {
         loadAllActiveTriggers()
     }
 
-
     /**
      * 在服务首次启动时，加载所有已启用的工作流。
      */
@@ -239,22 +241,28 @@ class TriggerService : Service() {
         DebugLogger.d(TAG, "TriggerService 首次启动，加载 ${activeWorkflows.size} 个活动的触发器。")
         activeWorkflows.forEach { workflow ->
             // 复用变更逻辑，确保启动时也进行权限检查
-            handleWorkflowChanged(workflow, null)
+            handleWorkflowChanged(workflow, emptyList())
         }
     }
 
     /**
      * 处理工作流变更，增加权限守卫。
      * @param newWorkflow 新的工作流状态。
-     * @param oldWorkflow 旧的工作流状态，可能为null（表示新增）。
+     * @param oldTriggerRefs 旧工作流触发器的轻量引用。
      */
-    private fun handleWorkflowChanged(newWorkflow: Workflow, oldWorkflow: Workflow?) {
+    private fun handleWorkflowChanged(
+        newWorkflow: Workflow,
+        oldTriggerRefs: List<WorkflowTriggerRef>,
+    ) {
         val newHandlers = getHandlersForWorkflow(newWorkflow)
-        val oldHandlers = oldWorkflow?.let { getHandlersForWorkflow(it) }.orEmpty()
+        val oldHandlers = oldTriggerRefs.mapNotNull { triggerRef ->
+            val handler = triggerHandlers[triggerRef.type] ?: return@mapNotNull null
+            handler to triggerRef.triggerId
+        }
 
-        if (oldWorkflow != null && oldHandlers.isNotEmpty()) {
-            DebugLogger.d(TAG, "准备更新，正在从处理器中移除旧版: ${oldWorkflow.name}")
-            oldHandlers.forEach { (handler, trigger) -> handler.removeTrigger(this, trigger.triggerId) }
+        if (oldHandlers.isNotEmpty()) {
+            DebugLogger.d(TAG, "准备更新，正在从处理器中移除旧版: ${newWorkflow.name}")
+            oldHandlers.forEach { (handler, triggerId) -> handler.removeTrigger(this, triggerId) }
         }
 
         if (newHandlers.isEmpty()) {
@@ -285,6 +293,12 @@ class TriggerService : Service() {
         }
     }
 
+    private fun handleWorkflowRemoved(oldTriggerRefs: List<WorkflowTriggerRef>) {
+        oldTriggerRefs.forEach { triggerRef ->
+            triggerHandlers[triggerRef.type]?.removeTrigger(this, triggerRef.triggerId)
+        }
+    }
+
     private suspend fun recoverWorkflowPermissionsAndApplyState(workflowId: String) {
         workflowChangeMutex.withLock {
             val latestWorkflow = workflowManager.getWorkflow(workflowId) ?: return
@@ -306,6 +320,11 @@ class TriggerService : Service() {
                 if (latestWorkflow.wasEnabledBeforePermissionsLost) {
                     workflowManager.saveWorkflow(latestWorkflow.copy(wasEnabledBeforePermissionsLost = false))
                 }
+            } else if (shouldTreatAsTransientAccessibilityState(remainingPermissions)) {
+                DebugLogger.w(
+                    TAG,
+                    "工作流 '${latestWorkflow.name}' 的无障碍服务暂未连接，但系统设置中仍已启用；跳过自动禁用，等待服务恢复。"
+                )
             } else {
                 DebugLogger.w(
                     TAG,
@@ -321,15 +340,12 @@ class TriggerService : Service() {
         }
     }
 
-
-    /**
-     * 处理被删除的工作流。
-     */
-    private fun handleWorkflowRemoved(removedWorkflow: Workflow) {
-        DebugLogger.d(TAG, "处理器正在移除已删除的工作流: ${removedWorkflow.name}")
-        getHandlersForWorkflow(removedWorkflow).forEach { (handler, trigger) ->
-            handler.removeTrigger(this, trigger.triggerId)
-        }
+    private fun shouldTreatAsTransientAccessibilityState(
+        remainingPermissions: List<com.chaomixian.vflow.permissions.Permission>
+    ): Boolean {
+        return remainingPermissions.size == 1 &&
+            remainingPermissions.first().id == PermissionManager.ACCESSIBILITY.id &&
+            AccessibilityServiceStatus.isEnabledInSettings(this)
     }
 
     /**

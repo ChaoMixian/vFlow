@@ -7,6 +7,7 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.content.res.ColorStateList
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -15,12 +16,14 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.DisplayMetrics
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.PopupMenu
+import android.widget.PopupWindow
 import android.widget.Toast
 import com.chaomixian.vflow.core.locale.toast
 import androidx.activity.OnBackPressedCallback
@@ -83,14 +86,19 @@ class WorkflowEditorActivity : BaseActivity() {
     private var currentEditorSheet: ActionEditorSheet? = null
     private lateinit var undoButton: Button
     private lateinit var executeButton: FloatingActionButton
+    private lateinit var copySelectedButton: ImageButton
     private lateinit var editorMoreButton: ImageButton
+    private lateinit var selectionModeButton: com.google.android.material.button.MaterialButton
     private lateinit var recyclerView: RecyclerView
     private val gson = Gson()
     private val delayedExecuteHandler = Handler(Looper.getMainLooper())
     private val undoStack = java.util.ArrayDeque<EditorSnapshot>()
+    private val redoStack = java.util.ArrayDeque<EditorSnapshot>()
     private var suppressUndoCapture = false
     private var nameEditSnapshotCaptured = false
     private var dragUndoSnapshot: EditorSnapshot? = null
+    private var selectionModeEnabled = false
+    private val selectedActionStepIds = linkedSetOf<String>()
 
     private var initialWorkflowJson: String? = null
 
@@ -214,7 +222,9 @@ class WorkflowEditorActivity : BaseActivity() {
 
     private fun bindViews() {
         nameEditText = findViewById(R.id.edit_text_workflow_name)
+        copySelectedButton = findViewById(R.id.btn_editor_copy_selected)
         editorMoreButton = findViewById(R.id.btn_editor_more)
+        selectionModeButton = findViewById(R.id.button_open_selection_mode)
         undoButton = findViewById(R.id.button_undo_edit)
         executeButton = findViewById(R.id.button_execute_workflow)
         recyclerView = findViewById(R.id.recycler_view_action_steps)
@@ -315,7 +325,16 @@ class WorkflowEditorActivity : BaseActivity() {
         findViewById<Button>(R.id.button_save_workflow).setOnClickListener { saveWorkflow(false) }
         executeButton.setOnClickListener { handleExecuteButtonClick() }
         executeButton.setOnLongClickListener { handleExecuteButtonLongClick() }
+        copySelectedButton.setOnClickListener {
+            if (selectedActionStepIds.isEmpty()) {
+                setSelectionMode(false)
+            } else {
+                copySelectedModulesToClipboard()
+            }
+        }
         editorMoreButton.setOnClickListener { showEditorMoreOptionsSheet() }
+        selectionModeButton.setOnClickListener { showEditorToolsMenu(it) }
+        updateSelectionUi()
     }
 
     private fun handleExecuteButtonClick() {
@@ -402,11 +421,13 @@ class WorkflowEditorActivity : BaseActivity() {
         while (undoStack.size > MAX_UNDO_STEPS) {
             undoStack.removeFirst()
         }
+        redoStack.clear()
         updateUndoButtonState()
     }
 
     private fun undoLastEdit() {
         val snapshot = undoStack.pollLast() ?: return
+        pushRedoSnapshot(createEditorSnapshot())
         suppressUndoCapture = true
         currentWorkflow = snapshot.workflow?.let(::copyWorkflow)
         nameEditText.setText(snapshot.workflowName)
@@ -423,10 +444,54 @@ class WorkflowEditorActivity : BaseActivity() {
         updateUndoButtonState()
     }
 
+    private fun redoLastEdit() {
+        val snapshot = redoStack.pollLast() ?: return
+        pushUndoSnapshot(createEditorSnapshot(), clearRedoStack = false)
+        suppressUndoCapture = true
+        currentWorkflow = snapshot.workflow?.let(::copyWorkflow)
+        nameEditText.setText(snapshot.workflowName)
+        triggerSteps.clear()
+        triggerSteps.addAll(copySteps(snapshot.triggerSteps))
+        actionSteps.clear()
+        actionSteps.addAll(copySteps(snapshot.actionSteps))
+        suppressUndoCapture = false
+        nameEditSnapshotCaptured = false
+
+        recalculateAndNotify()
+        val workflowId = currentWorkflow?.id
+        updateExecuteButton(workflowId != null && WorkflowExecutor.isRunning(workflowId))
+        updateUndoButtonState()
+        updateRedoButtonState()
+    }
+
+    private fun pushRedoSnapshot(snapshot: EditorSnapshot) {
+        redoStack.addLast(snapshot)
+        while (redoStack.size > MAX_UNDO_STEPS) {
+            redoStack.removeFirst()
+        }
+        updateRedoButtonState()
+    }
+
+    private fun pushUndoSnapshot(snapshot: EditorSnapshot, clearRedoStack: Boolean = true) {
+        undoStack.addLast(snapshot)
+        while (undoStack.size > MAX_UNDO_STEPS) {
+            undoStack.removeFirst()
+        }
+        if (clearRedoStack) {
+            redoStack.clear()
+        }
+        updateUndoButtonState()
+        updateRedoButtonState()
+    }
+
     private fun updateUndoButtonState() {
         val canUndo = undoStack.isNotEmpty()
         undoButton.isEnabled = canUndo
         undoButton.alpha = if (canUndo) 1f else 0.38f
+    }
+
+    private fun updateRedoButtonState() {
+        // redo 入口只在工具弹窗里展示，这里只维护状态源。
     }
 
     private fun createEditorSnapshot(): EditorSnapshot {
@@ -453,6 +518,122 @@ class WorkflowEditorActivity : BaseActivity() {
                 indentationLevel = step.indentationLevel
             )
         }
+    }
+
+    private fun updateSelectionUi() {
+        if (selectionModeEnabled) {
+            val validIds = actionSteps.mapTo(linkedSetOf()) { it.id }
+            selectedActionStepIds.retainAll(validIds)
+        } else {
+            selectedActionStepIds.clear()
+        }
+        val hasSelection = selectedActionStepIds.isNotEmpty()
+        copySelectedButton.visibility = if (selectionModeEnabled) View.VISIBLE else View.GONE
+        copySelectedButton.setImageResource(
+            if (hasSelection) R.drawable.rounded_content_copy_24 else R.drawable.rounded_disabled_by_default_24
+        )
+        copySelectedButton.imageTintList = ColorStateList.valueOf(
+            MaterialColors.getColor(
+                copySelectedButton,
+                if (hasSelection) android.R.attr.colorPrimary
+                else com.google.android.material.R.attr.colorOnErrorContainer,
+                0
+            )
+        )
+        copySelectedButton.contentDescription = getString(
+            if (hasSelection) R.string.editor_copy_selected_modules else R.string.editor_exit_selection_mode
+        )
+        actionStepAdapter.notifyDataSetChanged()
+    }
+
+    private fun setSelectionMode(enabled: Boolean) {
+        if (selectionModeEnabled == enabled) {
+            return
+        }
+        selectionModeEnabled = enabled
+        selectedActionStepIds.clear()
+        updateSelectionUi()
+        if (enabled) {
+            toast(R.string.editor_toast_selection_mode_started)
+        }
+    }
+
+    private fun toggleSelectionMode() {
+        setSelectionMode(!selectionModeEnabled)
+    }
+
+    private fun toggleActionStepSelection(position: Int) {
+        if (!selectionModeEnabled) return
+        if (actionSteps.getOrNull(position) == null) return
+        val blockIds = getSelectionBlockIds(position)
+        if (blockIds.all(selectedActionStepIds::contains)) {
+            selectedActionStepIds.removeAll(blockIds)
+        } else {
+            selectedActionStepIds.addAll(blockIds)
+        }
+        updateSelectionUi()
+    }
+
+    private fun copySelectedModulesToClipboard() {
+        val selectedSteps = actionSteps.filter { selectedActionStepIds.contains(it.id) }
+        if (selectedSteps.isEmpty()) return
+        WorkflowClipboardStore.storeSteps(selectedSteps)
+        toast(getString(R.string.editor_toast_selected_modules_copied, selectedSteps.size))
+        setSelectionMode(false)
+    }
+
+    private fun pasteClipboardWorkflowAtPosition(insertPosition: Int) {
+        val stepsToPaste = WorkflowClipboardStore.getStepsForInsertion()
+        if (stepsToPaste.isEmpty()) {
+            toast(R.string.editor_toast_workflow_clipboard_empty)
+            return
+        }
+        val safeInsertPosition = insertPosition.coerceIn(0, actionSteps.size)
+        pushUndoSnapshot()
+        actionSteps.addAll(safeInsertPosition, stepsToPaste)
+        recalculateAndNotify()
+        recyclerView.smoothScrollToPosition(safeInsertPosition)
+        toast(getString(R.string.editor_toast_workflow_pasted, stepsToPaste.size))
+    }
+
+    private fun showEditorToolsMenu(anchor: View) {
+        val popupView = layoutInflater.inflate(R.layout.popup_editor_tools_menu, null, false)
+        val redoButton = popupView.findViewById<ImageButton>(R.id.button_redo_edit)
+        val selectionButton = popupView.findViewById<ImageButton>(R.id.button_enter_selection_mode)
+
+        val popupWindow = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            isOutsideTouchable = true
+            elevation = 24f
+        }
+
+        redoButton.isEnabled = redoStack.isNotEmpty()
+        redoButton.alpha = if (redoButton.isEnabled) 1f else 0.38f
+        redoButton.setOnClickListener {
+            popupWindow.dismiss()
+            redoLastEdit()
+        }
+        selectionButton.setOnClickListener {
+            popupWindow.dismiss()
+            toggleSelectionMode()
+        }
+
+        popupView.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val xOffset = anchor.width - popupView.measuredWidth
+        val yOffset = -anchor.height - popupView.measuredHeight
+        popupWindow.showAsDropDown(anchor, xOffset, yOffset)
+    }
+
+    private fun getSelectionBlockIds(position: Int): Set<String> {
+        val (blockStart, blockEnd) = BlockStructureHelper.findBlockRange(actionSteps, position)
+        return (blockStart..blockEnd).mapTo(linkedSetOf()) { index -> actionSteps[index].id }
     }
 
     private fun deepCopyParameters(parameters: Map<String, Any?>): Map<String, Any?> {
@@ -693,8 +874,16 @@ class WorkflowEditorActivity : BaseActivity() {
             oldVariableName = null
         }
 
+        // 对于积木块模块，如果编辑目标不是第一个步骤，则使用目标步骤对应的模块来构建编辑器
+        val targetIndex = module.editorTargetStepIndex
+        val editorModule = if (position == -1 && targetIndex > 0) {
+            val targetModuleId = module.createSteps().getOrNull(targetIndex)?.moduleId
+            targetModuleId?.let { ModuleRegistry.getModule(it) } ?: module
+        } else {
+            module
+        }
 
-        val editor = ActionEditorSheet.newInstance(module, existingStep, focusedInputId, getAllEditableSteps())
+        val editor = ActionEditorSheet.newInstance(editorModule, existingStep, focusedInputId, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
@@ -711,10 +900,16 @@ class WorkflowEditorActivity : BaseActivity() {
                 handleVariableNameChange(position)
             } else {
                 val stepsToAdd = module.createSteps()
-                val configuredFirstStep = stepsToAdd.first().copy(parameters = newStepData.parameters)
-                actionSteps.add(configuredFirstStep)
-                if (stepsToAdd.size > 1) {
-                    actionSteps.addAll(stepsToAdd.subList(1, stepsToAdd.size))
+                if (targetIndex > 0 && targetIndex < stepsToAdd.size) {
+                    val configuredSteps = stepsToAdd.toMutableList()
+                    configuredSteps[targetIndex] = configuredSteps[targetIndex].copy(parameters = newStepData.parameters)
+                    actionSteps.addAll(configuredSteps)
+                } else {
+                    val configuredFirstStep = stepsToAdd.first().copy(parameters = newStepData.parameters)
+                    actionSteps.add(configuredFirstStep)
+                    if (stepsToAdd.size > 1) {
+                        actionSteps.addAll(stepsToAdd.subList(1, stepsToAdd.size))
+                    }
                 }
             }
             recalculateAndNotify()
@@ -912,6 +1107,9 @@ class WorkflowEditorActivity : BaseActivity() {
             displayIndexProvider = { adapterPosition, _ -> adapterPosition },
             getAllSteps = { getAllEditableSteps() },
             getTriggerSteps = { getTriggerSteps() },
+            isSelectionModeEnabled = { selectionModeEnabled },
+            isStepSelected = { stepId -> selectedActionStepIds.contains(stepId) },
+            onStepSelectionClick = { position -> toggleActionStepSelection(position) },
             onAddTriggerClick = { showTriggerPickerAtPosition(getTriggerInsertPosition()) },
             onEditTriggerClick = { position, inputId ->
                 val step = triggerSteps[position]
@@ -1417,6 +1615,11 @@ class WorkflowEditorActivity : BaseActivity() {
         picker.arguments = Bundle().apply {
             putBoolean("is_trigger_picker", isTriggerPicker)
         }
+        if (!isTriggerPicker) {
+            picker.onPasteClipboardClicked = {
+                pasteClipboardWorkflowAtPosition(actionSteps.size)
+            }
+        }
 
         picker.onActionSelected = { module ->
             if (module.metadata.getResolvedCategoryId() == ModuleCategories.TEMPLATE) {
@@ -1462,6 +1665,9 @@ class WorkflowEditorActivity : BaseActivity() {
         picker.arguments = Bundle().apply {
             putBoolean("is_trigger_picker", false)
         }
+        picker.onPasteClipboardClicked = {
+            pasteClipboardWorkflowAtPosition(insertPosition)
+        }
 
         picker.onActionSelected = { module ->
             if (module.metadata.getResolvedCategoryId() == ModuleCategories.TEMPLATE) {
@@ -1481,16 +1687,30 @@ class WorkflowEditorActivity : BaseActivity() {
      * 在指定位置显示参数编辑器，插入新模块
      */
     private fun showActionEditorAtPosition(module: ActionModule, insertPosition: Int) {
-        val editor = ActionEditorSheet.newInstance(module, null, null, getAllEditableSteps())
+        val targetIndex = module.editorTargetStepIndex
+        val editorModule = if (targetIndex > 0) {
+            val targetModuleId = module.createSteps().getOrNull(targetIndex)?.moduleId
+            targetModuleId?.let { ModuleRegistry.getModule(it) } ?: module
+        } else {
+            module
+        }
+
+        val editor = ActionEditorSheet.newInstance(editorModule, null, null, getAllEditableSteps())
         currentEditorSheet = editor
 
         editor.onSave = { newStepData ->
             pushUndoSnapshot()
             val stepsToAdd = module.createSteps()
-            val configuredFirstStep = stepsToAdd.first().copy(parameters = newStepData.parameters)
-            actionSteps.add(insertPosition, configuredFirstStep)
-            if (stepsToAdd.size > 1) {
-                actionSteps.addAll(insertPosition + 1, stepsToAdd.subList(1, stepsToAdd.size))
+            if (targetIndex > 0 && targetIndex < stepsToAdd.size) {
+                val configuredSteps = stepsToAdd.toMutableList()
+                configuredSteps[targetIndex] = configuredSteps[targetIndex].copy(parameters = newStepData.parameters)
+                actionSteps.addAll(insertPosition, configuredSteps)
+            } else {
+                val configuredFirstStep = stepsToAdd.first().copy(parameters = newStepData.parameters)
+                actionSteps.add(insertPosition, configuredFirstStep)
+                if (stepsToAdd.size > 1) {
+                    actionSteps.addAll(insertPosition + 1, stepsToAdd.subList(1, stepsToAdd.size))
+                }
             }
             recalculateAndNotify()
         }
@@ -1543,6 +1763,7 @@ class WorkflowEditorActivity : BaseActivity() {
         ensureAtLeastOneTrigger()
         recalculateAllIndentation()
         actionStepAdapter.notifyDataSetChanged()
+        updateSelectionUi()
     }
 
     private fun maybePromptEnumMigration() {

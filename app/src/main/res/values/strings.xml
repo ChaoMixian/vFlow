@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">vFlow</string>
     <string name="accessibility_service_description">vFlow 服务可以通过自动化流程执行多种任务。</string>
+    <string name="accessibility_service_description_disguise">vFlow 服务可以通过自动化流程执行多种任务。（已启用无障碍伪装）</string>
 
     <string name="title_home">首页</string>
     <string name="title_workflows">工作流</string>
@@ -238,6 +239,7 @@
     <string name="common_confirm">确定</string>
     <string name="save">保存</string>
     <string name="workflow_editor_undo">撤销</string>
+    <string name="workflow_editor_redo">重做</string>
     <string name="workflow_editor_add_action">添加动作</string>
     <string name="workflow_editor_add_trigger">添加触发器</string>
     <string name="workflow_editor_trigger_group_title">#0 触发器</string>
@@ -251,6 +253,11 @@
 
     <string name="workflow_editor_execute">执行</string>
     <string name="workflow_editor_save">保存</string>
+    <string name="editor_tools_menu">更多工具</string>
+    <string name="editor_exit_selection_mode">退出选择</string>
+    <string name="editor_selection_mode">选择模块</string>
+    <string name="editor_copy_selected_modules">复制选中模块</string>
+    <string name="editor_paste_workflow">粘贴工作流</string>
     <string name="share_to_vflow">分享到 vFlow</string>
     <string name="shortcut_executing">正在通过快捷方式启动: %s</string>
 
@@ -352,6 +359,8 @@
     <string name="workflow_list_sort_name">名称排序</string>
     <string name="workflow_list_sort_recent_modified">最近修改</string>
     <string name="workflow_list_sort_favorites_first">收藏优先</string>
+    <string name="workflow_list_menu_grid_view">两列布局</string>
+    <string name="workflow_list_menu_list_view">列表布局</string>
     <string name="workflow_list_menu_backup_all">备份所有工作流</string>
     <string name="workflow_list_menu_import_restore">导入/恢复工作流</string>
     <string name="toast_workflow_moved_to_folder">已将 \"%1$s\" 移动到 \"%2$s\"</string>
@@ -391,8 +400,13 @@
     <string name="settings_switch_allow_popup_keep_screen_on">允许弹窗阻止息屏</string>
     <string name="settings_switch_allow_popup_keep_screen_on_summary">弹窗显示时保持屏幕常亮</string>
     <string name="settings_switch_allow_popup_keep_screen_on_desc">开启后，输入框、报错提示等 vFlow 弹窗显示期间会阻止系统自动息屏。默认关闭以减少待处理弹窗造成的额外耗电。</string>
+    <string name="settings_switch_keep_device_awake_during_workflow">工作流执行时阻止休眠</string>
+    <string name="settings_switch_keep_device_awake_during_workflow_summary">执行期间保持 CPU 唤醒</string>
+    <string name="settings_switch_keep_device_awake_during_workflow_desc">开启后，工作流执行期间会自动申请 PARTIAL_WAKE_LOCK，并在执行结束、取消或异常时立即释放。默认关闭以减少后台耗电。</string>
     <string name="settings_switch_hide_from_recents">从最近任务中隐藏</string>
     <string name="settings_switch_hide_from_recents_desc">不出现在最近任务列表。</string>
+    <string name="settings_default_error_policy_title">默认异常处理策略</string>
+    <string name="settings_default_error_policy_desc">新建模块时默认使用的异常处理策略。</string>
     <string name="settings_toast_hide_from_recents_enabled">已开启从最近任务中隐藏</string>
     <string name="settings_toast_hide_from_recents_disabled">已关闭从最近任务中隐藏</string>
     <string name="settings_section_permissions_shell">权限与 Shell</string>
@@ -447,8 +461,12 @@
     <string name="variable_named_variable">命名变量</string>
     <string name="editor_toast_variable_reference_updated">已自动更新对变量 \'%s\' 的引用</string>
     <string name="editor_toast_input_definition_not_found">无法找到输入定义：%s</string>
+    <string name="editor_toast_selection_mode_started">已进入选择模式</string>
     <string name="editor_toast_trigger_cannot_duplicate">触发器无法复制</string>
     <string name="editor_toast_steps_duplicated">已复制 %d 个步骤</string>
+    <string name="editor_toast_selected_modules_copied">已复制 %d 个模块</string>
+    <string name="editor_toast_workflow_pasted">已粘贴 %d 个步骤</string>
+    <string name="editor_toast_workflow_clipboard_empty">剪切板中没有可粘贴的工作流</string>
     <string name="editor_toast_step_enabled">已启用该步骤</string>
     <string name="editor_toast_step_disabled">已禁用该步骤</string>
     <string name="editor_toast_enable_parent_block_first">请先启用父块</string>
@@ -746,6 +764,7 @@
     <string name="default_workflow_version">1.0.0</string>
     <string name="magic_variable_use_self">使用 %1$s 本身</string>
     <string name="magic_variable_property_name">%1$s 的 %2$s</string>
+    <string name="magic_variable_property_separator">的</string>
     <string name="magic_variable_select_dictionary_value">选择指定键的值...</string>
     <string name="magic_variable_dictionary_title">字典: %1$s</string>
     <string name="magic_variable_dictionary_key_hint">输入键名（区分大小写）</string>
@@ -760,6 +779,29 @@
     <string name="magic_variable_string_index_title">输入索引或切片</string>
     <string name="magic_variable_select_property_title">选择 %1$s 的属性</string>
     <string name="magic_variable_clear_action">清除 / 使用静态值</string>
+    <string name="magic_variable_breadcrumb_root">全部变量</string>
+    <string name="magic_variable_select_property_sheet_title">选择属性</string>
+    <string name="magic_variable_navigation_hint">点一下直接选中，带箭头的项可以继续深入</string>
+    <string name="magic_variable_section_properties">可用属性</string>
+    <string name="magic_variable_section_dynamic">动态取值</string>
+    <string name="magic_variable_no_more_properties">当前层没有更多属性了</string>
+    <string name="magic_variable_type_any">任意</string>
+    <string name="magic_variable_type_number">数字</string>
+    <string name="magic_variable_type_boolean">布尔</string>
+    <string name="magic_variable_type_null">空</string>
+    <string name="magic_variable_type_list">列表</string>
+    <string name="magic_variable_type_dictionary">字典</string>
+    <string name="magic_variable_type_image">图片</string>
+    <string name="magic_variable_type_file">文件</string>
+    <string name="magic_variable_type_date">日期</string>
+    <string name="magic_variable_type_time">时间</string>
+    <string name="magic_variable_type_screen_element">屏幕控件</string>
+    <string name="magic_variable_type_ui_component">UI组件</string>
+    <string name="magic_variable_type_coordinate">坐标</string>
+    <string name="magic_variable_type_coordinate_region">坐标区域</string>
+    <string name="magic_variable_type_notification">通知</string>
+    <string name="magic_variable_type_event">事件</string>
+    <string name="magic_variable_type_app">应用</string>
     <string name="ai_generation_requirement_required">请输入需求</string>
     <string name="ai_generation_api_key_required">请在配置中输入 API Key</string>
     <string name="ai_generation_generating">AI 正在思考并生成工作流...</string>
@@ -848,7 +890,9 @@
     <string name="text_open_uri">打开链接</string>
     <string name="label_target_app">目标应用/Activity</string>
     <string name="label_target_apps">目标应用</string>
+    <string name="label_excluded_apps">排除应用</string>
     <string name="button_add_app">添加应用</string>
+    <string name="button_add_excluded_app">添加排除应用</string>
     <string name="text_not_recorded">未录制\n点击下方按钮录制触摸操作</string>
     <string name="text_time_09_00">09:00</string>
     <string name="text_scale_1_0">1.0x</string>
@@ -996,9 +1040,9 @@
     <string name="insert_below">在下方插入</string>
     <string name="desc_select_device">选择设备</string>
     <string name="label_trigger_condition">触发条件</string>
-    <string name="hint_package_name">应用包名包含 (可选)</string>
-    <string name="hint_notification_title">通知标题包含 (可选)</string>
-    <string name="hint_notification_content">通知内容包含 (可选)</string>
+    <string name="hint_package_name">应用包名 (可选)</string>
+    <string name="hint_notification_title">通知标题关键词 (可选)</string>
+    <string name="hint_notification_content">通知内容关键词 (可选)</string>
     <string name="text_when_connected">连接时</string>
     <string name="text_when_disconnected">断开时</string>
     <string name="hint_model_name">模型名称</string>
@@ -1102,6 +1146,9 @@
     <string name="content_desc_close">关闭</string>
     <string name="content_desc_expand_panel">展开面板</string>
     <string name="content_desc_minimize">最小化</string>
+    <string name="workflow_float_status_permission_required">需要权限</string>
+    <string name="workflow_float_hold_to_close">长按以关闭</string>
+    <string name="workflow_float_permission_toast">缺少必要权限，请在主界面授予权限后再执行</string>
 
     <!-- Permissions -->
     <string name="permission_name_core">vFlow Core 服务</string>
@@ -1299,7 +1346,9 @@
 
     <!-- Workflow Item Chips -->
     <string name="workflow_chip_missing_permissions">缺少权限</string>
+    <string name="workflow_chip_missing_permissions_count">缺 %d 项权限</string>
     <string name="workflow_chip_steps">%d 个步骤</string>
+    <string name="workflow_chip_permissions_count">%d 项权限</string>
     <string name="workflow_id_copied">工作流ID已复制</string>
 
     <!-- Key Tester -->

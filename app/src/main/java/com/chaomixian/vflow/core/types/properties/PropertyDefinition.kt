@@ -1,17 +1,25 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/properties/PropertyDefinition.kt
 package com.chaomixian.vflow.core.types.properties
 
+import com.chaomixian.vflow.core.types.VType
+
 /**
  * 属性定义：包含名称、别名、访问器和描述
  *
  * @param primaryName 主名称（推荐使用的名称）
  * @param aliases 别名集合（包括中文名、缩写等）
+ * @param returnType 属性返回类型
+ * @param displayName 属性显示名
+ * @param nameStringRes 属性显示名资源 ID
  * @param accessor 属性访问器，负责计算属性值
  * @param description 属性描述（用于文档和 IDE 支持）
  */
 data class PropertyDefinition(
     val primaryName: String,
     val aliases: Set<String> = emptySet(),
+    val returnType: VType,
+    val displayName: String = primaryName,
+    val nameStringRes: Int? = null,
     val accessor: PropertyAccessor,
     val description: String = ""
 ) {

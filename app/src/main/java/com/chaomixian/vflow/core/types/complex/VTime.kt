@@ -1,6 +1,7 @@
 // 文件: main/java/com/chaomixian/vflow/core/types/complex/VTime.kt
 package com.chaomixian.vflow.core.types.complex
 
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VNumber
@@ -32,13 +33,15 @@ class VTime(val timeString: String) : EnhancedBaseVObject() {
 
     companion object {
         // 属性注册表：所有 VTime 实例共享
-        private val registry = PropertyRegistry().apply {
-            register("hour", "时", getter = { host ->
+        private val registry: PropertyRegistry = PropertyRegistry().apply {
+            register("hour", "时", returnType = VTypeRegistry.NUMBER, displayName = "时", nameStringRes = R.string.vtype_time_hour, getter = { host ->
                 (host as VTime).parts?.first?.let { VNumber(it.toDouble()) } ?: VNull
             })
-            register("minute", "分", getter = { host ->
+            register("minute", "分", returnType = VTypeRegistry.NUMBER, displayName = "分", nameStringRes = R.string.vtype_time_minute, getter = { host ->
                 (host as VTime).parts?.second?.let { VNumber(it.toDouble()) } ?: VNull
             })
         }
+
+        fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
     }
 }

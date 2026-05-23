@@ -11,21 +11,25 @@
     app:cardElevation="8dp"
     app:strokeWidth="0dp">
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="200dp"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="wrap_content">
 
-        <!-- 标题栏 - 可拖拽 -->
         <LinearLayout
-            android:id="@+id/drag_handle"
-            android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:background="@drawable/float_window_header_background"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="16dp"
-            android:paddingEnd="8dp">
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- 标题栏 - 可拖拽 -->
+            <LinearLayout
+                android:id="@+id/drag_handle"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:background="@drawable/float_window_header_background"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="8dp">
 
             <!-- 图标 -->
             <ImageView
@@ -66,44 +70,104 @@
                 android:contentDescription="@string/content_desc_close"
                 app:icon="@drawable/ic_close"
                 app:iconSize="20dp" />
+            </LinearLayout>
+
+            <!-- 分隔线 -->
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <!-- 工作流列表 -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recycler_view_workflows"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:maxHeight="300dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    tools:itemCount="4"
+                    tools:listitem="@layout/item_workflow_float_panel" />
+
+                <!-- 空状态提示 -->
+                <LinearLayout
+                    android:id="@+id/empty_state"
+                    android:layout_width="match_parent"
+                    android:layout_height="80dp"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/text_no_favorite_workflows"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/close_hold_overlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#47000000"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:gravity="center"
+                    android:padding="16dp"
+                    android:visibility="gone">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:cardBackgroundColor="?attr/colorSurface"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:strokeWidth="0dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="14dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="14dp">
+
+                            <com.google.android.material.progressindicator.CircularProgressIndicator
+                                android:id="@+id/close_hold_progress"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:indeterminate="false"
+                                android:max="100"
+                                app:indicatorColor="?attr/colorError"
+                                app:trackColor="?attr/colorErrorContainer"
+                                app:trackThickness="3dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:text="@string/workflow_float_hold_to_close"
+                                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                                android:textColor="?attr/colorOnSurface" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+            </FrameLayout>
+
         </LinearLayout>
 
-        <!-- 分隔线 -->
-        <com.google.android.material.divider.MaterialDivider
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <!-- 工作流列表 -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_view_workflows"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clipToPadding="false"
-            android:maxHeight="300dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            tools:itemCount="4"
-            tools:listitem="@layout/item_workflow_float_panel" />
-
-        <!-- 空状态提示 -->
-        <LinearLayout
-            android:id="@+id/empty_state"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/text_no_favorite_workflows"
-                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant" />
-        </LinearLayout>
-
-    </LinearLayout>
+    </FrameLayout>
 
 </com.google.android.material.card.MaterialCardView>

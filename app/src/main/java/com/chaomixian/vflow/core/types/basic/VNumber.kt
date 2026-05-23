@@ -5,6 +5,7 @@ import android.os.Parcelable
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.properties.PropertyRegistry
+import com.chaomixian.vflow.R
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import kotlin.math.roundToInt
@@ -54,18 +55,20 @@ data class VNumber(override val raw: Number) : EnhancedBaseVObject(), Parcelable
  */
 object VNumberCompanion {
     // 属性注册表：所有 VNumber 实例共享
-    val registry = PropertyRegistry().apply {
-        register("int", "整数", getter = { host ->
+    val registry: PropertyRegistry = PropertyRegistry().apply {
+        register("int", "整数", returnType = VTypeRegistry.NUMBER, displayName = "整数部分", nameStringRes = R.string.vtype_number_int, getter = { host ->
             VNumber((host as VNumber).raw.toInt())
         })
-        register("round", "四舍五入", getter = { host ->
+        register("round", "四舍五入", returnType = VTypeRegistry.NUMBER, displayName = "四舍五入", nameStringRes = R.string.vtype_number_round, getter = { host ->
             VNumber((host as VNumber).raw.toDouble().roundToInt())
         })
-        register("abs", "绝对值", getter = { host ->
+        register("abs", "绝对值", returnType = VTypeRegistry.NUMBER, displayName = "绝对值", nameStringRes = R.string.vtype_number_abs, getter = { host ->
             VNumber(Math.abs((host as VNumber).raw.toDouble()))
         })
-        register("length", "len", "长度", getter = { host ->
+        register("length", "len", "长度", returnType = VTypeRegistry.NUMBER, displayName = "长度", nameStringRes = R.string.vtype_string_length, getter = { host ->
             VNumber((host as VNumber).raw.toLong().toString().length.toLong())
         })
     }
+
+    fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
 }

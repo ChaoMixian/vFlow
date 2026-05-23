@@ -294,6 +294,25 @@
     <string name="error_vflow_system_brightness_set_failed">设置失败</string>
     <string name="msg_vflow_system_brightness_setting">正在设置屏幕亮度为 %d...</string>
 
+    <!-- vflow.system.screen_rotation -->
+    <string name="module_vflow_system_screen_rotation_name">屏幕旋转</string>
+    <string name="module_vflow_system_screen_rotation_desc">控制自动旋转或锁定屏幕方向。</string>
+    <string name="param_vflow_system_screen_rotation_auto_rotate_name">自动旋转</string>
+    <string name="param_vflow_system_screen_rotation_direction_name">屏幕方向</string>
+    <string name="output_vflow_system_screen_rotation_success_name">是否成功</string>
+    <string name="summary_vflow_system_screen_rotation_auto">开启自动旋转</string>
+    <string name="summary_vflow_system_screen_rotation_prefix">锁定屏幕方向为 </string>
+    <string name="msg_vflow_system_screen_rotation_enabling_auto">正在开启自动旋转...</string>
+    <string name="msg_vflow_system_screen_rotation_locking">正在锁定屏幕方向为 %s...</string>
+    <string name="error_vflow_system_screen_rotation_invalid_direction">无效的屏幕方向</string>
+    <string name="error_vflow_system_screen_rotation_invalid_direction_detail">不支持的屏幕方向：%s</string>
+    <string name="error_vflow_system_screen_rotation_failed">设置屏幕旋转失败</string>
+    <string name="error_vflow_system_screen_rotation_failed_detail">发生未知错误</string>
+    <string name="option_vflow_system_screen_rotation_portrait">竖屏</string>
+    <string name="option_vflow_system_screen_rotation_landscape_left">横屏（左）</string>
+    <string name="option_vflow_system_screen_rotation_portrait_upside_down">反向竖屏</string>
+    <string name="option_vflow_system_screen_rotation_landscape_right">横屏（右）</string>
+
     <!-- vflow.system.set_clipboard -->
     <string name="module_vflow_system_set_clipboard_name">写入剪贴板</string>
     <string name="module_vflow_system_set_clipboard_desc">将指定的文本或图片内容写入系统剪贴板</string>
@@ -608,6 +627,23 @@
     <string name="option_vflow_trigger_app_start_event_opened">打开时</string>
     <string name="option_vflow_trigger_app_start_event_closed">关闭时</string>
 
+    <!-- vflow.trigger.app_switch -->
+    <string name="module_vflow_trigger_app_switch_name">应用切换</string>
+    <string name="module_vflow_trigger_app_switch_desc">当前台应用发生切换时触发工作流，可排除指定应用</string>
+    <string name="param_vflow_trigger_app_switch_excluded_package_names_name">排除应用包名列表</string>
+    <string name="output_vflow_trigger_app_switch_package_name_name">当前应用包名</string>
+    <string name="output_vflow_trigger_app_switch_app_name_name">当前应用名称</string>
+    <string name="output_vflow_trigger_app_switch_previous_package_name_name">上一应用包名</string>
+    <string name="output_vflow_trigger_app_switch_previous_app_name_name">上一应用名称</string>
+    <string name="output_vflow_trigger_app_switch_class_name_name">当前窗口类名</string>
+    <string name="summary_vflow_trigger_app_switch_prefix">应用切换时触发，排除</string>
+    <string name="summary_vflow_trigger_app_switch_no_exclusions">无</string>
+    <string name="summary_vflow_trigger_app_switch_picker_no_exclusions">未排除应用时监听所有应用切换</string>
+    <string name="summary_vflow_trigger_app_switch_picker_selected">已排除：%1$s</string>
+    <string name="summary_vflow_trigger_two_apps">%1$s 和 %2$s</string>
+    <string name="summary_vflow_trigger_many_apps">%1$s 等 %2$d 个应用</string>
+    <string name="msg_vflow_trigger_app_switch_triggered">应用切换已触发</string>
+
     <!-- vflow.trigger.app_package -->
     <string name="module_vflow_trigger_app_package_name">应用安装卸载更新</string>
     <string name="module_vflow_trigger_app_package_desc">当应用被安装、卸载或更新时触发工作流</string>
@@ -735,18 +771,26 @@
     <!-- vflow.trigger.notification -->
     <string name="module_vflow_trigger_notification_name">通知触发</string>
     <string name="module_vflow_trigger_notification_desc">当收到符合条件的通知时触发工作流</string>
-    <string name="param_vflow_trigger_notification_app_filter_name">应用包名</string>
-    <string name="param_vflow_trigger_notification_title_filter_name">标题包含</string>
-    <string name="param_vflow_trigger_notification_content_filter_name">内容包含</string>
+    <string name="param_vflow_trigger_notification_app_filter_type_name">应用过滤方式</string>
+    <string name="param_vflow_trigger_notification_app_filter_name">应用</string>
+    <string name="param_vflow_trigger_notification_title_filter_type_name">标题过滤方式</string>
+    <string name="param_vflow_trigger_notification_title_filter_name">标题</string>
+    <string name="param_vflow_trigger_notification_content_filter_type_name">内容过滤方式</string>
+    <string name="param_vflow_trigger_notification_content_filter_name">内容</string>
+    <string name="option_vflow_trigger_notification_include">包含</string>
+    <string name="option_vflow_trigger_notification_exclude">不包含</string>
     <string name="output_vflow_trigger_notification_notification_object_name">通知对象</string>
     <string name="output_vflow_trigger_notification_package_name_name">应用包名</string>
     <string name="output_vflow_trigger_notification_title_name">通知标题</string>
     <string name="output_vflow_trigger_notification_content_name">通知内容</string>
     <string name="summary_vflow_trigger_notification_prefix">当收到 </string>
-    <string name="summary_vflow_trigger_notification_from">来自 </string>
+    <string name="summary_vflow_trigger_notification_app_contains"> 来自 </string>
+    <string name="summary_vflow_trigger_notification_app_not_contains"> 不来自 </string>
     <string name="summary_vflow_trigger_notification_and"> 且</string>
     <string name="summary_vflow_trigger_notification_title_contains"> 标题含 </string>
+    <string name="summary_vflow_trigger_notification_title_not_contains"> 标题不含 </string>
     <string name="summary_vflow_trigger_notification_content_contains"> 内容含 </string>
+    <string name="summary_vflow_trigger_notification_content_not_contains"> 内容不含 </string>
     <string name="summary_vflow_trigger_notification_any">任意</string>
     <string name="summary_vflow_trigger_notification_suffix"> 的通知时</string>
     <string name="msg_vflow_trigger_notification_received">通知已收到</string>
@@ -1498,6 +1542,9 @@
     <string name="module_vflow_interaction_ocr_name">文字识别 (OCR)</string>
     <string name="module_vflow_interaction_ocr_desc">识别图片中的文字，或查找指定文字的坐标</string>
     <string name="param_vflow_interaction_ocr_image_name">输入图片</string>
+    <string name="param_vflow_interaction_ocr_engine_name">识别引擎</string>
+    <string name="param_vflow_interaction_ocr_engine_opt_ml_kit">ML Kit</string>
+    <string name="param_vflow_interaction_ocr_engine_opt_pp_ocr_v5">PP-OCRv5</string>
     <string name="param_vflow_interaction_ocr_mode_name">模式</string>
     <string name="param_vflow_interaction_ocr_mode_opt_recognize">识别全文</string>
     <string name="param_vflow_interaction_ocr_mode_opt_find">查找文本</string>
@@ -1515,6 +1562,8 @@
     <string name="param_vflow_interaction_ocr_region_hint">留空则识别全屏</string>
     <string name="output_vflow_interaction_ocr_success_name">是否成功</string>
     <string name="output_vflow_interaction_ocr_full_text_name">识别到的文字</string>
+    <string name="output_vflow_interaction_ocr_text_list_name">文本列表</string>
+    <string name="output_vflow_interaction_ocr_structured_json_name">结构化 JSON</string>
     <string name="output_vflow_interaction_ocr_found_name">是否找到</string>
     <string name="output_vflow_interaction_ocr_count_name">找到数量</string>
     <string name="output_vflow_interaction_ocr_first_match_name">第一个结果 (区域)</string>
@@ -1569,6 +1618,7 @@
     <string name="output_vflow_interaction_ui_selector_count_name">找到数量</string>
     <string name="output_vflow_interaction_ui_selector_element_name">选中的控件</string>
     <string name="output_vflow_interaction_ui_selector_all_elements_name">所有控件</string>
+    <string name="output_vflow_interaction_ui_selector_all_text_name">所有文本</string>
     <string name="summary_vflow_interaction_ui_selector_prefix">使用选择器查找</string>
     <string name="option_vflow_interaction_ui_selector_result_first">第一个</string>
     <string name="option_vflow_interaction_ui_selector_result_last">最后一个</string>
@@ -1893,9 +1943,22 @@
     <string name="module_vflow_logic_while_end_desc">While 循环块的结束点</string>
     <string name="module_vflow_logic_while_end_name">结束循环</string>
 
+    <!-- vflow.logic.do_while_start -->
+    <string name="module_vflow_logic_do_while_start_desc">先执行循环体，再判断条件是否继续</string>
+    <string name="module_vflow_logic_do_while_start_name">循环直到</string>
+
+    <!-- vflow.logic.do_while_end -->
+    <string name="module_vflow_logic_do_while_end_desc">循环直到块的结束点，判断条件是否继续循环</string>
+    <string name="module_vflow_logic_do_while_end_name">结束循环</string>
+    <string name="param_vflow_logic_do_while_end_input1_name">输入</string>
+    <string name="param_vflow_logic_do_while_end_operator_name">条件</string>
+    <string name="param_vflow_logic_do_while_end_value1_name">比较值 1</string>
+    <string name="param_vflow_logic_do_while_end_value2_name">比较值 2</string>
+    <string name="output_vflow_logic_do_while_end_result_name">条件结果</string>
+
     <!-- vflow.logic.while_start -->
-    <string name="module_vflow_logic_while_start_desc">当条件为真时重复，直到条件不满足</string>
-    <string name="module_vflow_logic_while_start_name">循环直到</string>
+    <string name="module_vflow_logic_while_start_desc">满足条件时重复执行循环体</string>
+    <string name="module_vflow_logic_while_start_name">条件循环</string>
     <string name="param_vflow_logic_while_start_input1_name">输入</string>
     <string name="param_vflow_logic_while_start_operator_name">条件</string>
     <string name="param_vflow_logic_while_start_value1_name">比较值 1</string>
@@ -2712,6 +2775,13 @@
     <string name="summary_vflow_system_mobile_data">移动数据:</string>
     <string name="option_vflow_system_mobile_data_enable">开启</string>
     <string name="option_vflow_system_mobile_data_disable">关闭</string>
+    <string name="error_vflow_system_mobile_data_param_error">参数错误</string>
+    <string name="error_vflow_system_mobile_data_execution_failed">执行失败</string>
+    <string name="msg_vflow_system_mobile_data_enabling">正在开启移动数据...</string>
+    <string name="msg_vflow_system_mobile_data_disabling">正在关闭移动数据...</string>
+    <string name="msg_vflow_system_mobile_data_done">移动数据%1$s完成</string>
+    <string name="error_vflow_system_mobile_data_unknown_action">未知的操作类型: %1$s</string>
+    <string name="error_vflow_system_mobile_data_failed">移动数据操作失败</string>
 
     <!-- vflow.interaction.get_current_activity -->
     <string name="module_vflow_interaction_get_current_activity_name">获取当前活动</string>
@@ -2953,8 +3023,11 @@
     <string name="summary_vflow_logic_loop_prefix">循环</string>
     <string name="summary_vflow_logic_loop_suffix">次</string>
     <string name="summary_vflow_logic_stop_and_return_prefix">返回</string>
-    <string name="summary_vflow_logic_while_prefix">循环直到</string>
-    <string name="summary_vflow_logic_while_suffix">不成立</string>
+    <string name="summary_vflow_logic_while_prefix">如果</string>
+    <string name="summary_vflow_logic_while_suffix">就循环</string>
+    <string name="summary_vflow_logic_do_while_start">开始循环</string>
+    <string name="summary_vflow_logic_do_while_prefix">直到</string>
+    <string name="summary_vflow_logic_do_while_suffix">不成立</string>
     <string name="summary_vflow_logic_loop_between">之间</string>
     <string name="summary_vflow_logic_loop_between_suffix">次</string>
     <string name="button_edit_gkd_rules">编辑规则文件</string>

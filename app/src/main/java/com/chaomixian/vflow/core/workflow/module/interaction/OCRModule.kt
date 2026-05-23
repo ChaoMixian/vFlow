@@ -3,6 +3,7 @@ package com.chaomixian.vflow.core.workflow.module.interaction
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.net.Uri
 import android.provider.MediaStore
 import com.chaomixian.vflow.R
@@ -10,6 +11,9 @@ import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.execution.VariableResolver
 import com.chaomixian.vflow.core.module.isMagicVariable
 import com.chaomixian.vflow.core.module.*
+import com.chaomixian.vflow.ocr.PpOcrV5ModelManager
+import com.chaomixian.vflow.ocr.PpOcrV5Native
+import com.chaomixian.vflow.ocr.PpOcrV5NativeItem
 import com.chaomixian.vflow.core.types.VTypeRegistry
 import com.chaomixian.vflow.core.types.basic.VBoolean
 import com.chaomixian.vflow.core.types.basic.VNull
@@ -17,7 +21,6 @@ import com.chaomixian.vflow.core.types.basic.VNumber
 import com.chaomixian.vflow.core.types.basic.VString
 import com.chaomixian.vflow.core.types.complex.VCoordinate
 import com.chaomixian.vflow.core.types.complex.VCoordinateRegion
-import com.chaomixian.vflow.core.types.complex.VImage
 import com.chaomixian.vflow.core.workflow.model.ActionStep
 import com.chaomixian.vflow.ui.workflow_editor.PillUtil
 import com.google.mlkit.vision.common.InputImage
@@ -25,6 +28,7 @@ import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.google.gson.Gson
 import kotlinx.coroutines.tasks.await
 import java.io.IOException
 import kotlin.math.pow
@@ -33,6 +37,7 @@ import kotlin.math.pow
  * "屏幕文字识别 (OCR)" 模块。
  */
 class OCRModule : BaseModule() {
+    private val gson = Gson()
 
     override val id = "vflow.interaction.ocr"
     override val metadata = ActionMetadata(
@@ -61,6 +66,9 @@ class OCRModule : BaseModule() {
 
     // 序列化值使用与语言无关的标识符
     companion object {
+        const val ENGINE_ML_KIT = "ML_KIT"
+        const val ENGINE_PP_OCR_V5 = "PP_OCR_V5"
+
         const val MODE_RECOGNIZE = "recognize"
         const val MODE_FIND = "find"
 
@@ -71,9 +79,27 @@ class OCRModule : BaseModule() {
         const val STRATEGY_DEFAULT = "default"
         const val STRATEGY_CENTER = "center"
         const val STRATEGY_CONFIDENCE = "confidence"
+
+        val ENGINE_INPUT_DEFINITION = InputDefinition(
+            id = "engine",
+            name = "识别引擎",
+            staticType = ParameterType.ENUM,
+            defaultValue = ENGINE_ML_KIT,
+            options = listOf(ENGINE_ML_KIT, ENGINE_PP_OCR_V5),
+            acceptsMagicVariable = false,
+            inputStyle = InputStyle.CHIP_GROUP,
+            nameStringRes = R.string.param_vflow_interaction_ocr_engine_name,
+            optionsStringRes = listOf(
+                R.string.param_vflow_interaction_ocr_engine_opt_ml_kit,
+                R.string.param_vflow_interaction_ocr_engine_opt_pp_ocr_v5,
+            )
+        )
     }
 
+    override fun getEditorActions(step: ActionStep?, allSteps: List<ActionStep>?): List<EditorAction> = emptyList()
+
     override fun getInputs(): List<InputDefinition> = listOf(
+        ENGINE_INPUT_DEFINITION,
         InputDefinition(
             id = "image",
             name = "输入图片",
@@ -189,7 +215,9 @@ class OCRModule : BaseModule() {
         return if (mode == MODE_RECOGNIZE) {
             listOf(
                 OutputDefinition("success", "是否成功", VTypeRegistry.BOOLEAN.id, nameStringRes = R.string.output_vflow_interaction_ocr_success_name),
-                OutputDefinition("full_text", "识别到的文字", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_ocr_full_text_name)
+                OutputDefinition("full_text", "识别到的文字", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_ocr_full_text_name),
+                OutputDefinition("text_list", "文本列表", VTypeRegistry.LIST.id, listElementType = VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_ocr_text_list_name),
+                OutputDefinition("structured_json", "结构化 JSON", VTypeRegistry.STRING.id, nameStringRes = R.string.output_vflow_interaction_ocr_structured_json_name)
             )
         } else {
             listOf(
@@ -226,6 +254,8 @@ class OCRModule : BaseModule() {
         val inputsById = getInputs().associateBy { it.id }
         val rawMode = context.getVariableAsString("mode", MODE_RECOGNIZE)
         val mode = inputsById["mode"]?.normalizeEnumValue(rawMode) ?: rawMode
+        val rawEngine = context.getVariableAsString("engine", ENGINE_ML_KIT)
+        val engine = inputsById["engine"]?.normalizeEnumValue(rawEngine) ?: rawEngine
         val rawLanguage = context.getVariableAsString("language", LANGUAGE_MIXED)
         val language = inputsById["language"]?.normalizeEnumValue(rawLanguage) ?: rawLanguage
         val rawStrategy = context.getVariableAsString("search_strategy", STRATEGY_DEFAULT)
@@ -261,32 +291,83 @@ class OCRModule : BaseModule() {
             else -> appContext.getString(R.string.param_vflow_interaction_ocr_search_strategy_opt_default)
         }
 
-        // 准备识别器
-        val recognizer = when (language) {
-            LANGUAGE_ENGLISH -> TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-            else -> TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
-        }
-
         try {
             onProgress(ProgressUpdate("正在处理图片..."))
-            val inputImage = if (topLeft != null && bottomRight != null) {
-                // 使用区域识别
-                createInputImageWithRegion(appContext, Uri.parse(imageVar.uriString), topLeft, bottomRight)
-            } else {
-                // 全屏识别
-                InputImage.fromFilePath(appContext, Uri.parse(imageVar.uriString))
+            val imageUri = Uri.parse(imageVar.uriString)
+
+            if (engine == ENGINE_PP_OCR_V5) {
+                onProgress(ProgressUpdate("正在使用本地 PP-OCRv5 识别..."))
+                val native = PpOcrV5Native(appContext)
+                val nativeResult = if (topLeft != null && bottomRight != null) {
+                    native.recognizeUri(
+                        imageUri,
+                        Rect(topLeft.first, topLeft.second, bottomRight.first, bottomRight.second)
+                    )
+                } else {
+                    native.recognizeUri(imageUri)
+                }
+                if (!nativeResult.success) {
+                    return ExecutionResult.Failure(
+                        "PP-OCRv5 识别失败",
+                        nativeResult.error ?: "本地 PP-OCRv5 推理失败"
+                    )
+                }
+
+                val adjustedItems = nativeResult.items.mapNotNull { item ->
+                    toRegion(item, topLeft, bottomRight)
+                }
+
+                if (mode == MODE_RECOGNIZE) {
+                    val textList = adjustedItems
+                        .sortedWith(compareBy<Pair<String, VCoordinateRegion>>({ it.second.top }, { it.second.left }))
+                        .map { it.first.trim() }
+                        .filter { it.isNotEmpty() }
+                    val fullText = textList.joinToString("\n")
+                    val structuredJson = buildStructuredJsonFromNativeItems(nativeResult.items, topLeft)
+                    onProgress(ProgressUpdate("识别完成，文字长度: ${fullText.length}"))
+                    return ExecutionResult.Success(mapOf(
+                        "success" to VBoolean(true),
+                        "full_text" to VString(fullText),
+                        "text_list" to textList.map { VString(it) },
+                        "structured_json" to VString(structuredJson)
+                    ))
+                }
+
+                onProgress(ProgressUpdate("正在查找匹配项: $targetText"))
+                val matches = adjustedItems
+                    .filter { it.first.contains(targetText, ignoreCase = true) }
+                    .map { it.second }
+
+                return buildFindResult(matches, targetText, strategy, topLeft, bottomRight, null, strategyDisplay, languageDisplay)
             }
 
+            // 准备识别器
+            val recognizer = when (language) {
+                LANGUAGE_ENGLISH -> TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                else -> TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
+            }
+
+            val inputImage = if (topLeft != null && bottomRight != null) {
+                createInputImageWithRegion(appContext, imageUri, topLeft, bottomRight)
+            } else {
+                InputImage.fromFilePath(appContext, imageUri)
+            }
             onProgress(ProgressUpdate("正在识别文字..."))
             val result: Text = recognizer.process(inputImage).await()
 
             // 处理结果 - 识别全文模式
             if (mode == MODE_RECOGNIZE) {
                 val fullText = result.text
+                val textList = result.textBlocks
+                    .flatMap { block -> block.lines.map { it.text.trim() } }
+                    .filter { it.isNotEmpty() }
+                val structuredJson = buildStructuredJsonFromMlKitResult(result, topLeft)
                 onProgress(ProgressUpdate("识别完成，文字长度: ${fullText.length}"))
                 return ExecutionResult.Success(mapOf(
                     "success" to VBoolean(true),
-                    "full_text" to VString(fullText)
+                    "full_text" to VString(fullText),
+                    "text_list" to textList.map { VString(it) },
+                    "structured_json" to VString(structuredJson)
                 ))
             }
 
@@ -315,76 +396,191 @@ class OCRModule : BaseModule() {
                 }
             }
 
-            if (matches.isEmpty()) {
-                // 返回 Failure，让用户通过"异常处理策略"选择行为
-                // 用户可以选择：重试（OCR 可能识别不准确）、忽略错误继续、停止工作流
-                return ExecutionResult.Failure(
-                    "未找到文字",
-                    "在图片中未找到指定文字: '$targetText'（语言: $languageDisplay, 策略: $strategyDisplay）",
-                    // 提供 partialOutputs，让"跳过此步骤继续"时有语义化的默认值
-                    partialOutputs = mapOf(
-                        "success" to VBoolean(true),
-                        "found" to VBoolean(false),
-                        "count" to VNumber(0.0),              // 找到 0 个（语义化）
-                        "all_matches" to emptyList<Any>(),    // 空列表（语义化）
-                        "first_match" to VNull,              // 没有"第一个"
-                        "all_centers" to emptyList<Any>(),   // 空列表（语义化）
-                        "first_center" to VNull              // 没有"第一个"
-                    )
-                )
-            }
-
-            // 应用排序策略
-            val sortedMatches = when (strategy) {
-                STRATEGY_CENTER -> {
-                    // 如果使用了区域识别，中心点应该是识别区域的中心（在原始图片坐标系中）
-                    val cx = if (topLeft != null && bottomRight != null) {
-                        (topLeft.first + bottomRight.first) / 2
-                    } else {
-                        inputImage.width / 2
-                    }
-                    val cy = if (topLeft != null && bottomRight != null) {
-                        (topLeft.second + bottomRight.second) / 2
-                    } else {
-                        inputImage.height / 2
-                    }
-                    matches.sortedBy { elem ->
-                        val dx = elem.centerX - cx
-                        val dy = elem.centerY - cy
-                        dx.toDouble().pow(2) + dy.toDouble().pow(2)
-                    }
-                }
-                STRATEGY_CONFIDENCE -> {
-                    matches.sortedBy { it.top } // 暂回退到默认排序
-                }
-                else -> { // STRATEGY_DEFAULT
-                    matches.sortedWith(compareBy({ it.top }, { it.left }))
-                }
-            }
-
-            val firstMatch = sortedMatches.first()
-            val firstCenter = VCoordinate(firstMatch.centerX, firstMatch.centerY)
-            val allCenters = sortedMatches.map { VCoordinate(it.centerX, it.centerY) }
-
-            onProgress(ProgressUpdate("找到 ${matches.size} 个结果，第一个位于 (${firstMatch.centerX}, ${firstMatch.centerY})"))
-
-            return ExecutionResult.Success(mapOf(
-                "success" to VBoolean(true),
-                "found" to VBoolean(true),
-                "count" to VNumber(matches.size.toDouble()),
-                "first_match" to firstMatch,
-                "first_center" to firstCenter,
-                "all_matches" to sortedMatches,
-                "all_centers" to allCenters
-            ))
+            return buildFindResult(matches, targetText, strategy, topLeft, bottomRight, inputImage, strategyDisplay, languageDisplay)
 
         } catch (e: IOException) {
             return ExecutionResult.Failure("图片读取失败", e.message ?: "无法打开图片文件")
         } catch (e: Exception) {
             return ExecutionResult.Failure("OCR 识别异常", e.message ?: "发生了未知错误")
-        } finally {
-            recognizer.close()
         }
+    }
+
+    private fun buildFindResult(
+        matches: List<VCoordinateRegion>,
+        targetText: String,
+        strategy: String,
+        topLeft: Pair<Int, Int>?,
+        bottomRight: Pair<Int, Int>?,
+        inputImage: InputImage?,
+        strategyDisplay: String,
+        languageDisplay: String,
+    ): ExecutionResult {
+        if (matches.isEmpty()) {
+            return ExecutionResult.Failure(
+                "未找到文字",
+                "在图片中未找到指定文字: '$targetText'（语言: $languageDisplay, 策略: $strategyDisplay）",
+                partialOutputs = mapOf(
+                    "success" to VBoolean(true),
+                    "found" to VBoolean(false),
+                    "count" to VNumber(0.0),
+                    "all_matches" to emptyList<Any>(),
+                    "first_match" to VNull,
+                    "all_centers" to emptyList<Any>(),
+                    "first_center" to VNull
+                )
+            )
+        }
+
+        val sortedMatches = when (strategy) {
+            STRATEGY_CENTER -> {
+                val cx = if (topLeft != null && bottomRight != null) {
+                    (topLeft.first + bottomRight.first) / 2
+                } else {
+                    inputImage?.width?.div(2) ?: 0
+                }
+                val cy = if (topLeft != null && bottomRight != null) {
+                    (topLeft.second + bottomRight.second) / 2
+                } else {
+                    inputImage?.height?.div(2) ?: 0
+                }
+                matches.sortedBy { elem ->
+                    val dx = elem.centerX - cx
+                    val dy = elem.centerY - cy
+                    dx.toDouble().pow(2) + dy.toDouble().pow(2)
+                }
+            }
+            STRATEGY_CONFIDENCE -> matches.sortedBy { it.top }
+            else -> matches.sortedWith(compareBy({ it.top }, { it.left }))
+        }
+
+        val firstMatch = sortedMatches.first()
+        val firstCenter = VCoordinate(firstMatch.centerX, firstMatch.centerY)
+        val allCenters = sortedMatches.map { VCoordinate(it.centerX, it.centerY) }
+
+        return ExecutionResult.Success(mapOf(
+            "success" to VBoolean(true),
+            "found" to VBoolean(true),
+            "count" to VNumber(matches.size.toDouble()),
+            "first_match" to firstMatch,
+            "first_center" to firstCenter,
+            "all_matches" to sortedMatches,
+            "all_centers" to allCenters
+        ))
+    }
+
+    private fun toRegion(
+        item: PpOcrV5NativeItem,
+        topLeft: Pair<Int, Int>?,
+        bottomRight: Pair<Int, Int>?,
+    ): Pair<String, VCoordinateRegion>? {
+        if (item.points.isEmpty()) return null
+        val minX = item.points.minOf { it.x }
+        val minY = item.points.minOf { it.y }
+        val maxX = item.points.maxOf { it.x }
+        val maxY = item.points.maxOf { it.y }
+
+        val rect = if (topLeft != null && bottomRight != null) {
+            Rect(
+                (minX + topLeft.first).toInt(),
+                (minY + topLeft.second).toInt(),
+                (maxX + topLeft.first).toInt(),
+                (maxY + topLeft.second).toInt()
+            )
+        } else {
+            Rect(minX.toInt(), minY.toInt(), maxX.toInt(), maxY.toInt())
+        }
+
+        return item.text to VCoordinateRegion.fromRect(rect)
+    }
+
+    private fun buildStructuredJsonFromNativeItems(
+        items: List<PpOcrV5NativeItem>,
+        topLeft: Pair<Int, Int>?,
+    ): String {
+        val payload = mapOf(
+            "engine" to ENGINE_PP_OCR_V5,
+            "items" to items.map { item ->
+                val adjustedPoints = item.points.map { point ->
+                    mapOf(
+                        "x" to point.x + (topLeft?.first ?: 0),
+                        "y" to point.y + (topLeft?.second ?: 0)
+                    )
+                }
+                val minX = adjustedPoints.minOfOrNull { (it["x"] as Number).toFloat() } ?: item.centerX
+                val minY = adjustedPoints.minOfOrNull { (it["y"] as Number).toFloat() } ?: item.centerY
+                val maxX = adjustedPoints.maxOfOrNull { (it["x"] as Number).toFloat() } ?: item.centerX
+                val maxY = adjustedPoints.maxOfOrNull { (it["y"] as Number).toFloat() } ?: item.centerY
+                mapOf(
+                    "text" to item.text,
+                    "confidence" to item.score,
+                    "orientation" to item.orientation,
+                    "angle" to item.angle,
+                    "center" to mapOf(
+                        "x" to item.centerX + (topLeft?.first ?: 0),
+                        "y" to item.centerY + (topLeft?.second ?: 0)
+                    ),
+                    "size" to mapOf(
+                        "width" to item.width,
+                        "height" to item.height
+                    ),
+                    "bounding_box" to mapOf(
+                        "left" to minX,
+                        "top" to minY,
+                        "right" to maxX,
+                        "bottom" to maxY
+                    ),
+                    "points" to adjustedPoints
+                )
+            }
+        )
+        return gson.toJson(payload)
+    }
+
+    private fun buildStructuredJsonFromMlKitResult(
+        result: Text,
+        topLeft: Pair<Int, Int>?,
+    ): String {
+        val payload = mapOf(
+            "engine" to ENGINE_ML_KIT,
+            "items" to result.textBlocks.flatMap { block ->
+                block.lines.mapNotNull { line ->
+                    val rect = line.boundingBox ?: return@mapNotNull null
+                    val adjustedRect = Rect(
+                        rect.left + (topLeft?.first ?: 0),
+                        rect.top + (topLeft?.second ?: 0),
+                        rect.right + (topLeft?.first ?: 0),
+                        rect.bottom + (topLeft?.second ?: 0)
+                    )
+                    mapOf(
+                        "text" to line.text,
+                        "confidence" to null,
+                        "orientation" to null,
+                        "angle" to null,
+                        "center" to mapOf(
+                            "x" to adjustedRect.centerX(),
+                            "y" to adjustedRect.centerY()
+                        ),
+                        "size" to mapOf(
+                            "width" to adjustedRect.width(),
+                            "height" to adjustedRect.height()
+                        ),
+                        "bounding_box" to mapOf(
+                            "left" to adjustedRect.left,
+                            "top" to adjustedRect.top,
+                            "right" to adjustedRect.right,
+                            "bottom" to adjustedRect.bottom
+                        ),
+                        "points" to listOf(
+                            mapOf("x" to adjustedRect.left, "y" to adjustedRect.top),
+                            mapOf("x" to adjustedRect.right, "y" to adjustedRect.top),
+                            mapOf("x" to adjustedRect.right, "y" to adjustedRect.bottom),
+                            mapOf("x" to adjustedRect.left, "y" to adjustedRect.bottom)
+                        )
+                    )
+                }
+            }
+        )
+        return gson.toJson(payload)
     }
 
     /**

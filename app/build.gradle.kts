@@ -12,28 +12,48 @@ android {
     namespace = "com.chaomixian.vflow"
     compileSdk = 36
 
+    val releaseKeystoreFile = rootProject.file("vFlow.jks")
+    val releaseSigningPropsFile = rootProject.file("signing.properties")
+    val hasReleaseSigning = releaseKeystoreFile.exists() && releaseSigningPropsFile.exists()
+
+    val debugKeystoreFile = rootProject.file("debug.keystore")
+    val debugSigningPropsFile = rootProject.file("debug-signing.properties")
+    val hasDebugKeystore = debugKeystoreFile.exists()
+
     defaultConfig {
         applicationId = "com.chaomixian.vflow"
         minSdk = 29
         targetSdk = 36
         versionCode = 48
-        versionName = "1.5.1"
+        versionName = "1.5.2-pr1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                arguments += listOf("-DANDROID_STL=c++_shared")
+            }
+        }
     }
 
     signingConfigs {
         getByName("debug") {
-            val keystoreFile = rootProject.file("debug.keystore")
-            val signingPropsFile = rootProject.file("debug-signing.properties")
-
-            if (keystoreFile.exists()) {
+            if (hasReleaseSigning) {
                 val props = Properties()
-                if (signingPropsFile.exists()) {
-                    props.load(FileInputStream(signingPropsFile))
+                props.load(FileInputStream(releaseSigningPropsFile))
+
+                storeFile = releaseKeystoreFile
+                storePassword = props.getProperty("KEYSTORE_PASSWORD")
+                keyAlias = props.getProperty("KEYSTORE_ALIAS")
+                keyPassword = props.getProperty("KEY_PASSWORD")
+                println("ℹ️ Debug 构建复用 Release 签名")
+            } else if (hasDebugKeystore) {
+                val props = Properties()
+                if (debugSigningPropsFile.exists()) {
+                    props.load(FileInputStream(debugSigningPropsFile))
                 }
 
-                storeFile = keystoreFile
+                storeFile = debugKeystoreFile
                 storePassword = props.getProperty("KEYSTORE_PASSWORD", "android")
                 keyAlias = props.getProperty("KEYSTORE_ALIAS", "androiddebugkey")
                 keyPassword = props.getProperty("KEY_PASSWORD", "android")
@@ -43,14 +63,11 @@ android {
         }
 
         create("release") {
-            val keystoreFile = rootProject.file("vFlow.jks")
-            val signingPropsFile = rootProject.file("signing.properties")
-
-            if (keystoreFile.exists() && signingPropsFile.exists()) {
+            if (hasReleaseSigning) {
                 val props = Properties()
-                props.load(FileInputStream(signingPropsFile))
+                props.load(FileInputStream(releaseSigningPropsFile))
 
-                storeFile = keystoreFile
+                storeFile = releaseKeystoreFile
                 storePassword = props.getProperty("KEYSTORE_PASSWORD")
                 keyAlias = props.getProperty("KEYSTORE_ALIAS")
                 keyPassword = props.getProperty("KEY_PASSWORD")
@@ -62,7 +79,7 @@ android {
 
     buildTypes {
         debug {
-            if (rootProject.file("debug.keystore").exists()) {
+            if (hasReleaseSigning || hasDebugKeystore) {
                 signingConfig = signingConfigs.getByName("debug")
             }
         }
@@ -74,7 +91,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (rootProject.file("vFlow.jks").exists() && rootProject.file("signing.properties").exists()) {
+            if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             } else {
                 println("⚠️ Release 签名文件未找到")
@@ -95,6 +112,13 @@ android {
         viewBinding = true
         aidl = true           // 启用aidl
         compose = true
+        prefab = true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
     }
 
     splits {
@@ -111,6 +135,12 @@ android {
             excludes += "META-INF/INDEX.LIST"
             excludes += "META-INF/io.netty.versions.properties"
             excludes += "META-INF/DEPENDENCIES"
+        }
+        jniLibs {
+            pickFirsts += setOf(
+                "lib/**/libc++_shared.so",
+                "lib/**/libopencv_java4.so",
+            )
         }
     }
 }

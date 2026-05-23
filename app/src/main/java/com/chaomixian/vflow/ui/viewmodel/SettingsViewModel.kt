@@ -8,6 +8,7 @@ import com.chaomixian.vflow.api.ApiService
 import com.chaomixian.vflow.core.locale.LocaleManager
 import com.chaomixian.vflow.core.logging.DebugLogger
 import com.chaomixian.vflow.core.telemetry.TelemetryManager
+import com.chaomixian.vflow.core.workflow.model.ActionStepExecutionSettings
 import com.chaomixian.vflow.data.update.UpdateChecker
 import com.chaomixian.vflow.data.update.UpdateInfo
 import com.chaomixian.vflow.services.ShellManager
@@ -34,7 +35,11 @@ data class SettingsUiState(
     val autoEnableAccessibility: Boolean = false,
     val enableTypeFilter: Boolean = false,
     val allowPopupKeepScreenOn: Boolean = false,
+    val keepDeviceAwakeDuringWorkflow: Boolean = false,
     val hideFromRecents: Boolean = false,
+    val defaultErrorPolicy: String = ActionStepExecutionSettings.POLICY_STOP,
+    val defaultRetryCount: Int = ActionStepExecutionSettings.DEFAULT_RETRY_COUNT,
+    val defaultRetryIntervalMillis: Long = ActionStepExecutionSettings.DEFAULT_RETRY_INTERVAL_MS,
     val allowShowOnLockScreen: Boolean = false,
     val defaultShellMode: String = "shizuku",
     val loggingEnabled: Boolean = false,
@@ -76,7 +81,18 @@ class SettingsViewModel : ViewModel() {
                 autoEnableAccessibility = prefs.getBoolean(KEY_AUTO_ENABLE_ACCESSIBILITY, false),
                 enableTypeFilter = prefs.getBoolean(KEY_ENABLE_TYPE_FILTER, false),
                 allowPopupKeepScreenOn = OverlayUiPreferences.isPopupKeepScreenOnAllowed(context),
+                keepDeviceAwakeDuringWorkflow = OverlayUiPreferences.isKeepDeviceAwakeDuringWorkflowEnabled(context),
                 hideFromRecents = prefs.getBoolean(KEY_HIDE_FROM_RECENTS, false),
+                defaultErrorPolicy = prefs.getString(KEY_DEFAULT_ERROR_POLICY, ActionStepExecutionSettings.POLICY_STOP)
+                    ?: ActionStepExecutionSettings.POLICY_STOP,
+                defaultRetryCount = prefs.getInt(
+                    KEY_DEFAULT_RETRY_COUNT,
+                    ActionStepExecutionSettings.DEFAULT_RETRY_COUNT
+                ),
+                defaultRetryIntervalMillis = prefs.getLong(
+                    KEY_DEFAULT_RETRY_INTERVAL,
+                    ActionStepExecutionSettings.DEFAULT_RETRY_INTERVAL_MS
+                ),
                 allowShowOnLockScreen = OverlayUiPreferences.isShowOnLockScreenAllowed(context),
                 defaultShellMode = prefs.getString(
                     KEY_DEFAULT_SHELL_MODE,
@@ -167,9 +183,32 @@ class SettingsViewModel : ViewModel() {
         _uiState.update { it.copy(hideFromRecents = enabled) }
     }
 
+    fun setDefaultErrorHandlingStrategy(
+        context: Context,
+        policy: String,
+        retryCount: Int,
+        retryIntervalMillis: Long
+    ) = editPref(context) {
+        putString(KEY_DEFAULT_ERROR_POLICY, policy)
+        putInt(KEY_DEFAULT_RETRY_COUNT, retryCount)
+        putLong(KEY_DEFAULT_RETRY_INTERVAL, retryIntervalMillis)
+        _uiState.update {
+            it.copy(
+                defaultErrorPolicy = policy,
+                defaultRetryCount = retryCount,
+                defaultRetryIntervalMillis = retryIntervalMillis
+            )
+        }
+    }
+
     fun setAllowPopupKeepScreenOn(context: Context, enabled: Boolean) = editPref(context) {
         putBoolean(OverlayUiPreferences.KEY_ALLOW_POPUP_KEEP_SCREEN_ON, enabled)
         _uiState.update { it.copy(allowPopupKeepScreenOn = enabled) }
+    }
+
+    fun setKeepDeviceAwakeDuringWorkflow(context: Context, enabled: Boolean) = editPref(context) {
+        putBoolean(OverlayUiPreferences.KEY_KEEP_DEVICE_AWAKE_DURING_WORKFLOW, enabled)
+        _uiState.update { it.copy(keepDeviceAwakeDuringWorkflow = enabled) }
     }
 
     fun setAllowShowOnLockScreen(context: Context, enabled: Boolean) = editPref(context) {
@@ -233,6 +272,9 @@ class SettingsViewModel : ViewModel() {
         private const val KEY_AUTO_ENABLE_ACCESSIBILITY = "autoEnableAccessibility"
         private const val KEY_ENABLE_TYPE_FILTER = "enableTypeFilter"
         private const val KEY_HIDE_FROM_RECENTS = "hideFromRecents"
+        private const val KEY_DEFAULT_ERROR_POLICY = "defaultErrorPolicy"
+        private const val KEY_DEFAULT_RETRY_COUNT = "defaultRetryCount"
+        private const val KEY_DEFAULT_RETRY_INTERVAL = "defaultRetryInterval"
         private const val KEY_DEFAULT_SHELL_MODE = "default_shell_mode"
     }
 }

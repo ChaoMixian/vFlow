@@ -16,14 +16,19 @@ object TriggerServiceProxy {
     private const val ACTION_WORKFLOW_CHANGED = "com.chaomixian.vflow.ACTION_WORKFLOW_CHANGED"
     private const val ACTION_WORKFLOW_REMOVED = "com.chaomixian.vflow.ACTION_WORKFLOW_REMOVED"
     private const val ACTION_RELOAD_TRIGGERS = "com.chaomixian.vflow.ACTION_RELOAD_TRIGGERS"
-    private const val EXTRA_WORKFLOW = "extra_workflow"
-    private const val EXTRA_OLD_WORKFLOW = "extra_old_workflow"
+    private const val EXTRA_TRIGGER_DELTA = "extra_trigger_delta"
 
     fun notifyWorkflowChanged(context: Context, newWorkflow: Workflow, oldWorkflow: Workflow?) {
+        val delta = WorkflowTriggerDelta(
+            workflowId = newWorkflow.id,
+            oldTriggerRefs = oldWorkflow
+                ?.toAutoTriggerSpecs()
+                ?.map { WorkflowTriggerRef(triggerId = it.triggerId, type = it.type) }
+                .orEmpty()
+        )
         val intent = Intent(context, TriggerService::class.java).apply {
             action = ACTION_WORKFLOW_CHANGED
-            putExtra(EXTRA_WORKFLOW, newWorkflow)
-            putExtra(EXTRA_OLD_WORKFLOW, oldWorkflow)
+            putExtra(EXTRA_TRIGGER_DELTA, delta)
         }
         context.startService(intent)
 
@@ -35,9 +40,15 @@ object TriggerServiceProxy {
     }
 
     fun notifyWorkflowRemoved(context: Context, removedWorkflow: Workflow) {
+        val delta = WorkflowTriggerDelta(
+            workflowId = removedWorkflow.id,
+            oldTriggerRefs = removedWorkflow
+                .toAutoTriggerSpecs()
+                .map { WorkflowTriggerRef(triggerId = it.triggerId, type = it.type) }
+        )
         val intent = Intent(context, TriggerService::class.java).apply {
             action = ACTION_WORKFLOW_REMOVED
-            putExtra(EXTRA_WORKFLOW, removedWorkflow)
+            putExtra(EXTRA_TRIGGER_DELTA, delta)
         }
         context.startService(intent)
 

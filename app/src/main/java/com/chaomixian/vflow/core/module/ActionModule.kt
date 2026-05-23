@@ -37,6 +37,14 @@ interface ActionModule {
     val blockBehavior: BlockBehavior
 
     /**
+     * 对于积木块模块，指定添加时编辑器应配置哪个步骤的参数。
+     * 默认为 0（第一个步骤，即 start block）。
+     * 例如，"循环直到"模块的条件在 end block，此值应为 1。
+     */
+    val editorTargetStepIndex: Int
+        get() = 0
+
+    /**
      * 获取模块的输出参数定义。
      * @param step 可选参数，当前的动作步骤实例。如果提供，模块可以根据步骤的当前参数动态确定其输出。
      * @return 输出参数定义列表。

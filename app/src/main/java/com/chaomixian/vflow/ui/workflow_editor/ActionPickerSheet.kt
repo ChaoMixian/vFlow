@@ -8,11 +8,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import com.google.android.material.button.MaterialButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.res.use
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -31,6 +33,7 @@ import java.util.LinkedHashMap
 
 class ActionPickerSheet : BottomSheetDialogFragment() {
     var onActionSelected: ((ActionModule) -> Unit)? = null
+    var onPasteClipboardClicked: (() -> Unit)? = null
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchView: SearchView
@@ -38,6 +41,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
     private lateinit var progressBar: ProgressBar
     private lateinit var noResultsView: TextView
     private lateinit var titleView: TextView
+    private lateinit var pasteWorkflowButton: MaterialButton
 
     private var allModuleGroups: Map<String, List<ActionModule>> = emptyMap()
     private var filteredModuleGroups: Map<String, List<ActionModule>> = emptyMap()
@@ -59,6 +63,12 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
         progressBar = view.findViewById(R.id.progress_bar)
         noResultsView = view.findViewById(R.id.text_view_no_results)
         titleView = view.findViewById(R.id.text_view_bottom_sheet_title)
+        pasteWorkflowButton = view.findViewById(R.id.button_paste_workflow)
+        pasteWorkflowButton.isVisible = onPasteClipboardClicked != null && WorkflowClipboardStore.hasSteps()
+        pasteWorkflowButton.setOnClickListener {
+            onPasteClipboardClicked?.invoke()
+            dismiss()
+        }
 
         setupRecyclerView()
         setupSearch()
@@ -118,6 +128,7 @@ class ActionPickerSheet : BottomSheetDialogFragment() {
 
             withContext(Dispatchers.Main) {
                 titleView.text = if (isTriggerPicker) getString(R.string.picker_select_trigger) else getString(R.string.picker_select_action)
+                pasteWorkflowButton.isVisible = !isTriggerPicker && onPasteClipboardClicked != null && WorkflowClipboardStore.hasSteps()
                 setupPermissionChips()
                 progressBar.visibility = View.GONE
                 recyclerView.visibility = View.VISIBLE

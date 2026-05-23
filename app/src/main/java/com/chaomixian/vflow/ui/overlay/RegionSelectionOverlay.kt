@@ -13,6 +13,7 @@ import android.os.Looper
 import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
@@ -519,6 +520,8 @@ class RegionSelectionOverlay(
             private const val INITIAL_IMAGE_SCALE = 0.86f
             private const val EDGE_TOUCH_SIZE = 44f
             private const val MIN_CROP_SIZE = 50f
+            private const val MIN_IMAGE_SCALE = 1f
+            private const val MAX_IMAGE_SCALE = 6f
             private const val SHOW_ANIMATION_DURATION = 750L
             private const val HIDE_ANIMATION_DURATION = 520L
             private const val RESET_ANIMATION_DURATION = 260L
@@ -578,10 +581,32 @@ class RegionSelectionOverlay(
         private var dragMode = DragMode.NONE
         private var lastTouchX = 0f
         private var lastTouchY = 0f
+        private var isScaling = false
         private var showAnimator: ValueAnimator? = null
         private var resetAnimator: ValueAnimator? = null
         private var finishAnimator: ValueAnimator? = null
         private var isFinishing = false
+        private val scaleDetector = ScaleGestureDetector(
+            context,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                    dragMode = DragMode.NONE
+                    isScaling = true
+                    return true
+                }
+
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    scaleImage(detector.scaleFactor, detector.focusX, detector.focusY)
+                    notifyFrameChanged()
+                    invalidate()
+                    return true
+                }
+
+                override fun onScaleEnd(detector: ScaleGestureDetector) {
+                    isScaling = false
+                }
+            }
+        )
 
         override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
             super.onSizeChanged(w, h, oldw, oldh)
@@ -763,20 +788,44 @@ class RegionSelectionOverlay(
         }
 
         private fun panImage(dx: Float, dy: Float) {
+            imageRect.offset(dx, dy)
+            constrainImagePosition()
+        }
+
+        private fun scaleImage(scaleFactor: Float, focusX: Float, focusY: Float) {
+            val baseWidth = targetImageRect.width().takeIf { it > 0f } ?: return
+            val baseHeight = targetImageRect.height().takeIf { it > 0f } ?: return
+            val currentScale = imageRect.width() / baseWidth
+            val targetScale = (currentScale * scaleFactor).coerceIn(MIN_IMAGE_SCALE, MAX_IMAGE_SCALE)
+            val appliedScale = targetScale / currentScale
+            if (!appliedScale.isFinite() || abs(appliedScale - 1f) < 0.001f) return
+
+            val newWidth = (baseWidth * targetScale).coerceAtLeast(baseWidth)
+            val newHeight = (baseHeight * targetScale).coerceAtLeast(baseHeight)
+            val focusRatioX = ((focusX - imageRect.left) / imageRect.width()).coerceIn(0f, 1f)
+            val focusRatioY = ((focusY - imageRect.top) / imageRect.height()).coerceIn(0f, 1f)
+            val newLeft = focusX - newWidth * focusRatioX
+            val newTop = focusY - newHeight * focusRatioY
+
+            imageRect.set(newLeft, newTop, newLeft + newWidth, newTop + newHeight)
+            constrainImagePosition()
+        }
+
+        private fun constrainImagePosition() {
             val horizontalMargin = width * 0.2f
             val verticalMargin = height * 0.2f
-            var safeDx = dx
-            var safeDy = dy
+            var safeDx = 0f
+            var safeDy = 0f
 
-            if (imageRect.left + dx > width - horizontalMargin) {
+            if (imageRect.left > width - horizontalMargin) {
                 safeDx = width - horizontalMargin - imageRect.left
-            } else if (imageRect.right + dx < horizontalMargin) {
+            } else if (imageRect.right < horizontalMargin) {
                 safeDx = horizontalMargin - imageRect.right
             }
 
-            if (imageRect.top + dy > height - verticalMargin) {
+            if (imageRect.top > height - verticalMargin) {
                 safeDy = height - verticalMargin - imageRect.top
-            } else if (imageRect.bottom + dy < verticalMargin) {
+            } else if (imageRect.bottom < verticalMargin) {
                 safeDy = verticalMargin - imageRect.bottom
             }
 
@@ -791,10 +840,12 @@ class RegionSelectionOverlay(
         override fun onTouchEvent(event: MotionEvent): Boolean {
             if (isFinishing) return true
 
+            scaleDetector.onTouchEvent(event)
+
             val x = event.x
             val y = event.y
 
-            when (event.action) {
+            when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     lastTouchX = x
                     lastTouchY = y
@@ -804,7 +855,14 @@ class RegionSelectionOverlay(
                     invalidate()
                     return true
                 }
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    dragMode = DragMode.NONE
+                    return true
+                }
                 MotionEvent.ACTION_MOVE -> {
+                    if (isScaling || event.pointerCount > 1) {
+                        return true
+                    }
                     if (dragMode != DragMode.NONE) {
                         val dx = x - lastTouchX
                         val dy = y - lastTouchY
@@ -853,6 +911,7 @@ class RegionSelectionOverlay(
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     dragMode = DragMode.NONE
+                    isScaling = false
                     invalidate()
                     return true
                 }

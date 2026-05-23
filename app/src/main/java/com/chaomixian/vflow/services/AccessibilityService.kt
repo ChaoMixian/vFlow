@@ -119,7 +119,7 @@ open class AccessibilityService : AccessibilityService() {
         }
         serviceStateCleaned = true
         AccessibilityKeepAliveManager.onAccessibilityDisconnected(this)
-        ServiceStateBus.onAccessibilityServiceDisconnected(this)
+        ServiceStateBus.onAccessibilityServiceDisconnected(this, this)
         serviceScope.cancel()
         logLifecycle(level = "W", event = event, extra = extra)
     }

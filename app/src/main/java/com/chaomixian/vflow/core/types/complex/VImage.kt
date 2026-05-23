@@ -4,6 +4,7 @@ package com.chaomixian.vflow.core.types.complex
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Parcelable
+import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.logging.LogManager
 import com.chaomixian.vflow.core.types.EnhancedBaseVObject
 import com.chaomixian.vflow.core.types.VTypeRegistry
@@ -74,38 +75,40 @@ data class VImage(val uriString: String) : EnhancedBaseVObject(), Parcelable {
 
     companion object {
         // 属性注册表：所有 VImage 实例共享
-        private val registry = PropertyRegistry().apply {
-            register("width", "w", "宽度", getter = { host ->
+        private val registry: PropertyRegistry = PropertyRegistry().apply {
+            register("width", "w", "宽度", returnType = VTypeRegistry.NUMBER, displayName = "宽度", nameStringRes = R.string.vtype_image_width, getter = { host ->
                 val img = host as VImage
                 img.readImageMetadata()
                 img._width?.let { VNumber(it.toDouble()) } ?: VNull
             })
-            register("height", "h", "高度", getter = { host ->
+            register("height", "h", "高度", returnType = VTypeRegistry.NUMBER, displayName = "高度", nameStringRes = R.string.vtype_image_height, getter = { host ->
                 val img = host as VImage
                 img.readImageMetadata()
                 img._height?.let { VNumber(it.toDouble()) } ?: VNull
             })
-            register("path", "路径", getter = { host ->
+            register("path", "路径", returnType = VTypeRegistry.STRING, displayName = "文件路径", nameStringRes = R.string.vtype_image_path, getter = { host ->
                 val img = host as VImage
                 VString(VFilePropertySupport.path(img.uriString))
             })
-            register("uri", getter = { host ->
+            register("uri", returnType = VTypeRegistry.STRING, displayName = "URI地址", nameStringRes = R.string.vtype_image_uri, getter = { host ->
                 VString((host as VImage).uriString)
             })
-            register("size", "大小", "filesize", getter = { host ->
+            register("size", "大小", "filesize", returnType = VTypeRegistry.NUMBER, displayName = "文件大小", nameStringRes = R.string.vtype_image_size, getter = { host ->
                 val img = host as VImage
                 img.readImageMetadata()
                 img._size?.let { VNumber(it.toDouble()) } ?: VNull
             })
-            register("name", "文件名", "filename", getter = { host ->
+            register("name", "文件名", "filename", returnType = VTypeRegistry.STRING, displayName = "文件名", nameStringRes = R.string.vtype_image_name, getter = { host ->
                 val img = host as VImage
                 VString(VFilePropertySupport.name(img.uriString))
             })
-            register("base64", getter = { host ->
+            register("base64", returnType = VTypeRegistry.STRING, displayName = "Base64", nameStringRes = R.string.vtype_image_base64, getter = { host ->
                 VFilePropertySupport.base64((host as VImage).uriString)
                     ?.let { VString(it) }
                     ?: VNull
             })
         }
+
+        fun propertyDefs(): List<com.chaomixian.vflow.core.types.VPropertyDef> = registry.toPropertyDefs()
     }
 }
