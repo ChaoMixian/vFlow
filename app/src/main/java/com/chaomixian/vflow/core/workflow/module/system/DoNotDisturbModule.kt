@@ -255,10 +255,9 @@ class DoNotDisturbModule : BaseModule() {
     }
 
     internal fun createAutomaticZenRule(ruleName: String, packageName: String): AutomaticZenRule {
-        val ownerComponent = ComponentName(packageName, "com.chaomixian.vflow.core.system.DndConditionProviderService")
         return AutomaticZenRule(
             ruleName,
-            ownerComponent,
+            null,
             createRuleConfigurationActivity(packageName),
             conditionId(packageName, ruleName),
             null,
