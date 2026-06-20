@@ -7,6 +7,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.service.notification.Condition
+import android.service.notification.ZenPolicy
 import com.chaomixian.vflow.R
 import com.chaomixian.vflow.core.execution.ExecutionContext
 import com.chaomixian.vflow.core.module.ActionMetadata
@@ -174,7 +175,7 @@ class DoNotDisturbModule : BaseModule() {
                         actualConditionId,
                         getConditionSummary(context.applicationContext, enabled),
                         targetState,
-                        Condition.SOURCE_USER_ACTION
+                        Condition.SOURCE_CONTEXT
                     )
                 )
                 enabled
@@ -281,12 +282,16 @@ class DoNotDisturbModule : BaseModule() {
     }
 
     internal fun createAutomaticZenRule(ruleName: String, packageName: String): AutomaticZenRule {
+        val zenPolicy = ZenPolicy.Builder()
+            .disallowAllSounds()
+            .hideAllVisualEffects()
+            .build()
         return AutomaticZenRule(
             ruleName,
             null,
             createRuleConfigurationActivity(packageName),
             conditionId(packageName, ruleName),
-            null,
+            zenPolicy,
             NotificationManager.INTERRUPTION_FILTER_NONE,
             true
         )
