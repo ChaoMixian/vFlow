@@ -67,8 +67,8 @@ class DndModeManager(private val context: Context) {
                 policyBuilder.allowCalls(ZenPolicy.PEOPLE_TYPE_NONE)
             }
 
-            AutomaticZenRule.Builder(name, providerComponent)
-                .setConditionId(conditionId)
+            AutomaticZenRule.Builder(name, conditionId)
+                .setOwner(providerComponent)
                 .setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
                 .setZenPolicy(policyBuilder.build())
                 .setEnabled(true)
