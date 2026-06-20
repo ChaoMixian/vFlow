@@ -86,6 +86,14 @@ class DoNotDisturbModule : BaseModule() {
             ),
             legacyValueMap = ACTION_LEGACY_MAP,
             inputStyle = InputStyle.CHIP_GROUP
+        ),
+        InputDefinition(
+            id = "mode_name",
+            name = "模式名称",
+            nameStringRes = R.string.param_vflow_system_do_not_disturb_mode_name,
+            staticType = ParameterType.STRING,
+            defaultValue = "vFlow",
+            inputStyle = InputStyle.DEFAULT
         )
     )
 
@@ -110,9 +118,10 @@ class DoNotDisturbModule : BaseModule() {
             step.parameters["action"] as? String,
             ACTION_TOGGLE
         ) ?: ACTION_TOGGLE
+        val modeName = step.parameters["mode_name"] as? String ?: "vFlow"
         val displayText = getActionDisplayName(context, action)
         val actionPill = PillUtil.Pill(displayText, "action", isModuleOption = true)
-        return PillUtil.buildSpannable(context, "${metadata.getLocalizedName(context)}: ", actionPill)
+        return PillUtil.buildSpannable(context, "${metadata.getLocalizedName(context)} ($modeName): ", actionPill)
     }
 
     override suspend fun execute(
@@ -125,7 +134,9 @@ class DoNotDisturbModule : BaseModule() {
             ACTION_TOGGLE
         ) ?: ACTION_TOGGLE
 
-        val ruleName = appContext.getString(R.string.module_vflow_system_do_not_disturb_name)
+        val modeName = context.getVariable("mode_name").asString()
+            .takeIf { it.isNotBlank() } 
+            ?: appContext.getString(R.string.module_vflow_system_do_not_disturb_name)
 
         val notificationManager = context.applicationContext
             .getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -142,14 +153,14 @@ class DoNotDisturbModule : BaseModule() {
 
         return try {
             val enabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                val ruleId = ensureRule(context.applicationContext, notificationManager, ruleName)
+                val ruleId = ensureRule(context.applicationContext, notificationManager, modeName)
                     ?: return ExecutionResult.Failure(
                         appContext.getString(R.string.error_vflow_system_do_not_disturb_set_failed),
                         appContext.getString(R.string.error_vflow_system_do_not_disturb_rule_create_failed)
                     )
                 // Read the actual conditionId from the existing rule to avoid mismatch
                 val rule = notificationManager.getAutomaticZenRule(ruleId)
-                val actualConditionId = rule?.conditionId ?: conditionId(context.applicationContext, ruleName)
+                val actualConditionId = rule?.conditionId ?: conditionId(context.applicationContext, modeName)
                 val currentState = getRuleState(notificationManager, ruleId)
                 val targetState = resolveTargetState(currentState, action)
                     ?: return ExecutionResult.Failure(
@@ -225,14 +236,37 @@ class DoNotDisturbModule : BaseModule() {
     }
 
     private fun ensureRule(context: Context, notificationManager: NotificationManager, ruleName: String): String? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedRuleId = prefs.getString(PREF_RULE_ID, null)
+
+        if (savedRuleId != null) {
+            val existingRule = notificationManager.getAutomaticZenRule(savedRuleId)
+            if (existingRule != null) {
+                if (existingRule.name != ruleName) {
+                    existingRule.name = ruleName
+                    try {
+                        notificationManager.updateAutomaticZenRule(savedRuleId, existingRule)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                return savedRuleId
+            }
+        }
+
         val existingRuleEntry = notificationManager.automaticZenRules?.entries?.find { it.value.name == ruleName }
         if (existingRuleEntry != null) {
+            prefs.edit().putString(PREF_RULE_ID, existingRuleEntry.key).apply()
             return existingRuleEntry.key
         }
 
         val rule = createAutomaticZenRule(context, ruleName)
         return try {
-            notificationManager.addAutomaticZenRule(rule)
+            val ruleId = notificationManager.addAutomaticZenRule(rule)
+            if (ruleId != null) {
+                prefs.edit().putString(PREF_RULE_ID, ruleId).apply()
+            }
+            ruleId
         } catch (e: Exception) {
             e.printStackTrace()
             null
