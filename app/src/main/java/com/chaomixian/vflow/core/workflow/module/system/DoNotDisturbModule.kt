@@ -152,7 +152,7 @@ class DoNotDisturbModule : BaseModule() {
         onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_do_not_disturb_setting, actionName)))
 
         return try {
-            val enabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            val enabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val ruleId = ensureRule(context.applicationContext, notificationManager, modeName)
                     ?: return ExecutionResult.Failure(
                         appContext.getString(R.string.error_vflow_system_do_not_disturb_set_failed),
@@ -255,9 +255,10 @@ class DoNotDisturbModule : BaseModule() {
     }
 
     internal fun createAutomaticZenRule(ruleName: String, packageName: String): AutomaticZenRule {
+        val ownerComponent = ComponentName(packageName, "com.chaomixian.vflow.core.system.DndConditionProviderService")
         return AutomaticZenRule(
             ruleName,
-            null,
+            ownerComponent,
             createRuleConfigurationActivity(packageName),
             conditionId(packageName, ruleName),
             null,
