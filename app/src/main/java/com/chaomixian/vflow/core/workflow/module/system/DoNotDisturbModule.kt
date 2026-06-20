@@ -86,14 +86,6 @@ class DoNotDisturbModule : BaseModule() {
             ),
             legacyValueMap = ACTION_LEGACY_MAP,
             inputStyle = InputStyle.CHIP_GROUP
-        ),
-        InputDefinition(
-            id = "mode_name",
-            name = "模式名称",
-            nameStringRes = R.string.param_vflow_system_do_not_disturb_mode_name,
-            staticType = ParameterType.STRING,
-            defaultValue = "vFlow",
-            inputStyle = InputStyle.DEFAULT
         )
     )
 
@@ -118,10 +110,9 @@ class DoNotDisturbModule : BaseModule() {
             step.parameters["action"] as? String,
             ACTION_TOGGLE
         ) ?: ACTION_TOGGLE
-        val modeName = step.parameters["mode_name"] as? String ?: "vFlow"
         val displayText = getActionDisplayName(context, action)
         val actionPill = PillUtil.Pill(displayText, "action", isModuleOption = true)
-        return PillUtil.buildSpannable(context, "${metadata.getLocalizedName(context)} ($modeName): ", actionPill)
+        return PillUtil.buildSpannable(context, "${metadata.getLocalizedName(context)}: ", actionPill)
     }
 
     override suspend fun execute(
@@ -134,9 +125,7 @@ class DoNotDisturbModule : BaseModule() {
             ACTION_TOGGLE
         ) ?: ACTION_TOGGLE
 
-        val modeName = context.getVariable("mode_name").asString()
-            .takeIf { it.isNotBlank() } 
-            ?: appContext.getString(R.string.module_vflow_system_do_not_disturb_name)
+        val ruleName = appContext.getString(R.string.module_vflow_system_do_not_disturb_name)
 
         val notificationManager = context.applicationContext
             .getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -153,14 +142,14 @@ class DoNotDisturbModule : BaseModule() {
 
         return try {
             val enabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                val ruleId = ensureRule(context.applicationContext, notificationManager, modeName)
+                val ruleId = ensureRule(context.applicationContext, notificationManager, ruleName)
                     ?: return ExecutionResult.Failure(
                         appContext.getString(R.string.error_vflow_system_do_not_disturb_set_failed),
                         appContext.getString(R.string.error_vflow_system_do_not_disturb_rule_create_failed)
                     )
                 // Read the actual conditionId from the existing rule to avoid mismatch
                 val rule = notificationManager.getAutomaticZenRule(ruleId)
-                val actualConditionId = rule?.conditionId ?: conditionId(context.applicationContext, modeName)
+                val actualConditionId = rule?.conditionId ?: conditionId(context.applicationContext, ruleName)
                 val currentState = getRuleState(notificationManager, ruleId)
                 val targetState = resolveTargetState(currentState, action)
                     ?: return ExecutionResult.Failure(
