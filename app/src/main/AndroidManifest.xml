@@ -271,6 +271,17 @@
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
+        <!-- DND rule owner service -->
+        <service
+            android:name=".core.system.DndConditionProviderService"
+            android:label="vFlow DND Manager"
+            android:permission="android.permission.BIND_CONDITION_PROVIDER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.zen.ConditionProviderService" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".services.BootReceiver"
             android:exported="true">
