@@ -152,12 +152,15 @@ class DoNotDisturbModule : BaseModule() {
         onProgress(ProgressUpdate(appContext.getString(R.string.msg_vflow_system_do_not_disturb_setting, actionName)))
 
         return try {
-            val enabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val enabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 val ruleId = ensureRule(context.applicationContext, notificationManager, modeName)
                     ?: return ExecutionResult.Failure(
                         appContext.getString(R.string.error_vflow_system_do_not_disturb_set_failed),
                         appContext.getString(R.string.error_vflow_system_do_not_disturb_rule_create_failed)
                     )
+                // Read the actual conditionId from the existing rule to avoid mismatch
+                val rule = notificationManager.getAutomaticZenRule(ruleId)
+                val actualConditionId = rule?.conditionId ?: conditionId(context.applicationContext, modeName)
                 val currentState = getRuleState(notificationManager, ruleId)
                 val targetState = resolveTargetState(currentState, action)
                     ?: return ExecutionResult.Failure(
@@ -168,7 +171,7 @@ class DoNotDisturbModule : BaseModule() {
                 notificationManager.setAutomaticZenRuleState(
                     ruleId,
                     Condition(
-                        conditionId(context.applicationContext, modeName),
+                        actualConditionId,
                         getConditionSummary(context.applicationContext, enabled),
                         targetState,
                         Condition.SOURCE_USER_ACTION
