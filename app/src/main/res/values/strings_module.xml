@@ -2943,6 +2943,7 @@
     <string name="module_vflow_system_do_not_disturb_name">免打扰模式</string>
     <string name="module_vflow_system_do_not_disturb_desc">开启、关闭或切换免打扰模式。Android 15+ 使用 vFlow 自己的勿扰规则，Android 15 以下使用全局勿扰开关。</string>
     <string name="param_vflow_system_do_not_disturb_action_name">操作</string>
+    <string name="param_vflow_system_do_not_disturb_mode_name">模式名称</string>
     <string name="output_vflow_system_do_not_disturb_success_name">是否成功</string>
     <string name="output_vflow_system_do_not_disturb_enabled_name">免打扰已开启</string>
     <string name="option_vflow_system_do_not_disturb_toggle">切换</string>
