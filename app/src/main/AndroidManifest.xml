@@ -278,7 +278,7 @@
             android:permission="android.permission.BIND_CONDITION_PROVIDER_SERVICE"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.service.zen.ConditionProviderService" />
+                <action android:name="android.service.notification.ConditionProviderService" />
             </intent-filter>
         </service>
 
