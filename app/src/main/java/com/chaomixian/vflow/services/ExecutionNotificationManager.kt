@@ -127,6 +127,7 @@ object ExecutionNotificationManager {
                     .setOngoing(false)
                     .setRequestPromotedOngoing(false) // 取消提升请求
                     .setAutoCancel(true)
+                    .setTimeoutAfter(3000) // 3秒后自动消失
                     // 通过 setProgress(0, 0, false) 来移除进度条
                     .setProgress(0, 0, false)
                     // (可选) 可以临时将小图标变为完成状态，增强视觉反馈
@@ -139,6 +140,7 @@ object ExecutionNotificationManager {
                     .setOngoing(false)
                     .setRequestPromotedOngoing(false) // 取消提升请求
                     .setAutoCancel(true)
+                    .setTimeoutAfter(3000) // 3秒后自动消失
                     // 移除进度条
                     .setProgress(0, 0, false)
                     .setSmallIcon(R.drawable.rounded_close_small_24)
@@ -169,6 +171,7 @@ object ExecutionNotificationManager {
                     .setProgress(0, 0, false)
                     .setOngoing(false)
                     .setAutoCancel(true)
+                    .setTimeoutAfter(3000) // 3秒后自动消失
             }
             is ExecutionNotificationState.Cancelled -> {
                 builder
@@ -176,6 +179,7 @@ object ExecutionNotificationManager {
                     .setProgress(0, 0, false)
                     .setOngoing(false)
                     .setAutoCancel(true)
+                    .setTimeoutAfter(3000) // 3秒后自动消失
             }
         }
         notificationManager.notify(NOTIFICATION_ID, builder.build())
