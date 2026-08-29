@@ -212,6 +212,8 @@ object ModuleRegistry {
         register(DoNotDisturbModule(), context)
         register(VibrationModule(), context)
         register(FlashlightModule(), context)
+        register(TakePhotoModule(), context)
+        register(RecordAudioModule(), context)
         register(GetBatteryStatusModule(), context)
 
         // 应用集成

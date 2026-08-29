@@ -91,6 +91,15 @@ object PermissionManager {
         descriptionStringRes = R.string.permission_desc_microphone
     )
 
+    val CAMERA = Permission(
+        id = Manifest.permission.CAMERA,
+        name = "相机权限",
+        description = "用于拍照等图像采集功能。",
+        type = PermissionType.RUNTIME,
+        nameStringRes = R.string.permission_name_camera,
+        descriptionStringRes = R.string.permission_desc_camera
+    )
+
     // 定义悬浮窗权限
     val OVERLAY = Permission(
         id = "vflow.permission.SYSTEM_ALERT_WINDOW",
@@ -245,7 +254,7 @@ object PermissionManager {
     // 所有已知特殊权限的列表，用于 UI 展示和快速查找
     val allKnownPermissions = listOf(
         CORE, CORE_ROOT,
-        ACCESSIBILITY, NOTIFICATIONS, MICROPHONE, OVERLAY, NOTIFICATION_LISTENER_SERVICE,
+        ACCESSIBILITY, NOTIFICATIONS, MICROPHONE, CAMERA, OVERLAY, NOTIFICATION_LISTENER_SERVICE,
         NOTIFICATION_POLICY, STORAGE, SMS, READ_PHONE_STATE, BLUETOOTH, WRITE_SETTINGS, WRITE_SECURE_SETTINGS, LOCATION, SHIZUKU,
         IGNORE_BATTERY_OPTIMIZATIONS, EXACT_ALARM, ROOT, USAGE_STATS
     )

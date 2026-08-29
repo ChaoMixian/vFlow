@@ -1172,6 +1172,8 @@
     <string name="permission_desc_notifications">用于显示Toast提示、发送任务结果通知等。</string>
     <string name="permission_name_microphone">麦克风权限</string>
     <string name="permission_desc_microphone">用于语音转文字等语音输入功能。</string>
+    <string name="permission_name_camera">相机权限</string>
+    <string name="permission_desc_camera">用于拍照等图像采集功能。</string>
     <string name="permission_name_overlay">悬浮窗权限</string>
     <string name="permission_desc_overlay">允许应用在后台执行时显示输入框等窗口，这是实现复杂自动化流程的关键。</string>
     <string name="permission_name_notification_listener">通知使用权</string>

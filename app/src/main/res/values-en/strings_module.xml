@@ -3034,6 +3034,48 @@
     <string name="output_vflow_system_battery_level_name">Battery Level</string>
     <string name="output_vflow_system_battery_is_charging_name">Is Charging</string>
     <string name="output_vflow_system_battery_temperature_name">Battery Temperature</string>
+
+    <!-- vflow.device.take_photo -->
+    <string name="module_vflow_device_take_photo_name">Take Photo</string>
+    <string name="module_vflow_device_take_photo_desc">Take a photo using the front or rear camera and save as an image file.</string>
+    <string name="param_vflow_device_take_photo_camera_name">Camera</string>
+    <string name="option_vflow_device_take_photo_camera_back">Rear Camera</string>
+    <string name="option_vflow_device_take_photo_camera_front">Front Camera</string>
+    <string name="param_vflow_device_take_photo_flash_name">Flash</string>
+    <string name="option_vflow_device_take_photo_flash_off">Off</string>
+    <string name="option_vflow_device_take_photo_flash_auto">Auto</string>
+    <string name="option_vflow_device_take_photo_flash_on">On</string>
+    <string name="option_vflow_device_take_photo_flash_torch">Torch</string>
+    <string name="param_vflow_device_take_photo_quality_name">Image Quality (10-100)</string>
+    <string name="param_vflow_device_take_photo_save_path_name">Save Path (empty for auto-generate)</string>
+    <string name="output_vflow_device_take_photo_success_name">Is Success</string>
+    <string name="output_vflow_device_take_photo_image_name">Image Object</string>
+    <string name="output_vflow_device_take_photo_file_name">File Object</string>
+    <string name="output_vflow_device_take_photo_path_name">File Path</string>
+    <string name="summary_vflow_device_take_photo">Take Photo (%1$s)</string>
+    <string name="msg_vflow_device_take_photo_opening">Opening camera...</string>
+    <string name="msg_vflow_device_take_photo_capturing">Capturing photo...</string>
+    <string name="msg_vflow_device_take_photo_saving">Saving photo...</string>
+
+    <!-- vflow.device.record_audio -->
+    <string name="module_vflow_device_record_audio_name">Record Audio</string>
+    <string name="module_vflow_device_record_audio_desc">Record audio for a specified duration using the microphone and save as a file.</string>
+    <string name="param_vflow_device_record_audio_duration_name">Duration (seconds)</string>
+    <string name="param_vflow_device_record_audio_save_path_name">Save Path (empty for auto-generate)</string>
+    <string name="param_vflow_device_record_audio_source_name">Audio Source</string>
+    <string name="option_vflow_device_record_audio_source_mic">Microphone</string>
+    <string name="option_vflow_device_record_audio_source_camcorder">Camcorder Mic</string>
+    <string name="option_vflow_device_record_audio_source_voice_recognition">Voice Recognition</string>
+    <string name="param_vflow_device_record_audio_format_name">Audio Format</string>
+    <string name="option_vflow_device_record_audio_format_m4a">M4A (AAC)</string>
+    <string name="option_vflow_device_record_audio_format_3gp">3GP (AMR)</string>
+    <string name="output_vflow_device_record_audio_success_name">Is Success</string>
+    <string name="output_vflow_device_record_audio_file_name">File Object</string>
+    <string name="output_vflow_device_record_audio_path_name">File Path</string>
+    <string name="output_vflow_device_record_audio_duration_name">Actual Duration</string>
+    <string name="summary_vflow_device_record_audio">Record Audio (%1$s s)</string>
+    <string name="msg_vflow_device_record_audio_recording">Recording: %1$ds / %2$ds</string>
+
     <!-- Shared Summaries -->
     <string name="summary_unknown_workflow">Unknown workflow</string>
     <string name="summary_no_workflow_selected">No workflow selected</string>
