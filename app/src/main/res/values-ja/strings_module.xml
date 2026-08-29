@@ -2685,6 +2685,48 @@
     <string name="output_vflow_system_battery_level_name">バッテリー残量</string>
     <string name="output_vflow_system_battery_is_charging_name">充電中か</string>
     <string name="output_vflow_system_battery_temperature_name">バッテリー温度</string>
+
+    <!-- vflow.device.take_photo -->
+    <string name="module_vflow_device_take_photo_name">写真撮影</string>
+    <string name="module_vflow_device_take_photo_desc">前面または背面カメラを使用して写真を撮影し、画像ファイルとして保存します。</string>
+    <string name="param_vflow_device_take_photo_camera_name">カメラ</string>
+    <string name="option_vflow_device_take_photo_camera_back">背面カメラ</string>
+    <string name="option_vflow_device_take_photo_camera_front">前面カメラ</string>
+    <string name="param_vflow_device_take_photo_flash_name">フラッシュ</string>
+    <string name="option_vflow_device_take_photo_flash_off">オフ</string>
+    <string name="option_vflow_device_take_photo_flash_auto">自動</string>
+    <string name="option_vflow_device_take_photo_flash_on">オン</string>
+    <string name="option_vflow_device_take_photo_flash_torch">トーチ</string>
+    <string name="param_vflow_device_take_photo_quality_name">画質 (10-100)</string>
+    <string name="param_vflow_device_take_photo_save_path_name">保存パス（空の場合は自動生成）</string>
+    <string name="output_vflow_device_take_photo_success_name">成功したかどうか</string>
+    <string name="output_vflow_device_take_photo_image_name">画像オブジェクト</string>
+    <string name="output_vflow_device_take_photo_file_name">ファイルオブジェクト</string>
+    <string name="output_vflow_device_take_photo_path_name">ファイルパス</string>
+    <string name="summary_vflow_device_take_photo">写真撮影 (%1$s)</string>
+    <string name="msg_vflow_device_take_photo_opening">カメラを起動中...</string>
+    <string name="msg_vflow_device_take_photo_capturing">写真を撮影中...</string>
+    <string name="msg_vflow_device_take_photo_saving">写真を保存中...</string>
+
+    <!-- vflow.device.record_audio -->
+    <string name="module_vflow_device_record_audio_name">録音</string>
+    <string name="module_vflow_device_record_audio_desc">マイクを使用して指定された時間音声を録音し、ファイルとして保存します。</string>
+    <string name="param_vflow_device_record_audio_duration_name">録音時間（秒）</string>
+    <string name="param_vflow_device_record_audio_save_path_name">保存パス（空の場合は自動生成）</string>
+    <string name="param_vflow_device_record_audio_source_name">オーディオソース</string>
+    <string name="option_vflow_device_record_audio_source_mic">マイク</string>
+    <string name="option_vflow_device_record_audio_source_camcorder">ビデオカメラ</string>
+    <string name="option_vflow_device_record_audio_source_voice_recognition">音声認識</string>
+    <string name="param_vflow_device_record_audio_format_name">オーディオ形式</string>
+    <string name="option_vflow_device_record_audio_format_m4a">M4A (AAC)</string>
+    <string name="option_vflow_device_record_audio_format_3gp">3GP (AMR)</string>
+    <string name="output_vflow_device_record_audio_success_name">成功したかどうか</string>
+    <string name="output_vflow_device_record_audio_file_name">ファイルオブジェクト</string>
+    <string name="output_vflow_device_record_audio_path_name">ファイルパス</string>
+    <string name="output_vflow_device_record_audio_duration_name">実際の録音時間</string>
+    <string name="summary_vflow_device_record_audio">録音 (%1$s 秒)</string>
+    <string name="msg_vflow_device_record_audio_recording">録音中: %1$d秒 / %2$d秒</string>
+
     <string name="summary_unknown_workflow">不明なワークフロー</string>
     <string name="summary_no_workflow_selected">ワークフロー未選択</string>
     <string name="summary_end_for_each">反復終了</string>

@@ -1172,6 +1172,8 @@
     <string name="permission_desc_notifications">Used to display Toast messages and send task result notifications.</string>
     <string name="permission_name_microphone">Microphone Permission</string>
     <string name="permission_desc_microphone">Used for voice input features such as speech-to-text.</string>
+    <string name="permission_name_camera">Camera Permission</string>
+    <string name="permission_desc_camera">Used for capturing photos and other image collection features.</string>
     <string name="permission_name_overlay">Overlay Permission</string>
     <string name="permission_desc_overlay">Allows the app to display input boxes and other windows while running in the background, essential for complex automation flows.</string>
     <string name="permission_name_notification_listener">Notification Listener</string>

@@ -1112,6 +1112,8 @@
     <string name="permission_desc_notifications">トースト プロンプトの表示、タスク結果通知の送信などに使用されます。</string>
     <string name="permission_name_microphone">マイクの許可</string>
     <string name="permission_desc_microphone">音声テキスト変換などの音声入力機能に使用されます。</string>
+    <string name="permission_name_camera">カメラの許可</string>
+    <string name="permission_desc_camera">写真撮影などの画像取得機能に使用されます。</string>
     <string name="permission_name_overlay">フローティングウィンドウの権限</string>
     <string name="permission_desc_overlay">アプリケーションがバックグラウンドで実行中に入力ボックスなどのウィンドウを表示できるようにすることが、複雑な自動化プロセスを実現する鍵となります。</string>
     <string name="permission_name_notification_listener">使用権に関する通知</string>

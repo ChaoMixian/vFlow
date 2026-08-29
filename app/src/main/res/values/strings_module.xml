@@ -3052,6 +3052,48 @@
     <string name="output_vflow_system_battery_level_name">电池电量</string>
     <string name="output_vflow_system_battery_is_charging_name">是否正在充电</string>
     <string name="output_vflow_system_battery_temperature_name">电池温度</string>
+
+    <!-- vflow.device.take_photo -->
+    <string name="module_vflow_device_take_photo_name">拍照</string>
+    <string name="module_vflow_device_take_photo_desc">使用前置或后置摄像头拍照并保存为图片文件。</string>
+    <string name="param_vflow_device_take_photo_camera_name">摄像头</string>
+    <string name="option_vflow_device_take_photo_camera_back">后置摄像头</string>
+    <string name="option_vflow_device_take_photo_camera_front">前置摄像头</string>
+    <string name="param_vflow_device_take_photo_flash_name">闪光灯</string>
+    <string name="option_vflow_device_take_photo_flash_off">关闭</string>
+    <string name="option_vflow_device_take_photo_flash_auto">自动</string>
+    <string name="option_vflow_device_take_photo_flash_on">开启</string>
+    <string name="option_vflow_device_take_photo_flash_torch">常亮</string>
+    <string name="param_vflow_device_take_photo_quality_name">图片质量 (10-100)</string>
+    <string name="param_vflow_device_take_photo_save_path_name">保存路径 (留空自动生成)</string>
+    <string name="output_vflow_device_take_photo_success_name">是否成功</string>
+    <string name="output_vflow_device_take_photo_image_name">图片对象</string>
+    <string name="output_vflow_device_take_photo_file_name">文件对象</string>
+    <string name="output_vflow_device_take_photo_path_name">文件路径</string>
+    <string name="summary_vflow_device_take_photo">拍照 (%1$s)</string>
+    <string name="msg_vflow_device_take_photo_opening">正在打开相机...</string>
+    <string name="msg_vflow_device_take_photo_capturing">正在拍照...</string>
+    <string name="msg_vflow_device_take_photo_saving">正在保存照片...</string>
+
+    <!-- vflow.device.record_audio -->
+    <string name="module_vflow_device_record_audio_name">录音</string>
+    <string name="module_vflow_device_record_audio_desc">使用麦克风录制指定时长的音频并保存为文件。</string>
+    <string name="param_vflow_device_record_audio_duration_name">录音时长 (秒)</string>
+    <string name="param_vflow_device_record_audio_save_path_name">保存路径 (留空自动生成)</string>
+    <string name="param_vflow_device_record_audio_source_name">音频源</string>
+    <string name="option_vflow_device_record_audio_source_mic">麦克风</string>
+    <string name="option_vflow_device_record_audio_source_camcorder">摄像机麦克风</string>
+    <string name="option_vflow_device_record_audio_source_voice_recognition">语音识别源</string>
+    <string name="param_vflow_device_record_audio_format_name">音频格式</string>
+    <string name="option_vflow_device_record_audio_format_m4a">M4A (AAC)</string>
+    <string name="option_vflow_device_record_audio_format_3gp">3GP (AMR)</string>
+    <string name="output_vflow_device_record_audio_success_name">是否成功</string>
+    <string name="output_vflow_device_record_audio_file_name">文件对象</string>
+    <string name="output_vflow_device_record_audio_path_name">文件路径</string>
+    <string name="output_vflow_device_record_audio_duration_name">实际录制时长</string>
+    <string name="summary_vflow_device_record_audio">录音 (%1$s 秒)</string>
+    <string name="msg_vflow_device_record_audio_recording">正在录音: %1$d秒 / %2$d秒</string>
+
     <!-- Shared Summaries -->
     <string name="summary_unknown_workflow">未知工作流</string>
     <string name="summary_no_workflow_selected">未选择工作流</string>
