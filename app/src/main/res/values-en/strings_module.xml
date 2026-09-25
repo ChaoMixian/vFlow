@@ -1242,6 +1242,25 @@
     <string name="error_vflow_data_parse_xml_parse_error">XML parsing error</string>
     <string name="error_vflow_data_parse_xml_xpath_error">XPath evaluation error</string>
 
+    <!-- vflow.data.parse_html -->
+    <string name="module_vflow_data_parse_html_name">Parse HTML (XPath)</string>
+    <string name="module_vflow_data_parse_html_desc">Extract data from HTML text using XPath</string>
+    <string name="param_vflow_data_parse_html_html_name">HTML Text</string>
+    <string name="param_vflow_data_parse_html_xpath_name">XPath</string>
+    <string name="output_vflow_data_parse_html_first_value_name">First Matched Value</string>
+    <string name="output_vflow_data_parse_html_all_values_name">All Matched Values</string>
+    <string name="output_vflow_data_parse_html_first_element_name">First Matched Element</string>
+    <string name="output_vflow_data_parse_html_all_elements_name">All Matched Elements</string>
+    <string name="output_vflow_data_parse_html_scalar_value_name">Scalar Result</string>
+    <string name="output_vflow_data_parse_html_match_count_name">Match Count</string>
+    <string name="error_vflow_data_parse_html_param_error">Parameter Error</string>
+    <string name="error_vflow_data_parse_html_empty">HTML text cannot be empty</string>
+    <string name="error_vflow_data_parse_html_xpath_empty">XPath cannot be empty</string>
+    <string name="error_vflow_data_parse_html_parse_error">HTML parsing error</string>
+    <string name="error_vflow_data_parse_html_xpath_error">XPath evaluation error</string>
+    <string name="msg_vflow_data_parse_html_parsing">Parsing HTML…</string>
+    <string name="msg_vflow_data_parse_html_done" formatted="false">Parsing done, %d matches found</string>
+
     <!-- vflow.data.comment -->
     <string name="module_vflow_data_comment_name">Comment</string>
     <string name="module_vflow_data_comment_desc">Add comments to document your workflow design. Will be skipped during execution.</string>
@@ -1277,6 +1296,44 @@
     <string name="option_vflow_network_http_request_body_form">Form</string>
     <string name="option_vflow_network_http_request_body_raw">Raw Text</string>
     <string name="option_vflow_network_http_request_body_file">File</string>
+
+    <!-- vflow.network.webview -->
+    <string name="module_vflow_network_webview_name">Open Web Page (WebView)</string>
+    <string name="module_vflow_network_webview_desc">Open a page in an embedded WebView and return the request/response headers, response, cookies and JS results after confirmation</string>
+    <string name="param_vflow_network_webview_url_name">URL</string>
+    <string name="param_vflow_network_webview_method_name">Method</string>
+    <string name="param_vflow_network_webview_headers_name">Headers</string>
+    <string name="param_vflow_network_webview_headers_hint">{\"Authorization\": \"Bearer ...\"}</string>
+    <string name="param_vflow_network_webview_body_name">Body</string>
+    <string name="param_vflow_network_webview_custom_js_name">Custom JS</string>
+    <string name="param_vflow_network_webview_return_variable_name">Return Variable</string>
+    <string name="param_vflow_network_webview_headless_name">Headless</string>
+    <string name="param_vflow_network_webview_timeout_name">Timeout (s)</string>
+    <string name="output_vflow_network_webview_final_url_name">Final URL</string>
+    <string name="output_vflow_network_webview_status_code_name">Status Code</string>
+    <string name="output_vflow_network_webview_request_headers_name">Request Headers</string>
+    <string name="output_vflow_network_webview_response_headers_name">Response Headers</string>
+    <string name="output_vflow_network_webview_response_body_name">Response Body</string>
+    <string name="output_vflow_network_webview_page_title_name">Page Title</string>
+    <string name="output_vflow_network_webview_cookies_name">Cookies</string>
+    <string name="output_vflow_network_webview_return_value_name">Return Value</string>
+    <string name="output_vflow_network_webview_return_value_type_name">Return Value Type</string>
+    <string name="output_vflow_network_webview_js_error_name">JS Error</string>
+    <string name="error_vflow_network_webview_param_error">Parameter Error</string>
+    <string name="error_vflow_network_webview_empty_url">URL cannot be empty</string>
+    <string name="error_vflow_network_webview_invalid_url">Invalid URL</string>
+    <string name="error_vflow_network_webview_invalid_headers">Invalid headers: %s</string>
+    <string name="error_vflow_network_webview_invalid_method">Unsupported HTTP method: %s</string>
+    <string name="error_vflow_network_webview_invalid_return_variable">Invalid return variable name: %s</string>
+    <string name="error_vflow_network_webview_network_error">Network Error</string>
+    <string name="error_vflow_network_webview_redirect_loop">Too Many Redirects</string>
+    <string name="error_vflow_network_webview_timeout">Execution timed out</string>
+    <string name="error_vflow_network_webview_activity_launch_failed">Could not open the confirmation screen</string>
+    <string name="error_vflow_network_webview_cancelled">Cancelled</string>
+    <string name="error_vflow_network_webview_internal_error">Internal Error</string>
+    <string name="msg_vflow_network_webview_loading" formatted="false">Opening %s …</string>
+    <string name="msg_vflow_network_webview_waiting_confirm">Waiting for the user to confirm the page…</string>
+    <string name="webview_confirmation_check">Confirm</string>
 
     <!-- vflow.network.bark_push -->
     <string name="module_vflow_network_bark_push_name">Bark Push</string>

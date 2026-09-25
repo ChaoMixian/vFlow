@@ -1261,6 +1261,25 @@
     <string name="error_vflow_data_parse_xml_parse_error">XML 解析错误</string>
     <string name="error_vflow_data_parse_xml_xpath_error">XPath 解析错误</string>
 
+    <!-- vflow.data.parse_html -->
+    <string name="module_vflow_data_parse_html_name">解析 HTML (XPath)</string>
+    <string name="module_vflow_data_parse_html_desc">从 HTML 文本中通过 XPath 提取数据</string>
+    <string name="param_vflow_data_parse_html_html_name">HTML 文本</string>
+    <string name="param_vflow_data_parse_html_xpath_name">XPath</string>
+    <string name="output_vflow_data_parse_html_first_value_name">第一个匹配值</string>
+    <string name="output_vflow_data_parse_html_all_values_name">所有匹配值</string>
+    <string name="output_vflow_data_parse_html_first_element_name">第一个匹配元素</string>
+    <string name="output_vflow_data_parse_html_all_elements_name">所有匹配元素</string>
+    <string name="output_vflow_data_parse_html_scalar_value_name">标量结果</string>
+    <string name="output_vflow_data_parse_html_match_count_name">匹配数量</string>
+    <string name="error_vflow_data_parse_html_param_error">参数错误</string>
+    <string name="error_vflow_data_parse_html_empty">HTML 文本不能为空</string>
+    <string name="error_vflow_data_parse_html_xpath_empty">XPath 不能为空</string>
+    <string name="error_vflow_data_parse_html_parse_error">HTML 解析错误</string>
+    <string name="error_vflow_data_parse_html_xpath_error">XPath 解析错误</string>
+    <string name="msg_vflow_data_parse_html_parsing">正在解析 HTML…</string>
+    <string name="msg_vflow_data_parse_html_done" formatted="false">解析完成，找到 %d 个匹配项</string>
+
     <!-- vflow.data.comment -->
     <string name="module_vflow_data_comment_name">注释</string>
     <string name="module_vflow_data_comment_desc">添加注释说明，用于记录工作流的设计思路和目的。执行时会被跳过。</string>
@@ -1296,6 +1315,44 @@
     <string name="option_vflow_network_http_request_body_form">表单</string>
     <string name="option_vflow_network_http_request_body_raw">原始文本</string>
     <string name="option_vflow_network_http_request_body_file">文件</string>
+
+    <!-- vflow.network.webview -->
+    <string name="module_vflow_network_webview_name">打开网页 (WebView)</string>
+    <string name="module_vflow_network_webview_desc">在内嵌 WebView 中打开网页，交互确认后返回请求头、响应、Cookies 与 JS 结果</string>
+    <string name="param_vflow_network_webview_url_name">网址</string>
+    <string name="param_vflow_network_webview_method_name">方法</string>
+    <string name="param_vflow_network_webview_headers_name">请求头</string>
+    <string name="param_vflow_network_webview_headers_hint">{\"Authorization\": \"Bearer ...\"}</string>
+    <string name="param_vflow_network_webview_body_name">请求体</string>
+    <string name="param_vflow_network_webview_custom_js_name">自定义 JS</string>
+    <string name="param_vflow_network_webview_return_variable_name">返回变量</string>
+    <string name="param_vflow_network_webview_headless_name">后台模式</string>
+    <string name="param_vflow_network_webview_timeout_name">超时(秒)</string>
+    <string name="output_vflow_network_webview_final_url_name">最终网址</string>
+    <string name="output_vflow_network_webview_status_code_name">状态码</string>
+    <string name="output_vflow_network_webview_request_headers_name">请求头</string>
+    <string name="output_vflow_network_webview_response_headers_name">响应头</string>
+    <string name="output_vflow_network_webview_response_body_name">响应内容</string>
+    <string name="output_vflow_network_webview_page_title_name">页面标题</string>
+    <string name="output_vflow_network_webview_cookies_name">Cookies</string>
+    <string name="output_vflow_network_webview_return_value_name">返回值</string>
+    <string name="output_vflow_network_webview_return_value_type_name">返回值类型</string>
+    <string name="output_vflow_network_webview_js_error_name">JS 错误</string>
+    <string name="error_vflow_network_webview_param_error">参数错误</string>
+    <string name="error_vflow_network_webview_empty_url">网址不能为空</string>
+    <string name="error_vflow_network_webview_invalid_url">网址无效</string>
+    <string name="error_vflow_network_webview_invalid_headers">请求头格式错误：%s</string>
+    <string name="error_vflow_network_webview_invalid_method">不支持的 HTTP 方法：%s</string>
+    <string name="error_vflow_network_webview_invalid_return_variable">返回变量名称无效：%s</string>
+    <string name="error_vflow_network_webview_network_error">网络错误</string>
+    <string name="error_vflow_network_webview_redirect_loop">重定向次数过多</string>
+    <string name="error_vflow_network_webview_timeout">执行超时</string>
+    <string name="error_vflow_network_webview_activity_launch_failed">无法打开确认界面</string>
+    <string name="error_vflow_network_webview_cancelled">已取消</string>
+    <string name="error_vflow_network_webview_internal_error">内部错误</string>
+    <string name="msg_vflow_network_webview_loading" formatted="false">正在打开网页 %s …</string>
+    <string name="msg_vflow_network_webview_waiting_confirm">等待用户确认页面…</string>
+    <string name="webview_confirmation_check">确认</string>
 
     <!-- vflow.network.bark_push -->
     <string name="module_vflow_network_bark_push_name">Bark 推送</string>

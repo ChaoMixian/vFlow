@@ -143,6 +143,12 @@
             android:turnScreenOn="true" />
 
         <activity
+            android:name=".ui.webview.WebViewConfirmationActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
+
+        <activity
             android:name=".ui.common.ShortcutExecutorActivity"
             android:theme="@style/Theme.vFlow.Transparent.Default"
             android:exported="true"

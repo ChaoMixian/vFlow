@@ -224,6 +224,10 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.27.1")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
 
+    // HTML 解析（解析 HTML 模块 / vflow.data.parse_html）
+    // HTML parsing (the Parse HTML module / vflow.data.parse_html)
+    implementation("org.jsoup:jsoup:1.23.1")
+
     // Web 服务器
     implementation("org.nanohttpd:nanohttpd-webserver:2.3.1")
     implementation("org.nanohttpd:nanohttpd-websocket:2.3.1")
