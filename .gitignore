@@ -31,3 +31,48 @@ debug-signing.properties
 # Python local cache
 __pycache__/
 *.py[cod]
+
+# Gradle build outputs (all modules, including root build/)
+**/build/
+.gradle/
+.kotlin/
+gradle-app.setting
+.gradletasknamecache
+
+# Build logs, APKs and temporary outputs
+*.log
+build-*.log
+*.apk
+*.aab
+*.ap_
+*.apk.idsig
+*.idsig
+*.hprof
+hs_err_pid*.log
+
+# Native build artifacts
+**/.cxx/
+**/.externalNativeBuild/
+**/captures/
+
+# Signing material and local configuration
+*.jks
+*.keystore
+*.p12
+signing.properties
+debug-signing.properties
+local.properties
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+*.iml
+
+# Temporary helper scripts / local test artifacts
+/rewrite-overlay*.js
+/docs-pr18.js
+/readme-pr18.js
+/out/
+/test-artifacts/
+
