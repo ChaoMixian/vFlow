@@ -117,8 +117,8 @@
     <string name="settings_switch_auto_check_updates_desc">进入设置时自动检查新版本。</string>
     <string name="settings_switch_allow_show_on_lock_screen">允许锁屏显示</string>
     <string name="settings_switch_allow_show_on_lock_screen_desc">允许弹窗等在锁屏界面显示。</string>
-    <string name="settings_switch_api_enabled">启用远程API</string>
-    <string name="settings_switch_api_enabled_desc">允许通过局域网访问和控制工作流</string>
+    <string name="settings_switch_api_enabled">启用mcp服务器</string>
+    <string name="settings_switch_api_enabled_desc">允许 AI 通过局域网连接并直接调用本地模块工具</string>
 
     <string name="model_config_provider_list_title">选择供应商</string>
     <string name="model_config_add_provider">添加供应商</string>
@@ -1394,8 +1394,8 @@
     <string name="key_tester_listening_hint">监听中... 按下任意物理按键</string>
     <string name="key_tester_error">监听出错: %s</string>
 
-    <!-- API Settings -->
-    <string name="api_settings_title">远程API设置</string>
+    <!-- MCP Server Settings -->
+    <string name="api_settings_title">mcp服务器设置</string>
     <string name="api_settings_back">返回</string>
     <string name="api_settings_server_status">服务器状态</string>
     <string name="api_settings_status_running">运行中</string>
@@ -1409,12 +1409,12 @@
     <string name="api_settings_no_tokens">暂无活跃令牌</string>
     <string name="api_settings_instructions">使用说明</string>
     <string name="api_settings_instructions_text">
-1. 启用服务器开关
-2. 访问服务器地址查看API文档
-3. 生成令牌用于身份验证
-4. 在请求头中添加: Authorization: Bearer &lt;令牌&gt;
+1. 启用 mcp 服务器开关
+2. 将 AI 客户端的 MCP 地址设置为上方服务器地址（POST /mcp）
+3. 如需鉴权，生成令牌并添加请求头: Authorization: Bearer &lt;令牌&gt;
+4. MCP 客户端即可列出并直接调用本机 vFlow 模块工具
 
-注意: 请确保设备和Web编辑器在同一网络
+注意: 请确保 AI 客户端与手机在同一网络；未创建令牌时局域网可直接接入
     </string>
     <string name="api_settings_unknown_device">未知设备</string>
     <string name="api_settings_device_id">设备ID: %s</string>
@@ -1433,11 +1433,14 @@
     <string name="api_settings_copy">复制</string>
     <string name="api_settings_copied">已复制!</string>
     <string name="api_settings_close">关闭</string>
-    <string name="api_settings_toast_started">远程API已启动</string>
+    <string name="api_settings_toast_started">mcp服务器已启动</string>
     <string name="api_settings_toast_start_failed">启动失败，端口可能被占用</string>
-    <string name="api_settings_toast_stopped">远程API已停止</string>
-    <string name="api_settings_label">API管理</string>
-    <string name="api_settings_desc">查看服务器状态和管理访问令牌</string>
+    <string name="api_settings_toast_stopped">mcp服务器已停止</string>
+    <string name="api_settings_label">mcp服务器管理</string>
+    <string name="api_settings_desc">管理 mcp 服务器、端口与访问令牌</string>
+    <string name="mcp_service_channel_name">MCP 服务器</string>
+    <string name="mcp_service_notification_title">MCP 服务器运行中</string>
+    <string name="mcp_service_notification_text">AI 可通过局域网调用本机模块</string>
     <string name="module_config_section_global_variables">全局变量</string>
     <string name="global_variable_config_title">全局变量</string>
     <string name="global_variable_config_desc">跨工作流共享的持久化全局变量。</string>

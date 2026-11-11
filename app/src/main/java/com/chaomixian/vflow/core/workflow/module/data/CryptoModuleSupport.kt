@@ -23,6 +23,9 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 internal object CryptoModuleSupport {
+    // Android 自带同名 "BC" Provider，但不包含 SM4/SM3；直接持有完整 BouncyCastle 实例使用。
+    private val bundledBcProvider = BouncyCastleProvider()
+
     const val OP_ENCODE = "encode"
     const val OP_DECODE = "decode"
     const val OP_ENCRYPT = "encrypt"
@@ -32,6 +35,7 @@ internal object CryptoModuleSupport {
     const val MODE_CBC = "CBC"
 
     const val PADDING_PKCS5 = "PKCS5Padding"
+    const val PADDING_PKCS7 = "PKCS7Padding"
     const val PADDING_NO = "NoPadding"
 
     const val ENCODING_BASE64 = "base64"
@@ -80,7 +84,7 @@ internal object CryptoModuleSupport {
 
     init {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-            Security.addProvider(BouncyCastleProvider())
+            Security.addProvider(bundledBcProvider)
         }
     }
 
@@ -260,7 +264,7 @@ internal object CryptoModuleSupport {
         outputEncoding: String
     ): ExecutionResult {
         return try {
-            val digest = MessageDigest.getInstance(algorithm, BouncyCastleProvider.PROVIDER_NAME)
+            val digest = MessageDigest.getInstance(algorithm, bundledBcProvider)
                 .digest(sourceBytes)
             ExecutionResult.Success(mapOf("result_text" to VString(encodeBinary(digest, outputEncoding))))
         } catch (_: Exception) {
@@ -329,7 +333,13 @@ internal object CryptoModuleSupport {
         }
 
         val normalizedMode = mode.uppercase()
-        val transformation = "$algorithm/$normalizedMode/$padding"
+        // BouncyCastle 的 SM4 只提供 PKCS7Padding，UI 中的 PKCS5Padding 需要映射。
+        val effectivePadding = if (algorithm.equals("SM4", ignoreCase = true) && padding == PADDING_PKCS5) {
+            PADDING_PKCS7
+        } else {
+            padding
+        }
+        val transformation = "$algorithm/$normalizedMode/$effectivePadding"
 
         val ivBytes = if (normalizedMode == MODE_CBC) {
             val resolved = decodeByEncoding(ivText, ivEncoding)
@@ -345,10 +355,10 @@ internal object CryptoModuleSupport {
         }
 
         return try {
-            val cipher = if (provider != null) {
-                Cipher.getInstance(transformation, provider)
-            } else {
-                Cipher.getInstance(transformation)
+            val cipher = when {
+                provider == BouncyCastleProvider.PROVIDER_NAME -> Cipher.getInstance(transformation, bundledBcProvider)
+                provider != null -> Cipher.getInstance(transformation, provider)
+                else -> Cipher.getInstance(transformation)
             }
             val secretKey = SecretKeySpec(keyBytes, algorithm)
             val cipherMode = if (operation == OP_ENCRYPT) Cipher.ENCRYPT_MODE else Cipher.DECRYPT_MODE
@@ -365,7 +375,7 @@ internal object CryptoModuleSupport {
                 decodeBinary(sourceText, ciphertextEncoding)
             }
 
-            if (padding == PADDING_NO && blockSize != null && inputBytes.size % blockSize != 0) {
+            if (effectivePadding == PADDING_NO && blockSize != null && inputBytes.size % blockSize != 0) {
                 val label = if (operation == OP_ENCRYPT) {
                     context.getString(R.string.label_vflow_data_crypto_plain_text)
                 } else {

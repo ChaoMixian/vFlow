@@ -424,7 +424,7 @@
                         android:layout_height="wrap_content"
                         android:stepSize="5"
                         android:valueFrom="0"
-                        android:valueTo="120" />
+                        android:valueTo="600" />
 
                 </LinearLayout>
 

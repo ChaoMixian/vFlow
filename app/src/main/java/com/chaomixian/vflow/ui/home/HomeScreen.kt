@@ -74,6 +74,7 @@ import com.chaomixian.vflow.core.workflow.model.Workflow
 import com.chaomixian.vflow.permissions.PermissionActivity
 import com.chaomixian.vflow.permissions.PermissionManager
 import com.chaomixian.vflow.services.VFlowCoreBridge
+import com.chaomixian.vflow.ui.recording.UiRecordingsActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -283,6 +284,19 @@ fun HomeScreen(
                     uiState = uiState,
                     onOpenCoreManagement = openCoreManagement,
                 )
+            }
+
+            item {
+                FilledTonalButton(
+                    onClick = {
+                        context.startActivity(
+                            Intent(context, UiRecordingsActivity::class.java)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("录制UI结果")
+                }
             }
 
             if (uiState.coreConnected && uiState.coreNeedsUpdate) {

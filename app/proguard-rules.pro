@@ -211,7 +211,11 @@
 -dontwarn org.apache.log4j.**
 -dontwarn org.apache.logging.log4j.**
 
-# 30. Umeng analytics / ASMS
+# 30. BouncyCastle（SM4/SM3 由 Provider 反射加载算法实现，不能被 R8 裁剪）
+-keep class org.bouncycastle.** { *; }
+-dontwarn org.bouncycastle.**
+
+# 31. Umeng analytics / ASMS
 -keepclassmembers class * {
    public <init>(org.json.JSONObject);
 }

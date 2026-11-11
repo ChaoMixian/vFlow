@@ -197,10 +197,33 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.vFlow" />
 
+        <activity
+            android:name=".ui.recording.UiRecordingsActivity"
+            android:exported="false"
+            android:label="录制UI管理" />
+
         <service
             android:name=".services.TriggerService"
             android:exported="true" android:permission="android.permission.FOREGROUND_SERVICE"
             android:foregroundServiceType="specialUse" />
+
+        <service
+            android:name=".services.UiRecordingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="ui_recording" />
+        </service>
+
+        <service
+            android:name=".services.McpForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="mcp_server" />
+        </service>
 
         <service
             android:name=".services.VoiceTriggerService"
@@ -398,7 +421,7 @@
         <activity
             android:name=".ui.settings.ApiSettingsActivity"
             android:exported="false"
-            android:label="远程API"
+            android:label="@string/api_settings_label"
             android:theme="@style/Theme.vFlow" />
 
         <activity

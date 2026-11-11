@@ -1833,6 +1833,9 @@
     <string name="msg_vflow_file_rotate_image_saving">正在保存处理后的图像...</string>
 
     <!-- vflow.interaction.find_element -->
+    <string name="module_vflow_system_get_phone_status_name">获取手机状态</string>
+    <string name="module_vflow_system_get_phone_status_desc">读取当前权限、工具可用状态、设备状态、屏幕状态和屏幕截图</string>
+    <string name="summary_vflow_system_get_phone_status">获取手机状态</string>
     <string name="module_vflow_interaction_find_element_desc">通过文本、ID、区域等属性查找屏幕控件，支持多属性组合过滤</string>
     <string name="module_vflow_interaction_find_element_name">查找控件</string>
     <string name="param_vflow_interaction_find_element_checkable_name">可勾选</string>

@@ -195,6 +195,7 @@ object ModuleRegistry {
         register(ScreenRotationModule(), context)
         register(MobileDataModule(), context)
         register(GetScreenStateModule(), context)
+        register(GetPhoneStatusModule(), context)
         register(WakeScreenModule(), context)
         register(WakeAndUnlockScreenModule(), context)
         register(SleepScreenModule(), context)

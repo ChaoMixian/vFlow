@@ -1634,6 +1634,9 @@
     <string name="msg_vflow_file_rotate_image_loading">画像を読み込み中...</string>
     <string name="msg_vflow_file_rotate_image_rotating">画像を回転中...</string>
     <string name="msg_vflow_file_rotate_image_saving">処理後の画像を保存中...</string>
+    <string name="module_vflow_system_get_phone_status_name">端末状態を取得</string>
+    <string name="module_vflow_system_get_phone_status_desc">現在の権限、ツールの可用性、端末状態、画面状態、スクリーンショットを取得します</string>
+    <string name="summary_vflow_system_get_phone_status">端末状態を取得</string>
     <string name="module_vflow_interaction_find_element_desc">テキスト、ID、範囲などの属性で画面要素を検索し、複数条件の組み合わせで絞り込めます</string>
     <string name="module_vflow_interaction_find_element_name">要素を検索</string>
     <string name="param_vflow_interaction_find_element_checkable_name">チェック可能</string>

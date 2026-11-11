@@ -48,7 +48,7 @@ internal fun chatToolNameFromModuleId(moduleId: String): String {
 internal class ChatAgentToolRegistry(context: Context) {
     private val appContext = context.applicationContext
 
-    private val toolsByName: Map<String, ChatAgentToolDefinition>
+    private val toolsByName = LinkedHashMap<String, ChatAgentToolDefinition>()
     private val temporaryWorkflowModuleIds: List<String>
     private val savedWorkflowModuleIds: List<String>
 
@@ -56,11 +56,11 @@ internal class ChatAgentToolRegistry(context: Context) {
         ModuleRegistry.initialize(appContext)
         temporaryWorkflowModuleIds = buildTemporaryWorkflowModuleIds()
         savedWorkflowModuleIds = buildSavedWorkflowModuleIds()
-        toolsByName = (
+        (
             listOf(buildTemporaryWorkflowToolDefinition(), buildSaveWorkflowToolDefinition()) +
                 ChatAgentNativeToolExecutor.buildDefinitions(appContext) +
                 buildDirectToolDefinitions()
-            ).associateBy { it.name }
+            ).forEach { toolsByName[it.name] = it }
     }
 
     fun getTools(): List<ChatAgentToolDefinition> = toolsByName.values.toList()
@@ -69,6 +69,27 @@ internal class ChatAgentToolRegistry(context: Context) {
 
     fun getToolForModuleId(moduleId: String): ChatAgentToolDefinition? {
         return toolsByName[chatToolNameFromModuleId(moduleId)] ?: buildToolDefinition(moduleId)
+    }
+
+    /**
+     * 将任意本地模块注册为可执行工具。
+     *
+     * Chat Agent 只预注册一部分直接工具，MCP 服务器需要暴露全部本地模块，
+     * 因此在这里按需生成工具定义并写入工具表，供 [ChatAgentModuleExecutor] 查找执行。
+     */
+    internal fun ensureToolForModuleId(moduleId: String): ChatAgentToolDefinition? {
+        val toolName = chatToolNameFromModuleId(moduleId)
+        val existing = toolsByName[toolName]
+        if (existing != null && existing.moduleId != moduleId) {
+            // 名称规范化后发生冲突，保留已有工具，避免覆盖其他模块。
+            return null
+        }
+        if (existing != null) {
+            return existing
+        }
+        val definition = buildToolDefinition(moduleId) ?: return null
+        toolsByName[definition.name] = definition
+        return definition
     }
 
     fun getRiskLevelForModuleId(moduleId: String): ChatAgentToolRiskLevel = riskLevelForModuleId(moduleId)
