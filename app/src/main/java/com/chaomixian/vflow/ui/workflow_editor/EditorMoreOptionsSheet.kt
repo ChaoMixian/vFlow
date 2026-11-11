@@ -198,7 +198,10 @@ class EditorMoreOptionsSheet : BottomSheetDialogFragment() {
             wf.maxExecutionTime?.let { maxTime ->
                 switchMaxExecutionTime.isChecked = true
                 layoutMaxExecutionTimeSlider.visibility = View.VISIBLE
-                sliderMaxExecutionTime.value = maxTime.toFloat()
+                // 兼容历史工作流/自动导出的 300 秒等较大值，避免 Slider 值超出 valueTo 导致崩溃
+                val sliderMax = maxOf(600f, maxTime.toFloat())
+                sliderMaxExecutionTime.valueTo = sliderMax
+                sliderMaxExecutionTime.value = maxTime.toFloat().coerceIn(0f, sliderMax)
                 updateMaxExecutionTimeValue(maxTime)
             } ?: run {
                 switchMaxExecutionTime.isChecked = false

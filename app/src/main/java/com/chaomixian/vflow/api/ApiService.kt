@@ -2,22 +2,16 @@ package com.chaomixian.vflow.api
 
 import android.content.Context
 import com.chaomixian.vflow.api.auth.AuthManager
-import com.chaomixian.vflow.api.server.ApiDependencies
-import com.chaomixian.vflow.api.server.ApiServer
-import com.chaomixian.vflow.api.server.ExecutionManager
+import com.chaomixian.vflow.api.mcp.McpServer
 import com.chaomixian.vflow.core.workflow.WorkflowManager
-import com.chaomixian.vflow.core.workflow.FolderManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import com.chaomixian.vflow.services.McpForegroundService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import java.io.IOException
 
 /**
- * API服务管理器
- * 负责启动、停止和管理API服务器
+ * MCP 服务管理器
+ * 负责启动、停止和管理 MCP 服务器
  * 单例模式，在应用生命周期内持久化
  */
 class ApiService private constructor(
@@ -26,11 +20,8 @@ class ApiService private constructor(
     private val moduleRegistry: Any?
 ) {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     private val authManager = AuthManager(context)
-    private var apiServer: ApiServer? = null
-    private var executionManager: ExecutionManager? = null
+    private var mcpServer: McpServer? = null
 
     // 服务器状态
     private val _serverState = MutableStateFlow(ServerState.STOPPED)
@@ -43,9 +34,6 @@ class ApiService private constructor(
     init {
         // 加载配置
         loadConfig()
-
-        // 设置启动时间
-        ApiDependencies.setStartupTime(System.currentTimeMillis())
 
         // 确保ModuleRegistry已初始化（如果MainActivity还没启动）
         try {
@@ -84,33 +72,27 @@ class ApiService private constructor(
     }
 
     /**
-     * 启动API服务器
+     * 启动 MCP 服务器
      */
     fun startServer(): Boolean {
+        // 持久化启用状态，应用被回收后可由前台服务/进程重启自动恢复
+        if (!_serverConfig.value.enabled) {
+            _serverConfig.value = _serverConfig.value.copy(enabled = true)
+            saveConfig()
+        }
+
         if (_serverState.value == ServerState.RUNNING) {
+            ensureForegroundService()
             return true
         }
 
         try {
-            // 创建ExecutionManager和FolderManager
-            executionManager = ExecutionManager(workflowManager)
-            val folderManager = FolderManager(context)
-
-            // 创建依赖项
-            val dependencies = ApiDependencies(
-                context = context,
-                workflowManager = workflowManager,
-                moduleRegistry = moduleRegistry,
-                executionManager = executionManager!!,
-                folderManager = folderManager
-            )
-
-            // 创建服务器
+            // 创建 MCP 服务器
             val port = _serverConfig.value.port
-            apiServer = ApiServer(port, authManager, dependencies)
+            mcpServer = McpServer(port, authManager, context)
 
             // 启动服务器
-            val started = apiServer?.startServer() ?: false
+            val started = mcpServer?.startServer() ?: false
 
             if (started) {
                 _serverState.value = ServerState.RUNNING
@@ -118,8 +100,8 @@ class ApiService private constructor(
                 // 保存配置
                 saveConfig()
 
-                // 启动清理任务
-                startCleanupTasks()
+                // 使用前台服务保活，避免 MIUI 等系统在后台冻结 MCP 端口
+                ensureForegroundService()
             }
 
             return started
@@ -136,13 +118,33 @@ class ApiService private constructor(
     }
 
     /**
-     * 停止API服务器
+     * 停止 MCP 服务器
      */
     fun stopServer() {
-        apiServer?.stopServer()
-        apiServer = null
-        executionManager = null
+        if (_serverConfig.value.enabled) {
+            _serverConfig.value = _serverConfig.value.copy(enabled = false)
+            saveConfig()
+        }
+        mcpServer?.stopServer()
+        mcpServer = null
         _serverState.value = ServerState.STOPPED
+        stopForegroundService()
+    }
+
+    private fun ensureForegroundService() {
+        try {
+            McpForegroundService.start(context)
+        } catch (e: Exception) {
+            android.util.Log.w("ApiService", "无法启动 MCP 前台服务", e)
+        }
+    }
+
+    private fun stopForegroundService() {
+        try {
+            McpForegroundService.stop(context)
+        } catch (e: Exception) {
+            android.util.Log.w("ApiService", "无法停止 MCP 前台服务", e)
+        }
     }
 
     /**
@@ -176,7 +178,7 @@ class ApiService private constructor(
 
         val config = _serverConfig.value
         val ipAddress = getLocalIpAddress()
-        return "http://$ipAddress:${config.port}/api/v1"
+        return "http://$ipAddress:${config.port}/mcp"
     }
 
     /**
@@ -231,18 +233,6 @@ class ApiService private constructor(
             putInt("port", config.port)
             putBoolean("enabled", config.enabled)
             apply()
-        }
-    }
-
-    /**
-     * 启动清理任务
-     */
-    private fun startCleanupTasks() {
-        scope.launch {
-            while (_serverState.value == ServerState.RUNNING) {
-                kotlinx.coroutines.delay(300000) // 5分钟
-                executionManager?.cleanupOldExecutions()
-            }
         }
     }
 

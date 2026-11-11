@@ -1814,6 +1814,9 @@
     <string name="msg_vflow_file_rotate_image_saving">Saving processed image...</string>
 
     <!-- vflow.interaction.find_element -->
+    <string name="module_vflow_system_get_phone_status_name">Get Phone Status</string>
+    <string name="module_vflow_system_get_phone_status_desc">Read current permissions, tool availability, device status, screen state and a screenshot</string>
+    <string name="summary_vflow_system_get_phone_status">Get phone status</string>
     <string name="module_vflow_interaction_find_element_desc">Find screen elements by text, ID, region and other properties, supports multi-property combination filtering</string>
     <string name="module_vflow_interaction_find_element_name">Find Element</string>
     <string name="param_vflow_interaction_find_element_checkable_name">Checkable</string>

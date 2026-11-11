@@ -8,7 +8,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import com.chaomixian.vflow.core.logging.DebugLogger
+import com.chaomixian.vflow.core.recording.RecordingNodeUtils
+import com.chaomixian.vflow.core.recording.UiRecordingEvent
+import com.chaomixian.vflow.core.recording.UiRecordingEventBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -88,6 +92,10 @@ open class AccessibilityService : AccessibilityService() {
                 ServiceStateBus.postWindowContentChanged(packageName, className)
             }
         }
+
+        // UI 录制事件：仅在录制服务注册了监听者时才做额外处理，
+        // 异常全部吞掉，绝不影响原有逻辑。
+        emitUiRecordingEvent(event)
     }
 
     override fun onInterrupt() {
@@ -187,6 +195,48 @@ open class AccessibilityService : AccessibilityService() {
             "I" -> DebugLogger.i(TAG, baseMessage)
             else -> DebugLogger.d(TAG, baseMessage)
         }
+    }
+
+    /**
+     * 将无障碍事件转发给 UI 录制服务。
+     * 只处理点击、文本变化、滚动、窗口状态变化四类事件。
+     */
+    @Suppress("DEPRECATION")
+    private fun emitUiRecordingEvent(event: AccessibilityEvent) {
+        if (!UiRecordingEventBus.hasListener) return
+        // 录制悬浮窗自身的按钮（开始/暂停/继续/结束）也会产生无障碍点击事件，
+        // 不能把它们写进录制结果，否则生成的工作流会去点击录制悬浮窗。
+        if (isOwnRecordingOverlayEvent(event)) return
+
+        val type = when (event.eventType) {
+            AccessibilityEvent.TYPE_VIEW_CLICKED -> UiRecordingEvent.CLICK
+            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> UiRecordingEvent.TEXT_CHANGED
+            AccessibilityEvent.TYPE_VIEW_SCROLLED -> UiRecordingEvent.SCROLL
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> UiRecordingEvent.WINDOW_CHANGED
+            else -> return
+        }
+
+        runCatching {
+            var node: AccessibilityNodeInfo? = runCatching { event.source }.getOrNull()
+            if (node == null) {
+                node = runCatching { rootInActiveWindow }.getOrNull()
+            }
+            try {
+                val recorded = RecordingNodeUtils.buildEvent(event, type, node)
+                UiRecordingEventBus.emit(recorded)
+            } finally {
+                runCatching { node?.recycle() }
+            }
+        }
+    }
+
+    /** 判断事件是否来自 UI 录制悬浮窗自身的控制按钮，避免把控制操作录进目标工作流。 */
+    private fun isOwnRecordingOverlayEvent(event: AccessibilityEvent): Boolean {
+        if (event.packageName?.toString() != packageName) return false
+        val overlayLabels = setOf("开始", "暂停", "继续", "结束", "UI 录制")
+        if (event.text.any { it?.toString()?.trim() in overlayLabels }) return true
+        val description = event.contentDescription?.toString()?.trim()
+        return description in overlayLabels
     }
 
     private fun eventTypeName(eventType: Int): String {

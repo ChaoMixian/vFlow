@@ -1276,9 +1276,14 @@ internal class ChatAgentModuleExecutor(
             is JsonObject -> element.mapValues { (_, value) -> normalizeJsonValue(value) }
             is JsonArray -> element.map(::normalizeJsonValue)
             is JsonPrimitive -> {
-                element.booleanOrNull
-                    ?: element.doubleOrNull
-                    ?: element.contentOrNull
+                // 保留 JSON 字符串的原始类型，避免 "12345678" 之类的密钥、手机号被转成 Double。
+                if (element.isString) {
+                    element.content
+                } else {
+                    element.booleanOrNull
+                        ?: element.doubleOrNull
+                        ?: element.contentOrNull
+                }
             }
         }
     }
@@ -1346,7 +1351,11 @@ internal class ChatAgentModuleExecutor(
                     append("- ")
                     append(key)
                     append(": ")
-                    append(summarizeOutputValue(value))
+                    if (key == "status_json" && value is VString) {
+                        append(value.raw)
+                    } else {
+                        append(summarizeOutputValue(value))
+                    }
                     append("\n")
                 }
             }

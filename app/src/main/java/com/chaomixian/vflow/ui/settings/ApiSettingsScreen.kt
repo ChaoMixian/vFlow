@@ -22,7 +22,7 @@ import com.chaomixian.vflow.api.ApiService
 import kotlinx.coroutines.launch
 
 /**
- * API设置界面
+ * MCP 服务器设置界面
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
